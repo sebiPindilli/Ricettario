@@ -10,6 +10,7 @@ import {
   parseIngredientAmount, decomposeIngredient, composeIngredient,
   memoryPeriodLabel, memorySortKey, buildFridgeItems,
 } from "./utils/helpers.js";
+import { effectiveNutritionKey } from "./utils/aggregates.js";
 import {
   T, F, MACRO_SECTIONS, PICKER_EMOJIS, INGREDIENT_CATEGORIES,
   TAG_GROUPS, ALL_PRESET_TAGS, BOOK_THEMES,
@@ -796,7 +797,7 @@ const SectionPicker = ({ value, onChange, sections = MACRO_SECTIONS, onAddSectio
 // ── Calcolo nutrizionale di una ricetta ──
 // nutritionMap: { "<nome normalizzato>": { foodId } | { custom:{kcal,...} } }
 // Ritorna { total, perServing, covered, excluded:[{name, reason}] }
-const computeRecipeNutrition = (recipe, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null) => {
+const computeRecipeNutrition = (recipe, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null, aggregates = []) => {
   const dictIdx = ingredientDict ? ingDictIndex(ingredientDict) : null;
   const allFoods = [...NUTRITION_DB, ...customFoods];
   const dbById = new Map(allFoods.map(f => [f.id, f]));
@@ -809,7 +810,10 @@ const computeRecipeNutrition = (recipe, nutritionMap = {}, equivalences = {}, cu
   const details = []; // sintesi per-ingrediente: incluso/escluso e perché
   flattenIngredients(recipe.ingredients).forEach(ing => {
     const key = resolveIngId(dictIdx, ing.name);
-    const mapping = nutritionMap[key];
+    // Se l'ingrediente appartiene a un aggregato con nutrizione propria,
+    // usa quella (agg.id); altrimenti resta la chiave del singolo.
+    const effKey = effectiveNutritionKey(key, aggregates, nutritionMap);
+    const mapping = nutritionMap[effKey];
     // 1) mappatura esplicita → 2) match esatto sul nome del database
     const values = mapping?.custom
       ? mapping.custom
@@ -1084,14 +1088,14 @@ const ShoppingMode = ({ recipe, scale, onClose, onAddToList, preselectClean = nu
 // ══════════════════════════════════════════════════════════════
 // NUTRITION CARD — tabella valori nella scheda ricetta
 // ══════════════════════════════════════════════════════════════
-const NutritionCard = ({ recipe, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null, standalone = false }) => {
+const NutritionCard = ({ recipe, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null, aggregates = [], standalone = false }) => {
   const th = useTheme();
   const [open, setOpen] = useState(standalone);
   const [view, setView] = useState("serving"); // "serving" | "per100" | "total"
 
   const nutri = React.useMemo(
-    () => computeRecipeNutrition(recipe, nutritionMap, equivalences, customFoods, ingredientDict),
-    [recipe, nutritionMap, equivalences, customFoods, ingredientDict]
+    () => computeRecipeNutrition(recipe, nutritionMap, equivalences, customFoods, ingredientDict, aggregates),
+    [recipe, nutritionMap, equivalences, customFoods, ingredientDict, aggregates]
   );
   // Conta gli ingredienti mappati (anche se non convertibili in grammi)
   const mappedCount = React.useMemo(() => {
@@ -1380,7 +1384,7 @@ const ExportFlow = ({ current, allRecipes = [], sectionList = MACRO_SECTIONS, on
   );
 };
 
-const RecipeScreen = ({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemory, onAddToShoppingList, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null, allRecipes = [], sectionList = MACRO_SECTIONS, onExportPDF, onExportCode }) => {
+const RecipeScreen = ({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemory, onAddToShoppingList, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null, aggregates = [], allRecipes = [], sectionList = MACRO_SECTIONS, onExportPDF, onExportCode }) => {
   const th = useTheme();
   const [tab, setTab] = useState("ingredienti");
   const [toast, setToast] = useState({ msg:"", visible:false });
@@ -1754,7 +1758,7 @@ const RecipeScreen = ({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemo
                     </div>
                   );
                 }
-                return <NutritionCard recipe={recipe} nutritionMap={nutritionMap} equivalences={equivalences} customFoods={customFoods} ingredientDict={ingredientDict} standalone/>;
+                return <NutritionCard recipe={recipe} nutritionMap={nutritionMap} equivalences={equivalences} customFoods={customFoods} ingredientDict={ingredientDict} aggregates={aggregates} standalone/>;
               })()
             )}
 
@@ -6368,6 +6372,7 @@ function AppInner() {
             equivalences={equivalences}
             customFoods={customFoods}
             ingredientDict={ingredientDict}
+            aggregates={aggregates}
             onBack={() => setScreen(prevScreen === "recipe" ? "recipes" : prevScreen)}
             onUpdate={updateRecipe}
             onEdit={() => goTo("edit")}
