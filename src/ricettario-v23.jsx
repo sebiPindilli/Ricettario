@@ -17,6 +17,27 @@ import {
 } from "./data/constants.js";
 import { NUTRITION_DB, NUTRIENT_LABELS } from "./data/nutrition.js";
 import { RECIPES, INITIAL_NUTRITION_MAP, INITIAL_EQUIVALENCES } from "./data/recipes.js";
+import { ThemeCtx, useTheme, NavCtx, useNavActions } from "./context.js";
+import OrganizeIcon from "./components/OrganizeIcon.jsx";
+import BackBtn from "./components/BackBtn.jsx";
+import Divider from "./components/Divider.jsx";
+import Toast from "./components/Toast.jsx";
+import SectionBadge from "./components/SectionBadge.jsx";
+import Pill from "./components/Pill.jsx";
+import ProgressBar from "./components/ProgressBar.jsx";
+import ScanLabel from "./components/ScanLabel.jsx";
+import EditLabel from "./components/EditLabel.jsx";
+import EditField from "./components/EditField.jsx";
+import EditNumberInput from "./components/EditNumberInput.jsx";
+import MemoryPhoto from "./components/MemoryPhoto.jsx";
+import PhotoLightbox from "./components/PhotoLightbox.jsx";
+import TagPicker from "./components/TagPicker.jsx";
+import TagSection from "./components/TagSection.jsx";
+import EmojiColorPicker from "./components/EmojiColorPicker.jsx";
+import AutocompleteInput from "./components/AutocompleteInput.jsx";
+import RecipeCardList from "./components/RecipeCardList.jsx";
+import RecipeCardBook from "./components/RecipeCardBook.jsx";
+import GlobalNav from "./components/GlobalNav.jsx";
 
 // ── Subsection data helpers ────────────────────────────────────
 // ingredients and steps can be either:
@@ -24,25 +45,6 @@ import { RECIPES, INITIAL_NUTRITION_MAP, INITIAL_EQUIVALENCES } from "./data/rec
 //   sectioned: [{ section:"Nome", items:["item1","item2"] }, ...]
 //
 // Steps items can be strings or {text, photo}
-
-// ── Theme context — avoids prop-drilling ──────────────────────
-const ThemeCtx = React.createContext(BOOK_THEMES[0]);
-const useTheme = () => React.useContext(ThemeCtx);
-
-// ── Nav context — azioni globali del banner (es. Organizza) ──
-const NavCtx = React.createContext({});
-const useNavActions = () => React.useContext(NavCtx);
-
-// ── Icona Organizza: mela con ingranaggio all'angolo ──
-// Eredita la dimensione dal contesto (em): la scatola è quella di un'emoji
-// reale (segnaposto invisibile), quindi l'allineamento è identico alle altre icone.
-const OrganizeIcon = () => (
-  <span style={{ position:"relative", display:"inline-block" }}>
-    <span style={{ visibility:"hidden" }}>🍎</span>
-    <span style={{ position:"absolute", inset:0 }}>🍎</span>
-    <span style={{ position:"absolute", right:"-0.15em", bottom:"-0.05em", fontSize:"0.58em", lineHeight:1, filter:"drop-shadow(0 0 1px rgba(0,0,0,0.45))" }}>⚙️</span>
-  </span>
-);
 
 // ── iPhone shell ───────────────────────────────────────────────
 const IPhone = ({ children }) => {
@@ -71,38 +73,6 @@ const IPhone = ({ children }) => {
   </div>
   );
 };
-
-const BackBtn = ({ onBack, label="Indietro", dark=false }) => (
-  <button onClick={onBack} style={{
-    background:"none", border:"none", cursor:"pointer",
-    color: dark ? "#555" : "#C4593A",
-    fontFamily:F.ui, fontSize:15,
-    display:"flex", alignItems:"center", gap:4, padding:"4px 0",
-  }}>‹ {label}</button>
-);
-
-const Divider = () => (
-  <div style={{ display:"flex", alignItems:"center", gap:10, margin:"8px 0" }}>
-    <div style={{ flex:1, height:1, background:"#EDE6D4" }}/>
-    <span style={{ color:"#B8973A", fontSize:12 }}>✦</span>
-    <div style={{ flex:1, height:1, background:"#EDE6D4" }}/>
-  </div>
-);
-
-// ── Toast notification ─────────────────────────────────────────
-const Toast = ({ msg, visible }) => (
-  <div style={{
-    position:"fixed", bottom:100, left:"50%", transform:`translateX(-50%) translateY(${visible?0:20}px)`,
-    background:"#2C2416", color:"#fff",
-    padding:"10px 20px", borderRadius:20,
-    fontFamily:F.ui, fontSize:13,
-    opacity: visible ? 1 : 0,
-    transition:"all 0.3s",
-    pointerEvents:"none",
-    zIndex:999,
-    whiteSpace:"nowrap",
-  }}>{msg}</div>
-);
 
 // ══════════════════════════════════════════════════════════════
 // SCREEN: COVER (book opening animation)
@@ -297,26 +267,6 @@ const CoverScreen = ({ onEnter }) => {
 // SHARED: Ingredient & Step renderers (handle flat + sectioned)
 // ══════════════════════════════════════════════════════════════
 
-const SectionBadge = ({ label, color }) => {
-  const th = useTheme();
-  if (!label) return null;
-  return (
-    <div style={{
-      display:"flex", alignItems:"center", gap:8,
-      margin:"14px 0 6px",
-    }}>
-      <div style={{
-        background: color || th.appAccent,
-        color:"#fff",
-        fontFamily:F.ui, fontSize:10, fontWeight:700,
-        letterSpacing:1.5, textTransform:"uppercase",
-        padding:"3px 10px", borderRadius:20,
-      }}>{label}</div>
-      <div style={{ flex:1, height:1, background:th.appBorder }}/>
-    </div>
-  );
-};
-
 // Renders ingredients (flat array or sectioned)
 const IngredientsView = ({ ingredients, recipeColor, scaleFactor = 1 }) => {
   const th = useTheme();
@@ -413,111 +363,6 @@ const StepsView = ({ steps, recipeColor }) => {
 // ══════════════════════════════════════════════════════════════
 // PHOTO LIGHTBOX — fullscreen photo viewer with save option
 // ══════════════════════════════════════════════════════════════
-const PhotoLightbox = ({ photo, caption, date, isImage = false, onClose }) => {
-  const [saved, setSaved] = useState(false);
-
-  // In a real app this would use the Web Share API or canvas download
-  const handleSave = () => {
-    // Simulate save — in real PWA: fetch(photo).then(blob => saveAs(blob))
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
-
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position:"fixed", inset:0, zIndex:500,
-        background:"rgba(0,0,0,0.95)",
-        display:"flex", flexDirection:"column",
-        alignItems:"center", justifyContent:"center",
-      }}
-    >
-      {/* Close button */}
-      <button
-        onClick={onClose}
-        style={{
-          position:"absolute", top:20, right:20,
-          width:36, height:36, borderRadius:"50%",
-          background:"rgba(255,255,255,0.15)", border:"none",
-          color:"#fff", fontSize:20, cursor:"pointer",
-          display:"flex", alignItems:"center", justifyContent:"center",
-          zIndex:10,
-        }}
-      >×</button>
-
-      {/* Photo — emoji placeholder in prototype, real image in PWA */}
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          width:"90%", maxWidth:360,
-          aspectRatio:"4/3",
-          background:"rgba(255,255,255,0.05)",
-          borderRadius:12,
-          display:"flex", alignItems:"center", justifyContent:"center",
-          fontSize:80,
-          border:"1px solid rgba(255,255,255,0.1)",
-          overflow:"hidden",
-        }}
-      >
-        {/* Immagine reale (dataURL) o emoji placeholder */}
-        {isImage && photo
-          ? <img src={photo} alt={caption || "ricordo"} style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
-          : photo}
-      </div>
-
-      {/* Caption + date */}
-      {(caption || date) && (
-        <div
-          onClick={e => e.stopPropagation()}
-          style={{ marginTop:16, textAlign:"center", padding:"0 24px" }}
-        >
-          {caption && (
-            <div style={{
-              fontFamily:F.body, fontStyle:"italic",
-              fontSize:15, color:"rgba(255,255,255,0.85)",
-              marginBottom:4, lineHeight:1.4,
-            }}>"{caption}"</div>
-          )}
-          {date && (
-            <div style={{
-              fontFamily:F.ui, fontSize:12,
-              color:"rgba(255,255,255,0.4)",
-            }}>📅 {date}</div>
-          )}
-        </div>
-      )}
-
-      {/* Save to gallery button */}
-      <button
-        onClick={e => { e.stopPropagation(); handleSave(); }}
-        style={{
-          marginTop:24,
-          padding:"12px 28px",
-          background: saved ? "rgba(100,200,100,0.3)" : "rgba(255,255,255,0.12)",
-          border:`1px solid ${saved ? "rgba(100,200,100,0.6)" : "rgba(255,255,255,0.2)"}`,
-          borderRadius:30,
-          color:"#fff",
-          fontFamily:F.ui, fontSize:14, fontWeight:600,
-          cursor:"pointer",
-          display:"flex", alignItems:"center", gap:8,
-          transition:"all 0.2s",
-        }}
-      >
-        {saved ? "✅ Salvata!" : "⬇️ Salva in galleria"}
-      </button>
-
-      <div style={{
-        position:"absolute", bottom:24,
-        fontFamily:F.ui, fontSize:11,
-        color:"rgba(255,255,255,0.25)",
-      }}>Tocca fuori per chiudere</div>
-    </div>
-  );
-};
-
-
-
 // ══════════════════════════════════════════════════════════════
 // PDF EXPORT — generates a printable recipe PDF via browser
 // ══════════════════════════════════════════════════════════════
@@ -751,439 +596,9 @@ const exportBookPDF = (recipes, sections = MACRO_SECTIONS) => {
 };
 
 // ══════════════════════════════════════════════════════════════
-// COMPONENT: TagPicker — structured tag selector with custom tags
-// ══════════════════════════════════════════════════════════════
-const TagPicker = ({ selectedTags, onChange, extraGroups = [], onAddGroup, onAddTagToGroup }) => {
-  const th = useTheme();
-  const [openGroup, setOpenGroup] = useState(null);
-  const [customInputs, setCustomInputs] = useState({}); // {groupName: string}
-  const [newGroupInput, setNewGroupInput] = useState("");
-
-  const toggle = (tag) => onChange(
-    selectedTags.includes(tag)
-      ? selectedTags.filter(t => t !== tag)
-      : [...selectedTags, tag]
-  );
-
-  // Merge preset groups + extra custom groups, always end with "Altro"
-  const baseGroups = TAG_GROUPS.filter(g => g.group !== "Altro");
-  const altroPreset = TAG_GROUPS.find(g => g.group === "Altro") || { group:"Altro", tags:[] };
-  const allGroups = [
-    ...baseGroups,
-    ...extraGroups,
-    altroPreset,
-  ];
-
-  // Custom tags are any selected tags not in any known group
-  const allKnownTags = allGroups.flatMap(g => g.tags);
-  const orphanTags = selectedTags.filter(t => !allKnownTags.includes(t));
-
-  const addCustomTag = (groupName) => {
-    const val = (customInputs[groupName] || "").trim();
-    if (!val) return;
-    // Add tag to the group (via callback) and select it
-    if (onAddTagToGroup) onAddTagToGroup(groupName, val);
-    if (!selectedTags.includes(val)) onChange([...selectedTags, val]);
-    setCustomInputs(prev => ({ ...prev, [groupName]: "" }));
-  };
-
-  const addNewGroup = () => {
-    const val = newGroupInput.trim();
-    if (!val) return;
-    if (onAddGroup) onAddGroup(val);
-    setNewGroupInput("");
-    setOpenGroup(val); // open newly created group
-  };
-
-  return (
-    <div>
-      {/* Active tags summary */}
-      {selectedTags.length > 0 && (
-        <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginBottom:10 }}>
-          {selectedTags.map(tag => (
-            <button key={tag} onClick={() => toggle(tag)} style={{
-              padding:"4px 10px", borderRadius:20,
-              background:th.appAccent, color:"#fff",
-              border:"none", fontFamily:F.ui, fontSize:11, cursor:"pointer",
-              display:"flex", alignItems:"center", gap:4,
-            }}>
-              {tag} <span style={{ opacity:0.7 }}>×</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Groups */}
-      {allGroups.map(group => {
-        const isOpen = openGroup === group.group;
-        const activeInGroup = group.tags.filter(t => selectedTags.includes(t));
-        const isAltro = group.group === "Altro";
-        // Orphan tags (not in any group) shown in "Altro"
-        const altroCustTags = isAltro ? orphanTags : [];
-        const totalActive = activeInGroup.length + (isAltro ? altroCustTags.length : 0);
-
-        return (
-          <div key={group.group} style={{ marginBottom:6 }}>
-            <button
-              onClick={() => setOpenGroup(isOpen ? null : group.group)}
-              style={{
-                width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
-                padding:"9px 12px",
-                background: totalActive > 0 ? `${th.appAccent}12` : th.appCard,
-                border:`1.5px solid ${totalActive > 0 ? th.appAccent : th.appBorder}`,
-                borderRadius:10, cursor:"pointer",
-                fontFamily:F.ui, fontSize:12, color:th.appInk,
-              }}
-            >
-              <span style={{ fontWeight:600 }}>
-                {group.group}
-                {totalActive > 0 && (
-                  <span style={{ marginLeft:8, background:th.appAccent, color:"#fff", borderRadius:10, padding:"1px 7px", fontSize:10 }}>
-                    {totalActive}
-                  </span>
-                )}
-              </span>
-              <span style={{ color:th.appFaded, fontSize:11 }}>{isOpen ? "▲" : "▼"}</span>
-            </button>
-
-            {isOpen && (
-              <div style={{ padding:"8px 4px 4px" }}>
-                <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginBottom:8 }}>
-                  {group.tags.map(tag => {
-                    const sel = selectedTags.includes(tag);
-                    return (
-                      <button key={tag} onClick={() => toggle(tag)} style={{
-                        padding:"5px 12px", borderRadius:20,
-                        border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
-                        background: sel ? th.appAccent : "transparent",
-                        color: sel ? "#fff" : th.appFaded,
-                        fontFamily:F.ui, fontSize:11, cursor:"pointer",
-                      }}>{tag}</button>
-                    );
-                  })}
-                  {isAltro && altroCustTags.map(tag => (
-                    <button key={tag} onClick={() => toggle(tag)} style={{
-                      padding:"5px 12px", borderRadius:20,
-                      border:`1.5px solid ${th.appAccent}`,
-                      background:th.appAccent, color:"#fff",
-                      fontFamily:F.ui, fontSize:11, cursor:"pointer",
-                      display:"flex", alignItems:"center", gap:4,
-                    }}>{tag} <span style={{ opacity:0.7 }}>×</span></button>
-                  ))}
-                </div>
-                <div style={{ display:"flex", gap:8 }}>
-                  <input
-                    value={customInputs[group.group] || ""}
-                    onChange={e => setCustomInputs(prev => ({ ...prev, [group.group]:e.target.value }))}
-                    onKeyDown={e => e.key==="Enter" && addCustomTag(group.group)}
-                    placeholder={`Aggiungi tag a "${group.group}"…`}
-                    style={{ flex:1, padding:"8px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appBg, fontFamily:F.ui, fontSize:12, color:th.appInk, outline:"none" }}
-                  />
-                  <button onClick={() => addCustomTag(group.group)} style={{ padding:"8px 14px", borderRadius:10, background:th.appAccent, color:"#fff", border:"none", fontFamily:F.ui, fontSize:12, cursor:"pointer", fontWeight:700 }}>＋</button>
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      })}
-
-      {/* ── Add new custom category ── */}
-      {onAddGroup && (
-        <div style={{ marginTop:8, paddingTop:10, borderTop:`1px dashed ${th.appBorder}` }}>
-          <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginBottom:6 }}>
-            Aggiungi una nuova categoria di tag
-          </div>
-          <div style={{ display:"flex", gap:8 }}>
-            <input
-              value={newGroupInput}
-              onChange={e => setNewGroupInput(e.target.value)}
-              onKeyDown={e => e.key==="Enter" && addNewGroup()}
-              placeholder="es. Intolleranze, Occasione speciale…"
-              style={{ flex:1, padding:"8px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appBg, fontFamily:F.ui, fontSize:12, color:th.appInk, outline:"none" }}
-            />
-            <button onClick={addNewGroup} style={{ padding:"8px 14px", borderRadius:10, background:th.appInk, color:"#fff", border:"none", fontFamily:F.ui, fontSize:12, cursor:"pointer", fontWeight:700 }}>＋ Categoria</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ══════════════════════════════════════════════════════════════
-
-// ══════════════════════════════════════════════════════════════
 // SCREEN: HOME
 // ══════════════════════════════════════════════════════════════
 
-const RecipeCardList = ({ recipe, onClick }) => {
-  const th = useTheme();
-  return (
-    <button onClick={onClick} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:16, padding:"14px 16px", display:"flex", alignItems:"center", gap:12, cursor:"pointer", textAlign:"left", boxShadow:"0 2px 8px rgba(0,0,0,0.05)", width:"100%" }}>
-      <div style={{ width:46, height:46, borderRadius:12, background:recipe.color, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>{recipe.dishPhoto ? "📸" : recipe.emoji}</div>
-      <div style={{ flex:1 }}>
-        <div style={{ fontFamily:F.display, fontSize:16, color:th.appInk, marginBottom:2 }}>
-            {recipe.favorite && <span style={{ marginRight:4 }}>⭐</span>}{recipe.title}
-          </div>
-        <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>{recipe.category} · {recipe.prepTime+recipe.cookTime} min · {recipe.servings} porzioni</div>
-        <div style={{ display:"flex", gap:4, marginTop:4, flexWrap:"wrap" }}>
-          {recipe.tags.slice(0,3).map(t => (
-            <span key={t} style={{ padding:"2px 8px", borderRadius:10, background:th.appBorder, color:th.appFaded, fontFamily:F.ui, fontSize:10 }}>{t}</span>
-          ))}
-        </div>
-      </div>
-      <span style={{ color:th.appFaded, fontSize:18 }}>›</span>
-    </button>
-  );
-};
-
-const RecipeCardBook = ({ recipe }) => {
-  const th = useTheme();
-  const [lightbox, setLightbox] = useState(null);
-
-  return (
-    <div style={{
-      background: th.bookBg,
-      border:`1px solid ${th.bookBorder}`,
-      borderRadius:4,
-      boxShadow:"0 2px 16px rgba(0,0,0,0.10)",
-      fontFamily:F.book,
-      position:"relative",
-      overflow:"visible",
-    }}>
-      {lightbox && (
-        <PhotoLightbox
-          photo={lightbox.photo}
-          caption={lightbox.caption}
-          date={lightbox.date}
-          onClose={() => setLightbox(null)}
-        />
-      )}
-
-      {/* Binder holes */}
-      {[40, 90, 140].map(top => (
-        <div key={top} style={{
-          position:"absolute", left:-7, top,
-          width:11, height:11, borderRadius:"50%",
-          background: th.appBorder,
-          border:`1px solid ${th.bookBorder}`,
-          zIndex:1,
-        }}/>
-      ))}
-
-      <div style={{ padding:"22px 20px 28px" }}>
-
-        {/* Title */}
-        <div style={{
-          textAlign:"center", fontSize:18, fontWeight:"bold",
-          color:th.bookInk, marginBottom:4, lineHeight:1.3,
-        }}>{recipe.title}</div>
-
-        {/* Source */}
-        {recipe.source && (
-          <div style={{
-            textAlign:"center", fontFamily:F.ui, fontSize:10,
-            color:th.bookFaded, marginBottom:14, fontStyle:"italic",
-          }}>Ricetta di {recipe.source}</div>
-        )}
-
-        {/* Photo */}
-        <div
-          onClick={() => recipe.dishPhoto && setLightbox({ photo:"📸", caption:recipe.title, date:"" })}
-          style={{
-            width:190, height:140, margin:"0 auto 16px",
-            background: th.appBorder,
-            border:`1px solid ${th.bookBorder}`,
-            display:"flex", alignItems:"center", justifyContent:"center",
-            fontSize:44, cursor: recipe.dishPhoto ? "pointer" : "default",
-            position:"relative",
-          }}
-        >
-          {recipe.dishPhoto
-            ? <><span style={{ fontSize:44 }}>📸</span><div style={{ position:"absolute", bottom:4, right:6, fontSize:13, opacity:0.5 }}>⤢</div></>
-            : <span style={{ opacity:0.35 }}>{recipe.emoji}</span>
-          }
-        </div>
-
-        {/* Meta */}
-        <div style={{
-          display:"flex", justifyContent:"center", gap:16,
-          fontSize:11, color:th.bookFaded, marginBottom:14,
-          paddingBottom:12, borderBottom:`1px solid ${th.bookBorder}`,
-        }}>
-          <span>Prep: {recipe.prepTime} min</span>
-          <span>·</span>
-          <span>Cottura: {recipe.cookTime} min</span>
-          <span>·</span>
-          <span>{recipe.servings} porzioni</span>
-        </div>
-
-        {/* Note box */}
-        {recipe.note && (
-          <div style={{
-            border:`1px solid ${th.bookNoteBorder}`,
-            background: th.bookNote,
-            padding:"8px 12px", marginBottom:14,
-            fontSize:11, fontStyle:"italic",
-            color:th.bookFaded, lineHeight:1.65,
-          }}>
-            {recipe.note}
-          </div>
-        )}
-
-        {/* ── INGREDIENTI ── */}
-        <div style={{
-          textAlign:"center", fontSize:14, fontWeight:"bold",
-          color:th.bookInk, margin:"0 0 10px",
-        }}>Ingredienti</div>
-
-        {isSectioned(recipe.ingredients) ? (
-          recipe.ingredients.map((sec, si) => (
-            <div key={si} style={{ marginBottom:10 }}>
-              {sec.section && (
-                <div style={{
-                  fontSize:9, fontWeight:"bold", letterSpacing:1.5,
-                  textTransform:"uppercase", color:recipe.color,
-                  marginBottom:4, paddingBottom:3,
-                  borderBottom:`1px solid ${th.bookBorder}`,
-                }}>{sec.section}</div>
-              )}
-              {sec.items.map((ing, i) => (
-                <div key={i} style={{
-                  fontSize:12, color:th.bookInk, lineHeight:1.8,
-                  borderBottom:`1px solid ${th.bookBorder}`,
-                  padding:"2px 0",
-                }}>{ingredientToText(ing)}</div>
-              ))}
-            </div>
-          ))
-        ) : (
-          recipe.ingredients.map((ing, i) => (
-            <div key={i} style={{
-              fontSize:12, color:th.bookInk, lineHeight:1.8,
-              borderBottom:`1px solid ${th.bookBorder}`,
-              padding:"2px 0",
-            }}>{ingredientToText(ing)}</div>
-          ))
-        )}
-
-        {/* ── DIVISORE ── */}
-        <div style={{ display:"flex", alignItems:"center", gap:10, margin:"18px 0" }}>
-          <div style={{ flex:1, height:1, background:th.bookBorder }}/>
-          <span style={{ color:th.bookFaded, fontSize:11 }}>✦</span>
-          <div style={{ flex:1, height:1, background:th.bookBorder }}/>
-        </div>
-
-        {/* ── PREPARAZIONE ── */}
-        <div style={{
-          textAlign:"center", fontSize:14, fontWeight:"bold",
-          color:th.bookInk, marginBottom:12,
-        }}>Preparazione</div>
-
-        {isSectioned(recipe.steps) ? (
-          recipe.steps.map((sec, si) => {
-            let stepN = recipe.steps.slice(0,si).reduce((acc,s) => acc + s.items.length, 0);
-            return (
-              <div key={si} style={{ marginBottom:14 }}>
-                {sec.section && (
-                  <div style={{
-                    fontSize:9, fontWeight:"bold", letterSpacing:1.5,
-                    textTransform:"uppercase", color:recipe.color,
-                    marginBottom:8, paddingBottom:3,
-                    borderBottom:`1px solid ${th.bookBorder}`,
-                  }}>{sec.section}</div>
-                )}
-                {sec.items.map((step, i) => {
-                  const text = typeof step === "string" ? step : step.text;
-                  const photo = typeof step === "string" ? null : step.photo;
-                  return (
-                    <div key={i} style={{ marginBottom:12 }}>
-                      <div style={{ display:"flex", gap:8, alignItems:"flex-start" }}>
-                        <div style={{
-                          width:20, height:20, borderRadius:"50%",
-                          background:recipe.color, color:"#fff",
-                          display:"flex", alignItems:"center", justifyContent:"center",
-                          fontSize:10, fontWeight:700, flexShrink:0, marginTop:1,
-                          fontFamily:F.ui,
-                        }}>{stepN + i + 1}</div>
-                        <p style={{ fontSize:12, color:th.bookInk, lineHeight:1.65, margin:0 }}>{text}</p>
-                      </div>
-                      {photo && (
-                        <div
-                          onClick={() => setLightbox({ photo:"📸", caption:`Passo ${stepN+i+1}`, date:"" })}
-                          style={{
-                            marginTop:6, marginLeft:28, height:70, borderRadius:6,
-                            background:`${recipe.color}18`,
-                            display:"flex", alignItems:"center", justifyContent:"center",
-                            fontSize:24, cursor:"pointer", position:"relative",
-                            border:`1px solid ${th.bookBorder}`,
-                          }}
-                        >
-                          📸
-                          <div style={{ position:"absolute", bottom:3, right:6, fontSize:12, opacity:0.4 }}>⤢</div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })
-        ) : (
-          recipe.steps.map((step, i) => {
-            const text = typeof step === "string" ? step : step.text;
-            const photo = typeof step === "string" ? null : step.photo;
-            return (
-              <div key={i} style={{ marginBottom:12 }}>
-                <div style={{ display:"flex", gap:8, alignItems:"flex-start" }}>
-                  <div style={{
-                    width:20, height:20, borderRadius:"50%",
-                    background:recipe.color, color:"#fff",
-                    display:"flex", alignItems:"center", justifyContent:"center",
-                    fontSize:10, fontWeight:700, flexShrink:0, marginTop:1,
-                    fontFamily:F.ui,
-                  }}>{i+1}</div>
-                  <p style={{ fontSize:12, color:th.bookInk, lineHeight:1.65, margin:0 }}>{text}</p>
-                </div>
-                {photo && (
-                  <div
-                    onClick={() => setLightbox({ photo:"📸", caption:`Passo ${i+1}`, date:"" })}
-                    style={{
-                      marginTop:6, marginLeft:28, height:70, borderRadius:6,
-                      background:`${recipe.color}18`,
-                      display:"flex", alignItems:"center", justifyContent:"center",
-                      fontSize:24, cursor:"pointer", position:"relative",
-                      border:`1px solid ${th.bookBorder}`,
-                    }}
-                  >
-                    📸
-                    <div style={{ position:"absolute", bottom:3, right:6, fontSize:12, opacity:0.4 }}>⤢</div>
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
-
-        {/* Tags */}
-        {recipe.tags && recipe.tags.length > 0 && (
-          <div style={{
-            display:"flex", gap:6, flexWrap:"wrap",
-            marginTop:18, paddingTop:14,
-            borderTop:`1px solid ${th.bookBorder}`,
-          }}>
-            {recipe.tags.map(t => (
-              <span key={t} style={{
-                padding:"3px 10px", borderRadius:12,
-                background:th.appBorder, color:th.bookFaded,
-                fontFamily:F.ui, fontSize:10,
-              }}>{t}</span>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
 // ══════════════════════════════════════════════════════════════
 // SCREEN: RECIPE DETAIL
 // ══════════════════════════════════════════════════════════════
@@ -3115,14 +2530,6 @@ const BookPageView = ({ recipe }) => {
   );
 };
 
-const Pill = ({ icon, label }) => (
-  <span style={{
-    background:"rgba(255,255,255,0.25)", borderRadius:20, padding:"5px 10px",
-    fontFamily:F.ui, fontSize:11, color:"#fff",
-    display:"flex", alignItems:"center", gap:4,
-  }}>{icon} {label}</span>
-);
-
 // ══════════════════════════════════════════════════════════════
 // SCREEN: SCAN — with confidence check + GPT confirmation
 // ══════════════════════════════════════════════════════════════
@@ -3510,13 +2917,6 @@ const ScanScreen = ({ onBack, onSave, onLanding, onRecipes, onBook, onMemories, 
 
 // ── Shared sub-components for ScanScreen ──────────────────────
 
-const ProgressBar = ({ color, duration }) => (
-  <div style={{ width:200, height:4, background:"rgba(255,255,255,0.1)", borderRadius:2, overflow:"hidden" }}>
-    <div style={{ height:"100%", background:color, borderRadius:2, animation:`prog ${duration}ms linear forwards` }}/>
-    <style>{`@keyframes prog{from{transform:translateX(-100%)}to{transform:translateX(0)}}`}</style>
-  </div>
-);
-
 const ScanPreview = ({ ocrData, recipeName, setRecipeName }) => (
   <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
     <div>
@@ -3582,82 +2982,6 @@ const ScanPreviewUncertain = ({ ocrData, recipeName, setRecipeName }) => {
       </div>
       <div style={{ fontFamily:F.ui, fontSize:11, color:"#7A6E5F", textAlign:"center" }}>
         Puoi correggere manualmente oppure lasciare che GPT risolva tutto automaticamente
-      </div>
-    </div>
-  );
-};
-
-const TagSection = ({ selectedTags, onChange }) => (
-  <div>
-    <ScanLabel text="Categoria e tag"/>
-    <TagPicker selectedTags={selectedTags} onChange={onChange}/>
-  </div>
-);
-
-const ScanLabel = ({ text }) => (
-  <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:"#7A6E5F", textTransform:"uppercase", marginBottom:6 }}>{text}</div>
-);
-
-const EmojiColorPicker = ({ emoji, color, onEmoji, onColor }) => {
-  const [activeCategory, setActiveCategory] = useState(EMOJI_CATEGORIES[0].label);
-  const currentEmojis = EMOJI_CATEGORIES.find(c => c.label === activeCategory)?.emojis || [];
-
-  return (
-    <div style={{
-      background:"#F7F2E8", border:`1px solid #EDE6D4`,
-      borderRadius:14, padding:"12px 14px",
-    }}>
-      <ScanLabel text="Scegli icona e colore per la lista"/>
-
-      {/* Preview + color row */}
-      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
-        {/* Live mini-card preview */}
-        <div style={{
-          width:46, height:46, borderRadius:10,
-          background:color, flexShrink:0,
-          display:"flex", alignItems:"center", justifyContent:"center",
-          fontSize:24, boxShadow:`0 3px 10px ${color}55`,
-          transition:"all 0.2s",
-        }}>{emoji}</div>
-        {/* Color dots */}
-        <div style={{ display:"flex", gap:5, flexWrap:"wrap", flex:1 }}>
-          {COLOR_OPTIONS.map(c => (
-            <button key={c} onClick={() => onColor(c)} style={{
-              width:22, height:22, borderRadius:"50%",
-              background:c,
-              border: color===c ? `2.5px solid ${"#2C2416"}` : "2.5px solid transparent",
-              outline: color===c ? "2px solid #fff" : "none", outlineOffset:1,
-              cursor:"pointer", padding:0, transition:"transform 0.1s",
-            }}/>
-          ))}
-        </div>
-      </div>
-
-      {/* Category tabs */}
-      <div style={{ display:"flex", gap:4, overflowX:"auto", marginBottom:8, scrollbarWidth:"none", paddingBottom:2 }}>
-        {EMOJI_CATEGORIES.map(cat => (
-          <button key={cat.label} onClick={() => setActiveCategory(cat.label)} style={{
-            flexShrink:0, padding:"4px 10px", borderRadius:20, border:"none",
-            background: activeCategory===cat.label ? "#2C2416" : "transparent",
-            color: activeCategory===cat.label ? "#fff" : "#7A6E5F",
-            fontFamily:F.ui, fontSize:10, fontWeight:600,
-            cursor:"pointer", whiteSpace:"nowrap",
-          }}>{cat.label}</button>
-        ))}
-      </div>
-
-      {/* Emoji grid for active category */}
-      <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
-        {currentEmojis.map(e => (
-          <button key={e} onClick={() => onEmoji(e)} style={{
-            width:36, height:36, borderRadius:8,
-            background: emoji===e ? color+"22" : "transparent",
-            border:`1.5px solid ${emoji===e ? color : "transparent"}`,
-            cursor:"pointer", fontSize:20,
-            display:"flex", alignItems:"center", justifyContent:"center",
-            transition:"all 0.15s",
-          }}>{e}</button>
-        ))}
       </div>
     </div>
   );
@@ -3991,51 +3315,6 @@ const NewRecipeScreen = ({ onBack, onSave, onLanding, onRecipes, onBook, onMemor
 };
 
 // ── Editable sectioned ingredient list ───────────────────────────
-// ── Input con menu a tendina filtrato mentre scrivi ──
-const AutocompleteInput = ({ value, onChange, suggestions = [], placeholder, wrapperStyle, inputStyle, maxItems = 6 }) => {
-  const th = useTheme();
-  const [open, setOpen] = useState(false);
-  const v = (value || "").trim().toLowerCase();
-  const filtered = (v
-    ? suggestions.filter(s => s.toLowerCase().includes(v) && s.toLowerCase() !== v)
-    : suggestions
-  ).slice(0, maxItems);
-
-  return (
-    <div style={{ position:"relative", ...wrapperStyle }}>
-      <input
-        value={value}
-        onChange={e => { onChange(e.target.value); setOpen(true); }}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
-        placeholder={placeholder}
-        style={{ width:"100%", boxSizing:"border-box", ...inputStyle }}
-      />
-      {open && filtered.length > 0 && (
-        <div style={{
-          position:"absolute", top:"calc(100% + 3px)", left:0, right:0, zIndex:250,
-          background:th.appBg, border:`1.5px solid ${th.appBorder}`, borderRadius:10,
-          maxHeight:150, overflowY:"auto",
-          boxShadow:"0 6px 20px rgba(0,0,0,0.18)",
-        }}>
-          {filtered.map(s => (
-            <button
-              key={s}
-              onMouseDown={e => { e.preventDefault(); onChange(s); setOpen(false); }}
-              style={{
-                display:"block", width:"100%", textAlign:"left",
-                padding:"8px 11px", background:"none", border:"none",
-                borderBottom:`1px solid ${th.appBorder}55`,
-                cursor:"pointer", fontFamily:F.body, fontSize:12.5, color:th.appInk,
-              }}
-            >{s}</button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
 const EditSectionedList = ({ data, color, itemType, onUpdate, nameSuggestions = [], unitSuggestions = DEFAULT_UNIT_SUGGESTIONS }) => {
   const th = useTheme();
   const sections = data;
@@ -4657,30 +3936,6 @@ const EditScreen = ({ recipe, onBack, onSave, extraTagGroups=[], onAddGroup, onA
     </div>
   );
 };
-
-// Small edit helpers
-const EditLabel = ({ text }) => (
-  <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:"#7A6E5F", textTransform:"uppercase", marginBottom:6, marginTop:2 }}>{text}</div>
-);
-const EditField = ({ label, value, onChange, placeholder="" }) => (
-  <div>
-    <EditLabel text={label}/>
-    <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{
-      width:"100%", padding:"10px 14px",
-      border:`1.5px solid #EDE6D4`, borderRadius:10,
-      background:"#F7F2E8", fontFamily:F.body, fontSize:14, color:"#2C2416",
-      outline:"none", boxSizing:"border-box",
-    }}/>
-  </div>
-);
-const EditNumberInput = ({ value, onChange }) => (
-  <input type="number" value={value} onChange={e => onChange(e.target.value)} style={{
-    width:"100%", padding:"10px 10px",
-    border:`1.5px solid #EDE6D4`, borderRadius:10,
-    background:"#F7F2E8", fontFamily:F.ui, fontSize:14, color:"#2C2416",
-    outline:"none", boxSizing:"border-box", textAlign:"center",
-  }}/>
-);
 
 // ══════════════════════════════════════════════════════════════
 // ROOT
@@ -7149,19 +6404,6 @@ const LandingScreen = ({ recipes = [], bookName = "Il mio Ricettario", onBooks, 
 // ══════════════════════════════════════════════════════════════
 // SCREEN: MEMORIES BOOK — all photos, each linked to recipes
 // ══════════════════════════════════════════════════════════════
-// Rende la "foto" di un ricordo: immagine reale (dataURL) o emoji grande
-const MemoryPhoto = ({ mem, height, fontSize = 44, rounded = false }) => {
-  const th = useTheme();
-  if (mem.photoIsImage && mem.photo) {
-    return <img src={mem.photo} alt={mem.caption || "ricordo"} style={{ width:"100%", height, objectFit:"cover", display:"block", borderRadius: rounded ? 12 : 0 }}/>;
-  }
-  return (
-    <div style={{ height, display:"flex", alignItems:"center", justifyContent:"center", fontSize, background:`${th.appAccent}15`, borderRadius: rounded ? 12 : 0 }}>
-      {mem.photo || "📸"}
-    </div>
-  );
-};
-
 // Vista "ricordo aperto" a piena pagina — modalità libro, due ricordi per pagina
 const MemoryOpenPage = ({ mems, linkedFor, onRecipe, th }) => (
   <div style={{ display:"flex", flexDirection:"column", gap:14, padding:"6px 4px" }}>
@@ -7352,113 +6594,6 @@ const MemoriesBookScreen = ({ recipes, onBack, onRecipe, onRecipes, onBook, onAd
 //   onRecipes, onBook, onMemories, onAddRecipe, onAddMemory — nav callbacks
 //   onLanding, onSearch, onFavorites — utility callbacks
 //   showSearch, showFavorites — active states for utility buttons
-
-const NAV_ITEMS = [
-  { id:"recipes",   icon:"🍽️", label:"Ricette" },
-  { id:"memories",  icon:"📒", label:"Ricordi" },
-  { id:"fridge",    icon:"🧊", label:"Frigo" },
-  { id:"shopping",  icon:"🛒", label:"Spesa" },
-  { id:"organize",  icon:<OrganizeIcon/>, label:"Organizza" },
-];
-
-const GlobalNav = ({
-  activeScreen,
-  onRecipes, onBook, onMemories, onAdd, onFridge, onShopping,
-  onLanding, onSearch, onFavorites,
-  showSearch, showFavorites,
-  activeLabel, extraAction, bookView = false, viewToggle = null,
-}) => {
-  const th = useTheme();
-  const navActions = useNavActions();
-
-  // "recipes" e la vista libro condividono la stessa tab attiva (Ricette) e lo stesso banner.
-  const inRecipes = activeScreen === "recipes" || bookView;
-  // Interruttore schede/libro: nel Libro Ricette (recipes/book) o quando fornito esplicitamente (viewToggle)
-  const showViewToggle = activeScreen === "recipes" || bookView || !!viewToggle;
-
-  const handlers = {
-    recipes: () => onRecipes(),
-    book:    () => onBook(),
-    memories:() => onMemories(),
-    fridge:  () => onFridge && onFridge(),
-    shopping:() => onShopping && onShopping(),
-    organize:() => { navActions.onOrganize && navActions.onOrganize(); },
-  };
-
-  return (
-    <div style={{ position:"sticky", top:0, zIndex:100, boxShadow:"0 2px 16px rgba(0,0,0,0.2)" }}>
-      {/* Row 1 — 4 tabs */}
-      <div style={{ display:"flex", background:th.appInk, borderBottom:"1px solid rgba(255,255,255,0.08)" }}>
-        {NAV_ITEMS.map(item => {
-          const active = activeScreen === item.id
-            || (item.id==="recipes" && inRecipes)
-            || (item.id==="add" && ["addRecipe","addMemory","addRecipeHub","new","scan"].includes(activeScreen));
-          return (
-            <button
-              key={item.id}
-              onClick={handlers[item.id]}
-              style={{
-                flex:1, padding:"10px 4px 8px",
-                background: active ? "rgba(255,255,255,0.15)" : "none",
-                border:"none",
-                borderBottom: active ? `2px solid ${th.appAccent2}` : "2px solid transparent",
-                cursor:"pointer",
-                display:"flex", flexDirection:"column", alignItems:"center", gap:2,
-                transition:"all 0.2s",
-              }}
-            >
-              <span style={{ fontSize:item.id==="add" ? 24 : 18, background: item.id==="add" && !active ? `${th.appAccent}55` : "none", borderRadius: item.id==="add" ? "50%" : 0, width: item.id==="add" ? 32 : "auto", height: item.id==="add" ? 32 : "auto", display:"flex", alignItems:"center", justifyContent:"center" }}>{item.icon}</span>
-              <span style={{
-                fontFamily:F.ui, fontSize:9, fontWeight:600,
-                color: active ? th.appAccent2 : "rgba(255,255,255,0.5)",
-                letterSpacing:0.5,
-              }}>{item.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Row 2 — utility bar */}
-      <div style={{
-        display:"flex", alignItems:"center",
-        background:`${th.appInk}ee`,
-        padding:"6px 12px", gap:8,
-      }}>
-        <button onClick={onLanding} style={{
-          background:"rgba(255,255,255,0.1)", border:"none",
-          borderRadius:8, padding:"5px 8px", cursor:"pointer",
-          color:"rgba(255,255,255,0.85)", fontSize:14, flexShrink:0,
-        }}>🏠</button>
-
-        {/* Spaziatore sinistro: 🏠(≈34) + questo ≈ larghezza interruttore(≈62), così il titolo è centrato */}
-        {showViewToggle && <div style={{ width:28, flexShrink:0 }}/>}
-
-        <div style={{
-          flex:1, fontFamily:F.display, fontSize:13, fontStyle:"italic",
-          color:"rgba(255,255,255,0.8)", textAlign:"center",
-        }}>{activeLabel || "Il mio Ricettario"}</div>
-
-        {/* Interruttore schede/libro — posizione fissa all'estrema destra */}
-        {showViewToggle ? (
-          <div style={{ display:"flex", borderRadius:8, overflow:"hidden", border:"1px solid rgba(255,255,255,0.2)", flexShrink:0 }}>
-            <button onClick={viewToggle ? viewToggle.onCards : onRecipes} title="Vista schede" style={{
-              padding:"5px 9px", border:"none", cursor:"pointer", fontSize:13,
-              background: (viewToggle ? !viewToggle.isBook : !bookView) ? th.appAccent : "rgba(255,255,255,0.08)",
-              color: (viewToggle ? !viewToggle.isBook : !bookView) ? "#fff" : "rgba(255,255,255,0.7)",
-            }}>▦</button>
-            <button onClick={viewToggle ? viewToggle.onBook : onBook} title="Sfoglia come libro" style={{
-              padding:"5px 9px", border:"none", cursor:"pointer", fontSize:13,
-              background: (viewToggle ? viewToggle.isBook : bookView) ? th.appAccent : "rgba(255,255,255,0.08)",
-              color: (viewToggle ? viewToggle.isBook : bookView) ? "#fff" : "rgba(255,255,255,0.7)",
-            }}>📖</button>
-          </div>
-        ) : (
-          <div style={{ width:34, flexShrink:0 }}/> // bilancia 🏠 sugli altri schermi
-        )}
-      </div>
-    </div>
-  );
-};
 
 // ══════════════════════════════════════════════════════════════
 // SCREEN: RECIPES — list only, no book mode here
