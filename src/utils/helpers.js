@@ -2,6 +2,7 @@
 // Funzioni pure di calcolo e formattazione, estratte da ricettario-v23.jsx
 // Nessuna di queste usa React o JSX.
 // ══════════════════════════════════════════════════════════════
+import { effectiveEquivalenceKey } from "./aggregates.js";
 
 // "Altro" resta sempre in fondo, anche dopo l'aggiunta di nuove sezioni
 export const sortSectionsAltroLast = (list) => [
@@ -173,12 +174,16 @@ export const macroLine = (v, opts = {}) => {
 // Usa unità dirette (g/kg/ml…) o i fattori delle equivalenze (verso base peso).
 // ml→g approssimato 1:1 (ragionevole per liquidi acquosi). null = non convertibile.
 export const WEIGHT_UNITS = { g:1, kg:1000, ml:1, l:1000, cl:10, dl:100 };
-export const ingredientToGrams = (ing, equivalences = {}, dictIdx = null) => {
+export const ingredientToGrams = (ing, equivalences = {}, dictIdx = null, aggregates = []) => {
   if (ing.qty == null) return null;
   const unit = normUnit(ing.unit);
   if (unit in WEIGHT_UNITS) return ing.qty * WEIGHT_UNITS[unit];
-  // prova con le equivalenze: unità → base, se la base è un'unità di peso
-  const eq = equivalences[resolveIngId(dictIdx, ing.name)];
+  // prova con le equivalenze: unità → base, se la base è un'unità di peso.
+  // Se l'ingrediente appartiene a un aggregato con equivalenze proprie,
+  // quelle vincono (stessa priorità già applicata per la nutrizione).
+  const ingKey = resolveIngId(dictIdx, ing.name);
+  const effKey = effectiveEquivalenceKey(ingKey, aggregates, equivalences);
+  const eq = equivalences[effKey];
   if (eq && eq.base) {
     const base = normUnit(eq.base);
     if (base in WEIGHT_UNITS) {

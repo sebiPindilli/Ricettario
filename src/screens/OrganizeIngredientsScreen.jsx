@@ -7,7 +7,7 @@ import {
   normName, uid, macroLine, resolveIngId, flattenIngredients,
   UNIT_ALIASES, WEIGHT_UNITS, unitLabel, normUnit,
 } from "../utils/helpers.js";
-import { resolveAggregateFor } from "../utils/aggregates.js";
+import { resolveAggregateFor, effectiveCategories } from "../utils/aggregates.js";
 
 // ══════════════════════════════════════════════════════════════
 // SCREEN: ORGANIZZA INGREDIENTI (sotto Svuota Frigo)
@@ -902,7 +902,13 @@ export default function OrganizeIngredientsScreen({
     // nome normalizzato, per non collidere con un ingrediente omonimo),
     // altrimenti l'ID ingrediente come oggi.
     const dataKey = isAgg ? agg.id : name;
-    const cats = isAgg ? (agg.categories || []) : (ingredientCategories[name] || []);
+    // Come per nutrizione/equivalenze: categorie proprie se ci sono,
+    // altrimenti ereditate dall'aggregato di appartenenza (se ne ha).
+    const catsResult = isAgg
+      ? { categories: agg.categories || [], inheritedFrom: null }
+      : effectiveCategories(name, aggregates, ingredientCategories);
+    const cats = catsResult.categories;
+    const catsInheritedFrom = catsResult.inheritedFrom;
     // Se l'ingrediente appartiene a un aggregato che ha una nutrizione
     // propria, quella vince (stessa priorità del calcolo): la card non
     // deve segnalare un falso allarme, ma indicare da dove eredita.
@@ -975,7 +981,9 @@ export default function OrganizeIngredientsScreen({
         {/* Attributi */}
         <div style={{ marginTop:7, display:"flex", flexDirection:"column", gap:3 }}>
           <div style={{ fontFamily:F.ui, fontSize:10.5, color: issueNoCat ? RED : th.appFaded, fontWeight: issueNoCat ? 600 : 400 }}>
-            🏷 {cats.length > 0 ? cats.map(c => { const cc = catOf(c); return cc ? `${cc.emoji} ${cc.label}` : c; }).join(" · ") : "senza categoria — assegnane una"}
+            🏷 {cats.length > 0 ? (
+              <>{catsInheritedFrom && <>eredita da «{catsInheritedFrom.name}» · </>}{cats.map(c => { const cc = catOf(c); return cc ? `${cc.emoji} ${cc.label}` : c; }).join(" · ")}</>
+            ) : "senza categoria — assegnane una"}
           </div>
           <div style={{ fontFamily:F.ui, fontSize:10.5, color: nutri.ok ? th.appFaded : RED, fontWeight: nutri.ok ? 400 : 600 }}>
             🍎 {nutri.ok ? (

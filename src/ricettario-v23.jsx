@@ -831,7 +831,7 @@ const computeRecipeNutrition = (recipe, nutritionMap = {}, equivalences = {}, cu
       details.push({ name: ing.name, status: "unlinked" });
       return;
     }
-    const grams = ingredientToGrams(ing, equivalences, dictIdx);
+    const grams = ingredientToGrams(ing, equivalences, dictIdx, aggregates);
     if (grams == null) {
       excluded.push({ name: ing.name, reason: `unità "${ing.unit || "?"}" non convertibile in grammi` });
       details.push({ name: ing.name, status: "nounit", unit: ing.unit, foodName });

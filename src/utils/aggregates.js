@@ -36,3 +36,20 @@ export const effectiveEquivalenceKey = (ingKey, aggregates, equivalences) => {
   if (agg && equivalences && equivalences[agg.id]) return agg.id;
   return ingKey;
 };
+
+// Categorie: a differenza di nutrizione/equivalenze, quelle di un
+// aggregato non vivono in una mappa condivisa per id ma direttamente
+// su agg.categories, quindi qui non restituiamo una "chiave" ma il
+// risultato già pronto: le categorie proprie dell'ingrediente se le
+// ha, altrimenti quelle ereditate dal suo aggregato (se esiste e ne
+// ha), altrimenti nessuna. inheritedFrom è l'aggregato da cui si
+// eredita (o null), utile per la UI ("eredita da «Nome»").
+export const effectiveCategories = (ingKey, aggregates, ingredientCategories) => {
+  const own = (ingredientCategories && ingredientCategories[ingKey]) || [];
+  if (own.length > 0) return { categories: own, inheritedFrom: null };
+  const agg = resolveAggregateFor(ingKey, aggregates);
+  if (agg && (agg.categories || []).length > 0) {
+    return { categories: agg.categories, inheritedFrom: agg };
+  }
+  return { categories: [], inheritedFrom: null };
+};
