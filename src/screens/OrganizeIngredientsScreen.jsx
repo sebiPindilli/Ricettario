@@ -630,6 +630,9 @@ export default function OrganizeIngredientsScreen({
       setEditing({ ...editing, members: next });
     };
 
+    // Per un aggregato il salvataggio richiede nome e almeno un ingrediente incluso.
+    const canSaveAgg = !isAgg || ((editing.name || "").trim() && (editing.members || []).length > 0);
+
     const save = () => {
       if (isAgg) {
         // salva aggregato
@@ -677,22 +680,27 @@ export default function OrganizeIngredientsScreen({
             </div>
           )}
 
-          {/* Categorie */}
-          <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:8 }}>Categorie (multiple)</div>
-          <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:20 }}>
-            {orderedCats.map(cat => {
-              const sel = currentCats.includes(cat.id);
-              return (
-                <button key={cat.id} onClick={() => toggleCat(cat.id)} style={{
-                  padding:"6px 12px", borderRadius:20,
-                  border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
-                  background: sel ? th.appAccent : "transparent",
-                  color: sel ? "#fff" : th.appFaded,
-                  fontFamily:F.ui, fontSize:11, cursor:"pointer",
-                }}>{cat.emoji} {cat.label}</button>
-              );
-            })}
-          </div>
+          {/* Categorie — solo per il singolo ingrediente: per l'aggregato
+              si gestiscono dalla sua scheda (ItemCard), non da qui */}
+          {!isAgg && (
+            <>
+              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:8 }}>Categorie (multiple)</div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:20 }}>
+                {orderedCats.map(cat => {
+                  const sel = currentCats.includes(cat.id);
+                  return (
+                    <button key={cat.id} onClick={() => toggleCat(cat.id)} style={{
+                      padding:"6px 12px", borderRadius:20,
+                      border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
+                      background: sel ? th.appAccent : "transparent",
+                      color: sel ? "#fff" : th.appFaded,
+                      fontFamily:F.ui, fontSize:11, cursor:"pointer",
+                    }}>{cat.emoji} {cat.label}</button>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
           {/* Composizione aggregato */}
           {isAgg && (
@@ -728,10 +736,12 @@ export default function OrganizeIngredientsScreen({
               fontFamily:F.ui, fontSize:13, fontWeight:600, cursor:"pointer",
             }}>🗑</button>
           )}
-          <button onClick={save} style={{
+          <button onClick={save} disabled={!canSaveAgg} style={{
             flex:1, padding:"14px", borderRadius:12, border:"none",
-            background:th.appAccent, color:"#fff",
-            fontFamily:F.ui, fontSize:14, fontWeight:700, cursor:"pointer",
+            background: canSaveAgg ? th.appAccent : th.appBorder,
+            color: canSaveAgg ? "#fff" : th.appFaded,
+            fontFamily:F.ui, fontSize:14, fontWeight:700,
+            cursor: canSaveAgg ? "pointer" : "default",
           }}>Salva</button>
         </div>
       </div>
@@ -828,9 +838,15 @@ export default function OrganizeIngredientsScreen({
   };
 
   // ── Editor inline: equivalenze ──
-  const EqEditor = ({ name }) => {
-    const found = Array.from(unitsByIng.get(name) || []);
-    const units = found.some(u => u in WEIGHT_UNITS) ? found : ["g", ...found];
+  // Mostra solo le unità realmente usate nel ricettario: per un
+  // ingrediente singolo quelle rilevate in unitsByIng; per un aggregato
+  // l'unione delle unità rilevate per ciascuno dei suoi membri (un
+  // aggregato non compare mai direttamente in una ricetta, quindi non
+  // ha unità proprie da rilevare).
+  const EqEditor = ({ name, isAgg, members }) => {
+    const units = isAgg
+      ? Array.from(new Set((members || []).flatMap(m => Array.from(unitsByIng.get(m) || []))))
+      : Array.from(unitsByIng.get(name) || []);
     const eq = equivalences[name] || {};
     const base = eq.base && units.includes(eq.base) ? eq.base : (units.includes("g") ? "g" : units[0]);
     const factors = eq.factors || {};
@@ -839,18 +855,20 @@ export default function OrganizeIngredientsScreen({
     const save = (patch) => onSaveEquivalence(name, { base, factors, display, ...patch });
     return (
       <div style={{ marginTop:8 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, flexWrap:"wrap" }}>
-          <span style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, textTransform:"uppercase" }}>Unità base</span>
-          {units.map(u => (
-            <button key={u} onClick={() => save({ base:u, factors:{}, display:"separate" })} style={{
-              padding:"4px 10px", borderRadius:14,
-              border:`1.5px solid ${base===u ? th.appAccent : th.appBorder}`,
-              background: base===u ? th.appAccent : "transparent",
-              color: base===u ? "#fff" : th.appFaded,
-              fontFamily:F.ui, fontSize:10.5, cursor:"pointer",
-            }}>{unitLabel(u)}</button>
-          ))}
-        </div>
+        {units.length > 0 && (
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, flexWrap:"wrap" }}>
+            <span style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, textTransform:"uppercase" }}>Unità base</span>
+            {units.map(u => (
+              <button key={u} onClick={() => save({ base:u, factors:{}, display:"separate" })} style={{
+                padding:"4px 10px", borderRadius:14,
+                border:`1.5px solid ${base===u ? th.appAccent : th.appBorder}`,
+                background: base===u ? th.appAccent : "transparent",
+                color: base===u ? "#fff" : th.appFaded,
+                fontFamily:F.ui, fontSize:10.5, cursor:"pointer",
+              }}>{unitLabel(u)}</button>
+            ))}
+          </div>
+        )}
         {others.map(u => (
           <div key={u} style={{ display:"flex", alignItems:"center", gap:6, marginBottom:6, fontFamily:F.ui, fontSize:12, color:th.appInk }}>
             <span style={{ flexShrink:0 }}>1 {unitLabel(u)} =</span>
@@ -870,7 +888,7 @@ export default function OrganizeIngredientsScreen({
           </div>
         ))}
         {others.length === 0 && (
-          <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded }}>Una sola unità in uso: nessuna conversione necessaria.</div>
+          <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded }}>Nessuna unità alternativa usata nel ricettario per questa voce.</div>
         )}
       </div>
     );
@@ -879,16 +897,27 @@ export default function OrganizeIngredientsScreen({
   // ── Scheda unificata (ingrediente o aggregato) ──
   const ItemCard = ({ name, display, isAgg, agg }) => {
     const key = isAgg ? "agg_" + agg.id : name;
+    // Chiave per nutrizione/equivalenze: agg.id per un aggregato (MAI il
+    // nome normalizzato, per non collidere con un ingrediente omonimo),
+    // altrimenti l'ID ingrediente come oggi.
+    const dataKey = isAgg ? agg.id : name;
     const cats = isAgg ? (agg.categories || []) : (ingredientCategories[name] || []);
-    const nutri = !isAgg ? nutriStatusOf(name) : null;
-    const eqS = !isAgg ? eqSummary(name) : null;
+    const nutri = nutriStatusOf(dataKey);
+    const eqS = eqSummary(dataKey);
     const linked = recipesFor(isAgg ? (agg.members || []) : [name]);
     const exp = expanded[key];
     // ── Segnalazioni: dove è utile agire ──
     const RED = "#C4593A";
     const issueNoCat = cats.length === 0;
-    const issueNoNutri = !isAgg && !nutri.ok;
-    const multiUnits = !isAgg && (unitsByIng.get(name)?.size || 0) >= 2;
+    const issueNoNutri = !nutri.ok;
+    // L'alert equivalenze scatta solo se servirebbe davvero una
+    // conversione (2+ unità diverse in uso) e manca. Per un ingrediente
+    // singolo si guardano le sue unità; per un aggregato l'unione delle
+    // unità usate dai suoi membri (stessa logica di EqEditor).
+    const relevantUnits = isAgg
+      ? new Set((agg.members || []).flatMap(m => Array.from(unitsByIng.get(m) || [])))
+      : (unitsByIng.get(name) || new Set());
+    const multiUnits = relevantUnits.size >= 2;
     const issueNoEq = multiUnits && !eqS;
     const hasIssues = issueNoCat || issueNoNutri || issueNoEq;
     const toggleCat = (catId) => {
@@ -942,16 +971,12 @@ export default function OrganizeIngredientsScreen({
           <div style={{ fontFamily:F.ui, fontSize:10.5, color: issueNoCat ? RED : th.appFaded, fontWeight: issueNoCat ? 600 : 400 }}>
             🏷 {cats.length > 0 ? cats.map(c => { const cc = catOf(c); return cc ? `${cc.emoji} ${cc.label}` : c; }).join(" · ") : "senza categoria — assegnane una"}
           </div>
-          {!isAgg && (
-            <div style={{ fontFamily:F.ui, fontSize:10.5, color: nutri.ok ? th.appFaded : RED, fontWeight: nutri.ok ? 400 : 600 }}>
-              🍎 {nutri.ok ? <>{nutri.label}{nutri.auto ? " (auto)" : ""} · <span style={{ opacity:0.8 }}>{macroLine(nutri.values, {fib:false})}</span></> : "non collegato al database valori nutrizionali"}
-            </div>
-          )}
-          {!isAgg && (
-            <div style={{ fontFamily:F.ui, fontSize:10.5, color: issueNoEq ? RED : th.appFaded, fontWeight: issueNoEq ? 600 : 400 }}>
-              ⚖️ {eqS || (issueNoEq ? "più unità in uso senza equivalenze — definiscile" : "nessuna equivalenza definita")}
-            </div>
-          )}
+          <div style={{ fontFamily:F.ui, fontSize:10.5, color: nutri.ok ? th.appFaded : RED, fontWeight: nutri.ok ? 400 : 600 }}>
+            🍎 {nutri.ok ? <>{nutri.label}{nutri.auto ? " (auto)" : ""} · <span style={{ opacity:0.8 }}>{macroLine(nutri.values, {fib:false})}</span></> : "non collegato al database valori nutrizionali"}
+          </div>
+          <div style={{ fontFamily:F.ui, fontSize:10.5, color: issueNoEq ? RED : th.appFaded, fontWeight: issueNoEq ? 600 : 400 }}>
+            ⚖️ {eqS || (issueNoEq ? (isAgg ? "nessuna equivalenza definita — definiscila" : "più unità in uso senza equivalenze — definiscile") : "nessuna equivalenza da definire")}
+          </div>
           <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded }}>
             📖 {linked.length > 0
               ? linked.slice(0, 3).map(r => r.title).join(", ") + (linked.length > 3 ? ` +${linked.length - 3}` : "")
@@ -962,13 +987,13 @@ export default function OrganizeIngredientsScreen({
         {/* Pulsanti modifica */}
         <div style={{ display:"flex", gap:6, marginTop:9, flexWrap:"wrap" }}>
           {attrBtn("🏷 Categorie", "cat")}
-          {!isAgg && attrBtn("🍎 Nutrizione", "nutri")}
-          {!isAgg && attrBtn("⚖️ Equivalenze", "eq")}
+          {attrBtn("🍎 Nutrizione", "nutri")}
+          {attrBtn("⚖️ Equivalenze", "eq")}
         </div>
 
         {exp === "cat" && <CatEditor current={cats} onToggle={toggleCat}/>}
-        {exp === "nutri" && !isAgg && <NutriEditor name={name}/>}
-        {exp === "eq" && !isAgg && <EqEditor name={name}/>}
+        {exp === "nutri" && <NutriEditor name={dataKey}/>}
+        {exp === "eq" && <EqEditor name={dataKey} isAgg={isAgg} members={agg?.members}/>}
         {exp === "rename" && !isAgg && (
           <div style={{ marginTop:8 }}>
             <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:0.5, color:th.appFaded, textTransform:"uppercase", marginBottom:5 }}>Nuovo nome — aggiornato in tutte le ricette</div>
