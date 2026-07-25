@@ -7,6 +7,7 @@ import {
   normName, uid, macroLine, resolveIngId, flattenIngredients,
   UNIT_ALIASES, WEIGHT_UNITS, unitLabel, normUnit,
 } from "../utils/helpers.js";
+import { resolveAggregateFor } from "../utils/aggregates.js";
 
 // ══════════════════════════════════════════════════════════════
 // SCREEN: ORGANIZZA INGREDIENTI (sotto Svuota Frigo)
@@ -902,7 +903,12 @@ export default function OrganizeIngredientsScreen({
     // altrimenti l'ID ingrediente come oggi.
     const dataKey = isAgg ? agg.id : name;
     const cats = isAgg ? (agg.categories || []) : (ingredientCategories[name] || []);
-    const nutri = nutriStatusOf(dataKey);
+    // Se l'ingrediente appartiene a un aggregato che ha una nutrizione
+    // propria, quella vince (stessa priorità del calcolo): la card non
+    // deve segnalare un falso allarme, ma indicare da dove eredita.
+    const ownerAgg = !isAgg ? resolveAggregateFor(name, aggregates) : null;
+    const nutriInheritedFrom = (ownerAgg && nutritionMap[ownerAgg.id]) ? ownerAgg : null;
+    const nutri = nutriStatusOf(nutriInheritedFrom ? nutriInheritedFrom.id : dataKey);
     const eqS = eqSummary(dataKey);
     const linked = recipesFor(isAgg ? (agg.members || []) : [name]);
     const exp = expanded[key];
@@ -972,7 +978,13 @@ export default function OrganizeIngredientsScreen({
             🏷 {cats.length > 0 ? cats.map(c => { const cc = catOf(c); return cc ? `${cc.emoji} ${cc.label}` : c; }).join(" · ") : "senza categoria — assegnane una"}
           </div>
           <div style={{ fontFamily:F.ui, fontSize:10.5, color: nutri.ok ? th.appFaded : RED, fontWeight: nutri.ok ? 400 : 600 }}>
-            🍎 {nutri.ok ? <>{nutri.label}{nutri.auto ? " (auto)" : ""} · <span style={{ opacity:0.8 }}>{macroLine(nutri.values, {fib:false})}</span></> : "non collegato al database valori nutrizionali"}
+            🍎 {nutri.ok ? (
+              nutriInheritedFrom ? (
+                <>eredita da «{nutriInheritedFrom.name}» · <span style={{ opacity:0.8 }}>{macroLine(nutri.values, {fib:false})}</span></>
+              ) : (
+                <>{nutri.label}{nutri.auto ? " (auto)" : ""} · <span style={{ opacity:0.8 }}>{macroLine(nutri.values, {fib:false})}</span></>
+              )
+            ) : "non collegato al database valori nutrizionali"}
           </div>
           <div style={{ fontFamily:F.ui, fontSize:10.5, color: issueNoEq ? RED : th.appFaded, fontWeight: issueNoEq ? 600 : 400 }}>
             ⚖️ {eqS || (issueNoEq ? (isAgg ? "nessuna equivalenza definita — definiscila" : "più unità in uso senza equivalenze — definiscile") : "nessuna equivalenza da definire")}

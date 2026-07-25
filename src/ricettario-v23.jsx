@@ -1101,10 +1101,11 @@ const NutritionCard = ({ recipe, nutritionMap = {}, equivalences = {}, customFoo
   const mappedCount = React.useMemo(() => {
     const dbByName = new Map([...NUTRITION_DB, ...customFoods].map(f => [normName(f.name), f]));
     const idx = ingredientDict ? ingDictIndex(ingredientDict) : null;
-    return flattenIngredients(recipe.ingredients).filter(ing =>
-      nutritionMap[resolveIngId(idx, ing.name)] || dbByName.has(normName(ing.name))
-    ).length;
-  }, [recipe, nutritionMap, customFoods, ingredientDict]);
+    return flattenIngredients(recipe.ingredients).filter(ing => {
+      const key = effectiveNutritionKey(resolveIngId(idx, ing.name), aggregates, nutritionMap);
+      return nutritionMap[key] || dbByName.has(normName(ing.name));
+    }).length;
+  }, [recipe, nutritionMap, customFoods, ingredientDict, aggregates]);
 
   if (nutri.covered === 0 && mappedCount === 0) return null; // nessuna mappatura: nulla da mostrare
 
@@ -1745,8 +1746,10 @@ const RecipeScreen = ({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemo
               (() => {
                 const dbByName = new Map([...NUTRITION_DB, ...customFoods].map(f => [normName(f.name), f]));
                 const idx = ingredientDict ? ingDictIndex(ingredientDict) : null;
-                const anyMapped = flattenIngredients(recipe.ingredients).some(ing =>
-                  nutritionMap[resolveIngId(idx, ing.name)] || dbByName.has(normName(ing.name)));
+                const anyMapped = flattenIngredients(recipe.ingredients).some(ing => {
+                  const key = effectiveNutritionKey(resolveIngId(idx, ing.name), aggregates, nutritionMap);
+                  return nutritionMap[key] || dbByName.has(normName(ing.name));
+                });
                 if (!anyMapped) {
                   return (
                     <div style={{ textAlign:"center", padding:"30px 20px", color:th.appFaded }}>
