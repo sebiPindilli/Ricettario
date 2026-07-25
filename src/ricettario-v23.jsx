@@ -1,0 +1,9804 @@
+import React, { useState, useRef, useEffect } from "react";
+
+// ── Design tokens ──────────────────────────────────────────────
+const T = {
+  // App UI (warm ivory shell)
+  ivory:      "#F7F2E8",
+  ivoryDark:  "#EDE6D4",
+  paper:      "#FAF7F0",
+  ink:        "#2C2416",
+  inkFaded:   "#7A6E5F",
+  terracotta: "#C4593A",
+  sage:       "#6B8C6E",
+  gold:       "#B8973A",
+  cream:      "#F0E8D0",
+  shadow:     "rgba(44,36,22,0.13)",
+  // Book mode (faithful to the real book)
+  bookBg:     "#FFFFFF",
+  bookText:   "#1A1A1A",
+  bookMeta:   "#444444",
+  bookNote:   "#555555",
+};
+
+const F = {
+  display: "'Georgia','Times New Roman',serif",
+  body:    "'Georgia',serif",
+  ui:      "'Helvetica Neue',Arial,sans-serif",
+  book:    "'Arial','Helvetica',sans-serif",
+};
+
+// ── Sample data ────────────────────────────────────────────────
+
+// ── Macro sections ────────────────────────────────────────────
+const MACRO_SECTIONS = [
+  { id:"basi",   label:"Preparazioni Base", emoji:"🧱", desc:"Salse, brodi, impasti e tecniche fondamentali" },
+  { id:"salati", label:"Salati",            emoji:"🍝", desc:"Primi, secondi, contorni e antipasti" },
+  { id:"dolci",  label:"Dolci",             emoji:"🍰", desc:"Torte, biscotti, dessert e lievitati" },
+  { id:"altro",  label:"Altro",             emoji:"📦", desc:"Ricette senza sezione specifica" },
+];
+
+// "Altro" resta sempre in fondo, anche dopo l'aggiunta di nuove sezioni
+const sortSectionsAltroLast = (list) => [
+  ...list.filter(s => s.id !== "altro"),
+  ...list.filter(s => s.id === "altro"),
+];
+
+// Icone per sezioni e categorie personalizzate
+const PICKER_EMOJIS = [
+  "🧱","🍝","🍰","📦","🥘","🍲","🥗","🍕","🍔","🥪","🌮","🍜",
+  "🍛","🍤","🥧","🍮","🍩","🧁","🍪","🥐","🥖","🫕","🍷","🍹",
+  "☕","🍵","🧃","🥤","🍭","🍬","🎂","🍾","🥂","🧊","🔥","⭐",
+];
+
+// ── Categorie ingredienti (per Svuota Frigo) ───────────────────
+// Ogni ingrediente può appartenere a più categorie.
+const INGREDIENT_CATEGORIES = [
+  { id:"base",      label:"Ingredienti base",              emoji:"🧂" },
+  { id:"cereali",   label:"Cereali e tuberi",              emoji:"🌾" },
+  { id:"ortofrutta",label:"Frutta e ortaggi",              emoji:"🥕" },
+  { id:"proteine",  label:"Carne, pesce, uova",            emoji:"🥩" },
+  { id:"latticini", label:"Latte e derivati",              emoji:"🧀" },
+  { id:"legumi",    label:"Legumi",                        emoji:"🫘" },
+  { id:"grassi",    label:"Grassi e oli",                  emoji:"🫒" },
+  { id:"spezie",    label:"Spezie, erbe aromatiche e aromi",emoji:"🌿" },
+  { id:"alcolici",  label:"Alcolici",                      emoji:"🍷" },
+  { id:"cacao",     label:"Cacao e cioccolato",            emoji:"🍫" },
+  { id:"altro",     label:"Altro",                         emoji:"📦" },
+];
+
+// "Ingredienti base" resta sempre in cima, "Altro" sempre in fondo
+const sortCategoriesAltroLast = (list) => [
+  ...list.filter(c => c.id === "base"),
+  ...list.filter(c => c.id !== "base" && c.id !== "altro"),
+  ...list.filter(c => c.id === "altro"),
+];
+
+// ── Structured tag system ──────────────────────────────────────
+const TAG_GROUPS = [
+  {
+    group:"Tipo di cibo",
+    tags:["Vegetariano","Vegano","Carne","Pesce","Uova e latticini","Pasta","Riso","Legumi","Zuppe"],
+  },
+  {
+    group:"Occasione",
+    tags:["Quotidiano","Cena tra amici","Occasioni speciali","Pranzo domenicale","Buffet","Picnic","Natale","Pasqua"],
+  },
+  {
+    group:"Stagione",
+    tags:["Primavera","Estate","Autunno","Inverno","Tutto l'anno"],
+  },
+  {
+    group:"Metodo di cottura",
+    tags:["Forno","Padella","Pentola","Vapore","Crudo","Fritta","Grigliata"],
+  },
+  {
+    group:"Difficoltà",
+    tags:["Semplice","Media","Elaborata"],
+  },
+  {
+    group:"Tempo",
+    tags:["Meno di 30 min","30-60 min","Più di 1 ora"],
+  },
+  {
+    group:"Origine",
+    tags:["Italiana","Regionale","Internazionale","Di famiglia"],
+  },
+  {
+    group:"Altro",
+    tags:["Classici","Senza glutine","Senza lattosio","Light","Avanzato","Bimby"],
+  },
+];
+
+const ALL_PRESET_TAGS = TAG_GROUPS.flatMap(g => g.tags);
+
+
+// Mappature nutrizionali ed equivalenze precaricate per le ricette demo
+const INITIAL_NUTRITION_MAP = {
+  "farina": { foodId:"farina_00" },
+  "cioccolato fondente 70%": { foodId:"cioccolato_fondente" },
+  "zucchero semolato": { foodId:"zucchero" },
+  "zucchero di canna grezzo": { foodId:"zucchero_canna" },
+  "burro": { foodId:"burro" },
+  "uova": { foodId:"uova" },
+  "lievito chimico": { foodId:"lievito_chimico" },
+  "sale": { foodId:"sale" },
+  "vaniglia": { foodId:"vaniglia" },
+  "patate": { foodId:"patate" },
+  "prezzemolo": { foodId:"prezzemolo" },
+  "olio extravergine": { foodId:"olio_evo" },
+  "olio evo": { foodId:"olio_evo" },
+  "aglio": { foodId:"aglio" },
+  "pepe": { foodId:"pepe" },
+  "pepe nero in grani": { foodId:"pepe" },
+  "melanzane": { foodId:"melanzane" },
+  "pecorino": { foodId:"pecorino" },
+  "pan grattato": { foodId:"pangrattato" },
+  "menta": { foodId:"menta" },
+  "basilico": { foodId:"basilico" },
+  "carne macinata mista": { foodId:"macinato_misto" },
+  "cipolla dorata": { foodId:"cipolla" },
+  "cipolla": { foodId:"cipolla" },
+  "carote": { foodId:"carote" },
+  "sedano": { foodId:"sedano" },
+  "vino rosso": { foodId:"vino_rosso" },
+  "pomodori pelati": { foodId:"pomodori_pelati" },
+  "mele golden": { foodId:"mele" },
+  "zucchero": { foodId:"zucchero" },
+  "olio di semi": { foodId:"olio_semi" },
+  "lievito": { foodId:"lievito_chimico" },
+  "cannella": { foodId:"cannella" },
+  "buccia di limone": { foodId:"limoni" },
+  "pollo intero": { foodId:"pollo_intero" },
+  "rosmarino fresco": { foodId:"rosmarino" },
+  "vino bianco": { foodId:"vino_bianco" },
+  "brodo di pollo": { foodId:"brodo_carne" },
+  "timo fresco": { foodId:"timo" },
+  "sale grosso": { foodId:"sale" },
+  "zafferano": { foodId:"zafferano" },
+  "riso carnaroli": { foodId:"riso" },
+  "parmigiano reggiano": { foodId:"parmigiano" },
+  "vino bianco secco": { foodId:"vino_bianco" },
+  "brodo di carne": { foodId:"brodo_carne" },
+};
+const INITIAL_EQUIVALENCES = {
+  "uova":             { base:"g", factors:{ "": 60 },        display:"separate" },   // 1 uovo ≈ 60 g
+  "olio extravergine":{ base:"g", factors:{ cucchiaio: 10 }, display:"separate" },
+  "olio evo":         { base:"g", factors:{ cucchiaio: 10 }, display:"separate" },
+  "sale":             { base:"g", factors:{ cucchiaino: 6 }, display:"separate" },
+  "pan grattato":     { base:"g", factors:{ cucchiaio: 8 },  display:"separate" },
+  "farina":           { base:"g", factors:{ cucchiaio: 10 }, display:"separate" },
+  "aglio":            { base:"g", factors:{ spicchio: 5 },   display:"separate" },
+  "sedano":           { base:"g", factors:{ coste: 40 },     display:"separate" },
+  "melanzane":        { base:"g", factors:{ "": 300 },       display:"separate" },  // 1 melanzana media
+  "cipolla dorata":   { base:"g", factors:{ "": 100 },       display:"separate" },
+  "cipolla":          { base:"g", factors:{ "": 100 },       display:"separate" },
+  "carote":           { base:"g", factors:{ "": 80 },        display:"separate" },
+  "mele golden":      { base:"g", factors:{ "": 180 },       display:"separate" },
+  "lievito":          { base:"g", factors:{ bustina: 16 },   display:"separate" },
+  "zafferano":        { base:"g", factors:{ bustina: 0.15 }, display:"separate" },
+  "pollo intero":     { base:"g", factors:{ "": 1500 },      display:"separate" },
+  "patate":           { base:"g", factors:{ "": 90 },        display:"separate" },
+  "prezzemolo":       { base:"g", factors:{ "": 20 },        display:"separate" },  // 1 mazzetto
+};
+
+const RECIPES = [
+  {
+    id:1, title:"Brownies", category:"Dolci", macroSection:"dolci",
+    tags:["Dolci","Uova e latticini","Occasioni speciali","Forno","Elaborata","Di famiglia"],
+    prepTime:20, cookTime:35, servings:16,
+    source:"Sarah Carey", sourceUrl:"",
+    note:"Non è assolutamente necessario l'utilizzo di un'impastatrice. In superficie i brownies possono essere cosparsi con un topping di cioccolato, frutta secca o frutta fresca. L'accostamento ideale è il gelato.",
+    ingredients:[
+      { name:"Farina", qty:100, unit:"g", note:"possibilmente per dolci" },
+      { name:"Cioccolato Fondente 70%", qty:150, unit:"g" },
+      { name:"Zucchero Semolato", qty:100, unit:"g" },
+      { name:"Zucchero di Canna grezzo", qty:100, unit:"g" },
+      { name:"Burro", qty:115, unit:"g" },
+      { name:"Uova", qty:2, unit:"" },
+      { name:"Lievito chimico", qty:5, unit:"g" },
+      { name:"Sale", qty:0.5, unit:"cucchiaini" },
+      { name:"Vaniglia", qty:null, unit:"" },
+    ],
+    steps:["Fondere al microonde il burro, aggiungere il cioccolato tritato e sciogliere anch'esso.","Introdurre i due tipi di zucchero ed emulsionare bene.","A temperatura abbassata, aggiungere le uova sbattute e incorporarle bene.","Aggiungere i restanti ingredienti e omogeneizzare.","Versare in tortiera 20cm con carta forno, infornare a 170° per 35 min.","Tagliare a quadratini quando intiepidito."],
+    color:"#8B6046", emoji:"🍫", dishPhoto:null, favorite:false,
+    memories:[
+      { id:1, photo:"🍫", caption:"Prima volta — Natale 2023", story:"Le abbiamo fatte insieme la sera della vigilia, con la neve fuori. Bruciacchiate ai bordi ma buonissime.", date:"25 dic 2023", dateISO:"2023-12-25", recipeIds:[1] },
+      { id:2, photo:"🎉", caption:"Compleanno di Luca", date:"14 mar 2024", dateISO:"2024-03-14", recipeIds:[1] },
+    ],
+  },
+  {
+    id:2, title:"Patate al Prezzemolo", category:"Contorni", macroSection:"salati",
+    tags:["Vegetariano","Contorni","Quotidiano","Padella","Semplice","Meno di 30 min"],
+    prepTime:20, cookTime:20, servings:4,
+    source:"", sourceUrl:"",
+    note:"Si può anche passare le patate per 10 min sotto il grill del forno per renderle più croccanti.",
+    ingredients:[
+      { name:"Patate", qty:800, unit:"g", note:"a cubetti con la buccia" },
+      { name:"Prezzemolo", qty:1, unit:"", note:"un mazzetto, tritato" },
+      { name:"Olio extravergine", qty:3, unit:"cucchiai" },
+      { name:"Aglio", qty:1, unit:"spicchi", note:"tritato" },
+      { name:"Sale", qty:null, unit:"q.b." },
+      { name:"Pepe", qty:null, unit:"q.b." },
+    ],
+    steps:["Bollire le patate in acqua salata 6/7 min.","Mescolare prezzemolo, olio, aglio e pepe.","Scolare le patate e scaldarle in padella con il condimento.","Sigillare su ogni lato 2-3 min, spolverare con pepe e sale."],
+    color:"#6B8C6E", emoji:"🥬", dishPhoto:null, favorite:false,
+    memories:[],
+  },
+  {
+    id:3, title:"Polpette di Melanzane di Pluto", category:"Secondi", macroSection:"salati",
+    tags:["Vegetariano","Forno","Cena tra amici","Elaborata","Italiana"],
+    prepTime:30, cookTime:25, servings:8,
+    source:"", sourceUrl:"",
+    note:"Le dosi sono approssimative perché facemmo tutto ad occhio e a gusto.",
+    ingredients:[
+      { name:"Melanzane", qty:3, unit:"", note:"tonde di medie dimensioni" },
+      { name:"Pecorino", qty:100, unit:"g", note:"grattugiato" },
+      { name:"Uova", qty:3, unit:"" },
+      { name:"Pan grattato", qty:8, unit:"cucchiai", note:"7-8 secondo consistenza" },
+      { name:"Menta", qty:null, unit:"" },
+      { name:"Basilico", qty:null, unit:"" },
+      { name:"Pepe", qty:null, unit:"" },
+      { name:"Olio EVO", qty:null, unit:"", note:"da spennellare" },
+    ],
+    steps:["Tagliare le melanzane a cubetti da 1cm, bollire 5 min in acqua salata.","Scolare e lasciare in scolapasta con sale per perdere l'acqua.","Unire agli altri ingredienti tranne il pan grattato, aggiungere gradualmente.","Formare polpette e spennellare con olio.","Infornare a 185° per 25/30 min."],
+    color:"#C4593A", emoji:"🍆", dishPhoto:null, favorite:true,
+    memories:[{ id:1, photo:"🌿", caption:"Estate in campagna con gli amici", date:"10 ago 2024", dateISO:"2024-08-10", recipeIds:[3] }],
+  },
+  {
+    id:4, title:"Ragù della Nonna", category:"Primi", macroSection:"salati",
+    tags:["Carne","Pasta","Pranzo domenicale","Pentola","Più di 1 ora","Di famiglia","Classici"],
+    prepTime:30, cookTime:180, servings:6,
+    source:"Nonna Maria", sourceUrl:"",
+    note:"La nonna aggiungeva sempre un pizzico di noce moscata e lasciava andare a fuoco bassissimo.",
+    ingredients:[
+      { name:"Carne macinata mista", qty:500, unit:"g" },
+      { name:"Cipolla dorata", qty:1, unit:"" },
+      { name:"Carote", qty:2, unit:"" },
+      { name:"Sedano", qty:2, unit:"coste" },
+      { name:"Vino rosso", qty:200, unit:"ml" },
+      { name:"Pomodori pelati", qty:400, unit:"g" },
+      { name:"Olio EVO", qty:null, unit:"q.b." },
+      { name:"Sale", qty:null, unit:"q.b." },
+      { name:"Pepe", qty:null, unit:"q.b." },
+    ],
+    steps:["Soffriggere cipolla, carote e sedano in olio 10 min.","Rosolare la carne a fuoco alto.","Sfumare con il vino rosso.","Aggiungere i pomodori pelati.","Cuocere a fuoco lento coperto per 2 ore.","Aggiustare di sale e pepe."],
+    color:"#9B5E3A", emoji:"🍝", dishPhoto:null, favorite:true,
+    memories:[
+      { id:1, photo:"👨‍👩‍👦", caption:"Domenica in famiglia", date:"3 nov 2024", dateISO:"2024-11-03", recipeIds:[4] },
+      { id:2, photo:"❄️", caption:"Vigilia di Natale", date:"24 dic 2024", dateISO:"2024-12-24", recipeIds:[4] },
+    ],
+  },
+  {
+    id:5, title:"Torta di Mele", category:"Dolci", macroSection:"dolci",
+    tags:["Dolci","Vegetariano","Forno","Autunno","Media","Quotidiano"],
+    prepTime:20, cookTime:40, servings:8,
+    source:"", sourceUrl:"",
+    note:"Ottima tiepida con mascarpone o gelato alla vaniglia.",
+    ingredients:[
+      { name:"Mele Golden", qty:4, unit:"" },
+      { name:"Farina", qty:200, unit:"g" },
+      { name:"Zucchero", qty:150, unit:"g" },
+      { name:"Uova", qty:3, unit:"" },
+      { name:"Olio di semi", qty:100, unit:"ml" },
+      { name:"Lievito", qty:1, unit:"bustine" },
+      { name:"Cannella", qty:null, unit:"q.b." },
+      { name:"Buccia di limone", qty:null, unit:"", note:"grattugiata" },
+    ],
+    steps:["Sbucciare e tagliare le mele a fette.","Mescolare uova, zucchero e olio.","Aggiungere farina e lievito setacciati.","Incorporare mele e cannella.","Versare nello stampo imburrato.","Cuocere a 180° per 40 min."],
+    color:"#B8973A", emoji:"🍎", dishPhoto:null, favorite:false,
+    memories:[],
+  },
+  {
+    id:6, title:"Pollo Arrosto con Salsa", category:"Secondi", macroSection:"salati",
+    tags:["Carne","Forno","Pranzo domenicale","Elaborata","Più di 1 ora","Classici"],
+    prepTime:30, cookTime:90, servings:4,
+    source:"", sourceUrl:"",
+    note:"Il segreto è marinare il pollo almeno 2 ore prima.",
+    ingredients:[
+      { section:"Pollo", items:[
+        { name:"Pollo intero", qty:1, unit:"", note:"~1,5 kg" },
+        { name:"Rosmarino fresco", qty:null, unit:"" },
+        { name:"Aglio", qty:4, unit:"spicchi" },
+        { name:"Olio EVO", qty:3, unit:"cucchiai" },
+        { name:"Sale", qty:null, unit:"q.b." },
+        { name:"Pepe", qty:null, unit:"q.b." },
+      ]},
+      { section:"Salsa al vino", items:[
+        { name:"Fondo di cottura", qty:null, unit:"" },
+        { name:"Vino bianco", qty:150, unit:"ml" },
+        { name:"Farina", qty:1, unit:"cucchiai" },
+        { name:"Brodo di pollo", qty:null, unit:"q.b." },
+      ]},
+      { section:"Contorno", items:[
+        { name:"Patate", qty:600, unit:"g" },
+        { name:"Timo fresco", qty:null, unit:"" },
+        { name:"Olio EVO", qty:null, unit:"q.b." },
+        { name:"Sale grosso", qty:null, unit:"q.b." },
+      ]},
+    ],
+    steps:[
+      { section:"Preparazione pollo", items:[
+        { text:"Massaggiare il pollo con olio, sale, pepe e rosmarino.", photo:null },
+        { text:"Inserire l'aglio nella cavità e legare le cosce.", photo:null },
+        { text:"Infornare a 200° per 80-90 min, irrorando ogni 20 min.", photo:null },
+      ]},
+      { section:"Salsa", items:[
+        { text:"Deglassare la teglia con il vino bianco.", photo:null },
+        { text:"Aggiungere farina e brodo fino alla consistenza voluta.", photo:null },
+        { text:"Filtrare e aggiustare di sale.", photo:null },
+      ]},
+      { section:"Patate", items:[
+        { text:"Condire le patate a spicchi con olio, timo e sale grosso.", photo:null },
+        { text:"Cuocere in forno con il pollo negli ultimi 40 min.", photo:null },
+      ]},
+    ],
+    color:"#9B5E3A", emoji:"🍗", dishPhoto:null, favorite:false,
+    memories:[],
+  },
+  {
+    id:7, title:"Brodo di Pollo", category:"Basi", macroSection:"basi",
+    tags:["Carne","Pentola","Più di 1 ora","Quotidiano","Di famiglia"],
+    prepTime:10, cookTime:120, servings:8,
+    source:"", sourceUrl:"",
+    note:"Si conserva in frigo fino a 5 giorni o si congela in porzioni.",
+    ingredients:[
+      { name:"Pollo intero", qty:1, unit:"", note:"anche solo carcassa" },
+      { name:"Carote", qty:2, unit:"" },
+      { name:"Sedano", qty:2, unit:"coste" },
+      { name:"Cipolla", qty:1, unit:"" },
+      { name:"Pepe nero in grani", qty:null, unit:"", note:"qualche grano" },
+      { name:"Sale grosso", qty:null, unit:"q.b." },
+      { name:"Acqua fredda", qty:null, unit:"q.b." },
+    ],
+    steps:["Mettere tutti gli ingredienti in una pentola grande con acqua fredda.","Portare a ebollizione e schiumare.","Abbassare il fuoco e cuocere coperto per 2 ore.","Filtrare con un colino fine.","Aggiustare di sale e far raffreddare prima di sgrassare."],
+    color:"#B8973A", emoji:"🍲", dishPhoto:null, favorite:false,
+    memories:[],
+  },
+];
+
+// ── Helpers ────────────────────────────────────────────────────
+
+// ── Book themes ────────────────────────────────────────────────
+const BOOK_THEMES = [
+  { id:"classic",    name:"Classico",      desc:"Il tuo raccoglitore originale",   preview:"⬛",
+    coverBg:"linear-gradient(160deg,#2e2e2e 0%,#1a1a1a 45%,#252525 100%)", coverText:"rgba(255,255,255,0.88)", coverAccent:"rgba(184,151,58,0.5)", spineColor:"rgba(255,255,255,0.05)", pageColor:"#f5f5f5",
+    appBg:"#FAF7F0", appCard:"#F7F2E8", appBorder:"#EDE6D4", appInk:"#2C2416", appFaded:"#7A6E5F", appAccent:"#C4593A", appAccent2:"#B8973A",
+    bookBg:"#FFFFFF", bookBorder:"#ddd", bookInk:"#1A1A1A", bookFaded:"#555", bookNote:"#f5f5f5", bookNoteBorder:"#ccc" },
+  { id:"linen",      name:"Lino Grezzo",   desc:"Tessuto naturale color sabbia",   preview:"🟫",
+    coverBg:"linear-gradient(160deg,#c8b89a 0%,#a89070 45%,#b8a080 100%)", coverText:"rgba(44,28,10,0.9)", coverAccent:"rgba(100,70,30,0.5)", spineColor:"rgba(0,0,0,0.08)", pageColor:"#faf6ef",
+    appBg:"#F5EFE3", appCard:"#EDE4D2", appBorder:"#D9CDB8", appInk:"#3A2810", appFaded:"#7A6040", appAccent:"#8B5A2B", appAccent2:"#A07840",
+    bookBg:"#FDFAF4", bookBorder:"#D9CDB8", bookInk:"#3A2810", bookFaded:"#7A6040", bookNote:"#EDE4D2", bookNoteBorder:"#C8B898" },
+  { id:"forest",     name:"Verde Foresta", desc:"Eleganza botanica",               preview:"🟩",
+    coverBg:"linear-gradient(160deg,#2d4a2d 0%,#1a3020 45%,#253d25 100%)", coverText:"rgba(220,240,220,0.9)", coverAccent:"rgba(140,200,100,0.4)", spineColor:"rgba(255,255,255,0.04)", pageColor:"#f4f9f4",
+    appBg:"#F0F7F0", appCard:"#E4F0E4", appBorder:"#C8DCC8", appInk:"#1A301A", appFaded:"#4A6A4A", appAccent:"#2D6A2D", appAccent2:"#5A8C3A",
+    bookBg:"#F8FCF8", bookBorder:"#C8DCC8", bookInk:"#1A301A", bookFaded:"#4A6A4A", bookNote:"#E4F0E4", bookNoteBorder:"#A8C8A8" },
+  { id:"bordeaux",   name:"Bordeaux",      desc:"Caldo e sofisticato",             preview:"🟥",
+    coverBg:"linear-gradient(160deg,#5c1a1a 0%,#3d0f0f 45%,#4a1515 100%)", coverText:"rgba(255,230,220,0.9)", coverAccent:"rgba(200,120,80,0.5)", spineColor:"rgba(255,255,255,0.04)", pageColor:"#fff8f6",
+    appBg:"#FDF5F3", appCard:"#F5E8E4", appBorder:"#E0C8C0", appInk:"#3A0F0F", appFaded:"#7A4A40", appAccent:"#8B1A1A", appAccent2:"#C87850",
+    bookBg:"#FFFAF8", bookBorder:"#E0C8C0", bookInk:"#3A0F0F", bookFaded:"#7A4A40", bookNote:"#F5E8E4", bookNoteBorder:"#C8A090" },
+  { id:"navy",       name:"Blu Notte",     desc:"Classico marinaro",               preview:"🟦",
+    coverBg:"linear-gradient(160deg,#0f1f3d 0%,#071428 45%,#0d1a35 100%)", coverText:"rgba(200,220,255,0.9)", coverAccent:"rgba(100,150,220,0.45)", spineColor:"rgba(255,255,255,0.04)", pageColor:"#f5f8ff",
+    appBg:"#F0F4FF", appCard:"#E4ECFF", appBorder:"#C0D0F0", appInk:"#071428", appFaded:"#3A5080", appAccent:"#1A3A7A", appAccent2:"#3A60B0",
+    bookBg:"#F8FAFF", bookBorder:"#C0D0F0", bookInk:"#071428", bookFaded:"#3A5080", bookNote:"#E4ECFF", bookNoteBorder:"#A0B8E0" },
+  { id:"rose",       name:"Rosa Antico",   desc:"Delicato e romantico",            preview:"🩷",
+    coverBg:"linear-gradient(160deg,#8b4a5c 0%,#6b2a3c 45%,#7d3a4e 100%)", coverText:"rgba(255,230,235,0.9)", coverAccent:"rgba(220,150,170,0.5)", spineColor:"rgba(255,255,255,0.05)", pageColor:"#fff5f7",
+    appBg:"#FFF0F4", appCard:"#F8E4EC", appBorder:"#E8C8D4", appInk:"#3A1020", appFaded:"#7A4A58", appAccent:"#8B2A44", appAccent2:"#C87890",
+    bookBg:"#FFFAFC", bookBorder:"#E8C8D4", bookInk:"#3A1020", bookFaded:"#7A4A58", bookNote:"#F8E4EC", bookNoteBorder:"#D8A8B8" },
+  { id:"marble",     name:"Marmo Bianco",  desc:"Minimal e raffinato",             preview:"🤍",
+    coverBg:"linear-gradient(135deg,#f0ece8 0%,#d8d0c8 30%,#e8e0d8 60%,#c8c0b8 100%)", coverText:"rgba(40,35,30,0.85)", coverAccent:"rgba(80,70,60,0.3)", spineColor:"rgba(0,0,0,0.06)", pageColor:"#fdfcfb",
+    appBg:"#FAFAF8", appCard:"#F5F3F0", appBorder:"#E5E0D8", appInk:"#282520", appFaded:"#6A6560", appAccent:"#4A4540", appAccent2:"#8A8070",
+    bookBg:"#FEFEFE", bookBorder:"#E5E0D8", bookInk:"#282520", bookFaded:"#6A6560", bookNote:"#F5F3F0", bookNoteBorder:"#D0C8C0" },
+  { id:"terracotta", name:"Terracotta",    desc:"Caldo come la cucina italiana",   preview:"🟧",
+    coverBg:"linear-gradient(160deg,#a0522d 0%,#7a3a1a 45%,#8b4820 100%)", coverText:"rgba(255,240,225,0.92)", coverAccent:"rgba(230,180,100,0.5)", spineColor:"rgba(255,255,255,0.06)", pageColor:"#fff9f4",
+    appBg:"#FFF5EC", appCard:"#F8E8D8", appBorder:"#E8CDB0", appInk:"#3A1A08", appFaded:"#7A4A28", appAccent:"#A0522D", appAccent2:"#C88040",
+    bookBg:"#FFFCF8", bookBorder:"#E8CDB0", bookInk:"#3A1A08", bookFaded:"#7A4A28", bookNote:"#F8E8D8", bookNoteBorder:"#D8B890" },
+  { id:"lavender",   name:"Lavanda",       desc:"Provenzale e aromatico",          preview:"🟣",
+    coverBg:"linear-gradient(160deg,#5a4a7a 0%,#3d2f5c 45%,#4e3f6e 100%)", coverText:"rgba(235,225,255,0.92)", coverAccent:"rgba(180,150,230,0.5)", spineColor:"rgba(255,255,255,0.05)", pageColor:"#faf8ff",
+    appBg:"#F5F0FF", appCard:"#EDE4FF", appBorder:"#D4C4F0", appInk:"#250F50", appFaded:"#5A4A80", appAccent:"#5A3A9A", appAccent2:"#8060C0",
+    bookBg:"#FBF8FF", bookBorder:"#D4C4F0", bookInk:"#250F50", bookFaded:"#5A4A80", bookNote:"#EDE4FF", bookNoteBorder:"#B8A0D8" },
+  { id:"midnight",   name:"Mezzanotte",    desc:"Profondo e misterioso",           preview:"🌑",
+    coverBg:"linear-gradient(160deg,#0a0a1a 0%,#050510 45%,#080818 100%)", coverText:"rgba(180,180,255,0.85)", coverAccent:"rgba(100,100,220,0.4)", spineColor:"rgba(255,255,255,0.03)", pageColor:"#f8f8ff",
+    appBg:"#F0F0FF", appCard:"#E4E4F8", appBorder:"#C8C8E8", appInk:"#08081A", appFaded:"#404070", appAccent:"#2020A0", appAccent2:"#5050C0",
+    bookBg:"#FAFAFF", bookBorder:"#C8C8E8", bookInk:"#08081A", bookFaded:"#404070", bookNote:"#E4E4F8", bookNoteBorder:"#A8A8D0" },
+  { id:"olive",      name:"Verde Oliva",   desc:"Mediterraneo e rustico",          preview:"🫒",
+    coverBg:"linear-gradient(160deg,#4a4a1a 0%,#2e2e0a 45%,#3d3d12 100%)", coverText:"rgba(235,235,180,0.9)", coverAccent:"rgba(180,180,80,0.45)", spineColor:"rgba(255,255,255,0.04)", pageColor:"#fafdf0",
+    appBg:"#F5F8E8", appCard:"#ECF2D8", appBorder:"#D4E0B0", appInk:"#202808", appFaded:"#5A6030", appAccent:"#4A5818", appAccent2:"#7A8830",
+    bookBg:"#FDFFF8", bookBorder:"#D4E0B0", bookInk:"#202808", bookFaded:"#5A6030", bookNote:"#ECF2D8", bookNoteBorder:"#B8CC88" },
+  { id:"cream",      name:"Crema & Oro",   desc:"Luminoso e prezioso",             preview:"🌟",
+    coverBg:"linear-gradient(160deg,#c8a84b 0%,#9a7a2a 45%,#b8982e 100%)", coverText:"rgba(255,250,220,0.95)", coverAccent:"rgba(255,240,150,0.5)", spineColor:"rgba(255,255,255,0.08)", pageColor:"#fffdf0",
+    appBg:"#FFFCE8", appCard:"#FFF5C8", appBorder:"#E8D890", appInk:"#2A2000", appFaded:"#6A5820", appAccent:"#8A6800", appAccent2:"#C0A030",
+    bookBg:"#FFFEF5", bookBorder:"#E8D890", bookInk:"#2A2000", bookFaded:"#6A5820", bookNote:"#FFF5C8", bookNoteBorder:"#D0B860" },
+];
+
+
+// ── Subsection data helpers ────────────────────────────────────
+// ingredients and steps can be either:
+//   flat:  ["item1", "item2", ...]
+//   sectioned: [{ section:"Nome", items:["item1","item2"] }, ...]
+//
+// Steps items can be strings or {text, photo}
+
+const isSectioned = (arr) =>
+  Array.isArray(arr) && arr.length > 0 && typeof arr[0] === "object" && "section" in arr[0];
+
+// Normalize to sectioned format for editing
+const toSectioned = (arr) => {
+  if (!arr || arr.length === 0) return [{ section:"", items:[] }];
+  if (isSectioned(arr)) return arr;
+  return [{ section:"", items: arr }];
+};
+
+// Flatten back to simple array if only one unnamed section
+const fromSectioned = (sections) => {
+  if (sections.length === 1 && sections[0].section === "") return sections[0].items;
+  return sections;
+};
+
+// ── Theme context — avoids prop-drilling ──────────────────────
+const ThemeCtx = React.createContext(BOOK_THEMES[0]);
+const useTheme = () => React.useContext(ThemeCtx);
+
+// ── Nav context — azioni globali del banner (es. Organizza) ──
+const NavCtx = React.createContext({});
+const useNavActions = () => React.useContext(NavCtx);
+
+// ── Icona Organizza: mela con ingranaggio all'angolo ──
+// Eredita la dimensione dal contesto (em): la scatola è quella di un'emoji
+// reale (segnaposto invisibile), quindi l'allineamento è identico alle altre icone.
+const OrganizeIcon = () => (
+  <span style={{ position:"relative", display:"inline-block" }}>
+    <span style={{ visibility:"hidden" }}>🍎</span>
+    <span style={{ position:"absolute", inset:0 }}>🍎</span>
+    <span style={{ position:"absolute", right:"-0.15em", bottom:"-0.05em", fontSize:"0.58em", lineHeight:1, filter:"drop-shadow(0 0 1px rgba(0,0,0,0.45))" }}>⚙️</span>
+  </span>
+);
+
+// ── iPhone shell ───────────────────────────────────────────────
+const IPhone = ({ children }) => {
+  const th = useTheme();
+  return (
+  <div style={{
+    width:390, minHeight:844,
+    background: th.appBg,
+    borderRadius:50,
+    overflow:"hidden",
+    boxShadow:"0 40px 100px rgba(0,0,0,0.35), 0 0 0 12px #1a1a1a, 0 0 0 14px #333",
+    position:"relative",
+    fontFamily:F.body,
+    display:"flex", flexDirection:"column",
+    userSelect:"none",
+    transition:"background 0.3s",
+  }}>
+    <div style={{
+      position:"absolute", top:0, left:"50%", transform:"translateX(-50%)",
+      width:130, height:36, background:"#1a1a1a",
+      borderRadius:"0 0 20px 20px", zIndex:100,
+    }}/>
+    <div style={{ flex:1, overflowY:"auto", paddingTop:44 }}>
+      {children}
+    </div>
+  </div>
+  );
+};
+
+const BackBtn = ({ onBack, label="Indietro", dark=false }) => (
+  <button onClick={onBack} style={{
+    background:"none", border:"none", cursor:"pointer",
+    color: dark ? "#555" : "#C4593A",
+    fontFamily:F.ui, fontSize:15,
+    display:"flex", alignItems:"center", gap:4, padding:"4px 0",
+  }}>‹ {label}</button>
+);
+
+const Divider = () => (
+  <div style={{ display:"flex", alignItems:"center", gap:10, margin:"8px 0" }}>
+    <div style={{ flex:1, height:1, background:"#EDE6D4" }}/>
+    <span style={{ color:"#B8973A", fontSize:12 }}>✦</span>
+    <div style={{ flex:1, height:1, background:"#EDE6D4" }}/>
+  </div>
+);
+
+// ── Toast notification ─────────────────────────────────────────
+const Toast = ({ msg, visible }) => (
+  <div style={{
+    position:"fixed", bottom:100, left:"50%", transform:`translateX(-50%) translateY(${visible?0:20}px)`,
+    background:"#2C2416", color:"#fff",
+    padding:"10px 20px", borderRadius:20,
+    fontFamily:F.ui, fontSize:13,
+    opacity: visible ? 1 : 0,
+    transition:"all 0.3s",
+    pointerEvents:"none",
+    zIndex:999,
+    whiteSpace:"nowrap",
+  }}>{msg}</div>
+);
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN: COVER (book opening animation)
+// ══════════════════════════════════════════════════════════════
+const CoverScreen = ({ onEnter }) => {
+  const th = useTheme();
+  const [phase, setPhase] = useState("idle");
+  const [coverAngle, setCoverAngle] = useState(0);
+
+  useEffect(() => {
+    if (phase === "opening") {
+      let start = null;
+      const duration = 900;
+      const animate = (ts) => {
+        if (!start) start = ts;
+        const progress = Math.min((ts - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        setCoverAngle(eased * 105);
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          setPhase("open");
+          setTimeout(onEnter, 300);
+        }
+      };
+      requestAnimationFrame(animate);
+    }
+  }, [phase]);
+
+  const handleOpen = () => { if (phase === "idle") setPhase("opening"); };
+
+  const fabricTexture = `
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 4px),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 4px)
+  `;
+
+  return (
+    <div style={{
+      height:"100%", minHeight:800,
+      background:"#111",
+      overflow:"hidden", position:"relative",
+      cursor: phase==="idle" ? "pointer" : "default",
+    }} onClick={handleOpen}>
+
+      <div style={{ position:"absolute", top:0, left:0, right:0, zIndex:10 }}>
+      </div>
+
+      <div style={{ perspective:"1200px", perspectiveOrigin:"35% 50%", position:"absolute", inset:0 }}>
+
+        {/* PAGES edge */}
+        <div style={{
+          position:"absolute", right:0, top:0, bottom:0, width:22,
+          background:"linear-gradient(to right, #c8c8c8, #f5f5f5, #e0e0e0, #f8f8f8)",
+          zIndex:1,
+        }}>
+          {Array.from({length:40}).map((_,i) => (
+            <div key={i} style={{
+              height:1,
+              background: i%4===0 ? "rgba(0,0,0,0.1)" : "rgba(0,0,0,0.03)",
+              marginTop:"calc(100% / 40)",
+            }}/>
+          ))}
+        </div>
+
+        {/* BACK COVER */}
+        <div style={{
+          position:"absolute", inset:0, zIndex:2,
+          background:`${th.coverBg}, ${fabricTexture}`,
+          filter:"brightness(0.7)",
+        }}/>
+
+        {/* FRONT COVER */}
+        <div style={{
+          position:"absolute", inset:0, zIndex:3,
+          transformOrigin:"left center",
+          transform:`rotateY(-${coverAngle}deg)`,
+          transformStyle:"preserve-3d",
+        }}>
+          {/* Front face */}
+          <div style={{
+            position:"absolute", inset:0,
+            backfaceVisibility:"hidden",
+            background:`${th.coverBg}, ${fabricTexture}`,
+            boxShadow: phase==="idle"
+              ? "inset -8px 0 30px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.04)"
+              : "inset -4px 0 15px rgba(0,0,0,0.3)",
+            display:"flex", flexDirection:"column",
+            alignItems:"center", justifyContent:"center",
+          }}>
+            {/* Spine line */}
+            <div style={{
+              position:"absolute", left:28, top:0, bottom:0, width:1,
+              background: th.spineColor,
+            }}/>
+
+            {/* Decorative frames */}
+            <div style={{ position:"absolute", inset:28, border:`1px solid ${th.coverAccent}`, pointerEvents:"none" }}/>
+            <div style={{ position:"absolute", inset:34, border:`1px solid ${th.coverAccent}`, opacity:0.5, pointerEvents:"none" }}/>
+
+            {/* Corner ornaments */}
+            {[
+              {top:20,left:20,bt:"borderTop",bl:"borderLeft"},
+              {top:20,right:20,bt:"borderTop",bl:"borderRight"},
+              {bottom:20,left:20,bt:"borderBottom",bl:"borderLeft"},
+              {bottom:20,right:20,bt:"borderBottom",bl:"borderRight"},
+            ].map((pos,i) => {
+              const { bt, bl, ...coords } = pos;
+              return (
+                <div key={i} style={{
+                  position:"absolute", width:20, height:20, ...coords,
+                  [bt]:`1.5px solid ${th.coverAccent}`,
+                  [bl]:`1.5px solid ${th.coverAccent}`,
+                }}/>
+              );
+            })}
+
+            {/* Title */}
+            <div style={{ textAlign:"center", padding:"0 48px", zIndex:1 }}>
+              <div style={{
+                fontFamily:F.ui, fontSize:11, letterSpacing:6,
+                color: th.coverText.replace(/[\d.]+\)$/, "0.4)"),
+                textTransform:"uppercase", marginBottom:18,
+              }}>Il mio</div>
+              <div style={{
+                fontFamily:F.display, fontSize:42,
+                color: th.coverText,
+                letterSpacing:2, lineHeight:1.15, fontStyle:"italic",
+                textShadow:"0 2px 20px rgba(0,0,0,0.4)",
+              }}>Ricettario</div>
+              <div style={{
+                width:80, height:1, margin:"20px auto",
+                background:`linear-gradient(to right, transparent, ${th.coverAccent}, transparent)`,
+              }}/>
+              <div style={{
+                fontFamily:F.ui, fontSize:10, letterSpacing:4,
+                color: th.coverText.replace(/[\d.]+\)$/, "0.25)"),
+                textTransform:"uppercase",
+              }}>Le nostre ricette</div>
+            </div>
+
+            {/* Tap hint */}
+            {phase === "idle" && (
+              <div style={{ position:"absolute", bottom:52, left:0, right:0, textAlign:"center" }}>
+                <div style={{
+                  display:"inline-block",
+                  fontFamily:F.ui, fontSize:11,
+                  color: th.coverText.replace(/[\d.]+\)$/, "0.35)"),
+                  letterSpacing:3, textTransform:"uppercase",
+                  animation:"pulse 2s ease-in-out infinite",
+                }}>Apri il ricettario</div>
+              </div>
+            )}
+          </div>
+
+          {/* Inner face */}
+          <div style={{
+            position:"absolute", inset:0,
+            backfaceVisibility:"hidden",
+            transform:"rotateY(180deg)",
+            background: th.pageColor,
+          }}/>
+        </div>
+      </div>
+
+      {/* Recipe count */}
+      <div style={{
+        position:"absolute", bottom:32, left:0, right:0,
+        textAlign:"center", zIndex:20, pointerEvents:"none",
+      }}>
+        <div style={{
+          fontFamily:F.ui, fontSize:10,
+          color: th.coverText.replace(/[\d.]+\)$/, "0.15)"),
+          letterSpacing:3, textTransform:"uppercase",
+        }}>5 ricette salvate</div>
+      </div>
+
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity:0.4; transform:translateY(0); }
+          50% { opacity:0.8; transform:translateY(-3px); }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN: HOME
+// ══════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════
+// SHARED: Ingredient & Step renderers (handle flat + sectioned)
+// ══════════════════════════════════════════════════════════════
+
+const SectionBadge = ({ label, color }) => {
+  const th = useTheme();
+  if (!label) return null;
+  return (
+    <div style={{
+      display:"flex", alignItems:"center", gap:8,
+      margin:"14px 0 6px",
+    }}>
+      <div style={{
+        background: color || th.appAccent,
+        color:"#fff",
+        fontFamily:F.ui, fontSize:10, fontWeight:700,
+        letterSpacing:1.5, textTransform:"uppercase",
+        padding:"3px 10px", borderRadius:20,
+      }}>{label}</div>
+      <div style={{ flex:1, height:1, background:th.appBorder }}/>
+    </div>
+  );
+};
+
+// Renders ingredients (flat array or sectioned)
+const IngredientsView = ({ ingredients, recipeColor, scaleFactor = 1 }) => {
+  const th = useTheme();
+  if (!ingredients || ingredients.length === 0) return null;
+  const showIng = (ing) => scaleFactor !== 1 ? ingredientToText(scaleIngredient(ing, scaleFactor)) : ingredientToText(ing);
+
+  if (isSectioned(ingredients)) {
+    return (
+      <div>
+        {ingredients.map((sec, si) => (
+          <div key={si}>
+            <SectionBadge label={sec.section} color={recipeColor}/>
+            {sec.items.map((ing, i) => (
+              <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:10, padding:"8px 0", borderBottom:`1px solid ${th.appBorder}` }}>
+                <span style={{ color:th.appAccent2, fontSize:13, marginTop:2 }}>✦</span>
+                <span style={{ fontFamily:F.body, fontSize:14, color:th.appInk, lineHeight:1.4 }}>{showIng(ing)}</span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {ingredients.map((ing, i) => (
+        <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:10, padding:"8px 0", borderBottom:`1px solid ${th.appBorder}` }}>
+          <span style={{ color:th.appAccent2, fontSize:13, marginTop:2 }}>✦</span>
+          <span style={{ fontFamily:F.body, fontSize:14, color:th.appInk, lineHeight:1.4 }}>{showIng(ing)}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// Renders steps (flat or sectioned, items can be string or {text,photo})
+const StepsView = ({ steps, recipeColor }) => {
+  const th = useTheme();
+  if (!steps || steps.length === 0) return null;
+
+  const renderStep = (step, idx, color) => {
+    const text = typeof step === "string" ? step : step.text;
+    const photo = typeof step === "string" ? null : step.photo;
+    return (
+      <div key={idx} style={{ marginBottom:16 }}>
+        <div style={{ display:"flex", gap:12 }}>
+          <div style={{
+            width:26, height:26, borderRadius:"50%",
+            background: color || recipeColor,
+            color:"#fff",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            fontFamily:F.ui, fontSize:12, fontWeight:700,
+            flexShrink:0, marginTop:2,
+          }}>{idx+1}</div>
+          <p style={{ fontFamily:F.body, fontSize:14, color:th.appInk, lineHeight:1.55, margin:0 }}>{text}</p>
+        </div>
+        {photo && (
+          <div
+            style={{
+              marginTop:8, marginLeft:38, height:90, borderRadius:10,
+              background:`${color || recipeColor}22`,
+              display:"flex", alignItems:"center", justifyContent:"center",
+              fontSize:28, border:`1px solid ${(color||recipeColor)}22`,
+              cursor:"pointer", position:"relative",
+            }}
+          >
+            📸
+            <div style={{ position:"absolute", bottom:4, right:8, fontSize:14, opacity:0.5 }}>⤢</div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  if (isSectioned(steps)) {
+    // restart counter per section
+    return (
+      <div>
+        {steps.map((sec, si) => (
+          <div key={si}>
+            <SectionBadge label={sec.section} color={recipeColor}/>
+            {sec.items.map((step, i) => renderStep(step, i, recipeColor))}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return <div>{steps.map((step, i) => renderStep(step, i, recipeColor))}</div>;
+};
+
+
+// ══════════════════════════════════════════════════════════════
+// PHOTO LIGHTBOX — fullscreen photo viewer with save option
+// ══════════════════════════════════════════════════════════════
+const PhotoLightbox = ({ photo, caption, date, isImage = false, onClose }) => {
+  const [saved, setSaved] = useState(false);
+
+  // In a real app this would use the Web Share API or canvas download
+  const handleSave = () => {
+    // Simulate save — in real PWA: fetch(photo).then(blob => saveAs(blob))
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position:"fixed", inset:0, zIndex:500,
+        background:"rgba(0,0,0,0.95)",
+        display:"flex", flexDirection:"column",
+        alignItems:"center", justifyContent:"center",
+      }}
+    >
+      {/* Close button */}
+      <button
+        onClick={onClose}
+        style={{
+          position:"absolute", top:20, right:20,
+          width:36, height:36, borderRadius:"50%",
+          background:"rgba(255,255,255,0.15)", border:"none",
+          color:"#fff", fontSize:20, cursor:"pointer",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          zIndex:10,
+        }}
+      >×</button>
+
+      {/* Photo — emoji placeholder in prototype, real image in PWA */}
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width:"90%", maxWidth:360,
+          aspectRatio:"4/3",
+          background:"rgba(255,255,255,0.05)",
+          borderRadius:12,
+          display:"flex", alignItems:"center", justifyContent:"center",
+          fontSize:80,
+          border:"1px solid rgba(255,255,255,0.1)",
+          overflow:"hidden",
+        }}
+      >
+        {/* Immagine reale (dataURL) o emoji placeholder */}
+        {isImage && photo
+          ? <img src={photo} alt={caption || "ricordo"} style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
+          : photo}
+      </div>
+
+      {/* Caption + date */}
+      {(caption || date) && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{ marginTop:16, textAlign:"center", padding:"0 24px" }}
+        >
+          {caption && (
+            <div style={{
+              fontFamily:F.body, fontStyle:"italic",
+              fontSize:15, color:"rgba(255,255,255,0.85)",
+              marginBottom:4, lineHeight:1.4,
+            }}>"{caption}"</div>
+          )}
+          {date && (
+            <div style={{
+              fontFamily:F.ui, fontSize:12,
+              color:"rgba(255,255,255,0.4)",
+            }}>📅 {date}</div>
+          )}
+        </div>
+      )}
+
+      {/* Save to gallery button */}
+      <button
+        onClick={e => { e.stopPropagation(); handleSave(); }}
+        style={{
+          marginTop:24,
+          padding:"12px 28px",
+          background: saved ? "rgba(100,200,100,0.3)" : "rgba(255,255,255,0.12)",
+          border:`1px solid ${saved ? "rgba(100,200,100,0.6)" : "rgba(255,255,255,0.2)"}`,
+          borderRadius:30,
+          color:"#fff",
+          fontFamily:F.ui, fontSize:14, fontWeight:600,
+          cursor:"pointer",
+          display:"flex", alignItems:"center", gap:8,
+          transition:"all 0.2s",
+        }}
+      >
+        {saved ? "✅ Salvata!" : "⬇️ Salva in galleria"}
+      </button>
+
+      <div style={{
+        position:"absolute", bottom:24,
+        fontFamily:F.ui, fontSize:11,
+        color:"rgba(255,255,255,0.25)",
+      }}>Tocca fuori per chiudere</div>
+    </div>
+  );
+};
+
+
+
+// ══════════════════════════════════════════════════════════════
+// PDF EXPORT — generates a printable recipe PDF via browser
+// ══════════════════════════════════════════════════════════════
+const exportRecipePDF = (recipe) => {
+  const isSec = (arr) => Array.isArray(arr) && arr.length > 0 && typeof arr[0] === "object" && "section" in arr[0];
+
+  const flatIng = isSec(recipe.ingredients)
+    ? recipe.ingredients.flatMap(s => s.section ? [`── ${s.section} ──`, ...s.items.map(ingredientToText)] : s.items.map(ingredientToText))
+    : recipe.ingredients.map(ingredientToText);
+
+  // Steps carry {text, photo}; section markers use {section:true}
+  const flatSteps = isSec(recipe.steps)
+    ? recipe.steps.flatMap(s => {
+        const items = s.items.map(st => typeof st === "string" ? { text: st, photo: null } : { text: st.text, photo: st.photo });
+        return s.section ? [{ sectionLabel: s.section }, ...items] : items;
+      })
+    : recipe.steps.map(st => typeof st === "string" ? { text: st, photo: null } : { text: st.text, photo: st.photo });
+
+  const html = `<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>${recipe.title}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Georgia, serif; color: #1a1a1a; padding: 40px; max-width: 700px; margin: 0 auto; }
+  h1 { font-size: 28px; font-style: italic; text-align: center; margin-bottom: 4px; }
+  .source { text-align: center; font-size: 13px; color: #666; margin-bottom: 16px; }
+  .meta { display: flex; justify-content: center; gap: 24px; font-size: 12px; color: #555; border-top: 1px solid #ddd; border-bottom: 1px solid #ddd; padding: 8px 0; margin-bottom: 16px; }
+  .note { border: 1px solid #ccc; padding: 10px 14px; font-style: italic; font-size: 13px; color: #555; margin-bottom: 16px; background: #fafaf8; }
+  h2 { font-size: 15px; text-align: center; letter-spacing: 2px; text-transform: uppercase; margin: 20px 0 10px; color: #333; }
+  .ing { font-size: 13px; line-height: 1.9; border-bottom: 1px solid #eee; padding: 2px 0; }
+  .section-label { font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1.5px; color: #8B4520; margin: 10px 0 4px; }
+  .step { display: flex; gap: 12px; margin-bottom: 12px; }
+  .step-n { width: 24px; height: 24px; border-radius: 50%; background: #8B4520; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; flex-shrink: 0; margin-top: 2px; font-family: sans-serif; }
+  .step-t { font-size: 13px; line-height: 1.65; }
+  .divider { text-align: center; color: #B8973A; margin: 20px 0; font-size: 16px; }
+  .dish-photo { width: 200px; height: 150px; margin: 0 auto 18px; border: 1px solid #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 64px; background: #fafaf8; }
+  .step-photo { font-size: 34px; margin-left: 12px; }
+  @media print { body { padding: 20px; } }
+</style>
+</head>
+<body>
+  <h1>${recipe.title}</h1>
+  ${recipe.source ? `<div class="source">Ricetta di ${recipe.source}</div>` : ""}
+  ${recipe.dishPhoto ? `<div class="dish-photo">${recipe.dishPhoto === "PLACEHOLDER" ? "🍽️" : recipe.dishPhoto}</div>` : ""}
+  <div class="meta">
+    <span>Prep: ${recipe.prepTime} min</span>
+    <span>·</span>
+    <span>Cottura: ${recipe.cookTime} min</span>
+    <span>·</span>
+    <span>${recipe.servings} porzioni</span>
+  </div>
+  ${recipe.note ? `<div class="note">${recipe.note}</div>` : ""}
+
+  <h2>Ingredienti</h2>
+  ${flatIng.map(ing => ing.startsWith("──")
+    ? `<div class="section-label">${ing.replace(/── | ──/g,"")}</div>`
+    : `<div class="ing">${ing}</div>`
+  ).join("")}
+
+  <div class="divider">✦</div>
+
+  <h2>Preparazione</h2>
+  ${(() => {
+    let n = 0;
+    return flatSteps.map(step => step.sectionLabel
+      ? `<div class="section-label">${step.sectionLabel}</div>`
+      : `<div class="step"><div class="step-n">${++n}</div><div class="step-t">${step.text}</div>${step.photo && step.photo !== "PLACEHOLDER" ? `<div class="step-photo">${step.photo}</div>` : ""}</div>`
+    ).join("");
+  })()}
+</body>
+</html>`;
+
+  // Crea un iframe nascosto, ci inietta l'HTML e avvia la stampa
+  // → il browser mostra "Salva come PDF" nella finestra di stampa
+  const iframe = document.createElement("iframe");
+  iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:none;";
+  document.body.appendChild(iframe);
+  iframe.contentDocument.open();
+  iframe.contentDocument.write(html);
+  iframe.contentDocument.close();
+  iframe.contentWindow.focus();
+  setTimeout(() => {
+    iframe.contentWindow.print();
+    setTimeout(() => document.body.removeChild(iframe), 1000);
+  }, 400);
+};
+
+// ══════════════════════════════════════════════════════════════
+// EXPORT: intero ricettario in PDF — indice + pagine sezione + ricette
+// ══════════════════════════════════════════════════════════════
+const exportBookPDF = (recipes, sections = MACRO_SECTIONS) => {
+  const isSec = (arr) => Array.isArray(arr) && arr.length > 0 && typeof arr[0] === "object" && "section" in arr[0];
+
+  // Corpo di una singola ricetta (stesso layout dell'export singolo)
+  const recipeBody = (recipe) => {
+    const flatIng = isSec(recipe.ingredients)
+      ? recipe.ingredients.flatMap(s => s.section ? [`── ${s.section} ──`, ...s.items.map(ingredientToText)] : s.items.map(ingredientToText))
+      : recipe.ingredients.map(ingredientToText);
+    const flatSteps = isSec(recipe.steps)
+      ? recipe.steps.flatMap(s => {
+          const items = s.items.map(st => typeof st === "string" ? { text: st, photo: null } : { text: st.text, photo: st.photo });
+          return s.section ? [{ sectionLabel: s.section }, ...items] : items;
+        })
+      : recipe.steps.map(st => typeof st === "string" ? { text: st, photo: null } : { text: st.text, photo: st.photo });
+    let n = 0;
+    return `
+  <div class="recipe">
+    <h1>${recipe.title}</h1>
+    ${recipe.source ? `<div class="source">Ricetta di ${recipe.source}</div>` : ""}
+    ${recipe.dishPhoto ? `<div class="dish-photo">${recipe.dishPhoto === "PLACEHOLDER" ? "🍽️" : recipe.dishPhoto}</div>` : ""}
+    <div class="meta">
+      <span>Prep: ${recipe.prepTime} min</span><span>·</span>
+      <span>Cottura: ${recipe.cookTime} min</span><span>·</span>
+      <span>${recipe.servings} porzioni</span>
+    </div>
+    ${recipe.note ? `<div class="note">${recipe.note}</div>` : ""}
+    <h2>Ingredienti</h2>
+    ${flatIng.map(ing => ing.startsWith("──")
+      ? `<div class="section-label">${ing.replace(/── | ──/g,"")}</div>`
+      : `<div class="ing">${ing}</div>`
+    ).join("")}
+    <div class="divider">✦</div>
+    <h2>Preparazione</h2>
+    ${flatSteps.map(step => step.sectionLabel
+      ? `<div class="section-label">${step.sectionLabel}</div>`
+      : `<div class="step"><div class="step-n">${++n}</div><div class="step-t">${step.text}</div>${step.photo && step.photo !== "PLACEHOLDER" ? `<div class="step-photo">${step.photo}</div>` : ""}</div>`
+    ).join("")}
+  </div>`;
+  };
+
+  // Sezioni con almeno una ricetta, nell'ordine di MACRO_SECTIONS
+  const sectionsWithRecipes = sortSectionsAltroLast(sections)
+    .map(sec => ({ ...sec, recipes: recipes.filter(r => r.macroSection === sec.id) }))
+    .filter(sec => sec.recipes.length > 0);
+
+  const html = `<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Il mio Ricettario</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Georgia, serif; color: #1a1a1a; max-width: 700px; margin: 0 auto; }
+  .page { page-break-after: always; padding: 40px; }
+  /* Copertina */
+  .cover { text-align:center; padding-top: 200px; }
+  .cover .small { font-size: 12px; letter-spacing: 4px; color: #8a7c66; text-transform: uppercase; font-family: sans-serif; }
+  .cover h1 { font-size: 44px; font-style: italic; margin: 10px 0 6px; }
+  .cover .sub { font-size: 15px; color: #7A6E5F; font-style: italic; }
+  .cover .orn { color: #B8973A; font-size: 18px; margin: 26px 0; }
+  /* Indice */
+  .index h1 { font-size: 26px; font-style: italic; text-align: center; margin-bottom: 24px; }
+  .index .sec { font-size: 13px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; color: #8B4520; margin: 20px 0 8px; border-bottom: 1.5px solid #EDE6D4; padding-bottom: 4px; }
+  .index .row { display:flex; align-items:baseline; font-size: 13px; padding: 4px 0; }
+  .index .row .t { }
+  .index .row .dots { flex:1; border-bottom: 1px dotted #c9bda5; margin: 0 8px; }
+  .index .row .c { font-size: 11px; color: #7A6E5F; font-family: sans-serif; }
+  /* Pagina sezione */
+  .secpage { text-align:center; padding-top: 230px; }
+  .secpage .emoji { font-size: 80px; }
+  .secpage h1 { font-size: 34px; font-style: italic; margin: 18px 0 8px; }
+  .secpage .desc { font-size: 14px; color: #7A6E5F; font-style: italic; }
+  .secpage .orn { color: #B8973A; font-size: 15px; margin-top: 24px; }
+  /* Ricetta */
+  .recipe { page-break-before: always; padding: 40px; }
+  .recipe h1 { font-size: 26px; font-style: italic; text-align: center; margin-bottom: 4px; }
+  .source { text-align: center; font-size: 13px; color: #666; margin-bottom: 12px; }
+  .dish-photo { width: 170px; height: 128px; margin: 0 auto 14px; border: 1px solid #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 54px; background: #fafaf8; }
+  .meta { display: flex; justify-content: center; gap: 20px; font-size: 12px; color: #555; border-top: 1px solid #ddd; border-bottom: 1px solid #ddd; padding: 7px 0; margin-bottom: 14px; }
+  .note { border: 1px solid #ccc; padding: 9px 13px; font-style: italic; font-size: 12.5px; color: #555; margin-bottom: 14px; background: #fafaf8; }
+  h2 { font-size: 14px; text-align: center; letter-spacing: 2px; text-transform: uppercase; margin: 16px 0 9px; color: #333; }
+  .ing { font-size: 12.5px; line-height: 1.85; border-bottom: 1px solid #eee; padding: 2px 0; }
+  .section-label { font-size: 10.5px; font-weight: bold; text-transform: uppercase; letter-spacing: 1.5px; color: #8B4520; margin: 9px 0 4px; }
+  .step { display: flex; gap: 11px; margin-bottom: 11px; }
+  .step-n { width: 22px; height: 22px; border-radius: 50%; background: #8B4520; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: bold; flex-shrink: 0; margin-top: 2px; font-family: sans-serif; }
+  .step-t { font-size: 12.5px; line-height: 1.6; }
+  .step-photo { font-size: 30px; margin-left: 10px; }
+  .divider { text-align: center; color: #B8973A; margin: 16px 0; font-size: 15px; }
+  @media print { .page, .recipe { padding: 24px; } }
+</style>
+</head>
+<body>
+  <!-- Copertina -->
+  <div class="page cover">
+    <div class="small">Le nostre ricette, i nostri ricordi</div>
+    <h1>Il mio Ricettario</h1>
+    <div class="orn">✦ ✦ ✦</div>
+    <div class="sub">${recipes.length} ricette</div>
+  </div>
+
+  <!-- Indice -->
+  <div class="page index">
+    <h1>Indice</h1>
+    ${sectionsWithRecipes.map(sec => `
+      <div class="sec">${sec.emoji} ${sec.label}</div>
+      ${sec.recipes.map(r => `
+        <div class="row">
+          <span class="t">${r.title}</span>
+          <span class="dots"></span>
+          <span class="c">${r.category}</span>
+        </div>`).join("")}
+    `).join("")}
+  </div>
+
+  <!-- Sezioni e ricette -->
+  ${sectionsWithRecipes.map(sec => `
+    <div class="page secpage">
+      <div class="emoji">${sec.emoji}</div>
+      <h1>${sec.label}</h1>
+      <div class="desc">${sec.desc}</div>
+      <div class="orn">✦ ✦ ✦</div>
+    </div>
+    ${sec.recipes.map(recipeBody).join("")}
+  `).join("")}
+</body>
+</html>`;
+
+  const iframe = document.createElement("iframe");
+  iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:none;";
+  document.body.appendChild(iframe);
+  iframe.contentDocument.open();
+  iframe.contentDocument.write(html);
+  iframe.contentDocument.close();
+  iframe.contentWindow.focus();
+  setTimeout(() => {
+    iframe.contentWindow.print();
+    setTimeout(() => document.body.removeChild(iframe), 1000);
+  }, 400);
+};
+
+// ══════════════════════════════════════════════════════════════
+// COMPONENT: TagPicker — structured tag selector with custom tags
+// ══════════════════════════════════════════════════════════════
+const TagPicker = ({ selectedTags, onChange, extraGroups = [], onAddGroup, onAddTagToGroup }) => {
+  const th = useTheme();
+  const [openGroup, setOpenGroup] = useState(null);
+  const [customInputs, setCustomInputs] = useState({}); // {groupName: string}
+  const [newGroupInput, setNewGroupInput] = useState("");
+
+  const toggle = (tag) => onChange(
+    selectedTags.includes(tag)
+      ? selectedTags.filter(t => t !== tag)
+      : [...selectedTags, tag]
+  );
+
+  // Merge preset groups + extra custom groups, always end with "Altro"
+  const baseGroups = TAG_GROUPS.filter(g => g.group !== "Altro");
+  const altroPreset = TAG_GROUPS.find(g => g.group === "Altro") || { group:"Altro", tags:[] };
+  const allGroups = [
+    ...baseGroups,
+    ...extraGroups,
+    altroPreset,
+  ];
+
+  // Custom tags are any selected tags not in any known group
+  const allKnownTags = allGroups.flatMap(g => g.tags);
+  const orphanTags = selectedTags.filter(t => !allKnownTags.includes(t));
+
+  const addCustomTag = (groupName) => {
+    const val = (customInputs[groupName] || "").trim();
+    if (!val) return;
+    // Add tag to the group (via callback) and select it
+    if (onAddTagToGroup) onAddTagToGroup(groupName, val);
+    if (!selectedTags.includes(val)) onChange([...selectedTags, val]);
+    setCustomInputs(prev => ({ ...prev, [groupName]: "" }));
+  };
+
+  const addNewGroup = () => {
+    const val = newGroupInput.trim();
+    if (!val) return;
+    if (onAddGroup) onAddGroup(val);
+    setNewGroupInput("");
+    setOpenGroup(val); // open newly created group
+  };
+
+  return (
+    <div>
+      {/* Active tags summary */}
+      {selectedTags.length > 0 && (
+        <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginBottom:10 }}>
+          {selectedTags.map(tag => (
+            <button key={tag} onClick={() => toggle(tag)} style={{
+              padding:"4px 10px", borderRadius:20,
+              background:th.appAccent, color:"#fff",
+              border:"none", fontFamily:F.ui, fontSize:11, cursor:"pointer",
+              display:"flex", alignItems:"center", gap:4,
+            }}>
+              {tag} <span style={{ opacity:0.7 }}>×</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Groups */}
+      {allGroups.map(group => {
+        const isOpen = openGroup === group.group;
+        const activeInGroup = group.tags.filter(t => selectedTags.includes(t));
+        const isAltro = group.group === "Altro";
+        // Orphan tags (not in any group) shown in "Altro"
+        const altroCustTags = isAltro ? orphanTags : [];
+        const totalActive = activeInGroup.length + (isAltro ? altroCustTags.length : 0);
+
+        return (
+          <div key={group.group} style={{ marginBottom:6 }}>
+            <button
+              onClick={() => setOpenGroup(isOpen ? null : group.group)}
+              style={{
+                width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
+                padding:"9px 12px",
+                background: totalActive > 0 ? `${th.appAccent}12` : th.appCard,
+                border:`1.5px solid ${totalActive > 0 ? th.appAccent : th.appBorder}`,
+                borderRadius:10, cursor:"pointer",
+                fontFamily:F.ui, fontSize:12, color:th.appInk,
+              }}
+            >
+              <span style={{ fontWeight:600 }}>
+                {group.group}
+                {totalActive > 0 && (
+                  <span style={{ marginLeft:8, background:th.appAccent, color:"#fff", borderRadius:10, padding:"1px 7px", fontSize:10 }}>
+                    {totalActive}
+                  </span>
+                )}
+              </span>
+              <span style={{ color:th.appFaded, fontSize:11 }}>{isOpen ? "▲" : "▼"}</span>
+            </button>
+
+            {isOpen && (
+              <div style={{ padding:"8px 4px 4px" }}>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginBottom:8 }}>
+                  {group.tags.map(tag => {
+                    const sel = selectedTags.includes(tag);
+                    return (
+                      <button key={tag} onClick={() => toggle(tag)} style={{
+                        padding:"5px 12px", borderRadius:20,
+                        border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
+                        background: sel ? th.appAccent : "transparent",
+                        color: sel ? "#fff" : th.appFaded,
+                        fontFamily:F.ui, fontSize:11, cursor:"pointer",
+                      }}>{tag}</button>
+                    );
+                  })}
+                  {isAltro && altroCustTags.map(tag => (
+                    <button key={tag} onClick={() => toggle(tag)} style={{
+                      padding:"5px 12px", borderRadius:20,
+                      border:`1.5px solid ${th.appAccent}`,
+                      background:th.appAccent, color:"#fff",
+                      fontFamily:F.ui, fontSize:11, cursor:"pointer",
+                      display:"flex", alignItems:"center", gap:4,
+                    }}>{tag} <span style={{ opacity:0.7 }}>×</span></button>
+                  ))}
+                </div>
+                <div style={{ display:"flex", gap:8 }}>
+                  <input
+                    value={customInputs[group.group] || ""}
+                    onChange={e => setCustomInputs(prev => ({ ...prev, [group.group]:e.target.value }))}
+                    onKeyDown={e => e.key==="Enter" && addCustomTag(group.group)}
+                    placeholder={`Aggiungi tag a "${group.group}"…`}
+                    style={{ flex:1, padding:"8px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appBg, fontFamily:F.ui, fontSize:12, color:th.appInk, outline:"none" }}
+                  />
+                  <button onClick={() => addCustomTag(group.group)} style={{ padding:"8px 14px", borderRadius:10, background:th.appAccent, color:"#fff", border:"none", fontFamily:F.ui, fontSize:12, cursor:"pointer", fontWeight:700 }}>＋</button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {/* ── Add new custom category ── */}
+      {onAddGroup && (
+        <div style={{ marginTop:8, paddingTop:10, borderTop:`1px dashed ${th.appBorder}` }}>
+          <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginBottom:6 }}>
+            Aggiungi una nuova categoria di tag
+          </div>
+          <div style={{ display:"flex", gap:8 }}>
+            <input
+              value={newGroupInput}
+              onChange={e => setNewGroupInput(e.target.value)}
+              onKeyDown={e => e.key==="Enter" && addNewGroup()}
+              placeholder="es. Intolleranze, Occasione speciale…"
+              style={{ flex:1, padding:"8px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appBg, fontFamily:F.ui, fontSize:12, color:th.appInk, outline:"none" }}
+            />
+            <button onClick={addNewGroup} style={{ padding:"8px 14px", borderRadius:10, background:th.appInk, color:"#fff", border:"none", fontFamily:F.ui, fontSize:12, cursor:"pointer", fontWeight:700 }}>＋ Categoria</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN: HOME
+// ══════════════════════════════════════════════════════════════
+
+const RecipeCardList = ({ recipe, onClick }) => {
+  const th = useTheme();
+  return (
+    <button onClick={onClick} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:16, padding:"14px 16px", display:"flex", alignItems:"center", gap:12, cursor:"pointer", textAlign:"left", boxShadow:"0 2px 8px rgba(0,0,0,0.05)", width:"100%" }}>
+      <div style={{ width:46, height:46, borderRadius:12, background:recipe.color, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>{recipe.dishPhoto ? "📸" : recipe.emoji}</div>
+      <div style={{ flex:1 }}>
+        <div style={{ fontFamily:F.display, fontSize:16, color:th.appInk, marginBottom:2 }}>
+            {recipe.favorite && <span style={{ marginRight:4 }}>⭐</span>}{recipe.title}
+          </div>
+        <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>{recipe.category} · {recipe.prepTime+recipe.cookTime} min · {recipe.servings} porzioni</div>
+        <div style={{ display:"flex", gap:4, marginTop:4, flexWrap:"wrap" }}>
+          {recipe.tags.slice(0,3).map(t => (
+            <span key={t} style={{ padding:"2px 8px", borderRadius:10, background:th.appBorder, color:th.appFaded, fontFamily:F.ui, fontSize:10 }}>{t}</span>
+          ))}
+        </div>
+      </div>
+      <span style={{ color:th.appFaded, fontSize:18 }}>›</span>
+    </button>
+  );
+};
+
+const RecipeCardBook = ({ recipe }) => {
+  const th = useTheme();
+  const [lightbox, setLightbox] = useState(null);
+
+  return (
+    <div style={{
+      background: th.bookBg,
+      border:`1px solid ${th.bookBorder}`,
+      borderRadius:4,
+      boxShadow:"0 2px 16px rgba(0,0,0,0.10)",
+      fontFamily:F.book,
+      position:"relative",
+      overflow:"visible",
+    }}>
+      {lightbox && (
+        <PhotoLightbox
+          photo={lightbox.photo}
+          caption={lightbox.caption}
+          date={lightbox.date}
+          onClose={() => setLightbox(null)}
+        />
+      )}
+
+      {/* Binder holes */}
+      {[40, 90, 140].map(top => (
+        <div key={top} style={{
+          position:"absolute", left:-7, top,
+          width:11, height:11, borderRadius:"50%",
+          background: th.appBorder,
+          border:`1px solid ${th.bookBorder}`,
+          zIndex:1,
+        }}/>
+      ))}
+
+      <div style={{ padding:"22px 20px 28px" }}>
+
+        {/* Title */}
+        <div style={{
+          textAlign:"center", fontSize:18, fontWeight:"bold",
+          color:th.bookInk, marginBottom:4, lineHeight:1.3,
+        }}>{recipe.title}</div>
+
+        {/* Source */}
+        {recipe.source && (
+          <div style={{
+            textAlign:"center", fontFamily:F.ui, fontSize:10,
+            color:th.bookFaded, marginBottom:14, fontStyle:"italic",
+          }}>Ricetta di {recipe.source}</div>
+        )}
+
+        {/* Photo */}
+        <div
+          onClick={() => recipe.dishPhoto && setLightbox({ photo:"📸", caption:recipe.title, date:"" })}
+          style={{
+            width:190, height:140, margin:"0 auto 16px",
+            background: th.appBorder,
+            border:`1px solid ${th.bookBorder}`,
+            display:"flex", alignItems:"center", justifyContent:"center",
+            fontSize:44, cursor: recipe.dishPhoto ? "pointer" : "default",
+            position:"relative",
+          }}
+        >
+          {recipe.dishPhoto
+            ? <><span style={{ fontSize:44 }}>📸</span><div style={{ position:"absolute", bottom:4, right:6, fontSize:13, opacity:0.5 }}>⤢</div></>
+            : <span style={{ opacity:0.35 }}>{recipe.emoji}</span>
+          }
+        </div>
+
+        {/* Meta */}
+        <div style={{
+          display:"flex", justifyContent:"center", gap:16,
+          fontSize:11, color:th.bookFaded, marginBottom:14,
+          paddingBottom:12, borderBottom:`1px solid ${th.bookBorder}`,
+        }}>
+          <span>Prep: {recipe.prepTime} min</span>
+          <span>·</span>
+          <span>Cottura: {recipe.cookTime} min</span>
+          <span>·</span>
+          <span>{recipe.servings} porzioni</span>
+        </div>
+
+        {/* Note box */}
+        {recipe.note && (
+          <div style={{
+            border:`1px solid ${th.bookNoteBorder}`,
+            background: th.bookNote,
+            padding:"8px 12px", marginBottom:14,
+            fontSize:11, fontStyle:"italic",
+            color:th.bookFaded, lineHeight:1.65,
+          }}>
+            {recipe.note}
+          </div>
+        )}
+
+        {/* ── INGREDIENTI ── */}
+        <div style={{
+          textAlign:"center", fontSize:14, fontWeight:"bold",
+          color:th.bookInk, margin:"0 0 10px",
+        }}>Ingredienti</div>
+
+        {isSectioned(recipe.ingredients) ? (
+          recipe.ingredients.map((sec, si) => (
+            <div key={si} style={{ marginBottom:10 }}>
+              {sec.section && (
+                <div style={{
+                  fontSize:9, fontWeight:"bold", letterSpacing:1.5,
+                  textTransform:"uppercase", color:recipe.color,
+                  marginBottom:4, paddingBottom:3,
+                  borderBottom:`1px solid ${th.bookBorder}`,
+                }}>{sec.section}</div>
+              )}
+              {sec.items.map((ing, i) => (
+                <div key={i} style={{
+                  fontSize:12, color:th.bookInk, lineHeight:1.8,
+                  borderBottom:`1px solid ${th.bookBorder}`,
+                  padding:"2px 0",
+                }}>{ingredientToText(ing)}</div>
+              ))}
+            </div>
+          ))
+        ) : (
+          recipe.ingredients.map((ing, i) => (
+            <div key={i} style={{
+              fontSize:12, color:th.bookInk, lineHeight:1.8,
+              borderBottom:`1px solid ${th.bookBorder}`,
+              padding:"2px 0",
+            }}>{ingredientToText(ing)}</div>
+          ))
+        )}
+
+        {/* ── DIVISORE ── */}
+        <div style={{ display:"flex", alignItems:"center", gap:10, margin:"18px 0" }}>
+          <div style={{ flex:1, height:1, background:th.bookBorder }}/>
+          <span style={{ color:th.bookFaded, fontSize:11 }}>✦</span>
+          <div style={{ flex:1, height:1, background:th.bookBorder }}/>
+        </div>
+
+        {/* ── PREPARAZIONE ── */}
+        <div style={{
+          textAlign:"center", fontSize:14, fontWeight:"bold",
+          color:th.bookInk, marginBottom:12,
+        }}>Preparazione</div>
+
+        {isSectioned(recipe.steps) ? (
+          recipe.steps.map((sec, si) => {
+            let stepN = recipe.steps.slice(0,si).reduce((acc,s) => acc + s.items.length, 0);
+            return (
+              <div key={si} style={{ marginBottom:14 }}>
+                {sec.section && (
+                  <div style={{
+                    fontSize:9, fontWeight:"bold", letterSpacing:1.5,
+                    textTransform:"uppercase", color:recipe.color,
+                    marginBottom:8, paddingBottom:3,
+                    borderBottom:`1px solid ${th.bookBorder}`,
+                  }}>{sec.section}</div>
+                )}
+                {sec.items.map((step, i) => {
+                  const text = typeof step === "string" ? step : step.text;
+                  const photo = typeof step === "string" ? null : step.photo;
+                  return (
+                    <div key={i} style={{ marginBottom:12 }}>
+                      <div style={{ display:"flex", gap:8, alignItems:"flex-start" }}>
+                        <div style={{
+                          width:20, height:20, borderRadius:"50%",
+                          background:recipe.color, color:"#fff",
+                          display:"flex", alignItems:"center", justifyContent:"center",
+                          fontSize:10, fontWeight:700, flexShrink:0, marginTop:1,
+                          fontFamily:F.ui,
+                        }}>{stepN + i + 1}</div>
+                        <p style={{ fontSize:12, color:th.bookInk, lineHeight:1.65, margin:0 }}>{text}</p>
+                      </div>
+                      {photo && (
+                        <div
+                          onClick={() => setLightbox({ photo:"📸", caption:`Passo ${stepN+i+1}`, date:"" })}
+                          style={{
+                            marginTop:6, marginLeft:28, height:70, borderRadius:6,
+                            background:`${recipe.color}18`,
+                            display:"flex", alignItems:"center", justifyContent:"center",
+                            fontSize:24, cursor:"pointer", position:"relative",
+                            border:`1px solid ${th.bookBorder}`,
+                          }}
+                        >
+                          📸
+                          <div style={{ position:"absolute", bottom:3, right:6, fontSize:12, opacity:0.4 }}>⤢</div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })
+        ) : (
+          recipe.steps.map((step, i) => {
+            const text = typeof step === "string" ? step : step.text;
+            const photo = typeof step === "string" ? null : step.photo;
+            return (
+              <div key={i} style={{ marginBottom:12 }}>
+                <div style={{ display:"flex", gap:8, alignItems:"flex-start" }}>
+                  <div style={{
+                    width:20, height:20, borderRadius:"50%",
+                    background:recipe.color, color:"#fff",
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    fontSize:10, fontWeight:700, flexShrink:0, marginTop:1,
+                    fontFamily:F.ui,
+                  }}>{i+1}</div>
+                  <p style={{ fontSize:12, color:th.bookInk, lineHeight:1.65, margin:0 }}>{text}</p>
+                </div>
+                {photo && (
+                  <div
+                    onClick={() => setLightbox({ photo:"📸", caption:`Passo ${i+1}`, date:"" })}
+                    style={{
+                      marginTop:6, marginLeft:28, height:70, borderRadius:6,
+                      background:`${recipe.color}18`,
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      fontSize:24, cursor:"pointer", position:"relative",
+                      border:`1px solid ${th.bookBorder}`,
+                    }}
+                  >
+                    📸
+                    <div style={{ position:"absolute", bottom:3, right:6, fontSize:12, opacity:0.4 }}>⤢</div>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+
+        {/* Tags */}
+        {recipe.tags && recipe.tags.length > 0 && (
+          <div style={{
+            display:"flex", gap:6, flexWrap:"wrap",
+            marginTop:18, paddingTop:14,
+            borderTop:`1px solid ${th.bookBorder}`,
+          }}>
+            {recipe.tags.map(t => (
+              <span key={t} style={{
+                padding:"3px 10px", borderRadius:12,
+                background:th.appBorder, color:th.bookFaded,
+                fontFamily:F.ui, fontSize:10,
+              }}>{t}</span>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+// ══════════════════════════════════════════════════════════════
+// SCREEN: RECIPE DETAIL
+// ══════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════
+// HELPER: scala le quantità negli ingredienti in proporzione
+// ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// MODELLO INGREDIENTE: { name, qty, unit, note? }
+//   qty: numero (anche decimale) oppure null (es. "q.b.", senza quantità)
+//   unit: stringa dal menu unità ("g", "cucchiai", "q.b.", "" per pezzi)
+//   note: annotazione opzionale, mostrata tra parentesi
+// ══════════════════════════════════════════════════════════════
+
+// Nome normalizzato per confronti esatti (frigo, aggregati, suggerimenti)
+const normName = (name) => (name || "").trim().toLowerCase();
+// R9 — id univoci robusti (evita collisioni tra copie create nello stesso istante)
+const uid = (prefix = "") => {
+  const rnd = (typeof crypto !== "undefined" && crypto.randomUUID)
+    ? crypto.randomUUID().slice(0, 8)
+    : Math.random().toString(36).slice(2, 10);
+  return prefix + Date.now().toString(36) + rnd;
+};
+
+// Numero → testo italiano compatto (250 · 0,5 · 7,25)
+const fmtQty = (n) => String(Math.round(n * 100) / 100).replace(".", ",");
+
+// Unica funzione di visualizzazione, usata ovunque serva testo
+const ingredientToText = (ing) => {
+  if (!ing || typeof ing === "string") return ing || "";
+  const parts = [];
+  if (ing.qty != null) parts.push(fmtQty(ing.qty));
+  if (ing.unit) parts.push(ing.unit);
+  const tail = parts.join(" ");
+  const note = ing.note ? ` (${ing.note})` : "";
+  return tail ? `${ing.name}: ${tail}${note}` : `${ing.name}${note}`;
+};
+
+// Scala la quantità (le unità restano invariate)
+const scaleIngredient = (ing, factor) =>
+  ing.qty != null ? { ...ing, qty: Math.round(ing.qty * factor * 100) / 100 } : ing;
+
+// Appiattisce ingredienti (anche sezionati) → [{...ing, section}]
+const flattenIngredients = (ingredients) => {
+  if (!Array.isArray(ingredients)) return [];
+  if (ingredients.length > 0 && typeof ingredients[0] === "object" && "section" in ingredients[0]) {
+    return ingredients.flatMap(s => (s.items || []).map(it => ({ ...it, section: s.section })));
+  }
+  return ingredients.map(it => ({ ...it, section: null }));
+};
+
+// Tutti gli ingredienti unici del ricettario → [{ name (normalizzato), display }]
+const collectAllIngredients = (recipes) => {
+  const map = new Map();
+  recipes.forEach(r => {
+    flattenIngredients(r.ingredients).forEach(ing => {
+      const key = normName(ing.name);
+      if (key && !map.has(key)) map.set(key, ing.name.trim());
+    });
+  });
+  return Array.from(map.entries())
+    .map(([name, display]) => ({ name, display }))
+    .sort((a, b) => a.name.localeCompare(b.name, "it"));
+};
+
+// ══════════════════════════════════════════════════════════════
+// R2 — DIZIONARIO INGREDIENTI: id stabile → nome visualizzato
+// Le relazioni (categorie, nutrizione, equivalenze, membri aggregati)
+// sono keyed per ID: rinominare un ingrediente non le rompe più.
+// Migrazione trasparente: per i dati esistenti l'id coincide col nome
+// normalizzato, quindi le mappe demo/salvate restano valide.
+// ══════════════════════════════════════════════════════════════
+const buildIngredientDict = (recipes, existing = {}) => {
+  const dict = { ...existing };
+  const taken = new Set(Object.keys(dict));
+  const byName = new Map(Object.entries(dict).map(([id, nm]) => [normName(nm), id]));
+  collectAllIngredients(recipes).forEach(({ display }) => {
+    const key = normName(display);
+    if (byName.has(key)) return;
+    let id = key, n = 2;
+    while (taken.has(id)) id = key + "_" + (n++);
+    dict[id] = display; taken.add(id); byName.set(key, id);
+  });
+  return dict;
+};
+// Indice inverso (nome normalizzato → id); costruirlo una volta e riusarlo
+const ingDictIndex = (dict = {}) => {
+  const m = new Map();
+  Object.entries(dict).forEach(([id, nm]) => { if (!m.has(normName(nm))) m.set(normName(nm), id); });
+  return m;
+};
+// Risolve il nome scritto in ricetta nell'id; fallback = normName (nome nuovo)
+const resolveIngId = (idx, name) => (idx && idx.get(normName(name))) || normName(name);
+// Applica una trasformazione a ogni ingrediente preservando le sottosezioni
+const mapIngredientsStruct = (ingredients, fn) => {
+  if (!Array.isArray(ingredients)) return ingredients;
+  if (ingredients.length > 0 && typeof ingredients[0] === "object" && "section" in ingredients[0]) {
+    return ingredients.map(s => ({ ...s, items: (s.items || []).map(fn) }));
+  }
+  return ingredients.map(fn);
+};
+
+const flattenSteps = (steps) => {
+  if (!Array.isArray(steps)) return [];
+  if (steps.length > 0 && typeof steps[0] === "object" && "section" in steps[0]) {
+    return steps.flatMap(s => s.items.map(it => ({
+      text: typeof it === "string" ? it : it.text,
+      photo: typeof it === "string" ? null : it.photo,
+      section: s.section,
+    })));
+  }
+  return steps.map(it => ({
+    text: typeof it === "string" ? it : it.text,
+    photo: typeof it === "string" ? null : it.photo,
+    section: null,
+  }));
+};
+
+// ══════════════════════════════════════════════════════════════
+// DIALOG: scelta numero persone prima di spesa/cucina
+// ══════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════
+// SECTION PICKER — selettore sezione ricettario con aggiunta custom
+// ══════════════════════════════════════════════════════════════
+const SectionPicker = ({ value, onChange, sections = MACRO_SECTIONS, onAddSection, onUpdateSection, onDeleteSection, showDefaultHint = true }) => {
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newEmoji, setNewEmoji] = useState("📁");
+  const [pickEmoji, setPickEmoji] = useState(false);
+  const [managing, setManaging] = useState(false);       // popup modifica sezioni
+  const [editEmojiFor, setEditEmojiFor] = useState(null); // id sezione di cui cambiare icona
+  const [confirmDelId, setConfirmDelId] = useState(null);  // id sezione in attesa di conferma eliminazione
+
+  const ordered = sortSectionsAltroLast(sections);
+
+  const saveNew = () => {
+    const label = newName.trim();
+    if (!label || !onAddSection) return;
+    const id = uid("sec");
+    onAddSection({ id, label, emoji: newEmoji, desc: "" });
+    onChange(id);
+    setAdding(false); setNewName(""); setNewEmoji("📁");
+  };
+
+  return (
+    <div>
+      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+        {ordered.map(sec => {
+          const on = value === sec.id;
+          return (
+            <button key={sec.id} onClick={() => onChange(sec.id)} style={{
+              flex:"1 1 28%", minWidth:90, padding:"10px 6px", borderRadius:12, cursor:"pointer",
+              border:`1.5px solid ${on ? "#C4593A" : "#EDE6D4"}`,
+              background: on ? "#C4593A15" : "#F7F2E8",
+              display:"flex", flexDirection:"column", alignItems:"center", gap:3,
+            }}>
+              <span style={{ fontSize:18 }}>{sec.emoji}</span>
+              <span style={{ fontFamily:F.ui, fontSize:10, fontWeight:700, color: on ? "#C4593A" : "#7A6E5F", textAlign:"center" }}>{sec.label}</span>
+            </button>
+          );
+        })}
+        {onAddSection && (
+          <button onClick={() => setAdding(true)} style={{
+            flex:"1 1 28%", minWidth:90, padding:"10px 6px", borderRadius:12, cursor:"pointer",
+            border:"1.5px dashed #C9BDA5", background:"transparent",
+            display:"flex", flexDirection:"column", alignItems:"center", gap:3,
+          }}>
+            <span style={{ fontSize:18 }}>＋</span>
+            <span style={{ fontFamily:F.ui, fontSize:10, fontWeight:700, color:"#7A6E5F" }}>Nuova sezione</span>
+          </button>
+        )}
+      </div>
+      {onUpdateSection && (
+        <button onClick={() => setManaging(true)} style={{
+          marginTop:8, background:"none", border:"none", cursor:"pointer",
+          fontFamily:F.ui, fontSize:11, color:"#7A6E5F",
+          textDecoration:"underline", textUnderlineOffset:3, padding:0,
+        }}>✏️ Modifica sezioni esistenti</button>
+      )}
+
+      {/* Popup nuova sezione */}
+      {adding && (
+        <div onClick={() => setAdding(false)} style={{ position:"absolute", inset:0, zIndex:500, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+          <div onClick={e => e.stopPropagation()} style={{ width:"100%", background:"#FAF7F0", borderRadius:18, padding:"18px 16px", boxShadow:"0 10px 40px rgba(0,0,0,0.4)" }}>
+            <div style={{ fontFamily:F.display, fontSize:16, color:"#2C2416", textAlign:"center", marginBottom:12 }}>Nuova sezione</div>
+            {!pickEmoji ? (
+              <>
+                <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+                  <button onClick={() => setPickEmoji(true)} style={{ width:48, padding:"8px 4px", textAlign:"center", border:"1.5px solid #EDE6D4", borderRadius:10, background:"#F7F2E8", fontSize:18, cursor:"pointer", flexShrink:0 }}>{newEmoji}</button>
+                  <input
+                    value={newName}
+                    onChange={e => setNewName(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && saveNew()}
+                    placeholder="Nome sezione…"
+                    autoFocus
+                    style={{ flex:1, padding:"10px 12px", border:"1.5px solid #EDE6D4", borderRadius:10, background:"#F7F2E8", fontFamily:F.body, fontSize:14, color:"#2C2416", outline:"none", minWidth:0 }}
+                  />
+                </div>
+                <div style={{ display:"flex", gap:8 }}>
+                  <button onClick={() => setAdding(false)} style={{ flex:1, padding:"11px", border:"1.5px solid #EDE6D4", borderRadius:12, background:"transparent", color:"#7A6E5F", fontFamily:F.ui, fontSize:12, cursor:"pointer" }}>Annulla</button>
+                  <button onClick={saveNew} disabled={!newName.trim()} style={{ flex:2, padding:"11px", border:"none", borderRadius:12, background: newName.trim() ? "#C4593A" : "#EDE6D4", color: newName.trim() ? "#fff" : "#7A6E5F", fontFamily:F.ui, fontSize:12, fontWeight:700, cursor: newName.trim() ? "pointer" : "default" }}>Crea</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(6, 1fr)", gap:6 }}>
+                  {PICKER_EMOJIS.map(e => (
+                    <button key={e} onClick={() => { setNewEmoji(e); setPickEmoji(false); }} style={{
+                      aspectRatio:"1", borderRadius:10, border:"1px solid #EDE6D4",
+                      background:"#F7F2E8", fontSize:20, cursor:"pointer",
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                    }}>{e}</button>
+                  ))}
+                </div>
+                <button onClick={() => setPickEmoji(false)} style={{ width:"100%", marginTop:12, padding:"11px", border:"1.5px solid #EDE6D4", borderRadius:12, background:"transparent", color:"#7A6E5F", fontFamily:F.ui, fontSize:12, cursor:"pointer" }}>‹ Indietro</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Popup modifica sezioni esistenti */}
+      {managing && (
+        <div onClick={() => { setManaging(false); setEditEmojiFor(null); }} style={{ position:"absolute", inset:0, zIndex:500, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+          <div onClick={e => e.stopPropagation()} style={{ width:"100%", maxHeight:"85%", overflowY:"auto", background:"#FAF7F0", borderRadius:18, padding:"18px 16px", boxShadow:"0 10px 40px rgba(0,0,0,0.4)" }}>
+            <div style={{ fontFamily:F.display, fontSize:16, color:"#2C2416", textAlign:"center", marginBottom:4 }}>Modifica sezioni</div>
+            <div style={{ fontFamily:F.ui, fontSize:10.5, color:"#7A6E5F", textAlign:"center", marginBottom:12 }}>"Altro" è fissa e resta in fondo</div>
+
+            {editEmojiFor ? (
+              <>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(6, 1fr)", gap:6 }}>
+                  {PICKER_EMOJIS.map(e => (
+                    <button key={e} onClick={() => {
+                      const sec = sections.find(s => s.id === editEmojiFor);
+                      if (sec) onUpdateSection({ ...sec, emoji: e });
+                      setEditEmojiFor(null);
+                    }} style={{
+                      aspectRatio:"1", borderRadius:10, border:"1px solid #EDE6D4",
+                      background:"#F7F2E8", fontSize:20, cursor:"pointer",
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                    }}>{e}</button>
+                  ))}
+                </div>
+                <button onClick={() => setEditEmojiFor(null)} style={{ width:"100%", marginTop:12, padding:"11px", border:"1.5px solid #EDE6D4", borderRadius:12, background:"transparent", color:"#7A6E5F", fontFamily:F.ui, fontSize:12, cursor:"pointer" }}>‹ Indietro</button>
+              </>
+            ) : (
+              <>
+                {ordered.map(sec => {
+                  const isFixed = sec.id === "altro";
+                  return (
+                    <div key={sec.id} style={{
+                      display:"flex", alignItems:"center", gap:8, marginBottom:8,
+                      opacity: isFixed ? 0.7 : 1,
+                    }}>
+                      <button
+                        onClick={() => !isFixed && setEditEmojiFor(sec.id)}
+                        disabled={isFixed}
+                        style={{ width:44, padding:"8px 4px", textAlign:"center", border:"1.5px solid #EDE6D4", borderRadius:10, background:"#F7F2E8", fontSize:16, cursor: isFixed ? "default" : "pointer", flexShrink:0 }}
+                      >{sec.emoji}</button>
+                      <input
+                        value={sec.label}
+                        onChange={e => !isFixed && onUpdateSection({ ...sec, label: e.target.value })}
+                        disabled={isFixed}
+                        style={{ flex:1, padding:"9px 12px", border:"1.5px solid #EDE6D4", borderRadius:10, background:"#F7F2E8", fontFamily:F.body, fontSize:13, color:"#2C2416", outline:"none", minWidth:0 }}
+                      />
+                      {isFixed ? (
+                        <span style={{ fontFamily:F.ui, fontSize:9, color:"#7A6E5F", flexShrink:0 }}>fissa</span>
+                      ) : onDeleteSection && (
+                        confirmDelId === sec.id ? (
+                          <button onClick={() => { onDeleteSection(sec.id); if (value === sec.id) onChange("altro"); setConfirmDelId(null); }} style={{ flexShrink:0, padding:"8px 10px", border:"none", borderRadius:10, background:"#D93025", color:"#fff", fontFamily:F.ui, fontSize:10, fontWeight:700, cursor:"pointer" }}>Confermi?</button>
+                        ) : (
+                          <button onClick={() => setConfirmDelId(sec.id)} title="Elimina sezione" style={{ flexShrink:0, background:"none", border:"none", color:"#ccc", fontSize:15, cursor:"pointer", padding:"0 2px" }}>🗑</button>
+                        )
+                      )}
+                    </div>
+                  );
+                })}
+                {onDeleteSection && (
+                  <div style={{ fontFamily:F.ui, fontSize:9.5, color:"#7A6E5F", margin:"2px 0 6px", lineHeight:1.4 }}>
+                    🗑 elimina la sezione: le sue ricette passano in "Altro".
+                  </div>
+                )}
+                <button onClick={() => { setManaging(false); setConfirmDelId(null); }} style={{ width:"100%", marginTop:8, padding:"12px", border:"none", borderRadius:12, background:"#C4593A", color:"#fff", fontFamily:F.ui, fontSize:13, fontWeight:700, cursor:"pointer" }}>Fatto ✓</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Estrae il primo numero (con eventuale unità) da un testo ingrediente
+// Unità riconosciute (plurali normalizzati al singolare)
+const UNIT_ALIASES = {
+  g:"g", gr:"g", grammi:"g", grammo:"g", kg:"kg", ml:"ml", l:"l", cl:"cl", dl:"dl",
+  cucchiaio:"cucchiaio", cucchiai:"cucchiaio",
+  cucchiaino:"cucchiaino", cucchiaini:"cucchiaino",
+  tazza:"tazza", tazze:"tazza",
+  bicchiere:"bicchiere", bicchieri:"bicchiere",
+  bustina:"bustina", bustine:"bustina",
+  pizzico:"pizzico", pizzichi:"pizzico",
+  spicchio:"spicchio", spicchi:"spicchio",
+};
+const unitLabel = (u) => u === "" ? "unità" : u;
+// R4 — normalizzatore di unità unico (prima duplicato come nu/normUnit in più punti)
+const normUnit = (u) => UNIT_ALIASES[(u || "").toLowerCase()] || (u || "").toLowerCase();
+// R4 — riga macro compatta. opts.salt aggiunge il sale, opts.per100 aggiunge "/100g",
+// opts.fib=false omette la fibra (usato dove prima esisteva macroLine2).
+const macroLine = (v, opts = {}) => {
+  const c = (x) => String(x).replace(".", ",");
+  let out = `${v.kcal} kcal · C ${c(v.carb)} · P ${c(v.prot)} · Gr ${c(v.fat)}`;
+  if (opts.fib !== false && v.fib != null) out += ` · Fib ${c(v.fib)}`;
+  if (opts.salt && v.salt != null) out += ` · sale ${c(v.salt)} g`;
+  if (opts.per100) out += " /100g";
+  return out;
+};
+
+// ══════════════════════════════════════════════════════════════
+// VALORI NUTRIZIONALI — dataset locale (per 100 g di parte edibile)
+// Valori indicativi elaborati dalle Tabelle di Composizione degli
+// Alimenti CREA (alimentinutrizione.it) — citare la fonte nell'app.
+// kcal · carb=carboidrati · sug=zuccheri · prot=proteine
+// fat=grassi · sat=saturi · fib=fibre · salt=sale (g)
+// ══════════════════════════════════════════════════════════════
+const NUTRITION_DB = [
+  // ── Farine, cereali e derivati ──
+  { cat:"Farine, cereali e derivati", id:"farina_00", name:"Farina di frumento tipo 00", kcal:340, carb:77.3, sug:1.7, prot:11.0, fat:0.7, sat:0.1, fib:2.2, salt:0.005 },
+  { cat:"Farine, cereali e derivati", id:"farina_int", name:"Farina di frumento integrale", kcal:319, carb:67.8, sug:2.1, prot:11.9, fat:1.9, sat:0.3, fib:8.4, salt:0.008 },
+  { cat:"Farine, cereali e derivati", id:"farina_mandorle", name:"Farina di mandorle", kcal:603, carb:4.6, sug:3.7, prot:22.0, fat:55.3, sat:4.6, fib:12.7, salt:0.01 },
+  { cat:"Farine, cereali e derivati", id:"semola", name:"Semola di grano duro", kcal:339, carb:76.9, sug:3.2, prot:11.5, fat:0.5, sat:0.1, fib:3.6, salt:0.005 },
+  { cat:"Farine, cereali e derivati", id:"pasta_secca", name:"Pasta di semola", kcal:353, carb:79.1, sug:4.2, prot:10.9, fat:1.4, sat:0.2, fib:2.7, salt:0.01 },
+  { cat:"Farine, cereali e derivati", id:"pasta_uovo", name:"Pasta all'uovo secca", kcal:366, carb:72.1, sug:2.1, prot:13.0, fat:2.4, sat:0.7, fib:3.2, salt:0.03 },
+  { cat:"Farine, cereali e derivati", id:"riso", name:"Riso brillato (Carnaroli, Arborio…)", kcal:332, carb:80.4, sug:0.2, prot:6.7, fat:0.4, sat:0.1, fib:1.0, salt:0.01 },
+  { cat:"Farine, cereali e derivati", id:"riso_integrale", name:"Riso integrale", kcal:337, carb:77.4, sug:0.9, prot:7.5, fat:1.9, sat:0.5, fib:1.9, salt:0.01 },
+  { cat:"Farine, cereali e derivati", id:"pane", name:"Pane comune", kcal:275, carb:57.6, sug:2.0, prot:8.6, fat:0.4, sat:0.1, fib:3.1, salt:1.5 },
+  { cat:"Farine, cereali e derivati", id:"pangrattato", name:"Pane grattugiato", kcal:351, carb:70.3, sug:2.5, prot:11.5, fat:2.2, sat:0.5, fib:4.0, salt:1.7 },
+  { cat:"Farine, cereali e derivati", id:"orzo", name:"Orzo perlato", kcal:319, carb:70.5, sug:1.2, prot:10.4, fat:1.4, sat:0.3, fib:9.2, salt:0.01 },
+  { cat:"Farine, cereali e derivati", id:"farro", name:"Farro", kcal:335, carb:67.1, sug:2.7, prot:15.1, fat:2.5, sat:0.4, fib:6.8, salt:0.01 },
+  { cat:"Farine, cereali e derivati", id:"avena_fiocchi", name:"Fiocchi d'avena", kcal:376, carb:66.8, sug:1.0, prot:13.0, fat:7.1, sat:1.3, fib:10.6, salt:0.005 },
+  { cat:"Farine, cereali e derivati", id:"mais_polenta", name:"Farina di mais (polenta)", kcal:354, carb:80.8, sug:1.5, prot:8.7, fat:2.7, sat:0.4, fib:3.1, salt:0.005 },
+  { cat:"Farine, cereali e derivati", id:"couscous", name:"Cous cous secco", kcal:358, carb:77.4, sug:1.6, prot:12.8, fat:0.6, sat:0.1, fib:5.0, salt:0.02 },
+  { cat:"Farine, cereali e derivati", id:"lievito_birra", name:"Lievito di birra fresco", kcal:82, carb:1.1, sug:0, prot:12.1, fat:0.4, sat:0.1, fib:6.9, salt:0.09 },
+  { cat:"Farine, cereali e derivati", id:"lievito_chimico", name:"Lievito chimico (per dolci)", kcal:110, carb:27.0, sug:0, prot:0.5, fat:0.1, sat:0, fib:0.2, salt:26.0 },
+
+  // ── Zuccheri e dolcificanti ──
+  { cat:"Zuccheri e dolcificanti", id:"zucchero", name:"Zucchero (saccarosio)", kcal:392, carb:100, sug:100, prot:0, fat:0, sat:0, fib:0, salt:0 },
+  { cat:"Zuccheri e dolcificanti", id:"zucchero_canna", name:"Zucchero di canna grezzo", kcal:377, carb:97.0, sug:96.0, prot:0.1, fat:0, sat:0, fib:0, salt:0.03 },
+  { cat:"Zuccheri e dolcificanti", id:"zucchero_velo", name:"Zucchero a velo", kcal:392, carb:99.8, sug:99.5, prot:0, fat:0, sat:0, fib:0, salt:0 },
+  { cat:"Zuccheri e dolcificanti", id:"miele", name:"Miele", kcal:304, carb:80.3, sug:80.3, prot:0.6, fat:0, sat:0, fib:0, salt:0.01 },
+  { cat:"Zuccheri e dolcificanti", id:"marmellata", name:"Marmellata / confettura", kcal:222, carb:58.7, sug:58.7, prot:0.5, fat:0, sat:0, fib:1.0, salt:0.03 },
+  { cat:"Zuccheri e dolcificanti", id:"nutella", name:"Crema spalmabile alle nocciole", kcal:539, carb:57.5, sug:56.3, prot:6.3, fat:30.9, sat:10.6, fib:3.4, salt:0.11 },
+
+  // ── Latticini e uova ──
+  { cat:"Latticini e uova", id:"latte_intero", name:"Latte intero", kcal:64, carb:4.9, sug:4.9, prot:3.3, fat:3.6, sat:2.1, fib:0, salt:0.13 },
+  { cat:"Latticini e uova", id:"latte_ps", name:"Latte parzialmente scremato", kcal:46, carb:5.0, sug:5.0, prot:3.5, fat:1.5, sat:0.9, fib:0, salt:0.13 },
+  { cat:"Latticini e uova", id:"panna", name:"Panna fresca da montare (35%)", kcal:337, carb:3.4, sug:3.4, prot:2.3, fat:35.0, sat:22.0, fib:0, salt:0.08 },
+  { cat:"Latticini e uova", id:"panna_cucina", name:"Panna da cucina (20%)", kcal:207, carb:4.0, sug:4.0, prot:2.6, fat:20.0, sat:12.5, fib:0, salt:0.09 },
+  { cat:"Latticini e uova", id:"burro", name:"Burro", kcal:758, carb:1.1, sug:1.1, prot:0.8, fat:83.4, sat:51.4, fib:0, salt:0.02 },
+  { cat:"Latticini e uova", id:"yogurt_intero", name:"Yogurt intero bianco", kcal:66, carb:4.3, sug:4.3, prot:3.8, fat:3.9, sat:2.4, fib:0, salt:0.12 },
+  { cat:"Latticini e uova", id:"yogurt_greco", name:"Yogurt greco", kcal:97, carb:3.9, sug:3.9, prot:9.0, fat:5.0, sat:3.4, fib:0, salt:0.09 },
+  { cat:"Latticini e uova", id:"ricotta", name:"Ricotta di vacca", kcal:146, carb:3.5, sug:3.5, prot:8.8, fat:10.9, sat:7.1, fib:0, salt:0.22 },
+  { cat:"Latticini e uova", id:"mascarpone", name:"Mascarpone", kcal:455, carb:4.6, sug:4.6, prot:4.6, fat:47.0, sat:30.0, fib:0, salt:0.09 },
+  { cat:"Latticini e uova", id:"mozzarella", name:"Mozzarella di vacca", kcal:253, carb:0.7, sug:0.7, prot:18.7, fat:19.5, sat:12.5, fib:0, salt:0.5 },
+  { cat:"Latticini e uova", id:"parmigiano", name:"Parmigiano Reggiano", kcal:392, carb:0, sug:0, prot:33.0, fat:28.4, sat:18.5, fib:0, salt:1.6 },
+  { cat:"Latticini e uova", id:"grana", name:"Grana Padano", kcal:398, carb:0, sug:0, prot:33.0, fat:29.0, sat:19.0, fib:0, salt:1.5 },
+  { cat:"Latticini e uova", id:"pecorino", name:"Pecorino", kcal:392, carb:0.2, sug:0.2, prot:28.5, fat:30.6, sat:19.6, fib:0, salt:1.9 },
+  { cat:"Latticini e uova", id:"gorgonzola", name:"Gorgonzola", kcal:324, carb:0.1, sug:0.1, prot:19.1, fat:27.1, sat:18.0, fib:0, salt:1.6 },
+  { cat:"Latticini e uova", id:"uova", name:"Uova di gallina intere", kcal:128, carb:0.5, sug:0.5, prot:12.4, fat:8.7, sat:2.7, fib:0, salt:0.35 },
+
+  // ── Carni e salumi ──
+  { cat:"Carni e salumi", id:"pollo_petto", name:"Pollo, petto", kcal:100, carb:0, sug:0, prot:23.3, fat:0.8, sat:0.3, fib:0, salt:0.08 },
+  { cat:"Carni e salumi", id:"pollo_intero", name:"Pollo intero con pelle", kcal:171, carb:0, sug:0, prot:19.1, fat:10.6, sat:3.0, fib:0, salt:0.09 },
+  { cat:"Carni e salumi", id:"tacchino", name:"Tacchino, fesa", kcal:107, carb:0, sug:0, prot:24.0, fat:1.2, sat:0.4, fib:0, salt:0.06 },
+  { cat:"Carni e salumi", id:"manzo_magro", name:"Bovino adulto, tagli magri", kcal:129, carb:0, sug:0, prot:21.8, fat:4.6, sat:1.8, fib:0, salt:0.1 },
+  { cat:"Carni e salumi", id:"macinato_misto", name:"Carne macinata mista (bovino/suino)", kcal:220, carb:0, sug:0, prot:18.5, fat:16.0, sat:6.5, fib:0, salt:0.12 },
+  { cat:"Carni e salumi", id:"maiale_lonza", name:"Suino, lonza", kcal:157, carb:0, sug:0, prot:21.3, fat:8.0, sat:2.8, fib:0, salt:0.08 },
+  { cat:"Carni e salumi", id:"salsiccia", name:"Salsiccia di suino fresca", kcal:304, carb:0.6, sug:0.6, prot:15.4, fat:26.7, sat:9.5, fib:0, salt:2.2 },
+  { cat:"Carni e salumi", id:"prosciutto_crudo", name:"Prosciutto crudo", kcal:224, carb:0, sug:0, prot:25.5, fat:13.0, sat:4.5, fib:0, salt:5.5 },
+  { cat:"Carni e salumi", id:"prosciutto_cotto", name:"Prosciutto cotto", kcal:215, carb:0.9, sug:0.9, prot:19.8, fat:14.7, sat:5.0, fib:0, salt:1.8 },
+  { cat:"Carni e salumi", id:"speck", name:"Speck", kcal:303, carb:0.5, sug:0.5, prot:28.3, fat:20.9, sat:7.7, fib:0, salt:4.4 },
+  { cat:"Carni e salumi", id:"pancetta", name:"Pancetta tesa", kcal:337, carb:0.8, sug:0.8, prot:20.9, fat:28.1, sat:10.1, fib:0, salt:2.8 },
+  { cat:"Carni e salumi", id:"guanciale", name:"Guanciale", kcal:655, carb:0.2, sug:0.2, prot:8.6, fat:69.6, sat:24.5, fib:0, salt:2.0 },
+
+  // ── Pesce ──
+  { cat:"Pesce", id:"tonno_fresco", name:"Tonno fresco", kcal:159, carb:0.1, sug:0.1, prot:21.5, fat:8.1, sat:2.8, fib:0, salt:0.1 },
+  { cat:"Pesce", id:"tonno_olio", name:"Tonno sott'olio sgocciolato", kcal:192, carb:0, sug:0, prot:25.2, fat:10.1, sat:2.4, fib:0, salt:0.9 },
+  { cat:"Pesce", id:"salmone", name:"Salmone fresco", kcal:185, carb:1.0, sug:1.0, prot:18.4, fat:12.0, sat:2.9, fib:0, salt:0.1 },
+  { cat:"Pesce", id:"merluzzo", name:"Merluzzo / nasello", kcal:71, carb:0, sug:0, prot:17.0, fat:0.3, sat:0.1, fib:0, salt:0.2 },
+  { cat:"Pesce", id:"gamberi", name:"Gamberi", kcal:71, carb:0.6, sug:0, prot:13.6, fat:0.6, sat:0.2, fib:0, salt:0.6 },
+  { cat:"Pesce", id:"acciughe", name:"Acciughe sott'olio", kcal:206, carb:0.2, sug:0.2, prot:25.9, fat:11.3, sat:2.7, fib:0, salt:9.3 },
+
+  // ── Legumi ──
+  { cat:"Legumi", id:"ceci_secchi", name:"Ceci secchi", kcal:343, carb:46.9, sug:3.7, prot:20.9, fat:6.3, sat:0.7, fib:13.6, salt:0.02 },
+  { cat:"Legumi", id:"ceci_cotti", name:"Ceci in scatola scolati", kcal:113, carb:15.0, sug:0.9, prot:6.7, fat:2.3, sat:0.2, fib:5.7, salt:0.6 },
+  { cat:"Legumi", id:"lenticchie_secche", name:"Lenticchie secche", kcal:325, carb:51.1, sug:1.8, prot:22.7, fat:1.0, sat:0.2, fib:13.7, salt:0.02 },
+  { cat:"Legumi", id:"fagioli_borlotti", name:"Fagioli borlotti in scatola scolati", kcal:91, carb:14.9, sug:0.6, prot:6.9, fat:0.6, sat:0.1, fib:6.5, salt:0.7 },
+  { cat:"Legumi", id:"fagioli_cannellini", name:"Fagioli cannellini in scatola scolati", kcal:85, carb:13.5, sug:0.5, prot:6.6, fat:0.5, sat:0.1, fib:6.2, salt:0.7 },
+  { cat:"Legumi", id:"piselli", name:"Piselli freschi/surgelati", kcal:76, carb:11.4, sug:3.3, prot:5.5, fat:0.6, sat:0.1, fib:5.2, salt:0.01 },
+
+  // ── Verdure e ortaggi ──
+  { cat:"Verdure e ortaggi", id:"pomodori", name:"Pomodori da insalata", kcal:19, carb:2.8, sug:2.8, prot:1.0, fat:0.2, sat:0, fib:1.1, salt:0.01 },
+  { cat:"Verdure e ortaggi", id:"pomodori_pelati", name:"Pomodori pelati in scatola", kcal:23, carb:3.5, sug:3.5, prot:1.2, fat:0.5, sat:0.1, fib:0.9, salt:0.1 },
+  { cat:"Verdure e ortaggi", id:"passata", name:"Passata di pomodoro", kcal:30, carb:5.5, sug:5.0, prot:1.4, fat:0.2, sat:0, fib:1.2, salt:0.1 },
+  { cat:"Verdure e ortaggi", id:"cipolla", name:"Cipolla", kcal:28, carb:5.7, sug:5.7, prot:1.0, fat:0.1, sat:0, fib:1.0, salt:0.01 },
+  { cat:"Verdure e ortaggi", id:"aglio", name:"Aglio", kcal:44, carb:8.4, sug:2.4, prot:0.9, fat:0.6, sat:0.1, fib:3.1, salt:0.01 },
+  { cat:"Verdure e ortaggi", id:"carote", name:"Carote", kcal:39, carb:7.6, sug:7.6, prot:1.1, fat:0.2, sat:0, fib:3.1, salt:0.1 },
+  { cat:"Verdure e ortaggi", id:"sedano", name:"Sedano", kcal:23, carb:2.4, sug:2.2, prot:2.3, fat:0.2, sat:0, fib:1.6, salt:0.14 },
+  { cat:"Verdure e ortaggi", id:"zucchine", name:"Zucchine", kcal:14, carb:1.4, sug:1.3, prot:1.3, fat:0.1, sat:0, fib:1.2, salt:0.01 },
+  { cat:"Verdure e ortaggi", id:"melanzane", name:"Melanzane", kcal:21, carb:2.6, sug:2.6, prot:1.1, fat:0.4, sat:0.1, fib:2.6, salt:0.01 },
+  { cat:"Verdure e ortaggi", id:"peperoni", name:"Peperoni", kcal:24, carb:4.2, sug:4.2, prot:0.9, fat:0.3, sat:0.1, fib:1.9, salt:0.01 },
+  { cat:"Verdure e ortaggi", id:"patate", name:"Patate", kcal:81, carb:17.9, sug:0.4, prot:2.1, fat:1.0, sat:0.1, fib:1.6, salt:0.01 },
+  { cat:"Verdure e ortaggi", id:"spinaci", name:"Spinaci", kcal:35, carb:2.9, sug:0.4, prot:3.4, fat:0.7, sat:0.1, fib:1.9, salt:0.18 },
+  { cat:"Verdure e ortaggi", id:"broccoli", name:"Broccoli", kcal:30, carb:3.1, sug:3.1, prot:3.0, fat:0.4, sat:0.1, fib:3.1, salt:0.02 },
+  { cat:"Verdure e ortaggi", id:"funghi", name:"Funghi champignon", kcal:22, carb:0.9, sug:0.9, prot:3.9, fat:0.3, sat:0, fib:2.3, salt:0.01 },
+  { cat:"Verdure e ortaggi", id:"zucca", name:"Zucca", kcal:19, carb:3.5, sug:2.6, prot:1.1, fat:0.1, sat:0, fib:1.3, salt:0.01 },
+  { cat:"Verdure e ortaggi", id:"lattuga", name:"Lattuga", kcal:21, carb:2.2, sug:2.2, prot:1.8, fat:0.4, sat:0.1, fib:1.5, salt:0.02 },
+  { cat:"Verdure e ortaggi", id:"rucola", name:"Rucola", kcal:30, carb:3.9, sug:2.0, prot:2.6, fat:0.3, sat:0.1, fib:1.6, salt:0.07 },
+  { cat:"Verdure e ortaggi", id:"basilico", name:"Basilico fresco", kcal:32, carb:5.1, sug:0.3, prot:3.1, fat:0.6, sat:0, fib:1.6, salt:0.01 },
+  { cat:"Verdure e ortaggi", id:"prezzemolo", name:"Prezzemolo fresco", kcal:30, carb:1.7, sug:1.7, prot:3.7, fat:0.6, sat:0.1, fib:5.0, salt:0.05 },
+
+  // ── Frutta ──
+  { cat:"Frutta", id:"mele", name:"Mele", kcal:57, carb:13.7, sug:13.7, prot:0.3, fat:0.1, sat:0, fib:1.7, salt:0.005 },
+  { cat:"Frutta", id:"pere", name:"Pere", kcal:41, carb:9.5, sug:9.5, prot:0.3, fat:0.1, sat:0, fib:3.8, salt:0.005 },
+  { cat:"Frutta", id:"banane", name:"Banane", kcal:69, carb:15.4, sug:12.8, prot:1.2, fat:0.3, sat:0.1, fib:1.8, salt:0.005 },
+  { cat:"Frutta", id:"limoni", name:"Limoni (succo e polpa)", kcal:16, carb:2.3, sug:2.3, prot:0.6, fat:0.2, sat:0, fib:1.9, salt:0.005 },
+  { cat:"Frutta", id:"arance", name:"Arance", kcal:39, carb:8.1, sug:8.1, prot:0.7, fat:0.2, sat:0, fib:1.6, salt:0.005 },
+  { cat:"Frutta", id:"fragole", name:"Fragole", kcal:30, carb:5.3, sug:5.3, prot:0.9, fat:0.4, sat:0, fib:1.6, salt:0.005 },
+  { cat:"Frutta", id:"pesche", name:"Pesche", kcal:28, carb:6.1, sug:6.1, prot:0.7, fat:0.1, sat:0, fib:2.1, salt:0.005 },
+  { cat:"Frutta", id:"uva", name:"Uva", kcal:64, carb:15.6, sug:15.6, prot:0.5, fat:0.1, sat:0, fib:1.5, salt:0.005 },
+
+  // ── Frutta secca e semi ──
+  { cat:"Frutta secca e semi", id:"mandorle", name:"Mandorle sgusciate", kcal:628, carb:4.6, sug:3.7, prot:22.0, fat:55.3, sat:4.6, fib:12.7, salt:0.01 },
+  { cat:"Frutta secca e semi", id:"noci", name:"Noci sgusciate", kcal:689, carb:5.1, sug:3.1, prot:14.3, fat:68.1, sat:6.1, fib:6.2, salt:0.005 },
+  { cat:"Frutta secca e semi", id:"nocciole", name:"Nocciole sgusciate", kcal:655, carb:6.1, sug:4.1, prot:13.8, fat:64.1, sat:4.5, fib:8.1, salt:0.01 },
+  { cat:"Frutta secca e semi", id:"pinoli", name:"Pinoli", kcal:595, carb:4.0, sug:3.9, prot:31.9, fat:50.3, sat:4.3, fib:4.5, salt:0.01 },
+  { cat:"Frutta secca e semi", id:"pistacchi", name:"Pistacchi", kcal:608, carb:8.1, sug:7.6, prot:18.1, fat:56.1, sat:6.9, fib:10.6, salt:0.01 },
+  { cat:"Frutta secca e semi", id:"uvetta", name:"Uva passa / uvetta", kcal:283, carb:72.0, sug:72.0, prot:1.9, fat:0.6, sat:0.2, fib:3.1, salt:0.05 },
+
+  // ── Grassi e condimenti ──
+  { cat:"Grassi e condimenti", id:"olio_evo", name:"Olio extravergine di oliva", kcal:899, carb:0, sug:0, prot:0, fat:99.9, sat:14.5, fib:0, salt:0 },
+  { cat:"Grassi e condimenti", id:"olio_semi", name:"Olio di semi (girasole)", kcal:899, carb:0, sug:0, prot:0, fat:99.9, sat:11.2, fib:0, salt:0 },
+  { cat:"Grassi e condimenti", id:"aceto", name:"Aceto di vino", kcal:19, carb:0.6, sug:0.5, prot:0.4, fat:0, sat:0, fib:0, salt:0.02 },
+  { cat:"Grassi e condimenti", id:"aceto_balsamico", name:"Aceto balsamico", kcal:88, carb:17.0, sug:15.0, prot:0.5, fat:0, sat:0, fib:0, salt:0.06 },
+  { cat:"Grassi e condimenti", id:"maionese", name:"Maionese", kcal:655, carb:2.1, sug:1.4, prot:1.2, fat:70.0, sat:10.5, fib:0, salt:1.5 },
+  { cat:"Grassi e condimenti", id:"sale", name:"Sale da cucina", kcal:0, carb:0, sug:0, prot:0, fat:0, sat:0, fib:0, salt:100 },
+  { cat:"Grassi e condimenti", id:"pepe", name:"Pepe nero", kcal:255, carb:38.3, sug:0.6, prot:10.9, fat:3.3, sat:1.4, fib:26.5, salt:0.05 },
+  { cat:"Grassi e condimenti", id:"concentrato_pomodoro", name:"Concentrato di pomodoro", kcal:88, carb:17.8, sug:13.7, prot:4.9, fat:0.4, sat:0.1, fib:3.0, salt:0.5 },
+  { cat:"Grassi e condimenti", id:"brodo_carne", name:"Brodo di carne (pronto)", kcal:9, carb:0.4, sug:0.2, prot:1.1, fat:0.4, sat:0.2, fib:0, salt:0.9 },
+  { cat:"Grassi e condimenti", id:"brodo_vegetale", name:"Brodo vegetale (pronto)", kcal:6, carb:0.6, sug:0.3, prot:0.4, fat:0.2, sat:0.1, fib:0, salt:0.9 },
+  { cat:"Grassi e condimenti", id:"dado", name:"Dado da brodo", kcal:245, carb:15.0, sug:8.0, prot:12.0, fat:15.5, sat:8.5, fib:0.5, salt:47.0 },
+
+  // ── Cioccolato, cacao e dolci ──
+  { cat:"Cioccolato, cacao e dolci", id:"cioccolato_fondente", name:"Cioccolato fondente (70%)", kcal:531, carb:33.0, sug:28.0, prot:7.9, fat:38.0, sat:23.0, fib:10.0, salt:0.02 },
+  { cat:"Cioccolato, cacao e dolci", id:"cioccolato_latte", name:"Cioccolato al latte", kcal:552, carb:56.7, sug:54.0, prot:7.0, fat:33.6, sat:20.5, fib:2.1, salt:0.2 },
+  { cat:"Cioccolato, cacao e dolci", id:"cacao_amaro", name:"Cacao amaro in polvere", kcal:355, carb:11.5, sug:0.5, prot:20.4, fat:25.6, sat:15.3, fib:29.8, salt:0.05 },
+  { cat:"Cioccolato, cacao e dolci", id:"biscotti_secchi", name:"Biscotti secchi", kcal:429, carb:80.4, sug:21.9, prot:7.6, fat:8.1, sat:2.7, fib:2.6, salt:0.5 },
+  { cat:"Cioccolato, cacao e dolci", id:"savoiardi", name:"Savoiardi", kcal:392, carb:75.5, sug:41.0, prot:9.5, fat:5.9, sat:1.9, fib:1.8, salt:0.25 },
+
+  // ── Bevande e alcolici (per cucina) ──
+  { cat:"Bevande e alcolici (per cucina)", id:"vino_bianco", name:"Vino bianco da tavola", kcal:70, carb:0.1, sug:0.1, prot:0.1, fat:0, sat:0, fib:0, salt:0.01 },
+  { cat:"Bevande e alcolici (per cucina)", id:"vino_rosso", name:"Vino rosso da tavola", kcal:75, carb:0.2, sug:0.2, prot:0.1, fat:0, sat:0, fib:0, salt:0.01 },
+  { cat:"Bevande e alcolici (per cucina)", id:"birra", name:"Birra chiara", kcal:34, carb:3.5, sug:3.5, prot:0.2, fat:0, sat:0, fib:0, salt:0.005 },
+  { cat:"Bevande e alcolici (per cucina)", id:"caffe", name:"Caffè espresso", kcal:2, carb:0.3, sug:0, prot:0.1, fat:0, sat:0, fib:0, salt:0.005 },
+
+  // ── Varie ──
+  { cat:"Varie", id:"vaniglia", name:"Vaniglia (bacca/estratto)", kcal:288, carb:12.7, sug:12.7, prot:0.1, fat:0.1, sat:0, fib:0, salt:0.02 },
+  { cat:"Varie", id:"cannella", name:"Cannella in polvere", kcal:247, carb:27.5, sug:2.2, prot:4.0, fat:1.2, sat:0.3, fib:53.1, salt:0.03 },
+  { cat:"Varie", id:"rosmarino", name:"Rosmarino fresco", kcal:131, carb:13.5, sug:0, prot:3.3, fat:5.9, sat:2.8, fib:14.1, salt:0.07 },
+  { cat:"Varie", id:"timo", name:"Timo fresco", kcal:101, carb:10.5, sug:0, prot:5.6, fat:1.7, sat:0.5, fib:14.0, salt:0.02 },
+  { cat:"Varie", id:"menta", name:"Menta fresca", kcal:70, carb:5.3, sug:0, prot:3.8, fat:0.9, sat:0.2, fib:8.0, salt:0.08 },
+  { cat:"Varie", id:"olive", name:"Olive da tavola", kcal:145, carb:1.0, sug:0.5, prot:0.8, fat:15.0, sat:2.3, fib:4.4, salt:3.5 },
+  { cat:"Varie", id:"capperi", name:"Capperi sotto sale (dissalati)", kcal:23, carb:2.4, sug:0.4, prot:2.4, fat:0.9, sat:0.2, fib:3.2, salt:2.5 },
+  { cat:"Varie", id:"zafferano", name:"Zafferano", kcal:310, carb:61.5, sug:0, prot:11.4, fat:5.9, sat:1.6, fib:3.9, salt:0.4 },
+];
+
+const NUTRIENT_LABELS = [
+  { key:"kcal", label:"Energia",      unit:"kcal", dec:0 },
+  { key:"carb", label:"Carboidrati",  unit:"g",    dec:1 },
+  { key:"sug",  label:"di cui zuccheri", unit:"g", dec:1, sub:true },
+  { key:"prot", label:"Proteine",     unit:"g",    dec:1 },
+  { key:"fat",  label:"Grassi",       unit:"g",    dec:1 },
+  { key:"sat",  label:"di cui saturi", unit:"g",   dec:1, sub:true },
+  { key:"fib",  label:"Fibre",        unit:"g",    dec:1 },
+  { key:"salt", label:"Sale",         unit:"g",    dec:2 },
+];
+
+// ── Conversione quantità → grammi ──
+// Usa unità dirette (g/kg/ml…) o i fattori delle equivalenze (verso base peso).
+// ml→g approssimato 1:1 (ragionevole per liquidi acquosi). null = non convertibile.
+const WEIGHT_UNITS = { g:1, kg:1000, ml:1, l:1000, cl:10, dl:100 };
+const ingredientToGrams = (ing, equivalences = {}, dictIdx = null) => {
+  if (ing.qty == null) return null;
+  const unit = normUnit(ing.unit);
+  if (unit in WEIGHT_UNITS) return ing.qty * WEIGHT_UNITS[unit];
+  // prova con le equivalenze: unità → base, se la base è un'unità di peso
+  const eq = equivalences[resolveIngId(dictIdx, ing.name)];
+  if (eq && eq.base) {
+    const base = normUnit(eq.base);
+    if (base in WEIGHT_UNITS) {
+      const f = unit === base ? 1 : (eq.factors && eq.factors[unit] > 0 ? eq.factors[unit] : null);
+      if (f) return ing.qty * f * WEIGHT_UNITS[base];
+    }
+  }
+  return null;
+};
+
+// ── Calcolo nutrizionale di una ricetta ──
+// nutritionMap: { "<nome normalizzato>": { foodId } | { custom:{kcal,...} } }
+// Ritorna { total, perServing, covered, excluded:[{name, reason}] }
+const computeRecipeNutrition = (recipe, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null) => {
+  const dictIdx = ingredientDict ? ingDictIndex(ingredientDict) : null;
+  const allFoods = [...NUTRITION_DB, ...customFoods];
+  const dbById = new Map(allFoods.map(f => [f.id, f]));
+  const dbByName = new Map(allFoods.map(f => [normName(f.name), f]));
+  const total = { kcal:0, carb:0, sug:0, prot:0, fat:0, sat:0, fib:0, salt:0 };
+  const excluded = [];
+  let covered = 0;
+  let totalGrams = 0;
+
+  const details = []; // sintesi per-ingrediente: incluso/escluso e perché
+  flattenIngredients(recipe.ingredients).forEach(ing => {
+    const key = resolveIngId(dictIdx, ing.name);
+    const mapping = nutritionMap[key];
+    // 1) mappatura esplicita → 2) match esatto sul nome del database
+    const values = mapping?.custom
+      ? mapping.custom
+      : mapping?.foodId
+        ? dbById.get(mapping.foodId)
+        : dbByName.get(normName(ing.name));
+    const foodName = mapping?.custom ? "valori manuali" : values?.name;
+    if (ing.qty == null) {
+      // q.b. / senza dose: irrilevante per il computo
+      details.push({ name: ing.name, status: "noqty" });
+      return;
+    }
+    if (!values) {
+      excluded.push({ name: ing.name, reason: "non collegato" });
+      details.push({ name: ing.name, status: "unlinked" });
+      return;
+    }
+    const grams = ingredientToGrams(ing, equivalences, dictIdx);
+    if (grams == null) {
+      excluded.push({ name: ing.name, reason: `unità "${ing.unit || "?"}" non convertibile in grammi` });
+      details.push({ name: ing.name, status: "nounit", unit: ing.unit, foodName });
+      return;
+    }
+    // Percentuale che resta nel prodotto finale (default 100)
+    const pct = typeof ing.nutriPct === "number" ? Math.max(0, Math.min(100, ing.nutriPct)) : 100;
+    if (pct === 0) {
+      details.push({ name: ing.name, status: "optout" });
+      return;
+    }
+    const effGrams = grams * pct / 100;
+    covered++;
+    totalGrams += effGrams;
+    details.push({ name: ing.name, status: "ok", grams: effGrams, foodName, pct });
+    Object.keys(total).forEach(k => { total[k] += (values[k] || 0) * effGrams / 100; });
+  });
+
+  const servings = recipe.servings > 0 ? recipe.servings : 1;
+  const perServing = {};
+  Object.keys(total).forEach(k => { perServing[k] = total[k] / servings; });
+  const per100 = {};
+  Object.keys(total).forEach(k => { per100[k] = totalGrams > 0 ? total[k] * 100 / totalGrams : 0; });
+  return { total, perServing, per100, totalGrams, covered, excluded, details };
+};
+
+
+const parseIngredientAmount = (text) => {
+  const m = text.match(/(\d+(?:[.,]\d+)?)\s*([a-zàèéìòù]+)?/i);
+  if (!m) return null;
+  const raw = (m[2] || "").toLowerCase();
+  const unit = UNIT_ALIASES[raw] || "";
+  return { amount: parseFloat(m[1].replace(",", ".")), unit };
+};
+
+const ServingsDialog = ({ recipe, title, emoji, onConfirm, onClose, initialScale = null }) => {
+  const th = useTheme();
+  const baseServings = recipe.servings || 4;
+  const initMode = initialScale
+    ? (initialScale.factor === 1 ? "base" : (initialScale.people != null ? "people" : "limiting"))
+    : "people";
+  const [mode, setMode] = useState(initMode); // "base" | "people" | "limiting"
+  const [people, setPeople] = useState(initialScale?.people || baseServings);
+  // Ingrediente limitante
+  const parseable = flattenIngredients(recipe.ingredients).filter(ing => ing.qty != null && ing.qty > 0);
+  const [limIdx, setLimIdx] = useState(0);
+  const [limHave, setLimHave] = useState("");
+
+  const limSel = parseable[limIdx] || null;
+  const limParsed = limSel ? { amount: limSel.qty, unit: limSel.unit } : null;
+  const limFactor = (limParsed && limHave && parseFloat(limHave.replace(",", ".")) > 0)
+    ? parseFloat(limHave.replace(",", ".")) / limParsed.amount
+    : null;
+
+  const confirm = () => {
+    if (mode === "base") {
+      onConfirm({ factor: 1, people: baseServings, label: `dosi standard (${baseServings} porzioni)` });
+    } else if (mode === "people") {
+      onConfirm({ factor: people / baseServings, people, label: `${baseServings} → ${people} porzioni (×${Math.round(people/baseServings*100)/100})` });
+    } else if (mode === "limiting" && limFactor) {
+      onConfirm({ factor: limFactor, people: null, label: `in base a ${limSel.name}: ${limHave} ${limParsed.unit || "unità"} disponibili (×${Math.round(limFactor*100)/100})` });
+    }
+  };
+
+  const canConfirm = mode !== "limiting" || !!limFactor;
+
+  const OptCard = ({ id, icon, label, desc }) => (
+    <button onClick={() => setMode(id)} style={{
+      flex:1, padding:"10px 8px", borderRadius:12, cursor:"pointer",
+      border:`1.5px solid ${mode===id ? th.appAccent : th.appBorder}`,
+      background: mode===id ? `${th.appAccent}12` : "transparent",
+      display:"flex", flexDirection:"column", alignItems:"center", gap:3,
+    }}>
+      <span style={{ fontSize:18 }}>{icon}</span>
+      <span style={{ fontFamily:F.ui, fontSize:10, fontWeight:700, color: mode===id ? th.appAccent : th.appInk }}>{label}</span>
+      <span style={{ fontFamily:F.ui, fontSize:8.5, color:th.appFaded, lineHeight:1.3 }}>{desc}</span>
+    </button>
+  );
+
+  return (
+    <div style={{ position:"absolute", inset:0, zIndex:400, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ width:"100%", background:th.appBg, borderRadius:20, padding:"22px 20px", textAlign:"center", maxHeight:"90%", overflowY:"auto" }}>
+        <div style={{ fontSize:32, marginBottom:4 }}>{emoji}</div>
+        <div style={{ fontFamily:F.display, fontSize:19, color:th.appInk, marginBottom:12 }}>{title}</div>
+
+        {/* Le 3 opzioni */}
+        <div style={{ display:"flex", gap:6, marginBottom:16 }}>
+          <OptCard id="base"     icon="📄" label="Standard"     desc="dosi della ricetta"/>
+          <OptCard id="people"   icon="👥" label="Persone"      desc="ricalcola per commensali"/>
+          {parseable.length > 0 && (
+            <OptCard id="limiting" icon="⚖️" label="Ingrediente"  desc="in base a ciò che hai"/>
+          )}
+        </div>
+
+        {/* Contenuto per modalità */}
+        {mode === "base" && (
+          <div style={{ fontFamily:F.ui, fontSize:12, color:th.appFaded, marginBottom:16 }}>
+            Prosegui con le quantità originali della ricetta ({baseServings} porzioni).
+          </div>
+        )}
+
+        {mode === "people" && (
+          <>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:20, marginBottom:12 }}>
+              <button onClick={() => setPeople(p => Math.max(1, p-1))} style={{ width:44, height:44, borderRadius:"50%", border:`1.5px solid ${th.appBorder}`, background:th.appCard, fontSize:22, color:th.appInk, cursor:"pointer" }}>−</button>
+              <div style={{ minWidth:70 }}>
+                <div style={{ fontFamily:F.display, fontSize:38, color:th.appAccent, lineHeight:1 }}>{people}</div>
+                <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, marginTop:2 }}>person{people===1?"a":"e"}</div>
+              </div>
+              <button onClick={() => setPeople(p => Math.min(50, p+1))} style={{ width:44, height:44, borderRadius:"50%", border:`1.5px solid ${th.appBorder}`, background:th.appCard, fontSize:22, color:th.appInk, cursor:"pointer" }}>＋</button>
+            </div>
+            {people !== baseServings && (
+              <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginBottom:12 }}>
+                ricetta originale per {baseServings} — quantità ×{Math.round(people/baseServings*100)/100}
+              </div>
+            )}
+          </>
+        )}
+
+        {mode === "limiting" && (
+          <div style={{ marginBottom:14, textAlign:"left" }}>
+            {parseable.length === 0 ? (
+              <div style={{ fontFamily:F.ui, fontSize:12, color:th.appFaded, textAlign:"center" }}>
+                Nessun ingrediente con quantità numerica in questa ricetta.
+              </div>
+            ) : (
+              <>
+                <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:5 }}>Ingrediente limitante</div>
+                <select
+                  value={limIdx}
+                  onChange={e => setLimIdx(Number(e.target.value))}
+                  style={{ width:"100%", padding:"10px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appCard, fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none", marginBottom:10 }}
+                >
+                  {parseable.map((ing, i) => <option key={i} value={i}>{ingredientToText(ing)}</option>)}
+                </select>
+                <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:5 }}>
+                  Quanto ne hai? {limParsed?.unit ? `(in ${limParsed.unit})` : ""}
+                </div>
+                <input
+                  type="number"
+                  value={limHave}
+                  onChange={e => setLimHave(e.target.value)}
+                  placeholder={limParsed ? `la ricetta ne chiede ${fmtQty(limParsed.amount)} ${limParsed.unit || ""}`.trim() : ""}
+                  style={{ width:"100%", padding:"10px 12px", border:`1.5px solid ${limFactor ? th.appAccent : th.appBorder}`, borderRadius:10, background:th.appCard, fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none", boxSizing:"border-box" }}
+                />
+                {limFactor && (
+                  <div style={{ fontFamily:F.ui, fontSize:11, color:th.appAccent, marginTop:8, textAlign:"center", fontWeight:600 }}>
+                    tutte le quantità ×{Math.round(limFactor*100)/100}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        <div style={{ display:"flex", gap:10 }}>
+          <button onClick={onClose} style={{ flex:1, padding:"13px", border:`1.5px solid ${th.appBorder}`, borderRadius:12, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:13, cursor:"pointer" }}>Annulla</button>
+          <button onClick={confirm} disabled={!canConfirm} style={{ flex:2, padding:"13px", border:"none", borderRadius:12, background: canConfirm ? th.appAccent : th.appBorder, color: canConfirm ? "#fff" : th.appFaded, fontFamily:F.ui, fontSize:13, fontWeight:700, cursor: canConfirm ? "pointer" : "default" }}>Applica ✓</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════
+// MODALITÀ SPESA — checklist ingredienti scalati, copia selezione
+// ══════════════════════════════════════════════════════════════
+const ShoppingMode = ({ recipe, scale, onClose, onAddToList, preselectClean = null }) => {
+  const th = useTheme();
+  const factor = scale?.factor ?? 1;
+  const items = flattenIngredients(recipe.ingredients).map((ing, i) => {
+    const scaled = scaleIngredient(ing, factor);
+    return {
+      id: i, ing: scaled, text: ingredientToText(scaled), section: ing.section,
+      original: ingredientToText(ing),
+      clean: normName(ing.name),
+    };
+  });
+  // Se preselectClean è fornito (nomi puliti degli ingredienti mancanti),
+  // preseleziona solo quelli; altrimenti tutti.
+  const initialChecked = preselectClean
+    ? items.filter(it => preselectClean.some(m => it.clean.includes(m) || m.includes(it.clean))).map(it => it.id)
+    : items.map(it => it.id);
+  const [checked, setChecked] = useState(initialChecked);
+  const [copied, setCopied] = useState(false);
+
+  const toggleItem = (id) => setChecked(prev =>
+    prev.includes(id) ? prev.filter(x => x!==id) : [...prev, id]
+  );
+
+  const addSelected = () => {
+    const sel = items.filter(it => checked.includes(it.id));
+    onAddToList && onAddToList(recipe, scale, sel);
+    setCopied(true);
+    setTimeout(() => { setCopied(false); onClose(); }, 900);
+  };
+
+  let lastSection = null;
+
+  return (
+    <div style={{ position:"absolute", inset:0, zIndex:400, background:th.appBg, display:"flex", flexDirection:"column" }}>
+      {/* Header */}
+      <div style={{ background:th.appInk, padding:"14px 18px", display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
+        <button onClick={onClose} style={{ background:"rgba(255,255,255,0.12)", border:"none", borderRadius:8, padding:"6px 10px", color:"#fff", fontSize:14, cursor:"pointer" }}>✕</button>
+        <div style={{ flex:1 }}>
+          <div style={{ fontFamily:F.display, fontSize:15, color:"#fff", fontStyle:"italic" }}>🛒 Modalità Spesa</div>
+          <div style={{ fontFamily:F.ui, fontSize:10, color:"rgba(255,255,255,0.55)" }}>{recipe.title} · {scale?.label || "dosi originali"}</div>
+        </div>
+        <div style={{ fontFamily:F.ui, fontSize:11, color:"rgba(255,255,255,0.7)" }}>{checked.length}/{items.length}</div>
+      </div>
+
+      {/* List */}
+      <div style={{ flex:1, overflowY:"auto", padding:"12px 18px 100px" }}>
+        {/* Instruction banner */}
+        <div style={{
+          background:`${th.appAccent}12`, border:`1px solid ${th.appAccent}44`,
+          borderRadius:12, padding:"11px 14px", marginBottom:14,
+          fontFamily:F.ui, fontSize:12, color:th.appInk, lineHeight:1.5,
+        }}>
+          ✓ Gli ingredienti <b>selezionati</b> (spuntati) verranno aggiunti alla <b>Lista Spesa</b>. Deseleziona quelli che hai già in casa.
+        </div>
+        {items.map(it => {
+          const showSection = it.section && it.section !== lastSection;
+          lastSection = it.section;
+          const sel = checked.includes(it.id);
+          return (
+            <React.Fragment key={it.id}>
+              {showSection && (
+                <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appAccent, textTransform:"uppercase", margin:"12px 0 6px", fontWeight:700 }}>{it.section}</div>
+              )}
+              <button onClick={() => toggleItem(it.id)} style={{
+                width:"100%", display:"flex", alignItems:"center", gap:12,
+                padding:"11px 14px", marginBottom:6,
+                background: sel ? th.appCard : `${th.appBorder}55`,
+                border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
+                borderRadius:12, cursor:"pointer", textAlign:"left",
+              }}>
+                <div style={{ width:22, height:22, borderRadius:6, flexShrink:0, border:`2px solid ${sel ? th.appAccent : th.appBorder}`, background: sel ? th.appAccent : "transparent", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:13 }}>{sel ? "✓" : ""}</div>
+                <span style={{ fontFamily:F.body, fontSize:14, color: sel ? th.appInk : th.appFaded, textDecoration: sel ? "none" : "line-through", lineHeight:1.4 }}>{it.text}</span>
+              </button>
+            </React.Fragment>
+          );
+        })}
+      </div>
+
+      {/* Bottom bar */}
+      <div style={{ position:"absolute", bottom:0, left:0, right:0, padding:"14px 18px 22px", background:`linear-gradient(transparent, ${th.appBg} 30%)` }}>
+        <button onClick={addSelected} disabled={checked.length===0} style={{
+          width:"100%", padding:"15px",
+          background: checked.length===0 ? th.appBorder : copied ? "#6B8C6E" : th.appAccent,
+          color:"#fff", border:"none", borderRadius:14,
+          fontFamily:F.ui, fontSize:14, fontWeight:700, cursor:"pointer",
+          transition:"background 0.2s",
+        }}>
+          {copied ? "✓ Aggiunto alla Lista Spesa!" : `🛒 Aggiungi alla Lista Spesa (${checked.length})`}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════
+// MODALITÀ CUCINA — step by step a schermo intero, tap per avanzare
+// ══════════════════════════════════════════════════════════════
+const CookingMode = ({ recipe, scale, onClose }) => {
+  const th = useTheme();
+  const baseServings = recipe.servings || 1;
+  const factor = scale?.factor ?? 1;
+  const scaled = factor !== 1;
+  const steps = flattenSteps(recipe.steps);
+  const ingredients = flattenIngredients(recipe.ingredients).map(ing => ({
+    scaled: ingredientToText(scaleIngredient(ing, factor)),
+    original: ingredientToText(ing),
+  }));
+
+  // idx: -1 = intro ingredienti, 0..steps.length-1 = step, steps.length = fine
+  const [idx, setIdx] = useState(-1);
+  const [completed, setCompleted] = useState([]); // indici step completati
+  const isIntro = idx === -1;
+  const isDone = idx >= steps.length;
+  const step = steps[idx];
+
+  const markCompleteAndNext = () => {
+    if (!isIntro && !isDone && !completed.includes(idx)) {
+      setCompleted(prev => [...prev, idx]);
+    }
+    setIdx(i => Math.min(steps.length, i + 1));
+  };
+  const goTo = (target) => setIdx(target);
+  const prev = () => setIdx(i => Math.max(-1, i - 1));
+  // Avanza senza segnare come completato (tap singolo a destra)
+  const next = () => setIdx(i => Math.min(steps.length, i + 1));
+
+  // ── Zone tap: sinistra = indietro, destra = avanti, doppio tap = completa + avanti ──
+  const tapTimer = React.useRef(null);
+  const handleTap = (e) => {
+    if (isDone) { onClose(); return; }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX != null ? e.clientX : 0) - rect.left;
+    const isRight = x >= rect.width / 2;
+    if (tapTimer.current) {
+      // secondo tap ravvicinato → doppio tap
+      clearTimeout(tapTimer.current);
+      tapTimer.current = null;
+      markCompleteAndNext();
+      return;
+    }
+    tapTimer.current = setTimeout(() => {
+      tapTimer.current = null;
+      if (isRight) next(); else prev();
+    }, 250);
+  };
+  React.useEffect(() => () => { if (tapTimer.current) clearTimeout(tapTimer.current); }, []);
+
+  // Raggruppa gli step per sezione per la barra di progressione
+  const stepGroups = [];
+  steps.forEach((s, i) => {
+    const secName = s.section || "__nosec__";
+    let g = stepGroups.find(x => x.section === secName);
+    if (!g) { g = { section: secName, items: [] }; stepGroups.push(g); }
+    g.items.push({ ...s, globalIdx: i });
+  });
+
+  // ── Barra di progressione interattiva ──
+  const ProgressBar = () => (
+    <div style={{ padding:"10px 14px", borderBottom:"1px solid rgba(255,255,255,0.1)", flexShrink:0, overflowX:"auto" }}>
+      <div style={{ display:"flex", alignItems:"center", gap:6, minWidth:"min-content" }}>
+        {/* Icona ingredienti (intro) */}
+        <button
+          onClick={() => goTo(-1)}
+          title="Ingredienti"
+          style={{
+            width:30, height:30, borderRadius:"50%", flexShrink:0, cursor:"pointer",
+            border: isIntro ? `2px solid ${th.appAccent2}` : "2px solid rgba(255,255,255,0.2)",
+            background: isIntro ? th.appAccent2 : "rgba(255,255,255,0.08)",
+            color:"#fff", fontSize:13,
+            display:"flex", alignItems:"center", justifyContent:"center",
+          }}
+        >🧾</button>
+
+        {stepGroups.map((group, gi) => (
+          <React.Fragment key={gi}>
+            {/* Separatore sezione */}
+            {group.section !== "__nosec__" && (
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", flexShrink:0, marginLeft:4 }}>
+                <div style={{ fontFamily:F.ui, fontSize:8, letterSpacing:0.5, color:"rgba(255,255,255,0.4)", textTransform:"uppercase", whiteSpace:"nowrap", marginBottom:2, maxWidth:70, overflow:"hidden", textOverflow:"ellipsis" }}>{group.section}</div>
+              </div>
+            )}
+            {group.items.map(it => {
+              const active = idx === it.globalIdx;
+              const done = completed.includes(it.globalIdx);
+              return (
+                <button
+                  key={it.globalIdx}
+                  onClick={() => goTo(it.globalIdx)}
+                  title={`Passo ${it.globalIdx + 1}`}
+                  style={{
+                    width:30, height:30, borderRadius:"50%", flexShrink:0, cursor:"pointer",
+                    border: active ? `2px solid ${th.appAccent2}` : done ? "2px solid #6B8C6E" : "2px solid rgba(255,255,255,0.2)",
+                    background: active ? th.appAccent : done ? "#6B8C6E" : "rgba(255,255,255,0.08)",
+                    color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700,
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    transition:"all 0.2s",
+                  }}
+                >{done ? "✓" : it.globalIdx + 1}</button>
+              );
+            })}
+          </React.Fragment>
+        ))}
+
+        {/* Icona fine */}
+        <button
+          onClick={() => goTo(steps.length)}
+          title="Fine"
+          style={{
+            width:30, height:30, borderRadius:"50%", flexShrink:0, cursor:"pointer",
+            border: isDone ? `2px solid ${th.appAccent2}` : "2px solid rgba(255,255,255,0.2)",
+            background: isDone ? th.appAccent2 : "rgba(255,255,255,0.08)",
+            color:"#fff", fontSize:13,
+            display:"flex", alignItems:"center", justifyContent:"center",
+          }}
+        >🏁</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ position:"absolute", inset:0, zIndex:400, background:th.appInk, display:"flex", flexDirection:"column", color:"#fff" }}>
+      {/* Header */}
+      <div style={{ padding:"14px 18px 10px", display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
+        <button onClick={onClose} style={{ background:"rgba(255,255,255,0.12)", border:"none", borderRadius:8, padding:"6px 10px", color:"#fff", fontSize:14, cursor:"pointer" }}>✕</button>
+        <div style={{ flex:1 }}>
+          <div style={{ fontFamily:F.display, fontSize:14, fontStyle:"italic", color:"rgba(255,255,255,0.9)" }}>👨‍🍳 {recipe.title}</div>
+          <div style={{ fontFamily:F.ui, fontSize:10, color:"rgba(255,255,255,0.5)" }}>
+            {scale?.label || "dosi originali"}
+          </div>
+        </div>
+        {!isIntro && !isDone && (
+          <div style={{ fontFamily:F.ui, fontSize:12, color:"rgba(255,255,255,0.6)" }}>{idx+1}/{steps.length}</div>
+        )}
+      </div>
+
+      {/* Progress bar interattiva */}
+      <ProgressBar/>
+
+      {/* Content — tap sinistra: indietro · tap destra: avanti · doppio tap: completa e avanti */}
+      <div onClick={handleTap} style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"center", padding:"24px 28px", cursor:"pointer", overflowY:"auto", position:"relative" }}>
+        {isIntro ? (
+          <div>
+            <div style={{ fontFamily:F.ui, fontSize:11, letterSpacing:2, color:th.appAccent2, textTransform:"uppercase", marginBottom:12 }}>Prima di iniziare — ingredienti</div>
+
+            <div style={{
+              background:"rgba(255,255,255,0.08)",
+              border:"1px solid rgba(255,255,255,0.12)",
+              borderRadius:12, padding:"10px 14px", marginBottom:16,
+              fontFamily:F.ui, fontSize:12, color:"rgba(255,255,255,0.85)", lineHeight:1.5,
+            }}>
+              {scaled ? (
+                <>
+                  Dosi ricalcolate: <b>{scale?.label}</b>
+                  <div style={{ fontSize:11, color:"rgba(255,255,255,0.5)", marginTop:3 }}>
+                    tra parentesi trovi le dosi originali
+                  </div>
+                </>
+              ) : (
+                <>Dosi originali: <b>{baseServings} porzioni</b> (nessuna conversione)</>
+              )}
+            </div>
+
+            {ingredients.map((ing, i) => (
+              <div key={i} style={{ fontFamily:F.body, fontSize:16, lineHeight:1.5, padding:"7px 0", borderBottom:"1px solid rgba(255,255,255,0.08)", color:"rgba(255,255,255,0.9)" }}>
+                {ing.scaled}
+                {scaled && ing.original !== ing.scaled && (
+                  <span style={{ color:"rgba(255,255,255,0.45)", fontSize:13, fontStyle:"italic" }}> ({ing.original})</span>
+                )}
+              </div>
+            ))}
+            <div style={{ fontFamily:F.ui, fontSize:12, color:"rgba(255,255,255,0.4)", marginTop:20, textAlign:"center" }}>tocca a destra per iniziare →</div>
+            <div style={{ fontFamily:F.ui, fontSize:10.5, color:"rgba(255,255,255,0.3)", marginTop:6, textAlign:"center", lineHeight:1.6 }}>
+              ‹ tocca a sinistra per tornare indietro · tocca a destra per avanzare ›<br/>
+              doppio tocco = segna il passo come fatto e avanza
+            </div>
+          </div>
+        ) : isDone ? (
+          <div style={{ textAlign:"center" }}>
+            <div style={{ fontSize:64, marginBottom:16 }}>🎉</div>
+            <div style={{ fontFamily:F.display, fontSize:26, fontStyle:"italic", marginBottom:8 }}>Buon appetito!</div>
+            <div style={{ fontFamily:F.ui, fontSize:13, color:"rgba(255,255,255,0.5)" }}>tocca per chiudere</div>
+          </div>
+        ) : (
+          <div>
+            {step.section && (
+              <div style={{ fontFamily:F.ui, fontSize:11, letterSpacing:2, color:th.appAccent2, textTransform:"uppercase", marginBottom:10 }}>{step.section}</div>
+            )}
+            <div style={{ display:"flex", alignItems:"flex-start", gap:16, marginBottom:16 }}>
+              <div style={{ width:44, height:44, borderRadius:"50%", background:th.appAccent, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:F.ui, fontSize:18, fontWeight:700, flexShrink:0 }}>{idx+1}</div>
+              {step.photo && <div style={{ fontSize:40 }}>{step.photo === "PLACEHOLDER" ? "📸" : step.photo}</div>}
+            </div>
+            <div style={{ fontFamily:F.body, fontSize:22, lineHeight:1.6, color:"rgba(255,255,255,0.95)" }}>{step.text}</div>
+            <div style={{ fontFamily:F.ui, fontSize:11, color:"rgba(255,255,255,0.3)", marginTop:28, textAlign:"center", lineHeight:1.6 }}>
+              ‹ sinistra: indietro · destra: avanti ›<br/>doppio tocco: fatto ✓ e avanti
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom nav */}
+      {!isDone && (
+        <div style={{ display:"flex", flexShrink:0, borderTop:"1px solid rgba(255,255,255,0.1)" }}>
+          <button onClick={(e) => { e.stopPropagation(); prev(); }} disabled={isIntro} style={{ flex:1, padding:"16px", background:"none", border:"none", color: isIntro ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.75)", fontFamily:F.ui, fontSize:14, cursor: isIntro ? "default" : "pointer", borderRight:"1px solid rgba(255,255,255,0.1)" }}>‹ Indietro</button>
+          <button onClick={(e) => { e.stopPropagation(); markCompleteAndNext(); }} style={{ flex:1, padding:"16px", background:"none", border:"none", color:th.appAccent2, fontFamily:F.ui, fontSize:14, fontWeight:700, cursor:"pointer" }}>{isIntro ? "Inizia →" : idx === steps.length-1 ? "Fine ✓" : "Avanti ›"}</button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════
+// NUTRITION CARD — tabella valori nella scheda ricetta
+// ══════════════════════════════════════════════════════════════
+const NutritionCard = ({ recipe, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null, standalone = false }) => {
+  const th = useTheme();
+  const [open, setOpen] = useState(standalone);
+  const [view, setView] = useState("serving"); // "serving" | "per100" | "total"
+
+  const nutri = React.useMemo(
+    () => computeRecipeNutrition(recipe, nutritionMap, equivalences, customFoods, ingredientDict),
+    [recipe, nutritionMap, equivalences, customFoods, ingredientDict]
+  );
+  // Conta gli ingredienti mappati (anche se non convertibili in grammi)
+  const mappedCount = React.useMemo(() => {
+    const dbByName = new Map([...NUTRITION_DB, ...customFoods].map(f => [normName(f.name), f]));
+    const idx = ingredientDict ? ingDictIndex(ingredientDict) : null;
+    return flattenIngredients(recipe.ingredients).filter(ing =>
+      nutritionMap[resolveIngId(idx, ing.name)] || dbByName.has(normName(ing.name))
+    ).length;
+  }, [recipe, nutritionMap, customFoods, ingredientDict]);
+
+  if (nutri.covered === 0 && mappedCount === 0) return null; // nessuna mappatura: nulla da mostrare
+
+  // Mappature presenti ma nessuna quantità convertibile in grammi → guida invece della tabella
+  if (nutri.covered === 0) {
+    return (
+      <div style={{ marginTop:14, background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:14, padding:"12px 14px" }}>
+        <div style={{ fontFamily:F.ui, fontSize:12, fontWeight:700, color:th.appInk, marginBottom:6 }}>🍎 Valori nutrizionali</div>
+        <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.55, marginBottom:8 }}>
+          {mappedCount} ingredient{mappedCount===1?"e è collegato":"i sono collegati"} al database, ma nessuna quantità è convertibile in grammi.
+          Definisci i fattori (es. 1 cucchiaio = 10 g) in ⚙️ Organizza › ⚖️ Organizza equivalenze.
+        </div>
+        {nutri.details.map((d, i) => (
+          <div key={i} style={{ display:"flex", justifyContent:"space-between", gap:8, fontFamily:F.ui, fontSize:10.5, lineHeight:1.7, color:th.appFaded }}>
+            <span style={{ minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+              {d.status === "noqty" || d.status === "optout" ? "·" : "○"} {d.name}
+            </span>
+            <span style={{ flexShrink:0, fontStyle:"italic" }}>
+              {d.status === "noqty" ? "q.b." : d.status === "optout" ? "escluso (0%)" : d.status === "nounit" ? `"${d.unit || "?"}" non convertibile` : "non collegato"}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const vals = view === "per100" ? nutri.per100 : nutri.perServing;
+  const fmt = (v, dec) => v >= 100 ? String(Math.round(v)) : String(Math.round(v * 10**dec) / 10**dec).replace(".", ",");
+
+  return (
+    <div style={{ marginTop: standalone ? 0 : 14, background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:14, overflow:"hidden" }}>
+      <button onClick={() => { if (!standalone) setOpen(o => !o); }} style={{
+        width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
+        padding:"12px 14px", background:"none", border:"none", cursor: standalone ? "default" : "pointer",
+      }}>
+        <span style={{ fontFamily:F.ui, fontSize:12, fontWeight:700, color:th.appInk }}>
+          🍎 Valori nutrizionali
+          <span style={{ fontWeight:400, color:th.appFaded }}> · {fmt(nutri.perServing.kcal, 0)} kcal/porzione</span>
+        </span>
+        {!standalone && <span style={{ color:th.appFaded, fontSize:12 }}>{open ? "▴" : "▾"}</span>}
+      </button>
+
+      {open && (
+        <div style={{ padding:"0 14px 12px" }}>
+          <div style={{ display:"flex", gap:5, marginBottom:10, flexWrap:"wrap" }}>
+            {[["Per porzione","serving"], ["Per 100 g","per100"]].map(([label, v]) => (
+              <button key={v} onClick={() => setView(v)} style={{
+                padding:"5px 11px", borderRadius:14,
+                border:`1.5px solid ${view === v ? th.appAccent : th.appBorder}`,
+                background: view === v ? th.appAccent : "transparent",
+                color: view === v ? "#fff" : th.appFaded,
+                fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer",
+              }}>{label}</button>
+            ))}
+          </div>
+          {view === "per100" && (
+            <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginBottom:8 }}>
+              su {fmt(nutri.totalGrams, 0)} g totali di ingredienti calcolati (a crudo)
+            </div>
+          )}
+
+          {NUTRIENT_LABELS.map(({ key, label, unit, dec, sub }) => (
+            <div key={key} style={{
+              display:"flex", justifyContent:"space-between",
+              padding: sub ? "3px 0 3px 16px" : "5px 0",
+              borderBottom:`1px solid ${th.appBorder}55`,
+              fontFamily:F.body, fontSize: sub ? 12 : 13.5,
+              color: sub ? th.appFaded : th.appInk,
+            }}>
+              <span>{label}</span>
+              <span style={{ fontWeight: sub ? 400 : 700 }}>{fmt(vals[key], dec)} {unit}</span>
+            </div>
+          ))}
+
+          {/* Sintesi per ingrediente — quantità scalate alla vista corrente */}
+          <div style={{ marginTop:10 }}>
+            <div style={{ fontFamily:F.ui, fontSize:9.5, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:5 }}>
+              Ingredienti nel calcolo · {view === "per100" ? "per 100 g" : "per porzione"}
+            </div>
+            {nutri.details.map((d, i) => (
+              <div key={i} style={{
+                display:"flex", justifyContent:"space-between", gap:8,
+                fontFamily:F.ui, fontSize:10.5, lineHeight:1.7,
+                color: d.status === "ok" ? th.appInk : th.appFaded,
+              }}>
+                <span style={{ minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                  {d.status === "ok" ? "✓" : d.status === "noqty" || d.status === "optout" ? "·" : "○"} {d.name}
+                  {d.status === "ok" && (
+                    <span style={{
+                      display:"inline-block", marginLeft:5, padding:"0 5px", borderRadius:6,
+                      fontSize:8.5, fontWeight:700, verticalAlign:"middle",
+                      background: d.pct < 100 ? `${th.appAccent}22` : `${th.appBorder}66`,
+                      color: d.pct < 100 ? th.appAccent : th.appFaded,
+                    }} title="Pesatura nel calcolo nutrizionale">{d.pct != null ? d.pct : 100}%</span>
+                  )}
+                  {d.status === "optout" && (
+                    <span style={{ display:"inline-block", marginLeft:5, padding:"0 5px", borderRadius:6, fontSize:8.5, fontWeight:700, verticalAlign:"middle", background:`${th.appBorder}66`, color:th.appFaded }}>0%</span>
+                  )}
+                  {d.status === "ok" && d.foodName && d.foodName !== "valori manuali" && normName(d.foodName) !== normName(d.name) && (
+                    <span style={{ opacity:0.6 }}> → {d.foodName}</span>
+                  )}
+                </span>
+                <span style={{ flexShrink:0, fontStyle: d.status === "ok" ? "normal" : "italic" }}>
+                  {d.status === "ok" ? (() => {
+                      const factor = view === "serving" ? 1 / (recipe.servings > 0 ? recipe.servings : 1)
+                                   : view === "per100"  ? (nutri.totalGrams > 0 ? 100 / nutri.totalGrams : 0)
+                                   : 1;
+                      const g = d.grams * factor;
+                      return `${fmt(g, g < 10 ? 1 : 0)} g`;
+                    })()
+                    : d.status === "noqty" ? "q.b. — non conteggiato"
+                    : d.status === "optout" ? "escluso dal calcolo (0%)"
+                    : d.status === "nounit" ? `"${d.unit || "?"}" non convertibile`
+                    : "non collegato"}
+                </span>
+              </div>
+            ))}
+          </div>
+          {nutri.excluded.length > 0 && (
+            <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, marginTop:8, lineHeight:1.5 }}>
+              ⚠ Per includere gli esclusi: ⚙️ Organizza › 🍎 Valori nutrizionali (collegamenti) o ⚖️ Equivalenze (unità).
+            </div>
+          )}
+          <div style={{ fontFamily:F.ui, fontSize:9, color:th.appFaded, marginTop:8, textAlign:"center" }}>
+            Valori indicativi — elaborazione da Tabelle CREA (alimentinutrizione.it)
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════
+// COMPONENT: ExportFlow — overlay a passi per esportare ricette
+// Passo 1: solo questa ricetta o più ricette?
+// Passo 2 (se più): selezione multipla con "seleziona tutto"
+// Passo 3: link (codice) o PDF?
+// ══════════════════════════════════════════════════════════════
+const ExportFlow = ({ current, allRecipes = [], sectionList = MACRO_SECTIONS, onExportPDF, onExportCode, onClose }) => {
+  const th = useTheme();
+  const [step, setStep] = useState("scope");      // scope | select | format
+  const [selected, setSelected] = useState([current.id]);
+  const [scope, setScope] = useState("single");   // single | multi
+  const [resultCode, setResultCode] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  const toggle = (id) => setSelected(prev => prev.includes(id) ? prev.filter(x=>x!==id) : [...prev, id]);
+  const allIds = allRecipes.map(r => r.id);
+  const allSelected = selected.length === allRecipes.length && allRecipes.length > 0;
+  const toggleAll = () => setSelected(allSelected ? [] : allIds);
+
+  const finalIds = scope === "single" ? [current.id] : selected;
+
+  const doPDF = () => { onExportPDF(finalIds); onClose(); };
+  const doCode = () => { const code = onExportCode(finalIds); setResultCode(code || ""); };
+
+  const Panel = ({ children }) => (
+    <div style={{ position:"absolute", inset:0, zIndex:600, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", padding:18 }}>
+      <div style={{ width:"100%", maxHeight:"88%", background:th.appBg, borderRadius:20, padding:"20px 18px", display:"flex", flexDirection:"column", overflow:"hidden" }}>
+        {children}
+      </div>
+    </div>
+  );
+  const Title = ({ children }) => (
+    <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk, textAlign:"center", marginBottom:4 }}>{children}</div>
+  );
+  const Sub = ({ children }) => (
+    <div style={{ fontFamily:F.ui, fontSize:12, color:th.appFaded, textAlign:"center", marginBottom:16, lineHeight:1.5 }}>{children}</div>
+  );
+  const Primary = (props) => (
+    <button {...props} style={{ padding:"13px", borderRadius:12, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:13, fontWeight:700, cursor:"pointer", ...(props.style||{}) }}/>
+  );
+  const Ghost = (props) => (
+    <button {...props} style={{ padding:"13px", borderRadius:12, border:`1.5px solid ${th.appBorder}`, background:"transparent", color:th.appInk, fontFamily:F.ui, fontSize:13, fontWeight:600, cursor:"pointer", ...(props.style||{}) }}/>
+  );
+
+  // Risultato codice/link
+  if (resultCode !== null) {
+    return (
+      <Panel>
+        <Title>🔗 Link di condivisione</Title>
+        <Sub>Copia questo codice e invialo. Chi lo riceve lo incolla in "Importa da codice" per aggiungere le ricette al suo ricettario.</Sub>
+        <textarea readOnly value={resultCode} style={{
+          width:"100%", height:110, resize:"none", borderRadius:12, padding:"10px 12px",
+          border:`1.5px solid ${th.appBorder}`, background:th.appCard, color:th.appInk,
+          fontFamily:"monospace", fontSize:11, marginBottom:12,
+        }}/>
+        <Primary onClick={() => {
+          if (navigator.clipboard?.writeText) { navigator.clipboard.writeText(resultCode).catch(()=>{}); }
+          setCopied(true); setTimeout(()=>setCopied(false), 1500);
+        }}>{copied ? "✓ Copiato" : "📋 Copia il codice"}</Primary>
+        <Ghost onClick={onClose} style={{ marginTop:8 }}>Chiudi</Ghost>
+      </Panel>
+    );
+  }
+
+  // Passo 1 — ambito
+  if (step === "scope") {
+    return (
+      <Panel>
+        <Title>📤 Esporta</Title>
+        <Sub>Vuoi esportare solo questa ricetta o sceglierne più di una?</Sub>
+        <div style={{ display:"flex", flexDirection:"column", gap:9 }}>
+          <Primary onClick={() => { setScope("single"); setStep("format"); }}>
+            📄 Solo «{current.title}»
+          </Primary>
+          <Ghost onClick={() => { setScope("multi"); setStep("select"); }}>
+            ✔️ Scegli più ricette
+          </Ghost>
+          <Ghost onClick={onClose} style={{ border:"none", color:th.appFaded }}>Annulla</Ghost>
+        </div>
+      </Panel>
+    );
+  }
+
+  // Passo 2 — selezione multipla
+  if (step === "select") {
+    return (
+      <Panel>
+        <Title>Scegli le ricette</Title>
+        <Sub>{selected.length} selezionate</Sub>
+        <button onClick={toggleAll} style={{
+          padding:"9px", borderRadius:10, border:`1.5px solid ${th.appAccent}`,
+          background: allSelected ? th.appAccent : "transparent",
+          color: allSelected ? "#fff" : th.appAccent,
+          fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer", marginBottom:10, flexShrink:0,
+        }}>{allSelected ? "✓ Tutto il ricettario selezionato" : "Seleziona tutto il ricettario"}</button>
+        <div style={{ flex:1, overflowY:"auto", marginBottom:12 }}>
+          {sortSectionsAltroLast(sectionList).map(sec => {
+            const inSec = allRecipes.filter(r => r.macroSection === sec.id);
+            if (inSec.length === 0) return null;
+            return (
+              <div key={sec.id} style={{ marginBottom:8 }}>
+                <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, textTransform:"uppercase", letterSpacing:0.5, margin:"4px 2px" }}>{sec.emoji} {sec.label}</div>
+                {inSec.map(r => {
+                  const sel = selected.includes(r.id);
+                  return (
+                    <button key={r.id} onClick={() => toggle(r.id)} style={{
+                      width:"100%", display:"flex", alignItems:"center", gap:10, padding:"9px 11px",
+                      borderRadius:10, marginBottom:4, cursor:"pointer", textAlign:"left",
+                      background: sel ? `${th.appAccent}18` : th.appCard,
+                      border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
+                    }}>
+                      <span style={{
+                        width:20, height:20, borderRadius:6, flexShrink:0,
+                        border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
+                        background: sel ? th.appAccent : "transparent",
+                        color:"#fff", fontSize:12, display:"flex", alignItems:"center", justifyContent:"center",
+                      }}>{sel ? "✓" : ""}</span>
+                      <span style={{ fontFamily:F.body, fontSize:13, color:th.appInk }}>{r.title}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ display:"flex", gap:8, flexShrink:0 }}>
+          <Ghost onClick={() => setStep("scope")} style={{ flex:1 }}>‹ Indietro</Ghost>
+          <Primary onClick={() => selected.length > 0 && setStep("format")} style={{ flex:2, opacity: selected.length ? 1 : 0.5 }}>Continua →</Primary>
+        </div>
+      </Panel>
+    );
+  }
+
+  // Passo 3 — formato
+  return (
+    <Panel>
+      <Title>Come vuoi esportare?</Title>
+      <Sub>{finalIds.length === 1 ? "1 ricetta" : `${finalIds.length} ricette`}</Sub>
+      <div style={{ display:"flex", flexDirection:"column", gap:9 }}>
+        <Primary onClick={doCode}>🔗 Genera link (per copiarle in un altro ricettario)</Primary>
+        <Ghost onClick={doPDF}>📄 Genera PDF (da stampare o inviare)</Ghost>
+        <Ghost onClick={() => setStep(scope === "multi" ? "select" : "scope")} style={{ border:"none", color:th.appFaded }}>‹ Indietro</Ghost>
+      </div>
+    </Panel>
+  );
+};
+
+const RecipeScreen = ({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemory, onAddToShoppingList, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null, allRecipes = [], sectionList = MACRO_SECTIONS, onExportPDF, onExportCode }) => {
+  const th = useTheme();
+  const [tab, setTab] = useState("ingredienti");
+  const [toast, setToast] = useState({ msg:"", visible:false });
+  const [viewMode, setViewMode] = useState("app");
+  const [exportOpen, setExportOpen] = useState(false);
+  const [showPhotoOptions, setShowPhotoOptions] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // showAddMemory removed — use home screen
+  const [lightbox, setLightbox] = useState(null);
+  const [servingsDialog, setServingsDialog] = useState(null); // null | "shopping" | "cooking" | "dose"
+  // Calcolo dosi persistente per questa ricetta: default = dosi standard.
+  const [doseScale, setDoseScale] = useState({ factor: 1, people: recipe.servings || null, label: `dosi standard (${recipe.servings || "?"} porzioni)` });
+  const [activeMode, setActiveMode] = useState(null); // null | {mode, people}
+  const [commentInput, setCommentInput] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingText, setEditingText] = useState("");
+
+  const addComment = () => {
+    const text = commentInput.trim();
+    if (!text) return;
+    const newComment = {
+      id: uid("r"),
+      text,
+      date: new Date().toLocaleDateString("it-IT", { day:"numeric", month:"short", year:"numeric" }),
+    };
+    onUpdate({ ...recipe, comments: [...(recipe.comments || []), newComment] });
+    setCommentInput("");
+    showToast("💬 Commento aggiunto!");
+  };
+
+  const deleteComment = (id) => {
+    onUpdate({ ...recipe, comments: (recipe.comments || []).filter(c => c.id !== id) });
+    if (editingCommentId === id) { setEditingCommentId(null); setEditingText(""); }
+  };
+
+  const startEditComment = (c) => {
+    setEditingCommentId(c.id);
+    setEditingText(c.text);
+  };
+
+  const saveEditedComment = () => {
+    const text = editingText.trim();
+    if (!text) return;
+    onUpdate({
+      ...recipe,
+      comments: (recipe.comments || []).map(c =>
+        c.id === editingCommentId
+          ? { ...c, text, edited: new Date().toLocaleDateString("it-IT", { day:"numeric", month:"short", year:"numeric" }) }
+          : c
+      ),
+    });
+    setEditingCommentId(null);
+    setEditingText("");
+    showToast("✏️ Commento modificato!");
+  };
+
+  const cancelEditComment = () => {
+    setEditingCommentId(null);
+    setEditingText("");
+  };
+
+  const showToast = (msg) => {
+    setToast({ msg, visible:true });
+    setTimeout(() => setToast({ msg:"", visible:false }), 2000);
+  };
+
+  const addDishPhoto = () => {
+    const wasPresent = !!recipe.dishPhoto;
+    setShowPhotoOptions(false);
+    onUpdate({ ...recipe, dishPhoto: "PLACEHOLDER" });
+    showToast(wasPresent ? "📸 Foto piatto aggiornata!" : "📸 Foto piatto aggiunta!");
+  };
+
+  return (
+    <div style={{ background: viewMode==="book" ? th.bookBg : th.appBg, minHeight:"100%", position:"relative" }}>
+      {exportOpen && (
+        <ExportFlow
+          current={recipe}
+          allRecipes={allRecipes}
+          sectionList={sectionList}
+          onExportPDF={(ids) => onExportPDF && onExportPDF(ids)}
+          onExportCode={(ids) => onExportCode && onExportCode(ids)}
+          onClose={() => setExportOpen(false)}
+        />
+      )}
+      <div style={{ padding:"8px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"center", gap:8 }}>
+        <BackBtn onBack={onBack} label="Ricettario" dark={viewMode==="book"}/>
+        <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+          {/* View toggle */}
+          <div style={{ display:"flex", gap:0 }}>
+            {[["app","App"],["book","📖"]].map(([mode,label]) => (
+              <button key={mode} onClick={() => setViewMode(mode)} style={{
+                padding:"5px 10px", border:"none",
+                background: viewMode===mode ? (mode==="book" ? "#333" : "#2C2416") : "#EDE6D4",
+                color: viewMode===mode ? "#fff" : "#7A6E5F",
+                fontFamily:F.ui, fontSize:11, fontWeight:600,
+                cursor:"pointer",
+                borderRadius: mode==="app" ? "8px 0 0 8px" : "0 8px 8px 0",
+              }}>{label}</button>
+            ))}
+          </div>
+          {/* Export button */}
+          <button onClick={() => setExportOpen(true)} style={{
+            padding:"5px 10px", border:"none",
+            borderRadius:8, background:"transparent",
+            fontSize:16, cursor:"pointer", lineHeight:1,
+            color:"rgba(255,255,255,0.7)",
+          }} title="Esporta / condividi">📤</button>
+          {/* Favorite button */}
+          <button onClick={() => onUpdate({ ...recipe, favorite: !recipe.favorite })} style={{
+            padding:"5px 10px", border:"none",
+            borderRadius:8, background:"transparent",
+            fontSize:18, cursor:"pointer", lineHeight:1,
+          }}>{recipe.favorite ? "⭐" : "☆"}</button>
+          {/* Edit button */}
+          <button onClick={onEdit} style={{
+            padding:"5px 12px", border:`1.5px solid ${th.appAccent}`,
+            borderRadius:8, background:"transparent",
+            color:th.appAccent, fontFamily:F.ui, fontSize:11, fontWeight:600,
+            cursor:"pointer",
+          }}>✏️ Modifica</button>
+          {/* Delete button */}
+          <button onClick={() => setShowDeleteConfirm(true)} style={{
+            padding:"5px 10px", border:"none",
+            borderRadius:8, background:"transparent",
+            color:"#ccc", fontFamily:F.ui, fontSize:16,
+            cursor:"pointer", lineHeight:1,
+          }}>🗑</button>
+        </div>
+      </div>
+
+      <Toast msg={toast.msg} visible={toast.visible}/>
+
+      {/* ── Delete confirmation modal ── */}
+      {showDeleteConfirm && (
+        <div style={{
+          position:"absolute", inset:0, zIndex:200,
+          background:"rgba(0,0,0,0.5)",
+          display:"flex", alignItems:"flex-end",
+          backdropFilter:"blur(4px)",
+        }}>
+          <div style={{
+            width:"100%",
+            background:"#FAF7F0",
+            borderRadius:"24px 24px 0 0",
+            padding:"28px 24px 40px",
+          }}>
+            <div style={{ textAlign:"center", marginBottom:6 }}>
+              <div style={{ fontSize:40, marginBottom:10 }}>🗑️</div>
+              <div style={{ fontFamily:F.display, fontSize:20, color:"#2C2416", marginBottom:8 }}>
+                Elimina ricetta?
+              </div>
+              <div style={{ fontFamily:F.ui, fontSize:13, color:"#7A6E5F", lineHeight:1.5 }}>
+                Stai per eliminare <strong>"{recipe.title}"</strong> dal ricettario.
+                <br/>Questa azione non può essere annullata.
+              </div>
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:24 }}>
+              <button onClick={() => { onDelete(recipe.id); }} style={{
+                width:"100%", padding:"15px",
+                background:"#D93025", color:"#fff",
+                border:"none", borderRadius:14,
+                fontFamily:F.ui, fontSize:15, fontWeight:700,
+                cursor:"pointer",
+                boxShadow:"0 4px 16px rgba(217,48,37,0.35)",
+              }}>Sì, elimina definitivamente</button>
+              <button onClick={() => setShowDeleteConfirm(false)} style={{
+                width:"100%", padding:"15px",
+                background:"#EDE6D4", color:"#2C2416",
+                border:"none", borderRadius:14,
+                fontFamily:F.ui, fontSize:15, fontWeight:600,
+                cursor:"pointer",
+              }}>Annulla</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Photo lightbox */}
+      {lightbox && (
+        <PhotoLightbox
+          photo={lightbox.photo}
+          caption={lightbox.caption}
+          date={lightbox.date}
+          onClose={() => setLightbox(null)}
+        />
+      )}
+
+      {viewMode === "app" ? (
+        // ── App view ────────────────────────────────────────────
+        <div>
+          {/* Hero */}
+          <div style={{
+            margin:"12px 20px",
+            background: recipe.dishPhoto ? `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url(data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>)` : recipe.color,
+            borderRadius:20,
+            padding:"28px 24px",
+            position:"relative", overflow:"hidden",
+          }}>
+            {recipe.dishPhoto && (
+              <div
+                onClick={() => setLightbox({ photo:"📸", caption:recipe.title, date:"" })}
+                style={{
+                  position:"absolute", inset:0, borderRadius:20,
+                  background:`${recipe.color}cc`,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontSize:60, cursor:"pointer",
+                }}
+              >
+                📸
+                <div style={{ position:"absolute", bottom:10, right:14, fontSize:18, opacity:0.7 }}>⤢</div>
+              </div>
+            )}
+            <div style={{ position:"relative", zIndex:1 }}>
+              <div style={{ fontFamily:F.ui, fontSize:11, letterSpacing:2, color:"rgba(255,255,255,0.7)", textTransform:"uppercase" }}>{recipe.category}</div>
+              <div style={{ fontFamily:F.display, fontSize:24, color:"#fff", lineHeight:1.2, marginTop:4 }}>{recipe.title}</div>
+              {recipe.source && (
+                <div style={{ fontFamily:F.ui, fontSize:12, color:"rgba(255,255,255,0.6)", marginTop:4 }}>
+                  {recipe.sourceUrl
+                    ? <a href={recipe.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color:"rgba(255,255,255,0.8)", textDecoration:"underline", cursor:"pointer" }}>🔗 Ricetta di {recipe.source}</a>
+                    : <>Ricetta di {recipe.source}</>
+                  }
+                </div>
+              )}
+              <div style={{ display:"flex", gap:10, marginTop:12, flexWrap:"wrap" }}>
+                <Pill icon="🔪" label={`Prep: ${recipe.prepTime} min`}/>
+                <Pill icon="🔥" label={`Cottura: ${recipe.cookTime} min`}/>
+                <Pill icon="👤" label={`${recipe.servings} porzioni`}/>
+              </div>
+            </div>
+
+            {/* Camera icon — add/modify dish photo */}
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowPhotoOptions(!showPhotoOptions); }}
+              style={{
+                position:"absolute", top:12, right:12, zIndex:3,
+                width:36, height:36, borderRadius:"50%",
+                background:"rgba(0,0,0,0.35)", backdropFilter:"blur(4px)",
+                border:"1px solid rgba(255,255,255,0.25)",
+                display:"flex", alignItems:"center", justifyContent:"center",
+                fontSize:17, cursor:"pointer",
+              }}
+              title={recipe.dishPhoto ? "Modifica foto piatto" : "Aggiungi foto piatto"}
+            >📷</button>
+          </div>
+
+          {/* Photo options dropdown */}
+          {showPhotoOptions && (
+            <div style={{
+              margin:"0 20px 12px",
+              background:"#F7F2E8", border:`1px solid #EDE6D4`,
+              borderRadius:12, overflow:"hidden",
+            }}>
+              <div style={{ padding:"10px 16px 4px", fontFamily:F.ui, fontSize:10, letterSpacing:1, color:"#7A6E5F", textTransform:"uppercase" }}>
+                {recipe.dishPhoto ? "Modifica foto del piatto" : "Aggiungi foto del piatto"}
+              </div>
+              {[["📷","Scatta una foto"],["🖼","Scegli dalla galleria"]].map(([icon, label]) => (
+                <button key={label} onClick={addDishPhoto} style={{
+                  width:"100%", padding:"12px 16px",
+                  background:"none", border:"none",
+                  borderTop:`1px solid ${"#EDE6D4"}`,
+                  fontFamily:F.ui, fontSize:14, color:"#2C2416",
+                  textAlign:"left", cursor:"pointer",
+                  display:"flex", alignItems:"center", gap:10,
+                }}><span>{icon}</span>{label}</button>
+              ))}
+              {recipe.dishPhoto && (
+                <button onClick={() => { onUpdate({ ...recipe, dishPhoto: null }); setShowPhotoOptions(false); showToast("🗑 Foto rimossa"); }} style={{
+                  width:"100%", padding:"12px 16px",
+                  background:"none", border:"none",
+                  borderTop:`1px solid ${"#EDE6D4"}`,
+                  fontFamily:F.ui, fontSize:14, color:"#D93025",
+                  textAlign:"left", cursor:"pointer",
+                  display:"flex", alignItems:"center", gap:10,
+                }}><span>🗑</span>Rimuovi foto</button>
+              )}
+            </div>
+          )}
+
+          {/* Tags */}
+          <div style={{ display:"flex", gap:6, padding:"0 20px 8px", flexWrap:"wrap" }}>
+            {recipe.tags.map(t => (
+              <span key={t} style={{
+                padding:"4px 12px", borderRadius:20,
+                background:"#EDE6D4", color:"#7A6E5F",
+                fontFamily:F.ui, fontSize:11,
+              }}>{t}</span>
+            ))}
+          </div>
+
+          {/* Calcolo dosi (persistente per la ricetta) */}
+          <div style={{ padding:"0 20px 8px" }}>
+            <button onClick={() => setServingsDialog("dose")} style={{
+              width:"100%", padding:"11px 14px",
+              border:`1.5px solid ${doseScale.factor !== 1 ? th.appAccent : th.appBorder}`,
+              borderRadius:12, background: doseScale.factor !== 1 ? `${th.appAccent}10` : th.appCard,
+              cursor:"pointer", display:"flex", alignItems:"center", gap:10, textAlign:"left",
+            }}>
+              <span style={{ fontSize:20 }}>⚖️</span>
+              <span style={{ flex:1 }}>
+                <span style={{ display:"block", fontFamily:F.ui, fontSize:12, fontWeight:700, color:th.appInk }}>Calcolo dosi</span>
+                <span style={{ display:"block", fontFamily:F.ui, fontSize:10.5, color: doseScale.factor !== 1 ? th.appAccent : th.appFaded, marginTop:1 }}>{doseScale.label}</span>
+              </span>
+              <span style={{ fontFamily:F.ui, fontSize:16, color:th.appFaded }}>›</span>
+            </button>
+          </div>
+
+          {/* Mode buttons: Spesa + Cucina — usano il calcolo dosi impostato sopra */}
+          <div style={{ display:"flex", gap:8, padding:"0 20px 12px" }}>
+            <button onClick={() => setActiveMode({ mode:"shopping", scale: doseScale })} style={{
+              flex:1, padding:"12px 8px",
+              border:"none", borderRadius:12,
+              background:th.appAccent, color:"#fff",
+              fontFamily:F.ui, fontSize:13, fontWeight:700,
+              cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+            }}>🛒 Spesa</button>
+            <button onClick={() => setActiveMode({ mode:"cooking", scale: doseScale })} style={{
+              flex:1, padding:"12px 8px",
+              border:"none", borderRadius:12,
+              background:th.appInk, color:"#fff",
+              fontFamily:F.ui, fontSize:13, fontWeight:700,
+              cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+            }}>👨‍🍳 Cucina</button>
+          </div>
+
+          <Divider/>
+
+          {/* Tabs */}
+          <div style={{ display:"flex", padding:"8px 20px", gap:8 }}>
+            {[["ingredienti","Ingredienti"],["preparazione","Preparazione"],["nutrizione","Nutrizione"]].map(([t, label]) => (
+              <button key={t} onClick={() => setTab(t)} style={{
+                flex:1, padding:"10px 6px",
+                borderRadius:12, border:"none",
+                background: tab===t ? th.appInk : th.appBorder,
+                color: tab===t ? "#fff" : th.appFaded,
+                fontFamily:F.ui, fontSize:12, fontWeight:600,
+                cursor:"pointer",
+              }}>{label}</button>
+            ))}
+          </div>
+
+          <div style={{ padding:"8px 24px 40px" }}>
+            {doseScale.factor !== 1 && tab !== "nutrizione" && (
+              <div style={{ margin:"0 20px 10px", padding:"8px 12px", borderRadius:10, background:`${th.appAccent}12`, border:`1px solid ${th.appAccent}55`, display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:15 }}>⚖️</span>
+                <span style={{ fontFamily:F.ui, fontSize:11, color:th.appInk, lineHeight:1.35 }}>
+                  Dosi in scala <b>×{Math.round(doseScale.factor*100)/100}</b> — {doseScale.label}. Le quantità mostrate sono già ricalcolate.
+                </span>
+              </div>
+            )}
+            {tab === "ingredienti" && (
+              <IngredientsView ingredients={recipe.ingredients} recipeColor={recipe.color} scaleFactor={doseScale.factor}/>
+            )}
+            {tab === "preparazione" && (
+              <StepsView steps={recipe.steps} recipeColor={recipe.color}/>
+            )}
+            {tab === "nutrizione" && (
+              (() => {
+                const dbByName = new Map([...NUTRITION_DB, ...customFoods].map(f => [normName(f.name), f]));
+                const idx = ingredientDict ? ingDictIndex(ingredientDict) : null;
+                const anyMapped = flattenIngredients(recipe.ingredients).some(ing =>
+                  nutritionMap[resolveIngId(idx, ing.name)] || dbByName.has(normName(ing.name)));
+                if (!anyMapped) {
+                  return (
+                    <div style={{ textAlign:"center", padding:"30px 20px", color:th.appFaded }}>
+                      <div style={{ fontSize:34, marginBottom:10 }}>🍎</div>
+                      <div style={{ fontFamily:F.ui, fontSize:13, color:th.appInk, fontWeight:700, marginBottom:6 }}>Nessun valore nutrizionale</div>
+                      <div style={{ fontFamily:F.ui, fontSize:11, lineHeight:1.5 }}>
+                        Collega gli ingredienti al database in <b>🍎⚙️ Organizza › 🍎 Valori nutrizionali</b> per vedere calorie e macro di questa ricetta.
+                      </div>
+                    </div>
+                  );
+                }
+                return <NutritionCard recipe={recipe} nutritionMap={nutritionMap} equivalences={equivalences} customFoods={customFoods} ingredientDict={ingredientDict} standalone/>;
+              })()
+            )}
+
+            {recipe.note && (
+              <div style={{
+                marginTop:20,
+                background:"#EDE6D4",
+                borderRadius:14,
+                padding:"14px 16px",
+                borderLeft:`3px solid ${"#B8973A"}`,
+              }}>
+                <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:"#B8973A", textTransform:"uppercase", marginBottom:6 }}>Note</div>
+                <p style={{ fontFamily:F.body, fontStyle:"italic", fontSize:13, color:"#7A6E5F", margin:0, lineHeight:1.5 }}>"{recipe.note}"</p>
+              </div>
+            )}
+
+            {/* ── COMMENTI / APPUNTI ── */}
+            <div style={{ marginTop:24 }}>
+              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appAccent, textTransform:"uppercase", marginBottom:4, fontWeight:700 }}>
+                💬 Commenti e appunti
+              </div>
+              <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginBottom:10, lineHeight:1.4 }}>
+                Annota varianti e osservazioni senza modificare la ricetta.
+              </div>
+
+              {/* Lista commenti */}
+              {(recipe.comments || []).length > 0 && (
+                <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:12 }}>
+                  {recipe.comments.map(c => (
+                    <div key={c.id} style={{
+                      background:th.appCard, border:`1px solid ${editingCommentId === c.id ? th.appAccent : th.appBorder}`,
+                      borderRadius:12, padding:"10px 12px",
+                      display:"flex", gap:10, alignItems:"flex-start",
+                    }}>
+                      <span style={{ fontSize:14, marginTop:1 }}>📝</span>
+                      {editingCommentId === c.id ? (
+                        // ── Modalità modifica ──
+                        <div style={{ flex:1 }}>
+                          <textarea
+                            value={editingText}
+                            onChange={e => setEditingText(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); saveEditedComment(); }
+                              if (e.key === "Escape") { cancelEditComment(); }
+                            }}
+                            autoFocus
+                            rows={2}
+                            style={{
+                              width:"100%", padding:"8px 10px",
+                              border:`1.5px solid ${th.appAccent}`,
+                              borderRadius:10, background:th.appBg,
+                              fontFamily:F.body, fontSize:13, color:th.appInk,
+                              outline:"none", resize:"vertical", boxSizing:"border-box", minHeight:44,
+                            }}
+                          />
+                          <div style={{ display:"flex", gap:8, marginTop:8 }}>
+                            <button onClick={saveEditedComment} disabled={!editingText.trim()} style={{
+                              padding:"6px 14px", borderRadius:8, border:"none",
+                              background: editingText.trim() ? th.appAccent : th.appBorder,
+                              color: editingText.trim() ? "#fff" : th.appFaded,
+                              fontFamily:F.ui, fontSize:12, fontWeight:700,
+                              cursor: editingText.trim() ? "pointer" : "default",
+                            }}>Salva</button>
+                            <button onClick={cancelEditComment} style={{
+                              padding:"6px 14px", borderRadius:8,
+                              border:`1.5px solid ${th.appBorder}`, background:"transparent",
+                              color:th.appFaded, fontFamily:F.ui, fontSize:12, cursor:"pointer",
+                            }}>Annulla</button>
+                          </div>
+                        </div>
+                      ) : (
+                        // ── Visualizzazione ──
+                        <>
+                          <div style={{ flex:1 }}>
+                            <p style={{ fontFamily:F.body, fontSize:13, color:th.appInk, margin:0, lineHeight:1.5 }}>{c.text}</p>
+                            <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, marginTop:4 }}>
+                              📅 {c.date}{c.edited ? ` · modificato ${c.edited}` : ""}
+                            </div>
+                          </div>
+                          <div style={{ display:"flex", gap:4, flexShrink:0 }}>
+                            <button onClick={() => startEditComment(c)} style={{
+                              background:"none", border:"none", color:th.appFaded,
+                              fontSize:13, cursor:"pointer", padding:0,
+                            }}>✏️</button>
+                            <button onClick={() => deleteComment(c.id)} style={{
+                              background:"none", border:"none", color:"#ccc",
+                              fontSize:15, cursor:"pointer", padding:0,
+                            }}>×</button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Input nuovo commento */}
+              <div style={{ display:"flex", gap:8, alignItems:"flex-end" }}>
+                <textarea
+                  value={commentInput}
+                  onChange={e => setCommentInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); addComment(); }
+                  }}
+                  placeholder="Scrivi un commento o una variante…"
+                  rows={2}
+                  style={{
+                    flex:1, padding:"10px 12px",
+                    border:`1.5px solid ${commentInput ? th.appAccent : th.appBorder}`,
+                    borderRadius:12, background:th.appCard,
+                    fontFamily:F.body, fontSize:13, color:th.appInk,
+                    outline:"none", resize:"vertical", boxSizing:"border-box",
+                    minHeight:44,
+                  }}
+                />
+                <button
+                  onClick={addComment}
+                  disabled={!commentInput.trim()}
+                  style={{
+                    padding:"11px 16px", borderRadius:12, border:"none",
+                    background: commentInput.trim() ? th.appAccent : th.appBorder,
+                    color: commentInput.trim() ? "#fff" : th.appFaded,
+                    fontFamily:F.ui, fontSize:13, fontWeight:700,
+                    cursor: commentInput.trim() ? "pointer" : "default",
+                    flexShrink:0,
+                  }}
+                >＋</button>
+              </div>
+            </div>
+
+            {/* ── RICORDI ── */}
+            <MemoriesSection
+              memories={recipe.memories || []}
+              color={recipe.color}
+              onAdd={() => {}}  /* handled by home */
+              onDelete={(memId) => onDeleteMemory(memId)}
+            />
+          </div>
+        </div>
+      ) : (
+        // ── Book view ─────────────────────────────────────────
+        <BookPageView recipe={recipe}/>
+      )}
+
+      {/* Dialog calcolo dosi (imposta doseScale per la ricetta) */}
+      {servingsDialog && (
+        <ServingsDialog
+          recipe={recipe}
+          title="Calcolo dosi"
+          emoji="⚖️"
+          initialScale={doseScale}
+          onConfirm={(scale) => { setDoseScale(scale); setServingsDialog(null); }}
+          onClose={() => setServingsDialog(null)}
+        />
+      )}
+
+      {/* Active mode overlays */}
+      {activeMode?.mode === "shopping" && (
+        <ShoppingMode recipe={recipe} scale={activeMode.scale} onAddToList={onAddToShoppingList} onClose={() => setActiveMode(null)}/>
+      )}
+      {activeMode?.mode === "cooking" && (
+        <CookingMode recipe={recipe} scale={activeMode.scale} onClose={() => setActiveMode(null)}/>
+      )}
+    </div>
+  );
+};
+
+// ── Memories Section ───────────────────────────────────────────
+const MemoriesSection = ({ memories, color, onAdd, onDelete }) => {
+  const th = useTheme();
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [lightbox, setLightbox] = useState(null); // {photo, caption, date}
+  const isEmpty = !memories || memories.length === 0;
+
+  return (
+    <div style={{ marginTop:28 }}>
+      {/* Lightbox */}
+      {lightbox && (
+        <PhotoLightbox
+          photo={lightbox.photo}
+          caption={lightbox.caption}
+          date={lightbox.date}
+          onClose={() => setLightbox(null)}
+        />
+      )}
+
+      {/* Section header */}
+      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
+        <div style={{ flex:1, height:1, background:th.appBorder }}/>
+        <span style={{ fontFamily:F.ui, fontSize:11, letterSpacing:2.5, color:th.appFaded, textTransform:"uppercase" }}>
+          I nostri ricordi
+        </span>
+        <div style={{ flex:1, height:1, background:th.appBorder }}/>
+      </div>
+
+      {/* Memory grid */}
+      {isEmpty ? (
+        <div style={{
+          textAlign:"center", padding:"24px 16px",
+          background:th.appCard, borderRadius:16,
+          border:`1.5px dashed ${th.appBorder}`,
+          marginBottom:16,
+        }}>
+          <div style={{ fontSize:36, marginBottom:8 }}>📷</div>
+          <div style={{ fontFamily:F.display, fontSize:15, color:th.appFaded, fontStyle:"italic" }}>
+            Nessun ricordo ancora
+          </div>
+          <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginTop:4, opacity:0.7 }}>
+            Aggiungi una foto la prossima volta che cucinate questa ricetta
+          </div>
+        </div>
+      ) : (
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16 }}>
+          {memories.map(mem => (
+            <div key={mem.id} style={{
+              position:"relative",
+              borderRadius:14, overflow:"hidden",
+              background:`linear-gradient(135deg, ${color}28, ${color}12)`,
+              border:`1px solid ${color}30`,
+            }}>
+              {/* Photo — tappable to open lightbox */}
+              <div
+                onClick={() => setLightbox({ photo:mem.photo, caption:mem.caption, date:mem.date })}
+                style={{
+                  height:110, cursor:"pointer",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontSize:44,
+                  background:`linear-gradient(135deg, ${color}20, ${color}08)`,
+                  position:"relative",
+                }}
+              >
+                {mem.photo}
+                {/* Expand hint */}
+                <div style={{
+                  position:"absolute", bottom:4, right:6,
+                  fontSize:12, opacity:0.5,
+                }}>⤢</div>
+              </div>
+
+              {/* Caption + date */}
+              <div style={{ padding:"8px 10px 10px" }}>
+                {mem.caption && (
+                  <div style={{
+                    fontFamily:F.body, fontSize:12, color:th.appInk,
+                    fontStyle:"italic", lineHeight:1.4, marginBottom:3,
+                  }}>"{mem.caption}"</div>
+                )}
+                <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, letterSpacing:0.5 }}>
+                  📅 {mem.date}
+                </div>
+              </div>
+
+              {/* Delete button */}
+              <button
+                onClick={() => setConfirmDeleteId(mem.id)}
+                style={{
+                  position:"absolute", top:6, right:6,
+                  width:22, height:22, borderRadius:"50%",
+                  background:"rgba(0,0,0,0.45)", color:"#fff",
+                  border:"none", cursor:"pointer",
+                  fontSize:11, display:"flex", alignItems:"center", justifyContent:"center",
+                }}>×</button>
+
+              {/* Confirm delete overlay */}
+              {confirmDeleteId === mem.id && (
+                <div style={{
+                  position:"absolute", inset:0,
+                  background:"rgba(0,0,0,0.75)",
+                  display:"flex", flexDirection:"column",
+                  alignItems:"center", justifyContent:"center",
+                  gap:8, padding:10,
+                }}>
+                  <div style={{ fontFamily:F.ui, fontSize:11, color:"#fff", textAlign:"center" }}>
+                    Eliminare questo ricordo?
+                  </div>
+                  <div style={{ display:"flex", gap:6 }}>
+                    <button onClick={() => setConfirmDeleteId(null)} style={{
+                      padding:"5px 12px", borderRadius:8,
+                      background:"rgba(255,255,255,0.2)", color:"#fff",
+                      border:"none", fontFamily:F.ui, fontSize:11, cursor:"pointer",
+                    }}>Annulla</button>
+                    <button onClick={() => { onDelete(mem.id); setConfirmDeleteId(null); }} style={{
+                      padding:"5px 12px", borderRadius:8,
+                      background:"#D93025", color:"#fff",
+                      border:"none", fontFamily:F.ui, fontSize:11, cursor:"pointer", fontWeight:700,
+                    }}>Elimina</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add memory button handled by home screen */}
+    </div>
+  );
+};
+
+// ── Add Memory Modal ───────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// SCREEN: ADD MEMORY — standalone, choose recipes to link
+// ══════════════════════════════════════════════════════════════
+const AddMemoryScreen = ({ recipes, onBack, onSave, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping }) => {
+  const th = useTheme();
+  const [caption, setCaption] = useState("");
+  const [story, setStory] = useState("");
+  const [chosenPhoto, setChosenPhoto] = useState(null); // emoji o dataURL immagine
+  const [photoIsImage, setPhotoIsImage] = useState(false);
+  const [selectedRecipeIds, setSelectedRecipeIds] = useState([]);
+  const fileInputRef = React.useRef(null);
+
+  const MEMORY_EMOJIS = ["🍽","🥂","🎉","👨‍👩‍👦","🌿","🌅","🏠","🎂","⛺","🌊","❄️","🫂","🎄","🌸","🍂","✨","🫶","🥳"];
+  const today = new Date().toLocaleDateString("it-IT", { day:"numeric", month:"short", year:"numeric" });
+  const todayISO = new Date().toISOString().slice(0,10);
+
+  const handleFile = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => { setChosenPhoto(ev.target.result); setPhotoIsImage(true); };
+    reader.readAsDataURL(file);
+  };
+
+  const toggleRecipe = (id) => setSelectedRecipeIds(prev =>
+    prev.includes(id) ? prev.filter(r=>r!==id) : [...prev, id]
+  );
+
+  const canSave = chosenPhoto && selectedRecipeIds.length > 0;
+
+  return (
+    <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+      <GlobalNav
+        activeScreen="add"
+        onRecipes={onRecipes}
+        onBook={onBook}
+        onMemories={onMemories}
+        onAdd={onAdd}
+        onFridge={onFridge}
+        onShopping={onShopping}
+        onLanding={onLanding}
+        onSearch={() => {}}
+        onFavorites={() => {}}
+        showSearch={false}
+        showFavorites={false}
+        activeLabel="Nuovo Ricordo"
+      />
+      <div style={{ padding:"8px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <BackBtn onBack={onBack} label="Annulla"/>
+        <button
+          onClick={() => canSave && onSave({ photo:chosenPhoto, photoIsImage, caption, story, date:today, dateISO:todayISO, recipeIds:selectedRecipeIds })}
+          style={{
+            background: canSave ? th.appAccent : th.appBorder,
+            color: canSave ? "#fff" : th.appFaded,
+            border:"none", borderRadius:10, padding:"8px 18px",
+            fontFamily:F.ui, fontSize:13, fontWeight:700,
+            cursor: canSave ? "pointer" : "default", transition:"all 0.2s",
+          }}
+        >Salva ✓</button>
+      </div>
+
+      <div style={{ padding:"12px 20px 4px" }}>
+        <div style={{ fontFamily:F.display, fontSize:22, color:th.appInk }}>Nuovo Ricordo</div>
+        <div style={{ fontFamily:F.ui, fontSize:12, color:th.appFaded, marginTop:2 }}>{today}</div>
+      </div>
+
+      <div style={{ flex:1, overflowY:"auto", padding:"0 20px 40px", display:"flex", flexDirection:"column", gap:16 }}>
+
+        {/* Photo — caricamento reale con anteprima */}
+        <div>
+          <EditLabel text="Foto"/>
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFile} style={{ display:"none" }}/>
+          {photoIsImage && chosenPhoto ? (
+            <div style={{ position:"relative", borderRadius:14, overflow:"hidden", border:`1.5px solid ${th.appBorder}` }}>
+              <img src={chosenPhoto} alt="anteprima" style={{ width:"100%", height:200, objectFit:"cover", display:"block" }}/>
+              <button onClick={() => fileInputRef.current && fileInputRef.current.click()} style={{
+                position:"absolute", bottom:10, right:10,
+                background:"rgba(0,0,0,0.6)", color:"#fff", border:"none",
+                borderRadius:10, padding:"7px 12px", fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
+              }}>🔄 Cambia foto</button>
+            </div>
+          ) : (
+            <button onClick={() => fileInputRef.current && fileInputRef.current.click()} style={{
+              width:"100%", padding:"22px 8px",
+              border:`2px dashed ${th.appBorder}`, borderRadius:14,
+              background:"transparent", color:th.appFaded,
+              fontFamily:F.ui, fontSize:13, fontWeight:600, cursor:"pointer",
+              display:"flex", flexDirection:"column", alignItems:"center", gap:8,
+            }}>
+              <span style={{ fontSize:30 }}>📷</span>
+              <span>Scatta o scegli dalla galleria</span>
+            </button>
+          )}
+        </div>
+
+        {/* Emoji picker — alternativa se non c'è una foto */}
+        <div>
+          <EditLabel text={photoIsImage ? "Oppure usa un'emoji" : "Oppure scegli un'emoji"}/>
+          <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
+            {MEMORY_EMOJIS.map(e => (
+              <button key={e} onClick={() => { setChosenPhoto(e); setPhotoIsImage(false); }} style={{
+                width:38, height:38, borderRadius:10,
+                border:`1.5px solid ${!photoIsImage && chosenPhoto===e ? th.appAccent : th.appBorder}`,
+                background: !photoIsImage && chosenPhoto===e ? `${th.appAccent}15` : "transparent",
+                fontSize:20, cursor:"pointer",
+                display:"flex", alignItems:"center", justifyContent:"center",
+              }}>{e}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Titolo breve */}
+        <div>
+          <EditLabel text="Titolo (opzionale)"/>
+          <input
+            value={caption}
+            onChange={e => setCaption(e.target.value)}
+            placeholder="es. Domenica in famiglia, prima volta insieme…"
+            style={{
+              width:"100%", padding:"11px 14px",
+              border:`1.5px solid ${th.appBorder}`,
+              borderRadius:12, background:th.appCard,
+              fontFamily:F.body, fontStyle:"italic",
+              fontSize:14, color:th.appInk,
+              outline:"none", boxSizing:"border-box",
+            }}
+          />
+        </div>
+
+        {/* Racconto — spazio ampio per la storia */}
+        <div>
+          <EditLabel text="Il racconto (opzionale)"/>
+          <textarea
+            value={story}
+            onChange={e => setStory(e.target.value)}
+            placeholder="Com'è andata? Chi c'era, cosa vi siete detti, un dettaglio da ricordare…"
+            rows={4}
+            style={{
+              width:"100%", padding:"11px 14px",
+              border:`1.5px solid ${th.appBorder}`,
+              borderRadius:12, background:th.appCard,
+              fontFamily:F.body, fontSize:14, color:th.appInk,
+              outline:"none", boxSizing:"border-box", resize:"vertical", lineHeight:1.5,
+            }}
+          />
+        </div>
+
+        {/* Recipe association — required */}
+        <div>
+          <EditLabel text="Associa a una o più ricette *"/>
+          <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginBottom:8 }}>
+            Seleziona almeno una ricetta
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+            {recipes.map(r => {
+              const sel = selectedRecipeIds.includes(r.id);
+              return (
+                <button key={r.id} onClick={() => toggleRecipe(r.id)} style={{
+                  display:"flex", alignItems:"center", gap:12,
+                  padding:"10px 14px",
+                  background: sel ? `${r.color}15` : th.appCard,
+                  border:`1.5px solid ${sel ? r.color : th.appBorder}`,
+                  borderRadius:12, cursor:"pointer", textAlign:"left",
+                  transition:"all 0.15s",
+                }}>
+                  <div style={{ width:32, height:32, borderRadius:8, background:r.color, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, flexShrink:0 }}>{r.emoji}</div>
+                  <div style={{ flex:1, fontFamily:F.ui, fontSize:13, color: sel ? r.color : th.appInk, fontWeight: sel ? 600 : 400 }}>{r.title}</div>
+                  <div style={{
+                    width:22, height:22, borderRadius:"50%",
+                    border:`2px solid ${sel ? r.color : th.appBorder}`,
+                    background: sel ? r.color : "transparent",
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    color:"#fff", fontSize:12, flexShrink:0,
+                  }}>{sel ? "✓" : ""}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Save */}
+        <button
+          onClick={() => canSave && onSave({ photo:chosenPhoto, photoIsImage, caption, story, date:today, dateISO:todayISO, recipeIds:selectedRecipeIds })}
+          style={{
+            width:"100%", padding:"15px",
+            background: canSave ? th.appAccent : th.appBorder,
+            color: canSave ? "#fff" : th.appFaded,
+            border:"none", borderRadius:14,
+            fontFamily:F.ui, fontSize:14, fontWeight:700,
+            cursor: canSave ? "pointer" : "default",
+            boxShadow: canSave ? `0 4px 16px ${th.appAccent}44` : "none",
+            transition:"all 0.2s",
+          }}
+        >
+          {!chosenPhoto
+            ? "Seleziona una foto o emoji"
+            : selectedRecipeIds.length === 0
+              ? "Seleziona almeno una ricetta"
+              : `Salva ricordo ✓ (${selectedRecipeIds.length} ricett${selectedRecipeIds.length===1?"a":"e"})`
+          }
+        </button>
+      </div>
+    </div>
+  );
+};
+
+
+
+const BookPageView = ({ recipe }) => {
+  const th = useTheme();
+  return (
+    <div style={{ background:th.bookBg, margin:"12px 16px", padding:"24px 20px", border:`1px solid ${th.bookBorder}`, boxShadow:"0 2px 12px rgba(0,0,0,0.06)", fontFamily:F.book, color:th.bookInk, minHeight:600, position:"relative" }}>
+      {[60,120,180].map(top => (
+        <div key={top} style={{ position:"absolute", left:-8, top, width:12, height:12, borderRadius:"50%", background:th.appBorder, border:`1px solid ${th.bookBorder}` }}/>
+      ))}
+      <div style={{ textAlign:"center", fontSize:17, fontWeight:"bold", color:th.bookInk, marginBottom:14 }}>{recipe.title}</div>
+      <div style={{ width:180, height:130, margin:"0 auto 14px", background:th.appBorder, border:`1px solid ${th.bookBorder}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:40 }}>
+        {recipe.dishPhoto ? "📸" : <span style={{ opacity:0.35 }}>{recipe.emoji}</span>}
+      </div>
+      <div style={{ fontSize:12, color:th.bookFaded, lineHeight:2 }}>
+        <div>Tempo di prep.(min): {recipe.prepTime}</div>
+        <div>Tempo di cottura (min): {recipe.cookTime}</div>
+        <div>Porzioni: {recipe.servings}</div>
+      </div>
+      {recipe.note && (
+        <div style={{ border:`1px solid ${th.bookNoteBorder}`, background:th.bookNote, padding:"8px 12px", margin:"12px 0", fontSize:11, fontStyle:"italic", color:th.bookFaded, lineHeight:1.65 }}>
+          {recipe.source && <span>Ricetta di {recipe.source} — </span>}{recipe.note}
+        </div>
+      )}
+      <div style={{ textAlign:"center", fontSize:14, fontWeight:"bold", color:th.bookInk, margin:"12px 0 8px" }}>Ingredienti</div>
+      {isSectioned(recipe.ingredients) ? (
+        recipe.ingredients.map((sec, si) => (
+          <div key={si}>
+            {sec.section && <div style={{ fontSize:10, fontWeight:"bold", color:recipe.color, textTransform:"uppercase", letterSpacing:1.5, margin:"8px 0 3px", paddingBottom:2, borderBottom:`1px solid ${th.bookBorder}` }}>{sec.section}</div>}
+            {sec.items.map((ing,i) => <div key={i} style={{ fontSize:12, color:th.bookInk, lineHeight:1.8 }}>{ingredientToText(ing)}</div>)}
+          </div>
+        ))
+      ) : (
+        recipe.ingredients.map((ing,i) => (
+          <div key={i} style={{ fontSize:12, color:th.bookInk, lineHeight:1.8 }}>{ingredientToText(ing)}</div>
+        ))
+      )}
+      <div style={{ textAlign:"center", fontSize:14, fontWeight:"bold", color:th.bookInk, margin:"14px 0 8px" }}>Preparazione</div>
+      {isSectioned(recipe.steps) ? (
+        recipe.steps.map((sec, si) => (
+          <div key={si}>
+            {sec.section && <div style={{ fontSize:10, fontWeight:"bold", color:recipe.color, textTransform:"uppercase", letterSpacing:1.5, margin:"10px 0 5px", paddingBottom:2, borderBottom:`1px solid ${th.bookBorder}` }}>{sec.section}</div>}
+            {sec.items.map((step,i) => {
+              const text = typeof step === "string" ? step : step.text;
+              return <p key={i} style={{ fontSize:12, color:th.bookInk, lineHeight:1.65, marginBottom:8, marginTop:0 }}>{text}</p>;
+            })}
+          </div>
+        ))
+      ) : (
+        recipe.steps.map((step,i) => {
+          const text = typeof step === "string" ? step : step.text;
+          return <p key={i} style={{ fontSize:12, color:th.bookInk, lineHeight:1.65, marginBottom:8, marginTop:0 }}>{text}</p>;
+        })
+      )}
+    </div>
+  );
+};
+
+const Pill = ({ icon, label }) => (
+  <span style={{
+    background:"rgba(255,255,255,0.25)", borderRadius:20, padding:"5px 10px",
+    fontFamily:F.ui, fontSize:11, color:"#fff",
+    display:"flex", alignItems:"center", gap:4,
+  }}>{icon} {label}</span>
+);
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN: SCAN — with confidence check + GPT confirmation
+// ══════════════════════════════════════════════════════════════
+
+// Simulated OCR results: one "good" and one "uncertain" for demo
+const OCR_GOOD = {
+  confidence: 94,
+  title: "Risotto allo Zafferano",
+  ingredients: [
+    { name:"Riso Carnaroli", qty:320, unit:"g" },
+    { name:"Cipolla dorata", qty:1, unit:"" },
+    { name:"Brodo di carne", qty:1, unit:"l", note:"caldo" },
+    { name:"Zafferano", qty:1, unit:"bustine" },
+    { name:"Burro", qty:50, unit:"g" },
+    { name:"Parmigiano Reggiano", qty:80, unit:"g" },
+    { name:"Vino bianco secco", qty:100, unit:"ml" },
+  ],
+  steps: ["Soffriggere la cipolla tritata nel burro a fuoco dolce.","Tostare il riso per 2 minuti, sfumare con il vino bianco.","Aggiungere il brodo caldo un mestolo alla volta, mescolando.","A fine cottura sciogliere lo zafferano in poco brodo e unirlo al riso.","Mantecare con burro e parmigiano, coprire e lasciare riposare 2 minuti."],
+  note: "Il segreto è la mantecatura finale: burro freddo e movimento deciso.",
+  prepTime: 15, cookTime: 20, servings: 4,
+};
+const OCR_UNCERTAIN = {
+  confidence: 48,
+  title: "P?lp?tte di Mel??zane",
+  ingredients: [
+    { name:"Mel??zane", qty:3, unit:"", note:"t?nde" },
+    { name:"Pec?r?no", qty:100, unit:"g" },
+    { name:"U?va", qty:3, unit:"" },
+    { name:"Pan gr?tt?to", qty:8, unit:"c?cchiai", note:"7-8" },
+    { name:"M?nta, Bas?l?co, P?pe", qty:null, unit:"" },
+    { name:"Ol?o EVO", qty:null, unit:"", note:"da sp?nnellare" },
+  ],
+  steps: ["T?gl?are a cub?tti le mel?nzane e b?llire 5 m?n.","Sc?lare e l?sciare in sc?lapasta c?n sale.","Un?re agli altri ?ngr?d?enti tranne il pan gr?ttato.","F?rm?re le p?lpette e sp?nnellare c?n ol?o.","Inf?rnare a 185° per 25/30 m?n."],
+  note: "",
+  prepTime: 30, cookTime: 25, servings: 8,
+};
+
+const ScanScreen = ({ onBack, onSave, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping, sectionList=MACRO_SECTIONS, onAddSection, onUpdateSection, onDeleteSection }) => {
+  const [step, setStep] = useState("viewfinder");
+  // "viewfinder" | "processing_vision" | "confidence_good" | "confidence_bad" | "gpt_confirm" | "processing_gpt" | "result"
+  const [ocrData, setOcrData] = useState(null);
+  const [useUncertain, setUseUncertain] = useState(false); // toggle for demo
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [recipeName, setRecipeName] = useState("");
+  const [selectedEmoji, setSelectedEmoji] = useState("📄");
+  const [selectedColor, setSelectedColor] = useState("#6B8C6E");
+  const [scanMacro, setScanMacro] = useState("altro"); // default: Altro
+
+  // Elemento (non componente): evita il remount di SectionPicker a ogni render
+  const macroPicker = (
+    <div>
+      <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:"#7A6E5F", textTransform:"uppercase", marginBottom:6 }}>Sezione del ricettario</div>
+      <SectionPicker
+        value={scanMacro}
+        onChange={setScanMacro}
+        sections={sectionList}
+        onAddSection={onAddSection}
+        onUpdateSection={onUpdateSection}
+        onDeleteSection={onDeleteSection}
+      />
+    </div>
+  );
+
+  // Simulated costs
+  const GPT_COST_EURO = 0.01;
+  const CREDIT_REMAINING = 4.87;
+
+  const toggleTag = (tag) => setSelectedTags(prev =>
+    prev.includes(tag) ? prev.filter(t=>t!==tag) : [...prev, tag]);
+
+  const handleShoot = () => {
+    setStep("processing_vision");
+    setTimeout(() => {
+      const data = useUncertain ? OCR_UNCERTAIN : OCR_GOOD;
+      setOcrData(data);
+      setRecipeName(data.title);
+      setStep(data.confidence >= 80 ? "confidence_good" : "confidence_bad");
+    }, 2200);
+  };
+
+  const handleUseGPT = () => setStep("gpt_confirm");
+
+  const handleConfirmGPT = () => {
+    setStep("processing_gpt");
+    setTimeout(() => {
+      // GPT "fixes" the uncertain data
+      setOcrData(prev => ({
+        ...prev,
+        confidence: 97,
+        title: "Polpette di Melanzane",
+        ingredients: ["Melanzane: 3 tonde di medie dimensioni","Pecorino: 100g grattugiato","Uova: 3","Pan grattato: 7-8 cucchiai","Menta, Basilico, Pepe","Olio EVO da spennellare"],
+        steps: ["Tagliare a cubetti le melanzane e bollire 5 min in acqua salata.","Scolare e lasciare in scolapasta con sale per perdere l'acqua.","Unire agli altri ingredienti tranne il pan grattato, aggiungere gradualmente.","Formare le polpette e spennellare con olio extravergine.","Infornare a 185° per 25/30 min."],
+      }));
+      setRecipeName("Polpette di Melanzane");
+      setStep("result");
+    }, 2000);
+  };
+
+  const bgColor = ["result","confidence_good","confidence_bad","gpt_confirm"].includes(step) ? "#FAF7F0" : "#2C2416";
+  const isDark = bgColor === "#2C2416";
+
+  return (
+    <div style={{ background:bgColor, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+      <GlobalNav
+        activeScreen="add"
+        onRecipes={onRecipes}
+        onBook={onBook}
+        onMemories={onMemories}
+        onAdd={onAdd}
+        onFridge={onFridge}
+        onShopping={onShopping}
+        onLanding={onLanding}
+        onSearch={() => {}}
+        onFavorites={() => {}}
+        showSearch={false}
+        showFavorites={false}
+        activeLabel="Scansiona Ricetta"
+      />
+      <div style={{ padding:"8px 24px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <BackBtn onBack={onBack} label="Annulla" dark={!isDark}/>
+        {/* Demo toggle */}
+        {step === "viewfinder" && (
+          <button onClick={() => setUseUncertain(u=>!u)} style={{
+            background:"none", border:`1px solid rgba(255,255,255,0.2)`,
+            borderRadius:10, padding:"4px 10px",
+            color:"rgba(255,255,255,0.5)", fontFamily:F.ui, fontSize:10,
+            cursor:"pointer",
+          }}>Demo: {useUncertain ? "grafia difficile 😬" : "testo chiaro ✓"}</button>
+        )}
+      </div>
+
+      {/* ── VIEWFINDER ── */}
+      {step === "viewfinder" && (
+        <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", padding:"16px 24px" }}>
+          <div style={{ fontFamily:F.display, fontSize:22, color:"#fff", textAlign:"center", marginBottom:4 }}>Scansiona Ricetta</div>
+          <div style={{ fontFamily:F.ui, fontSize:12, color:"rgba(255,255,255,0.5)", textAlign:"center", marginBottom:20 }}>
+            Inquadra la pagina — tieni il telefono fermo
+          </div>
+          <div style={{ width:"100%", aspectRatio:"3/4", borderRadius:20, background:"#111", position:"relative", overflow:"hidden", border:"2px solid rgba(255,255,255,0.12)" }}>
+            {[["top:12px","left:12px","borderTop","borderLeft"],["top:12px","right:12px","borderTop","borderRight"],
+              ["bottom:12px","left:12px","borderBottom","borderLeft"],["bottom:12px","right:12px","borderBottom","borderRight"]
+            ].map(([t,s,b1,b2],i) => (
+              <div key={i} style={{
+                position:"absolute", width:28, height:28,
+                [b1]:`3px solid ${"#C4593A"}`, [b2]:`3px solid ${"#C4593A"}`,
+                ...Object.fromEntries([t,s].map(x=>x.split(":"))), borderRadius:4,
+              }}/>
+            ))}
+            <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <span style={{ fontSize:56, opacity:0.12 }}>📄</span>
+            </div>
+          </div>
+          <button onClick={handleShoot} style={{
+            marginTop:28, width:68, height:68, borderRadius:"50%",
+            background:"#fff", border:"5px solid rgba(255,255,255,0.25)",
+            cursor:"pointer", fontSize:26,
+          }}>📷</button>
+          <div style={{ color:"rgba(255,255,255,0.35)", fontFamily:F.ui, fontSize:11, marginTop:10 }}>Premi per fotografare</div>
+        </div>
+      )}
+
+      {/* ── PROCESSING VISION ── */}
+      {step === "processing_vision" && (
+        <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16, padding:24 }}>
+          <div style={{ fontSize:44 }}>🔍</div>
+          <div style={{ fontFamily:F.display, fontSize:20, color:"#fff", textAlign:"center" }}>Lettura testo in corso…</div>
+          <div style={{ fontFamily:F.ui, fontSize:12, color:"rgba(255,255,255,0.45)", textAlign:"center" }}>Apple Vision sta analizzando la pagina</div>
+          <ProgressBar color={"#C4593A"} duration={2200}/>
+        </div>
+      )}
+
+      {/* ── PROCESSING GPT ── */}
+      {step === "processing_gpt" && (
+        <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16, padding:24 }}>
+          <div style={{ fontSize:44 }}>✨</div>
+          <div style={{ fontFamily:F.display, fontSize:20, color:"#fff", textAlign:"center" }}>GPT sta correggendo…</div>
+          <div style={{ fontFamily:F.ui, fontSize:12, color:"rgba(255,255,255,0.45)", textAlign:"center" }}>Strutturazione intelligente della ricetta</div>
+          <ProgressBar color="#7B61FF" duration={2000}/>
+        </div>
+      )}
+
+      {/* ── CONFIDENCE GOOD ── */}
+      {step === "confidence_good" && ocrData && (
+        <div style={{ padding:"16px 22px 32px", display:"flex", flexDirection:"column", gap:14 }}>
+          {/* Score badge */}
+          <div style={{
+            background:`${"#6B8C6E"}18`, border:`1.5px solid ${"#6B8C6E"}`,
+            borderRadius:14, padding:"14px 16px",
+            display:"flex", alignItems:"center", gap:12,
+          }}>
+            <div style={{ fontSize:32 }}>✅</div>
+            <div>
+              <div style={{ fontFamily:F.ui, fontSize:13, fontWeight:700, color:"#6B8C6E" }}>
+                Testo riconosciuto con alta confidenza
+              </div>
+              <div style={{ fontFamily:F.ui, fontSize:11, color:"#7A6E5F", marginTop:2 }}>
+                Accuratezza Apple Vision: <strong>{ocrData.confidence}%</strong> — nessun intervento AI necessario
+              </div>
+            </div>
+          </div>
+
+          <ScanPreview ocrData={ocrData} recipeName={recipeName} setRecipeName={setRecipeName}/>
+
+          <EmojiColorPicker emoji={selectedEmoji} color={selectedColor} onEmoji={setSelectedEmoji} onColor={setSelectedColor}/>
+
+          {macroPicker}
+
+          <div style={{ display:"flex", gap:8, marginTop:4 }}>
+            <button onClick={() => setStep("viewfinder")} style={{
+              flex:1, padding:"13px",
+              border:`1.5px solid #EDE6D4`, borderRadius:12,
+              background:"transparent", color:"#7A6E5F",
+              fontFamily:F.ui, fontSize:13, cursor:"pointer",
+            }}>Rifai foto</button>
+            <button onClick={() => onSave(recipeName, selectedTags, ocrData, selectedEmoji, selectedColor, scanMacro)} style={{
+              flex:2, padding:"13px",
+              background:"#6B8C6E", color:"#fff",
+              border:"none", borderRadius:12,
+              fontFamily:F.ui, fontSize:14, fontWeight:700,
+              cursor:"pointer", boxShadow:`0 4px 16px ${"#6B8C6E"}55`,
+            }}>Continua →</button>
+          </div>
+
+          <TagSection selectedTags={selectedTags} onChange={(tags) => setSelectedTags(tags)}/>
+        </div>
+      )}
+
+      {/* ── CONFIDENCE BAD ── */}
+      {step === "confidence_bad" && ocrData && (
+        <div style={{ padding:"16px 22px 32px", display:"flex", flexDirection:"column", gap:14 }}>
+          {/* Score badge */}
+          <div style={{
+            background:`#C4593A18`, border:`1.5px solid ${"#C4593A"}`,
+            borderRadius:14, padding:"14px 16px",
+            display:"flex", alignItems:"center", gap:12,
+          }}>
+            <div style={{ fontSize:32 }}>⚠️</div>
+            <div>
+              <div style={{ fontFamily:F.ui, fontSize:13, fontWeight:700, color:"#C4593A" }}>
+                Testo difficile da leggere
+              </div>
+              <div style={{ fontFamily:F.ui, fontSize:11, color:"#7A6E5F", marginTop:2 }}>
+                Accuratezza Apple Vision: <strong>{ocrData.confidence}%</strong> — alcuni caratteri incerti (evidenziati in rosso)
+              </div>
+            </div>
+          </div>
+
+          <ScanPreviewUncertain ocrData={ocrData} recipeName={recipeName} setRecipeName={setRecipeName}/>
+
+          <EmojiColorPicker emoji={selectedEmoji} color={selectedColor} onEmoji={setSelectedEmoji} onColor={setSelectedColor}/>
+
+          {macroPicker}
+
+          <div style={{ display:"flex", gap:8 }}>
+            <button onClick={() => setStep("viewfinder")} style={{
+              flex:1, padding:"13px",
+              border:`1.5px solid #EDE6D4`, borderRadius:12,
+              background:"transparent", color:"#7A6E5F",
+              fontFamily:F.ui, fontSize:12, cursor:"pointer",
+            }}>Rifai foto</button>
+            <button onClick={() => onSave(recipeName, selectedTags, ocrData, selectedEmoji, selectedColor, scanMacro)} style={{
+              flex:1, padding:"13px",
+              border:`1.5px solid #EDE6D4`, borderRadius:12,
+              background:"transparent", color:"#7A6E5F",
+              fontFamily:F.ui, fontSize:12, cursor:"pointer",
+            }}>Continua →</button>
+            <button onClick={handleUseGPT} style={{
+              flex:2, padding:"13px",
+              background:"#C4593A", color:"#fff",
+              border:"none", borderRadius:12,
+              fontFamily:F.ui, fontSize:13, fontWeight:700,
+              cursor:"pointer", boxShadow:"0 4px 14px rgba(196,89,58,0.4)",
+            }}>✨ Migliora con AI</button>
+          </div>
+
+          <TagSection selectedTags={selectedTags} onChange={(tags) => setSelectedTags(tags)}/>
+        </div>
+      )}
+
+      {/* ── GPT CONFIRM ── */}
+      {step === "gpt_confirm" && (
+        <div style={{ flex:1, display:"flex", flexDirection:"column", padding:"20px 22px", gap:16 }}>
+          <div style={{ fontFamily:F.display, fontSize:20, color:"#2C2416" }}>Conferma utilizzo AI</div>
+          <div style={{ fontFamily:F.ui, fontSize:13, color:"#7A6E5F", lineHeight:1.6 }}>
+            GPT-4o analizzerà il testo riconosciuto e correggerà i caratteri incerti, strutturando la ricetta in modo pulito.
+          </div>
+
+          {/* Cost card */}
+          <div style={{
+            background:"#F7F2E8", border:`1px solid #EDE6D4`,
+            borderRadius:16, overflow:"hidden",
+          }}>
+            <div style={{ padding:"14px 16px", borderBottom:`1px solid ${"#EDE6D4"}` }}>
+              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:"#7A6E5F", textTransform:"uppercase", marginBottom:10 }}>Riepilogo costo</div>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                <div style={{ fontFamily:F.ui, fontSize:13, color:"#2C2416" }}>Analisi GPT-4o (1 ricetta)</div>
+                <div style={{ fontFamily:F.ui, fontSize:14, fontWeight:700, color:"#2C2416" }}>€ {GPT_COST_EURO.toFixed(2)}</div>
+              </div>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <div style={{ fontFamily:F.ui, fontSize:13, color:"#7A6E5F" }}>Credito residuo attuale</div>
+                <div style={{ fontFamily:F.ui, fontSize:14, fontWeight:700, color:"#6B8C6E" }}>€ {CREDIT_REMAINING.toFixed(2)}</div>
+              </div>
+            </div>
+            <div style={{ padding:"12px 16px", background:`${"#6B8C6E"}10` }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <div style={{ fontFamily:F.ui, fontSize:13, fontWeight:600, color:"#6B8C6E" }}>Credito dopo questa operazione</div>
+                <div style={{ fontFamily:F.ui, fontSize:15, fontWeight:700, color:"#6B8C6E" }}>
+                  € {(CREDIT_REMAINING - GPT_COST_EURO).toFixed(2)}
+                </div>
+              </div>
+              <div style={{ fontFamily:F.ui, fontSize:10, color:"#7A6E5F", marginTop:4 }}>
+                Equivale a circa {Math.floor((CREDIT_REMAINING - GPT_COST_EURO) / GPT_COST_EURO)} ricette rimanenti
+              </div>
+            </div>
+          </div>
+
+          {/* What GPT will do */}
+          <div style={{ background:"#F7F2E8", border:`1px solid #EDE6D4`, borderRadius:14, padding:"14px 16px" }}>
+            <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:"#7A6E5F", textTransform:"uppercase", marginBottom:10 }}>GPT provvederà a</div>
+            {["Correggere i caratteri non riconosciuti","Strutturare titolo, ingredienti e preparazione","Separare le unità di misura dagli ingredienti","Aggiungere punteggiatura e formattazione"].map((item,i) => (
+              <div key={i} style={{ display:"flex", gap:8, marginBottom:8, alignItems:"flex-start" }}>
+                <span style={{ color:"#6B8C6E", fontSize:14, marginTop:1 }}>✦</span>
+                <span style={{ fontFamily:F.ui, fontSize:13, color:"#2C2416", lineHeight:1.4 }}>{item}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display:"flex", gap:8, marginTop:"auto" }}>
+            <button onClick={() => setStep("confidence_bad")} style={{
+              flex:1, padding:"14px",
+              border:`1.5px solid #EDE6D4`, borderRadius:12,
+              background:"transparent", color:"#7A6E5F",
+              fontFamily:F.ui, fontSize:13, cursor:"pointer",
+            }}>Annulla</button>
+            <button onClick={handleConfirmGPT} style={{
+              flex:2, padding:"14px",
+              background:"#7B61FF", color:"#fff",
+              border:"none", borderRadius:12,
+              fontFamily:F.ui, fontSize:14, fontWeight:700,
+              cursor:"pointer", boxShadow:"0 4px 16px rgba(123,97,255,0.4)",
+            }}>✨ Conferma — usa GPT</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── RESULT (after GPT) ── */}
+      {step === "result" && ocrData && (
+        <div style={{ padding:"16px 22px 32px", display:"flex", flexDirection:"column", gap:14 }}>
+          <div style={{
+            background:"#7B61FF18", border:"1.5px solid #7B61FF",
+            borderRadius:14, padding:"14px 16px",
+            display:"flex", alignItems:"center", gap:12,
+          }}>
+            <div style={{ fontSize:32 }}>✨</div>
+            <div>
+              <div style={{ fontFamily:F.ui, fontSize:13, fontWeight:700, color:"#7B61FF" }}>
+                Ricetta migliorata da GPT-4o
+              </div>
+              <div style={{ fontFamily:F.ui, fontSize:11, color:"#7A6E5F", marginTop:2 }}>
+                Accuratezza finale: <strong>{ocrData.confidence}%</strong> · Costo: <strong>€{GPT_COST_EURO.toFixed(2)}</strong> · Credito rimasto: <strong>€{(CREDIT_REMAINING-GPT_COST_EURO).toFixed(2)}</strong>
+              </div>
+            </div>
+          </div>
+
+          <ScanPreview ocrData={ocrData} recipeName={recipeName} setRecipeName={setRecipeName}/>
+
+          <EmojiColorPicker emoji={selectedEmoji} color={selectedColor} onEmoji={setSelectedEmoji} onColor={setSelectedColor}/>
+
+          {macroPicker}
+
+          <button onClick={() => onSave(recipeName, selectedTags, ocrData, selectedEmoji, selectedColor, scanMacro)} style={{
+            width:"100%", padding:"15px",
+            background:"#7B61FF", color:"#fff",
+            border:"none", borderRadius:12,
+            fontFamily:F.ui, fontSize:14, fontWeight:700,
+            cursor:"pointer", boxShadow:"0 4px 16px rgba(123,97,255,0.4)",
+          }}>Continua →</button>
+
+          <TagSection selectedTags={selectedTags} onChange={(tags) => setSelectedTags(tags)}/>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Shared sub-components for ScanScreen ──────────────────────
+
+const ProgressBar = ({ color, duration }) => (
+  <div style={{ width:200, height:4, background:"rgba(255,255,255,0.1)", borderRadius:2, overflow:"hidden" }}>
+    <div style={{ height:"100%", background:color, borderRadius:2, animation:`prog ${duration}ms linear forwards` }}/>
+    <style>{`@keyframes prog{from{transform:translateX(-100%)}to{transform:translateX(0)}}`}</style>
+  </div>
+);
+
+const ScanPreview = ({ ocrData, recipeName, setRecipeName }) => (
+  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+    <div>
+      <ScanLabel text="Titolo"/>
+      <input value={recipeName} onChange={e=>setRecipeName(e.target.value)} style={{
+        width:"100%", padding:"10px 14px",
+        border:`1.5px solid #EDE6D4`, borderRadius:10,
+        background:"#F7F2E8", fontFamily:F.display, fontSize:15, color:"#2C2416",
+        outline:"none", boxSizing:"border-box",
+      }}/>
+    </div>
+    <div>
+      <ScanLabel text={`Ingredienti (${ocrData.ingredients.length})`}/>
+      <div style={{ border:`1.5px solid #EDE6D4`, borderRadius:10, padding:"10px 14px", background:"#F7F2E8" }}>
+        {ocrData.ingredients.map((ing,i) => (
+          <div key={i} style={{ fontFamily:F.body, fontSize:13, color:"#2C2416", lineHeight:1.8 }}>
+            <span style={{ color:"#B8973A", marginRight:6 }}>✦</span>{ingredientToText(ing)}
+          </div>
+        ))}
+      </div>
+    </div>
+    <div>
+      <ScanLabel text={`Preparazione (${ocrData.steps.length} passi)`}/>
+      <div style={{ border:`1.5px solid #EDE6D4`, borderRadius:10, padding:"10px 14px", background:"#F7F2E8" }}>
+        {ocrData.steps.map((s,i) => (
+          <div key={i} style={{ fontFamily:F.body, fontSize:12, color:"#2C2416", lineHeight:1.6, marginBottom:4 }}>
+            <span style={{ fontWeight:700, color:"#7A6E5F", marginRight:6 }}>{i+1}.</span>{s}
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+const ScanPreviewUncertain = ({ ocrData, recipeName, setRecipeName }) => {
+  // Highlight ? characters in red
+  const highlight = (text) => {
+    const parts = text.split(/(\?)/);
+    return parts.map((p,i) => p === "?" ?
+      <span key={i} style={{ color:"#C4593A", fontWeight:700, background:`${"#C4593A"}18`, borderRadius:2, padding:"0 1px" }}>?</span> : p
+    );
+  };
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+      <div>
+        <ScanLabel text="Titolo (verifica i caratteri rossi)"/>
+        <input value={recipeName} onChange={e=>setRecipeName(e.target.value)} style={{
+          width:"100%", padding:"10px 14px",
+          border:`1.5px solid ${"#C4593A"}`, borderRadius:10,
+          background:"#fff5f3", fontFamily:F.display, fontSize:15, color:"#2C2416",
+          outline:"none", boxSizing:"border-box",
+        }}/>
+      </div>
+      <div>
+        <ScanLabel text="Ingredienti — caratteri incerti evidenziati"/>
+        <div style={{ border:`1.5px solid ${"#C4593A"}`, borderRadius:10, padding:"10px 14px", background:"#fff5f3" }}>
+          {ocrData.ingredients.map((ing,i) => (
+            <div key={i} style={{ fontFamily:F.body, fontSize:13, color:"#2C2416", lineHeight:1.8 }}>
+              <span style={{ color:"#B8973A", marginRight:6 }}>✦</span>{highlight(ingredientToText(ing))}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ fontFamily:F.ui, fontSize:11, color:"#7A6E5F", textAlign:"center" }}>
+        Puoi correggere manualmente oppure lasciare che GPT risolva tutto automaticamente
+      </div>
+    </div>
+  );
+};
+
+const TagSection = ({ selectedTags, onChange }) => (
+  <div>
+    <ScanLabel text="Categoria e tag"/>
+    <TagPicker selectedTags={selectedTags} onChange={onChange}/>
+  </div>
+);
+
+const ScanLabel = ({ text }) => (
+  <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:"#7A6E5F", textTransform:"uppercase", marginBottom:6 }}>{text}</div>
+);
+
+const EmojiColorPicker = ({ emoji, color, onEmoji, onColor }) => {
+  const [activeCategory, setActiveCategory] = useState(EMOJI_CATEGORIES[0].label);
+  const currentEmojis = EMOJI_CATEGORIES.find(c => c.label === activeCategory)?.emojis || [];
+
+  return (
+    <div style={{
+      background:"#F7F2E8", border:`1px solid #EDE6D4`,
+      borderRadius:14, padding:"12px 14px",
+    }}>
+      <ScanLabel text="Scegli icona e colore per la lista"/>
+
+      {/* Preview + color row */}
+      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+        {/* Live mini-card preview */}
+        <div style={{
+          width:46, height:46, borderRadius:10,
+          background:color, flexShrink:0,
+          display:"flex", alignItems:"center", justifyContent:"center",
+          fontSize:24, boxShadow:`0 3px 10px ${color}55`,
+          transition:"all 0.2s",
+        }}>{emoji}</div>
+        {/* Color dots */}
+        <div style={{ display:"flex", gap:5, flexWrap:"wrap", flex:1 }}>
+          {COLOR_OPTIONS.map(c => (
+            <button key={c} onClick={() => onColor(c)} style={{
+              width:22, height:22, borderRadius:"50%",
+              background:c,
+              border: color===c ? `2.5px solid ${"#2C2416"}` : "2.5px solid transparent",
+              outline: color===c ? "2px solid #fff" : "none", outlineOffset:1,
+              cursor:"pointer", padding:0, transition:"transform 0.1s",
+            }}/>
+          ))}
+        </div>
+      </div>
+
+      {/* Category tabs */}
+      <div style={{ display:"flex", gap:4, overflowX:"auto", marginBottom:8, scrollbarWidth:"none", paddingBottom:2 }}>
+        {EMOJI_CATEGORIES.map(cat => (
+          <button key={cat.label} onClick={() => setActiveCategory(cat.label)} style={{
+            flexShrink:0, padding:"4px 10px", borderRadius:20, border:"none",
+            background: activeCategory===cat.label ? "#2C2416" : "transparent",
+            color: activeCategory===cat.label ? "#fff" : "#7A6E5F",
+            fontFamily:F.ui, fontSize:10, fontWeight:600,
+            cursor:"pointer", whiteSpace:"nowrap",
+          }}>{cat.label}</button>
+        ))}
+      </div>
+
+      {/* Emoji grid for active category */}
+      <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+        {currentEmojis.map(e => (
+          <button key={e} onClick={() => onEmoji(e)} style={{
+            width:36, height:36, borderRadius:8,
+            background: emoji===e ? color+"22" : "transparent",
+            border:`1.5px solid ${emoji===e ? color : "transparent"}`,
+            cursor:"pointer", fontSize:20,
+            display:"flex", alignItems:"center", justifyContent:"center",
+            transition:"all 0.15s",
+          }}>{e}</button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN: NEW RECIPE (manual entry)
+// ══════════════════════════════════════════════════════════════
+// ── Emoji organised by food category ──────────────────────────
+const EMOJI_CATEGORIES = [
+  {
+    label: "Italiani",
+    emojis: ["🍝","🍕","🍜","🫕","🥟","🧆","🍞","🥐","🫓","🥨","🧀","🫙"],
+  },
+  {
+    label: "Carne & Pesce",
+    emojis: ["🥩","🍗","🍖","🥓","🌭","🍔","🦐","🐟","🦑","🦞","🦀","🥚"],
+  },
+  {
+    label: "Verdure & Base",
+    emojis: ["🥗","🥬","🥦","🥕","🧅","🧄","🫑","🍅","🍆","🥑","🫛","🌽"],
+  },
+  {
+    label: "Zuppe & Stufati",
+    emojis: ["🍲","🥣","🍜","🫕","🥘","🍛","🫙","🧆","🫔","🌮","🌯","🥙"],
+  },
+  {
+    label: "Etnici",
+    emojis: ["🍣","🍱","🥡","🍤","🍙","🍚","🥮","🍢","🫔","🌮","🥗","🧆"],
+  },
+  {
+    label: "Dolci",
+    emojis: ["🍰","🎂","🧁","🍩","🍪","🍫","🍮","🍭","🍬","🍯","🧇","🥧"],
+  },
+  {
+    label: "Bevande & Altro",
+    emojis: ["☕","🍵","🧃","🍷","🧋","🍹","🥂","🫖","🍾","🧊","🍋","🫐"],
+  },
+];
+
+// Flat list for places that still need it (scan screen picker)
+const EMOJI_OPTIONS = EMOJI_CATEGORIES.flatMap(c => c.emojis);
+const COLOR_OPTIONS = [
+  "#C4593A","#9B5E3A","#8B6046","#B8973A",
+  "#6B8C6E","#4A7A6B","#5B7FA6","#7B61FF",
+  "#8B5E8B","#C47A3A","#3A7A8B","#8B3A3A",
+];
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN: ADD RECIPE HUB — choose how to add
+// ══════════════════════════════════════════════════════════════
+const AddRecipeHubScreen = ({ onManual, onScan, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping }) => {
+  const th = useTheme();
+  return (
+    <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+      <GlobalNav
+        activeScreen="add"
+        onRecipes={onRecipes}
+        onBook={onBook}
+        onMemories={onMemories}
+        onAdd={onAdd}
+        onFridge={onFridge}
+        onShopping={onShopping}
+        onLanding={onLanding}
+        onSearch={() => {}}
+        onFavorites={() => {}}
+        showSearch={false}
+        showFavorites={false}
+        activeLabel="Aggiungi"
+      />
+
+      <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"32px 28px", gap:16 }}>
+        <div style={{ textAlign:"center", marginBottom:8 }}>
+          <div style={{ fontFamily:F.display, fontSize:26, color:th.appInk, fontStyle:"italic" }}>Aggiungi Ricetta</div>
+          <div style={{ fontFamily:F.ui, fontSize:12, color:th.appFaded, marginTop:6 }}>Scegli come vuoi inserirla</div>
+        </div>
+
+        {[
+          {
+            icon:"✏️",
+            label:"Inserimento manuale",
+            desc:"Scrivi titolo, ingredienti e preparazione direttamente in app",
+            fn:onManual,
+            color:th.appInk,
+          },
+          {
+            icon:"📷",
+            label:"Scansiona dalla fotocamera",
+            desc:"Fotografa una ricetta scritta o stampata — OCR + AI la digitalizza",
+            fn:() => onScan("camera"),
+            color:th.appAccent,
+          },
+          {
+            icon:"🗃️",
+            label:"Importa dalla galleria",
+            desc:"Scegli una foto già scattata dalla tua libreria fotografica",
+            fn:() => onScan("gallery"),
+            color:"#6B4A8B",
+          },
+        ].map(item => (
+          <button key={item.label} onClick={item.fn} style={{
+            width:"100%", padding:"18px 20px",
+            background:th.appCard, border:`1px solid ${th.appBorder}`,
+            borderRadius:18, cursor:"pointer", textAlign:"left",
+            display:"flex", alignItems:"center", gap:16,
+            boxShadow:"0 2px 12px rgba(0,0,0,0.05)",
+          }}>
+            <div style={{ width:52, height:52, borderRadius:14, background:item.color, display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, flexShrink:0 }}>
+              {item.icon}
+            </div>
+            <div>
+              <div style={{ fontFamily:F.display, fontSize:16, color:th.appInk, marginBottom:3 }}>{item.label}</div>
+              <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.4 }}>{item.desc}</div>
+            </div>
+            <span style={{ marginLeft:"auto", color:th.appFaded, fontSize:18, flexShrink:0 }}>›</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const NewRecipeScreen = ({ onBack, onSave, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping, extraTagGroups=[], onAddGroup, onAddTagToGroup, sectionList=MACRO_SECTIONS, onAddSection, onUpdateSection, onDeleteSection, allRecipes=[], initialDraft=null }) => {
+  const th = useTheme();
+  const [draft, setDraft] = useState(initialDraft || {
+    title:"", source:"", prepTime:0, cookTime:0, servings:4,
+    note:"", ingredients:[{ name:"", qty:"", unit:"" }], steps:[""],
+    tags:[], color:"#C4593A", emoji:"🍝",
+    dishPhoto:null, macroSection:"altro",
+  });
+  const [activeSection, setActiveSection] = useState(initialDraft ? "ingredienti" : "info");
+
+  const set = (key, val) => setDraft(d => ({ ...d, [key]: val }));
+
+  const updateIngredient = (i, val) => {
+    const arr = [...draft.ingredients]; arr[i] = val; set("ingredients", arr);
+  };
+  const addIngredient = () => set("ingredients", [...draft.ingredients, ""]);
+  const removeIngredient = (i) => set("ingredients", draft.ingredients.filter((_,idx)=>idx!==i));
+
+  const updateStep = (i, val) => {
+    const arr = [...draft.steps]; arr[i] = val; set("steps", arr);
+  };
+  const addStep = () => set("steps", [...draft.steps, ""]);
+  const removeStep = (i) => set("steps", draft.steps.filter((_,idx)=>idx!==i));
+
+  const toggleTag = (tag) => {
+    set("tags", draft.tags.includes(tag) ? draft.tags.filter(t=>t!==tag) : [...draft.tags, tag]);
+  };
+
+  const canSave = draft.title.trim().length > 0;
+  const sections = ["info","ingredienti","preparazione","note"];
+
+  // Suggerimenti autocomplete da tutto il ricettario attivo
+  const nameSuggestions = React.useMemo(() =>
+    collectAllIngredients(allRecipes).map(i => i.display),
+    [allRecipes]);
+  const unitSuggestions = React.useMemo(() => {
+    const found = new Set();
+    allRecipes.forEach(r => flattenIngredients(r.ingredients).forEach(ing => {
+      if (ing.unit && ing.unit !== "q.b.") found.add(ing.unit);
+    }));
+    return Array.from(new Set([...DEFAULT_UNIT_SUGGESTIONS, ...found]));
+  }, [allRecipes]);
+
+
+  return (
+    <div style={{ background:"#FAF7F0", minHeight:"100%", display:"flex", flexDirection:"column" }}>
+
+      {/* Header */}
+      <div style={{ padding:"8px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <BackBtn onBack={onBack} label="Annulla"/>
+        <button onClick={() => canSave && onSave(draft)} style={{
+          background: canSave ? "#C4593A" : "#EDE6D4",
+          color: canSave ? "#fff" : "#7A6E5F",
+          border:"none", borderRadius:10,
+          padding:"8px 18px",
+          fontFamily:F.ui, fontSize:13, fontWeight:700,
+          cursor: canSave ? "pointer" : "default",
+          transition:"all 0.2s",
+        }}>Salva ✓</button>
+      </div>
+
+      {/* Preview hero — updates live */}
+      <div style={{
+        margin:"12px 20px 0",
+        background: draft.color,
+        borderRadius:16,
+        padding:"18px 20px",
+        display:"flex", alignItems:"center", gap:14,
+      }}>
+        {/* Emoji picker */}
+        <div style={{ position:"relative" }}>
+          <div style={{
+            width:52, height:52, borderRadius:12,
+            background:"rgba(255,255,255,0.2)",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            fontSize:26, cursor:"pointer",
+          }}>{draft.emoji}</div>
+        </div>
+        <div>
+          <div style={{
+            fontFamily:F.display, fontSize:20, color:"#fff",
+            opacity: draft.title ? 1 : 0.4,
+          }}>{draft.title || "Nome ricetta…"}</div>
+          <div style={{ fontFamily:F.ui, fontSize:11, color:"rgba(255,255,255,0.65)", marginTop:3 }}>
+            {draft.prepTime+draft.cookTime > 0 ? `${draft.prepTime+draft.cookTime} min · ` : ""}{draft.servings} porzioni
+          </div>
+        </div>
+      </div>
+
+      {/* Categorized emoji + color picker */}
+      <div style={{ padding:"10px 20px 0" }}>
+        <EmojiColorPicker
+          emoji={draft.emoji}
+          color={draft.color}
+          onEmoji={e => set("emoji", e)}
+          onColor={c => set("color", c)}
+        />
+      </div>
+
+      {/* Section tabs */}
+      <div style={{ display:"flex", overflowX:"auto", gap:6, padding:"4px 20px 10px", scrollbarWidth:"none" }}>
+        {sections.map(s => (
+          <button key={s} onClick={() => setActiveSection(s)} style={{
+            flexShrink:0, padding:"6px 14px", borderRadius:20, border:"none",
+            background: activeSection===s ? "#2C2416" : "#EDE6D4",
+            color: activeSection===s ? "#fff" : "#7A6E5F",
+            fontFamily:F.ui, fontSize:12, fontWeight:600,
+            cursor:"pointer", textTransform:"capitalize",
+          }}>{s}</button>
+        ))}
+      </div>
+
+      {/* Section content */}
+      <div style={{ flex:1, overflowY:"auto", padding:"0 20px 80px" }}>
+
+        {/* INFO */}
+        {activeSection==="info" && (
+          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+            <div>
+              <EditLabel text="Titolo ricetta *"/>
+              <input
+                value={draft.title}
+                onChange={e => set("title", e.target.value)}
+                placeholder="es. Risotto allo Zafferano"
+                autoFocus
+                style={{
+                  width:"100%", padding:"12px 14px",
+                  border:`1.5px solid ${draft.title ? "#C4593A" : "#EDE6D4"}`,
+                  borderRadius:10, background:"#F7F2E8",
+                  fontFamily:F.display, fontSize:16, color:"#2C2416",
+                  outline:"none", boxSizing:"border-box",
+                  transition:"border-color 0.2s",
+                }}
+              />
+            </div>
+            {/* Sezione del libro */}
+            <div>
+              <EditLabel text="Sezione del ricettario"/>
+              <SectionPicker
+                value={draft.macroSection}
+                onChange={v => set("macroSection", v)}
+                sections={sectionList}
+                onAddSection={onAddSection}
+                onUpdateSection={onUpdateSection}
+        onDeleteSection={onDeleteSection}
+              />
+            </div>
+            <EditField label="Fonte / Autore" value={draft.source} onChange={v=>set("source",v)} placeholder="es. Nonna Maria"/>
+            <EditField label="Link fonte (URL)" value={draft.sourceUrl||""} onChange={v=>set("sourceUrl",v)} placeholder="es. https://www.sito.it/ricetta"/>
+            <div style={{ display:"flex", gap:10 }}>
+              <div style={{ flex:1 }}><EditLabel text="Prep (min)"/><EditNumberInput value={draft.prepTime} onChange={v=>set("prepTime",Number(v))}/></div>
+              <div style={{ flex:1 }}><EditLabel text="Cottura (min)"/><EditNumberInput value={draft.cookTime} onChange={v=>set("cookTime",Number(v))}/></div>
+              <div style={{ flex:1 }}><EditLabel text="Porzioni"/><EditNumberInput value={draft.servings} onChange={v=>set("servings",Number(v))}/></div>
+            </div>
+            {/* Tags */}
+            <div>
+              <EditLabel text="Tag"/>
+              <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginBottom:10 }}>
+                Seleziona i tag o aggiungine di personalizzati in ogni categoria
+              </div>
+              <TagPicker
+                selectedTags={draft.tags}
+                onChange={(tags) => set("tags", tags)}
+                extraGroups={extraTagGroups}
+                onAddGroup={onAddGroup}
+                onAddTagToGroup={onAddTagToGroup}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* INGREDIENTI */}
+        {activeSection==="ingredienti" && (
+          <div>
+            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginBottom:10, lineHeight:1.4, background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"9px 12px" }}>
+              💡 Inserisci ingrediente e quantità. Le <b>categorie</b> e gli <b>aggregati</b> (usati in Svuota Frigo) si gestiscono nella sezione <b>🍎⚙️ Organizza</b> del banner, così valgono per tutte le ricette.
+            </div>
+            <EditSectionedList
+              data={toSectioned(draft.ingredients)}
+              color={draft.color}
+              itemType="ingredient"
+              onUpdate={(sections) => set("ingredients", fromSectioned(sections))}
+              nameSuggestions={nameSuggestions}
+              unitSuggestions={unitSuggestions}
+            />
+          </div>
+        )}
+
+        {/* PREPARAZIONE */}
+        {activeSection==="preparazione" && (
+          <EditSectionedSteps
+            data={toSectioned(draft.steps || []).map(sec => ({
+              ...sec,
+              items: sec.items.map(s => typeof s === "string" ? { text:s, photo:null } : (s || { text:"", photo:null })),
+            }))}
+            color={draft.color}
+            onUpdate={(sections) => {
+              const flat = fromSectioned(sections);
+              if (Array.isArray(flat) && flat.length > 0 && !("section" in flat[0])) {
+                set("steps", flat.map(s => typeof s === "string" ? s : (s && s.photo ? s : (s?.text ?? ""))));
+              } else {
+                set("steps", sections.map(sec => ({
+                  section: sec.section,
+                  items: sec.items.map(s => typeof s === "string" ? s : (s && s.photo ? s : (s?.text ?? ""))),
+                })));
+              }
+            }}
+          />
+        )}
+
+        {/* NOTE */}
+        {activeSection==="note" && (
+          <div>
+            <EditLabel text="Note e consigli"/>
+            <textarea value={draft.note} onChange={e=>set("note",e.target.value)}
+              rows={5} placeholder="Aggiungi note, varianti, consigli…"
+              style={{ width:"100%", padding:"12px 14px", border:`1.5px solid #EDE6D4`, borderRadius:12, background:"#F7F2E8", fontFamily:F.body, fontStyle:"italic", fontSize:14, color:"#2C2416", outline:"none", resize:"none", lineHeight:1.6, boxSizing:"border-box" }}/>
+          </div>
+        )}
+      </div>
+
+      {/* Floating save bar */}
+      <div style={{
+        position:"sticky", bottom:0,
+        background:"#FAF7F0", borderTop:`1px solid ${"#EDE6D4"}`,
+        padding:"12px 20px", display:"flex", gap:10,
+      }}>
+        <button onClick={onBack} style={{
+          flex:1, padding:"12px",
+          border:`1.5px solid #EDE6D4`, borderRadius:12,
+          background:"transparent", color:"#7A6E5F",
+          fontFamily:F.ui, fontSize:14, cursor:"pointer",
+        }}>Annulla</button>
+        <button onClick={() => canSave && onSave(draft)} style={{
+          flex:2, padding:"12px",
+          background: canSave ? "#C4593A" : "#EDE6D4",
+          color: canSave ? "#fff" : "#7A6E5F",
+          border:"none", borderRadius:12,
+          fontFamily:F.ui, fontSize:14, fontWeight:700,
+          cursor: canSave ? "pointer" : "default",
+          boxShadow: canSave ? "0 4px 16px rgba(196,89,58,0.35)" : "none",
+          transition:"all 0.2s",
+        }}>
+          {canSave ? "Salva ricetta ✓" : "Inserisci un titolo"}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ── Editable sectioned ingredient list ───────────────────────────
+// ── Scomposizione/ricomposizione ingrediente "Nome: quantità unità" ──
+// La memorizzazione resta la stringa (compatibile con tutto il resto dell'app);
+// il form la presenta come tre campi separati.
+const decomposeIngredient = (text) => {
+  const idx = text.indexOf(":");
+  if (idx < 0) return { name: text, qty: "", unit: "" };
+  const name = text.slice(0, idx);
+  const rest = text.slice(idx + 1).trim();
+  const m = rest.match(/^(\d+(?:[.,]\d*)?)\s*(.*)$/);
+  if (!m) return { name, qty: "", unit: rest }; // es. "q.b."
+  return { name, qty: m[1], unit: m[2] || "" };
+};
+const composeIngredient = (name, qty, unit) => {
+  const q = qty.trim(), u = unit.trim();
+  const tail = [q, u].filter(Boolean).join(" ");
+  return tail ? `${name}: ${tail}` : name;
+};
+
+// Unità suggerite di default (singolari e plurali comuni)
+const DEFAULT_UNIT_SUGGESTIONS = [
+  "g","kg","ml","l","cl","dl",
+  "cucchiai","cucchiaio","cucchiaini","cucchiaino",
+  "tazze","tazza","bicchieri","bicchiere",
+  "bustine","bustina","pizzico","spicchi","spicchio","q.b.",
+];
+
+// ── Input con menu a tendina filtrato mentre scrivi ──
+const AutocompleteInput = ({ value, onChange, suggestions = [], placeholder, wrapperStyle, inputStyle, maxItems = 6 }) => {
+  const th = useTheme();
+  const [open, setOpen] = useState(false);
+  const v = (value || "").trim().toLowerCase();
+  const filtered = (v
+    ? suggestions.filter(s => s.toLowerCase().includes(v) && s.toLowerCase() !== v)
+    : suggestions
+  ).slice(0, maxItems);
+
+  return (
+    <div style={{ position:"relative", ...wrapperStyle }}>
+      <input
+        value={value}
+        onChange={e => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        placeholder={placeholder}
+        style={{ width:"100%", boxSizing:"border-box", ...inputStyle }}
+      />
+      {open && filtered.length > 0 && (
+        <div style={{
+          position:"absolute", top:"calc(100% + 3px)", left:0, right:0, zIndex:250,
+          background:th.appBg, border:`1.5px solid ${th.appBorder}`, borderRadius:10,
+          maxHeight:150, overflowY:"auto",
+          boxShadow:"0 6px 20px rgba(0,0,0,0.18)",
+        }}>
+          {filtered.map(s => (
+            <button
+              key={s}
+              onMouseDown={e => { e.preventDefault(); onChange(s); setOpen(false); }}
+              style={{
+                display:"block", width:"100%", textAlign:"left",
+                padding:"8px 11px", background:"none", border:"none",
+                borderBottom:`1px solid ${th.appBorder}55`,
+                cursor:"pointer", fontFamily:F.body, fontSize:12.5, color:th.appInk,
+              }}
+            >{s}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const EditSectionedList = ({ data, color, itemType, onUpdate, nameSuggestions = [], unitSuggestions = DEFAULT_UNIT_SUGGESTIONS }) => {
+  const th = useTheme();
+  const sections = data;
+  const [nutriOpen, setNutriOpen] = useState(null); // "si_ii" con la riga % aperta
+  const [nutriInfo, setNutriInfo] = useState(false); // popup "i" mostrato mentre premuto
+
+  const updateSection = (si, key, val) => {
+    const next = sections.map((s,i) => i===si ? {...s,[key]:val} : s);
+    onUpdate(next);
+  };
+  const updateItem = (si, ii, val) => {
+    const next = sections.map((s,i) => i!==si ? s : {
+      ...s, items: s.items.map((it,j) => j===ii ? val : it)
+    });
+    onUpdate(next);
+  };
+  const emptyItem = () => itemType === "ingredient" ? { name:"", qty:"", unit:"" } : "";
+  const addItem = (si) => {
+    const next = sections.map((s,i) => i!==si ? s : { ...s, items:[...s.items, emptyItem()] });
+    onUpdate(next);
+  };
+  const removeItem = (si, ii) => {
+    const next = sections.map((s,i) => i!==si ? s : {
+      ...s, items: s.items.filter((_,j) => j!==ii)
+    });
+    onUpdate(next);
+  };
+  const addSection = () => onUpdate([...sections, { section:"", items:[emptyItem()] }]);
+  const removeSection = (si) => onUpdate(sections.filter((_,i) => i!==si));
+
+  return (
+    <div>
+      <div style={{ fontFamily:F.ui, fontSize:12, color:th.appFaded, marginBottom:12 }}>
+        Aggiungi ingredienti e, se vuoi, raggruppali in sottosezioni (es. "Pasta", "Sugo", "Guarnizione")
+      </div>
+      {sections.map((sec, si) => (
+        <div key={si} style={{ marginBottom:16 }}>
+          {/* Section name row */}
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
+            <div style={{ width:4, alignSelf:"stretch", borderRadius:2, background: sec.section ? color : th.appBorder, flexShrink:0 }}/>
+            <input
+              value={sec.section}
+              onChange={e => updateSection(si, "section", e.target.value)}
+              placeholder={sections.length > 1 ? "Nome sottosezione (es. Salsa)" : "Sottosezione (opzionale)"}
+              style={{
+                flex:1, padding:"7px 12px",
+                border:`1.5px solid ${sec.section ? color : th.appBorder}`,
+                borderRadius:10,
+                background: sec.section ? `${color}10` : th.appCard,
+                fontFamily:F.ui, fontSize:12, fontWeight:600,
+                color: sec.section ? color : th.appFaded,
+                outline:"none",
+              }}
+            />
+            {sections.length > 1 && (
+              <button onClick={() => removeSection(si)} style={{
+                background:"none", border:"none", color:"#ccc",
+                fontSize:16, cursor:"pointer", flexShrink:0,
+              }}>🗑</button>
+            )}
+          </div>
+
+          {/* Items */}
+          {sec.items.map((item, ii) => {
+            if (itemType === "ingredient") {
+              // item è un oggetto { name, qty, unit, note? } — qty può essere
+              // stringa durante la digitazione, numero dopo il salvataggio
+              const ing = (typeof item === "string") ? { name:item, qty:"", unit:"" } : (item || { name:"", qty:"", unit:"" });
+              const name = ing.name || "";
+              const qty = ing.qty == null ? "" : String(ing.qty).replace(".", ",");
+              const unit = ing.unit || "";
+              const patch = (p) => updateItem(si, ii, { ...ing, ...p });
+              const isQB = unit.toLowerCase() === "q.b.";
+              const inputBase = {
+                padding:"9px 10px",
+                border:`1.5px solid ${th.appBorder}`,
+                borderRadius:10, background:th.appCard,
+                fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none",
+              };
+              const disabledStyle = { opacity:0.4, pointerEvents:"none" };
+              const hasPct = typeof ing.nutriPct === "number" ? ing.nutriPct < 100 : (ing.nutriPct !== "" && ing.nutriPct != null && parseFloat(String(ing.nutriPct).replace(",", ".")) < 100);
+              const pctOpen = nutriOpen === si+"_"+ii;
+              return (
+                <React.Fragment key={ii}>
+                <div style={{ display:"flex", gap:5, marginBottom: pctOpen ? 4 : 6, alignItems:"center", paddingLeft:12 }}>
+                  <span style={{ color:th.appAccent2, fontSize:12, flexShrink:0 }}>✦</span>
+                  <AutocompleteInput
+                    value={name}
+                    onChange={v => patch({ name: v })}
+                    suggestions={nameSuggestions}
+                    placeholder="Ingrediente"
+                    wrapperStyle={{ flex:2.2, minWidth:0 }}
+                    inputStyle={inputBase}
+                  />
+                  <input
+                    value={isQB ? "" : qty}
+                    onChange={e => patch({ qty: e.target.value })}
+                    placeholder="Qtà"
+                    inputMode="decimal"
+                    disabled={isQB}
+                    style={{ ...inputBase, flex:0.9, minWidth:0, textAlign:"center", ...(isQB ? disabledStyle : {}) }}
+                  />
+                  <AutocompleteInput
+                    value={isQB ? "" : unit}
+                    onChange={v => patch({ unit: v })}
+                    suggestions={unitSuggestions}
+                    placeholder="Unità"
+                    wrapperStyle={{ flex:1.3, minWidth:0, ...(isQB ? disabledStyle : {}) }}
+                    inputStyle={inputBase}
+                  />
+                  {/* Spunta q.b. — quanto basta */}
+                  <button
+                    onClick={() => patch(isQB ? { qty:"", unit:"" } : { qty:"", unit:"q.b." })}
+                    title="Quanto basta"
+                    style={{
+                      display:"flex", flexDirection:"column", alignItems:"center", gap:1,
+                      background:"none", border:"none", cursor:"pointer", flexShrink:0, padding:0,
+                    }}
+                  >
+                    <span style={{
+                      width:18, height:18, borderRadius:5,
+                      border:`1.5px solid ${isQB ? th.appAccent : th.appBorder}`,
+                      background: isQB ? th.appAccent : "transparent",
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      color:"#fff", fontSize:11, boxSizing:"border-box",
+                    }}>{isQB && "✓"}</span>
+                    <span style={{ fontFamily:F.ui, fontSize:8, color: isQB ? th.appAccent : th.appFaded, fontWeight:700 }}>q.b.</span>
+                  </button>
+                  {/* 🍎 percentuale nutrizionale */}
+                  <button
+                    onClick={() => setNutriOpen(o => o === si+"_"+ii ? null : si+"_"+ii)}
+                    title="Quota nei valori nutrizionali"
+                    style={{
+                      display:"flex", flexDirection:"column", alignItems:"center", gap:1,
+                      background:"none", border:"none", cursor:"pointer", flexShrink:0, padding:0,
+                    }}
+                  >
+                    <span style={{ fontSize:14, filter: hasPct ? "none" : "grayscale(1) opacity(0.55)" }}>🍎</span>
+                    <span style={{ fontFamily:F.ui, fontSize:8, color: hasPct ? th.appAccent : th.appFaded, fontWeight:700 }}>{hasPct ? String(ing.nutriPct).replace(".", ",")+"%" : "%"}</span>
+                  </button>
+                  <button onClick={() => removeItem(si, ii)} style={{
+                    background:"none", border:"none", color:"#ccc",
+                    fontSize:16, cursor:"pointer", flexShrink:0, padding:"0 2px",
+                  }}>×</button>
+                </div>
+                {pctOpen && (() => {
+                  const pctVal = ing.nutriPct === "" || ing.nutriPct == null ? 100 : Math.max(0, Math.min(100, parseFloat(String(ing.nutriPct).replace(",", ".")) || 0));
+                  return (
+                  <div style={{ margin:"0 0 8px 24px", padding:"10px 12px", background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10 }}>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+                      <span style={{ fontFamily:F.ui, fontSize:11, color:th.appInk, fontWeight:700 }}>🍎 Quota nei valori nutrizionali</span>
+                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                        <span style={{ fontFamily:F.display, fontSize:16, color: hasPct ? th.appAccent : th.appInk, minWidth:44, textAlign:"right" }}>{pctVal}%</span>
+                        {/* Pulsante info: popup mentre premuto */}
+                        <div style={{ position:"relative", display:"inline-flex" }}>
+                          <button
+                            onMouseDown={() => setNutriInfo(true)}
+                            onMouseUp={() => setNutriInfo(false)}
+                            onMouseLeave={() => setNutriInfo(false)}
+                            onTouchStart={(e) => { e.preventDefault(); setNutriInfo(true); }}
+                            onTouchEnd={() => setNutriInfo(false)}
+                            title="Tieni premuto per le informazioni"
+                            style={{ width:22, height:22, borderRadius:"50%", border:`1.5px solid ${th.appBorder}`, background:th.appBg, color:th.appFaded, fontFamily:F.ui, fontSize:11, fontWeight:700, fontStyle:"italic", cursor:"pointer", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", padding:0 }}
+                          >i</button>
+                          {nutriInfo && (
+                            <div style={{ position:"absolute", top:"120%", right:0, width:210, zIndex:50, background:th.appInk, color:th.appBg, fontFamily:F.ui, fontSize:10.5, lineHeight:1.45, padding:"9px 11px", borderRadius:9, boxShadow:"0 4px 14px rgba(0,0,0,0.28)" }}>
+                              Indica quanta parte dell'ingrediente resta nel piatto e conta nei valori nutrizionali.<br/>
+                              <b>100%</b> = tutto (predefinito). <b>0%</b> = non concorre al calcolo.<br/>
+                              Es.: 100 ml d'olio per friggere di cui poco resta nel piatto → imposta ~10%.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <input
+                      type="range" min="0" max="100" step="5"
+                      value={pctVal}
+                      onChange={e => patch({ nutriPct: parseInt(e.target.value, 10) })}
+                      style={{ width:"100%", accentColor:th.appAccent, cursor:"pointer" }}
+                    />
+                    <div style={{ display:"flex", justifyContent:"space-between", marginTop:2 }}>
+                      <span style={{ fontFamily:F.ui, fontSize:9, color:th.appFaded }}>0% · escluso</span>
+                      <span style={{ fontFamily:F.ui, fontSize:9, color:th.appFaded }}>100% · tutto</span>
+                    </div>
+                    {hasPct && (
+                      <button onClick={() => { patch({ nutriPct: undefined }); setNutriOpen(null); setNutriInfo(false); }} style={{ marginTop:8, padding:"7px 11px", borderRadius:9, border:`1.5px solid ${th.appBorder}`, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:11, cursor:"pointer" }}>Ripristina 100%</button>
+                    )}
+                  </div>
+                  );
+                })()}
+                </React.Fragment>
+              );
+            }
+            return (
+              <div key={ii} style={{ display:"flex", gap:8, marginBottom:6, alignItems:"center", paddingLeft:12 }}>
+                <span style={{ color:th.appAccent2, fontSize:12, flexShrink:0 }}>✦</span>
+                <input
+                  value={item}
+                  onChange={e => updateItem(si, ii, e.target.value)}
+                  placeholder={`Elemento ${ii+1}…`}
+                  style={{
+                    flex:1, padding:"9px 12px",
+                    border:`1.5px solid ${th.appBorder}`,
+                    borderRadius:10, background:th.appCard,
+                    fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none",
+                  }}
+                />
+                <button onClick={() => removeItem(si, ii)} style={{
+                  background:"none", border:"none", color:"#ccc",
+                  fontSize:16, cursor:"pointer", flexShrink:0,
+                }}>×</button>
+              </div>
+            );
+          })}
+
+          <button onClick={() => addItem(si)} style={{
+            marginLeft:12, padding:"7px 14px",
+            border:`1.5px dashed ${th.appBorder}`,
+            borderRadius:10, background:"transparent",
+            color:th.appFaded, fontFamily:F.ui, fontSize:12,
+            cursor:"pointer",
+          }}>+ Aggiungi {itemType === "ingredient" ? "ingrediente" : "elemento"}</button>
+        </div>
+      ))}
+
+      {/* Add subsection */}
+      <button onClick={addSection} style={{
+        width:"100%", padding:"12px",
+        border:`1.5px dashed ${color}`,
+        borderRadius:12, background:`${color}08`,
+        color:color, fontFamily:F.ui, fontSize:13, fontWeight:600,
+        cursor:"pointer", marginTop:4,
+        display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+      }}>＋ Aggiungi sottosezione</button>
+    </div>
+  );
+};
+
+// ── Editable sectioned steps ─────────────────────────────────────
+const EditSectionedSteps = ({ data, color, onUpdate }) => {
+  const th = useTheme();
+  // Difesa: normalizza sempre gli item a oggetti {text, photo}
+  const sections = data.map(sec => ({
+    ...sec,
+    items: (sec.items || []).map(s =>
+      typeof s === "string" ? { text:s, photo:null } : (s || { text:"", photo:null })
+    ),
+  }));
+
+  const updateSection = (si, key, val) => onUpdate(sections.map((s,i) => i===si ? {...s,[key]:val} : s));
+  const updateStep = (si, ii, field, val) => onUpdate(sections.map((s,i) => i!==si ? s : {
+    ...s, items: s.items.map((it,j) => j===ii ? {...it,[field]:val} : it)
+  }));
+  const addStep = (si) => onUpdate(sections.map((s,i) => i!==si ? s : {
+    ...s, items:[...s.items, { text:"", photo:null }]
+  }));
+  const removeStep = (si, ii) => onUpdate(sections.map((s,i) => i!==si ? s : {
+    ...s, items: s.items.filter((_,j) => j!==ii)
+  }));
+  const addSection = () => onUpdate([...sections, { section:"", items:[{ text:"", photo:null }] }]);
+  const removeSection = (si) => onUpdate(sections.filter((_,i) => i!==si));
+
+  // running step count across sections
+  let globalIdx = 0;
+
+  return (
+    <div>
+      <div style={{ fontFamily:F.ui, fontSize:12, color:th.appFaded, marginBottom:12 }}>
+        Scrivi i passi e, se vuoi, raggruppali in sottosezioni (es. "Pasta", "Salsa", "Impiattamento")
+      </div>
+      {sections.map((sec, si) => (
+        <div key={si} style={{ marginBottom:18 }}>
+          {/* Section name */}
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+            <div style={{ width:4, alignSelf:"stretch", borderRadius:2, background: sec.section ? color : th.appBorder, flexShrink:0 }}/>
+            <input
+              value={sec.section}
+              onChange={e => updateSection(si, "section", e.target.value)}
+              placeholder={sections.length > 1 ? "Nome sottosezione (es. Preparazione salsa)" : "Sottosezione (opzionale)"}
+              style={{
+                flex:1, padding:"7px 12px",
+                border:`1.5px solid ${sec.section ? color : th.appBorder}`,
+                borderRadius:10,
+                background: sec.section ? `${color}10` : th.appCard,
+                fontFamily:F.ui, fontSize:12, fontWeight:600,
+                color: sec.section ? color : th.appFaded,
+                outline:"none",
+              }}
+            />
+            {sections.length > 1 && (
+              <button onClick={() => removeSection(si)} style={{
+                background:"none", border:"none", color:"#ccc",
+                fontSize:16, cursor:"pointer", flexShrink:0,
+              }}>🗑</button>
+            )}
+          </div>
+
+          {/* Steps */}
+          {sec.items.map((step, ii) => {
+            const stepN = ++globalIdx;
+            return (
+              <div key={ii} style={{
+                marginBottom:12, paddingLeft:12,
+                background:th.appCard,
+                border:`1px solid ${th.appBorder}`,
+                borderRadius:14, overflow:"hidden",
+              }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 12px 6px" }}>
+                  <div style={{
+                    width:24, height:24, borderRadius:"50%",
+                    background:color, color:"#fff",
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    fontFamily:F.ui, fontSize:11, fontWeight:700, flexShrink:0,
+                  }}>{stepN}</div>
+                  <div style={{ flex:1, fontFamily:F.ui, fontSize:11, color:th.appFaded }}>Passo {stepN}</div>
+                  <button onClick={() => removeStep(si, ii)} style={{
+                    background:"none", border:"none", color:"#ccc",
+                    fontSize:16, cursor:"pointer",
+                  }}>×</button>
+                </div>
+                <textarea
+                  value={step.text}
+                  onChange={e => updateStep(si, ii, "text", e.target.value)}
+                  rows={3}
+                  placeholder="Descrivi questo passo…"
+                  style={{
+                    width:"100%", padding:"4px 12px 10px",
+                    border:"none", background:"transparent",
+                    fontFamily:F.body, fontSize:13, color:th.appInk,
+                    outline:"none", resize:"none", lineHeight:1.5,
+                    boxSizing:"border-box",
+                  }}
+                />
+                {step.photo ? (
+                  <div style={{ margin:"0 12px 12px", position:"relative" }}>
+                    <div style={{ width:"100%", height:90, borderRadius:10, background:`${color}22`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:32 }}>📸</div>
+                    <button onClick={() => updateStep(si, ii, "photo", null)} style={{ position:"absolute", top:6, right:6, width:22, height:22, borderRadius:"50%", background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", cursor:"pointer", fontSize:11 }}>×</button>
+                  </div>
+                ) : (
+                  <div style={{ display:"flex", gap:6, padding:"0 12px 12px" }}>
+                    {["📷 Scatta","🖼 Libreria"].map(lbl => (
+                      <button key={lbl} onClick={() => updateStep(si, ii, "photo", "PHOTO_PLACEHOLDER")} style={{
+                        flex:1, padding:"7px", border:`1.5px dashed ${th.appBorder}`,
+                        borderRadius:10, background:"transparent",
+                        color:th.appFaded, fontFamily:F.ui, fontSize:11, cursor:"pointer",
+                      }}>{lbl}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          <button onClick={() => addStep(si)} style={{
+            marginLeft:12, padding:"7px 14px",
+            border:`1.5px dashed ${th.appBorder}`,
+            borderRadius:10, background:"transparent",
+            color:th.appFaded, fontFamily:F.ui, fontSize:12,
+            cursor:"pointer",
+          }}>+ Aggiungi passo</button>
+        </div>
+      ))}
+
+      <button onClick={addSection} style={{
+        width:"100%", padding:"12px",
+        border:`1.5px dashed ${color}`,
+        borderRadius:12, background:`${color}08`,
+        color:color, fontFamily:F.ui, fontSize:13, fontWeight:600,
+        cursor:"pointer", marginTop:4,
+        display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+      }}>＋ Aggiungi sottosezione</button>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN: EDIT RECIPE
+// ══════════════════════════════════════════════════════════════
+const EditScreen = ({ recipe, onBack, onSave, extraTagGroups=[], onAddGroup, onAddTagToGroup, sectionList=MACRO_SECTIONS, onAddSection, onUpdateSection, onDeleteSection, allRecipes=[] }) => {
+  const th = useTheme();
+  // Normalise steps: can be string or {text, photo}
+  const normaliseSteps = (steps) => (steps || []).map(s =>
+    typeof s === "string" ? { text: s, photo: null } : s
+  );
+
+  const [draft, setDraft] = useState({ ...recipe, steps: normaliseSteps(recipe.steps) });
+  const [activeSection, setActiveSection] = useState("info");
+
+  const set = (key, val) => setDraft(d => ({ ...d, [key]: val }));
+
+  const updateIngredient = (i, val) => {
+    const arr = [...draft.ingredients];
+    arr[i] = val;
+    set("ingredients", arr);
+  };
+  const addIngredient = () => set("ingredients", [...draft.ingredients, ""]);
+  const removeIngredient = (i) => set("ingredients", draft.ingredients.filter((_,idx) => idx!==i));
+
+  const updateStep = (i, field, val) => {
+    const arr = draft.steps.map((s, idx) => idx === i ? { ...s, [field]: val } : s);
+    set("steps", arr);
+  };
+  const addStep = () => set("steps", [...draft.steps, { text:"", photo:null }]);
+  const removeStep = (i) => set("steps", draft.steps.filter((_,idx) => idx!==i));
+  const addStepPhoto = (i) => {
+    // Simulate picking a photo — in real app would open camera/library
+    updateStep(i, "photo", "PHOTO_PLACEHOLDER");
+  };
+  const removeStepPhoto = (i) => updateStep(i, "photo", null);
+
+  const toggleTag = (tag) => {
+    set("tags", draft.tags.includes(tag) ? draft.tags.filter(t=>t!==tag) : [...draft.tags, tag]);
+  };
+
+  // Before saving, convert steps back to plain strings if no photo
+  const handleSave = () => {
+    onSave({
+      ...draft,
+      steps: draft.steps.map(s => s.photo ? s : s.text),
+    });
+  };
+
+
+  // Suggerimenti autocomplete da tutto il ricettario attivo
+  const nameSuggestions = React.useMemo(() =>
+    collectAllIngredients(allRecipes).map(i => i.display),
+    [allRecipes]);
+  const unitSuggestions = React.useMemo(() => {
+    const found = new Set();
+    allRecipes.forEach(r => flattenIngredients(r.ingredients).forEach(ing => {
+      if (ing.unit && ing.unit !== "q.b.") found.add(ing.unit);
+    }));
+    return Array.from(new Set([...DEFAULT_UNIT_SUGGESTIONS, ...found]));
+  }, [allRecipes]);
+
+  const sections = ["info","ingredienti","preparazione","note"];
+
+  return (
+    <div style={{ background:"#FAF7F0", minHeight:"100%", display:"flex", flexDirection:"column" }}>
+      <div style={{ padding:"8px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <BackBtn onBack={onBack} label="Annulla"/>
+        <button onClick={handleSave} style={{
+          background:"#C4593A", color:"#fff",
+          border:"none", borderRadius:10,
+          padding:"8px 18px",
+          fontFamily:F.ui, fontSize:13, fontWeight:700,
+          cursor:"pointer",
+        }}>Salva ✓</button>
+      </div>
+
+      <div style={{ padding:"12px 20px 4px" }}>
+        <div style={{ fontFamily:F.display, fontSize:20, color:"#2C2416" }}>Modifica Ricetta</div>
+      </div>
+
+      {/* Section tabs */}
+      <div style={{ display:"flex", overflowX:"auto", gap:6, padding:"4px 20px 10px", scrollbarWidth:"none" }}>
+        {sections.map(s => (
+          <button key={s} onClick={() => setActiveSection(s)} style={{
+            flexShrink:0, padding:"6px 14px", borderRadius:20,
+            border:"none",
+            background: activeSection===s ? "#2C2416" : "#EDE6D4",
+            color: activeSection===s ? "#fff" : "#7A6E5F",
+            fontFamily:F.ui, fontSize:12, fontWeight:600,
+            cursor:"pointer", textTransform:"capitalize",
+          }}>{s}</button>
+        ))}
+      </div>
+
+      <div style={{ flex:1, overflowY:"auto", padding:"0 20px 60px" }}>
+
+        {/* ── INFO ── */}
+        {activeSection==="info" && (
+          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+            <EditField label="Titolo" value={draft.title} onChange={v => set("title",v)}/>
+            {/* Sezione del libro */}
+            <div>
+              <EditLabel text="Sezione del ricettario"/>
+              <SectionPicker
+                value={draft.macroSection}
+                onChange={v => set("macroSection", v)}
+                sections={sectionList}
+                onAddSection={onAddSection}
+                onUpdateSection={onUpdateSection}
+        onDeleteSection={onDeleteSection}
+                showDefaultHint={false}
+              />
+            </div>
+            <EditField label="Fonte / Autore" value={draft.source} onChange={v => set("source",v)} placeholder="es. Nonna Maria"/>
+            <div style={{ display:"flex", gap:10 }}>
+              <div style={{ flex:1 }}>
+                <EditLabel text="Prep (min)"/>
+                <EditNumberInput value={draft.prepTime} onChange={v => set("prepTime", Number(v))}/>
+              </div>
+              <div style={{ flex:1 }}>
+                <EditLabel text="Cottura (min)"/>
+                <EditNumberInput value={draft.cookTime} onChange={v => set("cookTime", Number(v))}/>
+              </div>
+              <div style={{ flex:1 }}>
+                <EditLabel text="Porzioni"/>
+                <EditNumberInput value={draft.servings} onChange={v => set("servings", Number(v))}/>
+              </div>
+            </div>
+
+            {/* Tags */}
+            <div>
+              <EditLabel text="Tag"/>
+              <TagPicker
+                selectedTags={draft.tags}
+                onChange={(tags) => set("tags", tags)}
+                extraGroups={extraTagGroups}
+                onAddGroup={onAddGroup}
+                onAddTagToGroup={onAddTagToGroup}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ── INGREDIENTI ── */}
+        {activeSection==="ingredienti" && (
+          <div>
+            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginBottom:10, lineHeight:1.4, background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"9px 12px" }}>
+              💡 Inserisci ingrediente e quantità. Le <b>categorie</b> e gli <b>aggregati</b> (usati in Svuota Frigo) si gestiscono nella sezione <b>🍎⚙️ Organizza</b> del banner, così valgono per tutte le ricette.
+            </div>
+            <EditSectionedList
+              data={toSectioned(draft.ingredients)}
+              color={draft.color}
+              itemType="ingredient"
+              onUpdate={(sections) => set("ingredients", fromSectioned(sections))}
+              nameSuggestions={nameSuggestions}
+              unitSuggestions={unitSuggestions}
+            />
+          </div>
+        )}
+
+        {/* ── PREPARAZIONE ── */}
+        {activeSection==="preparazione" && (
+          <EditSectionedSteps
+            data={toSectioned(draft.steps).map(sec => ({
+              ...sec,
+              items: sec.items.map(s => typeof s === "string" ? { text:s, photo:null } : s)
+            }))}
+            color={draft.color}
+            onUpdate={(sections) => {
+              const flat = fromSectioned(sections);
+              // if flat array, strip photo-less steps back to strings
+              if (Array.isArray(flat) && flat.length > 0 && !("section" in flat[0])) {
+                set("steps", flat.map(s => typeof s === "string" ? s : (s && s.photo ? s : (s?.text ?? ""))));
+              } else {
+                // sectioned: keep structure, strip photo-less items
+                set("steps", sections.map(sec => ({
+                  section: sec.section,
+                  items: sec.items.map(s => typeof s === "string" ? s : (s && s.photo ? s : (s?.text ?? ""))),
+                })));
+              }
+            }}
+          />
+        )}
+
+        {/* ── NOTE ── */}
+        {activeSection==="note" && (
+          <div>
+            <EditLabel text="Note e consigli"/>
+            <textarea
+              value={draft.note}
+              onChange={e => set("note", e.target.value)}
+              rows={5}
+              placeholder="Aggiungi note, varianti, consigli…"
+              style={{
+                width:"100%", padding:"12px 14px",
+                border:`1.5px solid #EDE6D4`,
+                borderRadius:12, background:"#F7F2E8",
+                fontFamily:F.body, fontStyle:"italic",
+                fontSize:14, color:"#2C2416",
+                outline:"none", resize:"none", lineHeight:1.6,
+                boxSizing:"border-box",
+              }}
+            />
+            <EditLabel text="Fonte / Autore ricetta" style={{ marginTop:14 }}/>
+            <input
+              value={draft.source}
+              onChange={e => set("source", e.target.value)}
+              placeholder="es. Nonna Maria, Giallo Zafferano…"
+              style={{
+                width:"100%", padding:"10px 14px",
+                border:`1.5px solid #EDE6D4`,
+                borderRadius:10, background:"#F7F2E8",
+                fontFamily:F.ui, fontSize:13, color:"#2C2416",
+                outline:"none", boxSizing:"border-box",
+              }}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Floating save bar */}
+      <div style={{
+        position:"sticky", bottom:0,
+        background:"#FAF7F0",
+        borderTop:`1px solid ${"#EDE6D4"}`,
+        padding:"12px 20px",
+        display:"flex", gap:10,
+      }}>
+        <button onClick={onBack} style={{
+          flex:1, padding:"12px",
+          border:`1.5px solid #EDE6D4`,
+          borderRadius:12, background:"transparent",
+          color:"#7A6E5F", fontFamily:F.ui, fontSize:14,
+          cursor:"pointer",
+        }}>Annulla</button>
+        <button onClick={handleSave} style={{
+          flex:2, padding:"12px",
+          background:"#C4593A", color:"#fff",
+          border:"none", borderRadius:12,
+          fontFamily:F.ui, fontSize:14, fontWeight:700,
+          cursor:"pointer",
+          boxShadow:"0 4px 16px rgba(196,89,58,0.35)",
+        }}>Salva modifiche ✓</button>
+      </div>
+    </div>
+  );
+};
+
+// Small edit helpers
+const EditLabel = ({ text }) => (
+  <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:"#7A6E5F", textTransform:"uppercase", marginBottom:6, marginTop:2 }}>{text}</div>
+);
+const EditField = ({ label, value, onChange, placeholder="" }) => (
+  <div>
+    <EditLabel text={label}/>
+    <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{
+      width:"100%", padding:"10px 14px",
+      border:`1.5px solid #EDE6D4`, borderRadius:10,
+      background:"#F7F2E8", fontFamily:F.body, fontSize:14, color:"#2C2416",
+      outline:"none", boxSizing:"border-box",
+    }}/>
+  </div>
+);
+const EditNumberInput = ({ value, onChange }) => (
+  <input type="number" value={value} onChange={e => onChange(e.target.value)} style={{
+    width:"100%", padding:"10px 10px",
+    border:`1.5px solid #EDE6D4`, borderRadius:10,
+    background:"#F7F2E8", fontFamily:F.ui, fontSize:14, color:"#2C2416",
+    outline:"none", boxSizing:"border-box", textAlign:"center",
+  }}/>
+);
+
+// ══════════════════════════════════════════════════════════════
+// ROOT
+// ══════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN: THEME PICKER
+// ══════════════════════════════════════════════════════════════
+const ThemePickerScreen = ({ onBack, onSelect }) => {
+  const th = useTheme();
+  return (
+    <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+      <div style={{ padding:"8px 20px 0" }}><BackBtn onBack={onBack} label="Indietro"/></div>
+      <div style={{ padding:"12px 20px 4px" }}>
+        <div style={{ fontFamily:F.display, fontSize:24, color:th.appInk }}>Stile del libro</div>
+        <div style={{ fontFamily:F.ui, fontSize:12, color:th.appFaded, marginTop:4 }}>Scegli la copertina e il tema dell'app</div>
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"16px 20px 40px" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+          {BOOK_THEMES.map(theme => {
+            const isActive = th.id === theme.id;
+            return (
+              <button key={theme.id} onClick={() => onSelect(theme)} style={{ background:"none", border:"none", padding:0, cursor:"pointer", textAlign:"left" }}>
+                <div style={{ height:130, borderRadius:12, background:theme.coverBg, position:"relative", overflow:"hidden", boxShadow: isActive ? `0 0 0 3px ${th.appAccent}, 0 4px 16px rgba(0,0,0,0.2)` : "0 2px 10px rgba(0,0,0,0.15)", transition:"box-shadow 0.2s" }}>
+                  <div style={{ position:"absolute", inset:0, background:"repeating-linear-gradient(45deg,rgba(255,255,255,0.015) 0px,rgba(255,255,255,0.015) 1px,transparent 1px,transparent 4px)" }}/>
+                  {[{top:6,left:6,b1:"borderTop",b2:"borderLeft"},{top:6,right:6,b1:"borderTop",b2:"borderRight"},{bottom:6,left:6,b1:"borderBottom",b2:"borderLeft"},{bottom:6,right:6,b1:"borderBottom",b2:"borderRight"}].map((pos,i) => {
+                    const {b1,b2,...coords} = pos;
+                    return <div key={i} style={{ position:"absolute", width:10, height:10, ...coords, [b1]:`1px solid ${theme.coverAccent}`, [b2]:`1px solid ${theme.coverAccent}` }}/>;
+                  })}
+                  <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:4 }}>
+                    <div style={{ fontFamily:F.display, fontSize:16, fontStyle:"italic", color:theme.coverText, letterSpacing:1, textShadow:"0 1px 8px rgba(0,0,0,0.3)" }}>Ricettario</div>
+                    <div style={{ width:30, height:1, background:`linear-gradient(to right,transparent,${theme.coverAccent},transparent)` }}/>
+                  </div>
+                  <div style={{ position:"absolute", right:0, top:0, bottom:0, width:8, background:"linear-gradient(to right,#ccc,#f5f5f5)" }}/>
+                  {isActive && <div style={{ position:"absolute", top:6, left:6, width:20, height:20, borderRadius:"50%", background:th.appAccent, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700 }}>✓</div>}
+                </div>
+                <div style={{ padding:"6px 2px 0" }}>
+                  <div style={{ fontFamily:F.ui, fontSize:12, fontWeight:600, color: isActive ? th.appAccent : th.appInk }}>{theme.name}</div>
+                  <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, marginTop:1 }}>{theme.desc}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN: SVUOTA FRIGO — seleziona ingredienti in casa → ricette
+// ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// HELPER: risolve la "vista aggregata" degli ingredienti
+// ══════════════════════════════════════════════════════════════
+// Restituisce le "voci selezionabili": aggregati + ingredienti singoli
+// non appartenenti a nessun aggregato. Ogni voce porta con sé i "membri"
+// (nomi puliti reali usati nelle ricette) e le categorie.
+// members = ID del dizionario (non nomi): sopravvivono alle rinomine.
+const buildFridgeItems = (recipes, aggregates, ingredientCategories, ingredientDict = null) => {
+  const dictIdx = ingredientDict ? ingDictIndex(ingredientDict) : null;
+  const allIngs = collectAllIngredients(recipes); // [{name (norm), display}]
+  const memberToAgg = new Map();
+  aggregates.forEach(agg => (agg.members || []).forEach(m => {
+    if (!memberToAgg.has(m)) memberToAgg.set(m, []);
+    memberToAgg.get(m).push(agg.id);
+  }));
+
+  const items = [];
+
+  // 1) Un elemento per aggregato
+  aggregates.forEach(agg => {
+    const catSet = new Set(agg.categories || []);
+    (agg.members || []).forEach(m => (ingredientCategories[m] || []).forEach(c => catSet.add(c)));
+    items.push({
+      key: "agg_" + agg.id,
+      display: agg.name,
+      isAggregate: true,
+      members: agg.members || [], // id
+      categories: catSet.size ? Array.from(catSet) : ["altro"],
+    });
+  });
+
+  // 2) Ingredienti singoli non aggregati
+  allIngs.forEach(({ name, display }) => {
+    const ingId = resolveIngId(dictIdx, name);
+    if (memberToAgg.has(ingId)) return; // già dentro un aggregato
+    const shown = (ingredientDict && ingredientDict[ingId]) || display;
+    const cats = ingredientCategories[ingId];
+    items.push({
+      key: "ing_" + ingId,
+      display: shown.charAt(0).toUpperCase() + shown.slice(1),
+      isAggregate: false,
+      members: [ingId],
+      categories: (cats && cats.length) ? cats : ["altro"],
+    });
+  });
+
+  return items;
+};
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN: SVUOTA FRIGO — seleziona ingredienti in casa → ricette
+// ══════════════════════════════════════════════════════════════
+const EmptyFridgeScreen = ({
+  recipes, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge,
+  onStartCooking, onAddToShoppingList, onShopping, extraTagGroups = [],
+  aggregates = [], ingredientCategories = {},
+  categoryList = INGREDIENT_CATEGORIES,
+  ingredientDict = null,
+  sectionList = MACRO_SECTIONS,
+}) => {
+  const th = useTheme();
+  const navActions = useNavActions();
+  const [phase, setPhase] = useState("select"); // "select" | "results"
+  const [ownedMembers, setOwnedMembers] = useState([]); // nomi puliti reali posseduti
+  const [search, setSearch] = useState("");
+  const [activeTags, setActiveTags] = useState([]);
+  const [activeMacro, setActiveMacro] = useState("tutte"); // "tutte"|"basi"|"salati"|"dolci"
+  const [openTagGroup, setOpenTagGroup] = useState(null);
+  const [servingsDialog, setServingsDialog] = useState(null);
+  const [activeMode, setActiveMode] = useState(null);
+  const [tooltipKey, setTooltipKey] = useState(null); // key dell'aggregato di cui mostrare i membri
+  const pressTimer = React.useRef(null);
+  const suppressClick = React.useRef(false);
+
+  // Voci selezionabili (aggregati + singoli)
+  const fridgeItems = React.useMemo(
+    () => buildFridgeItems(recipes, aggregates, ingredientCategories, ingredientDict),
+    [recipes, aggregates, ingredientCategories, ingredientDict]
+  );
+  const dictIdx = React.useMemo(() => ingredientDict ? ingDictIndex(ingredientDict) : null, [ingredientDict]);
+
+  // Gli ingredienti "base" sono considerati presenti in dispensa di default.
+  // Vengono preselezionati automaticamente; teniamo traccia di quali abbiamo
+  // aggiunto noi, così un ingrediente reso "base" più tardi viene incluso,
+  // ma se l'utente ne deseleziona uno non lo ri-aggiungiamo.
+  const autoAddedBase = React.useRef(new Set());
+  const removedBase = React.useRef(new Set());
+  React.useEffect(() => {
+    const baseMembers = fridgeItems
+      .filter(it => it.categories.includes("base"))
+      .flatMap(it => it.members);
+    const toAdd = baseMembers.filter(m =>
+      !ownedMembers.includes(m) && !removedBase.current.has(m)
+    );
+    if (toAdd.length > 0) {
+      toAdd.forEach(m => autoAddedBase.current.add(m));
+      setOwnedMembers(prev => [...prev, ...toAdd.filter(m => !prev.includes(m))]);
+    }
+  }, [fridgeItems]);
+
+  // Una voce è selezionata se TUTTI i suoi membri sono posseduti
+  const isItemOwned = (item) => item.members.every(m => ownedMembers.includes(m));
+
+  const toggleItem = (item) => {
+    const owned = isItemOwned(item);
+    setOwnedMembers(prev => {
+      if (owned) {
+        // se l'utente deseleziona un base auto-aggiunto, ricordalo per non ri-aggiungerlo
+        item.members.forEach(m => {
+          if (autoAddedBase.current.has(m)) removedBase.current.add(m);
+        });
+        return prev.filter(m => !item.members.includes(m));
+      }
+      // ri-selezionando manualmente, togli dai "rimossi"
+      item.members.forEach(m => removedBase.current.delete(m));
+      const add = item.members.filter(m => !prev.includes(m));
+      return [...prev, ...add];
+    });
+  };
+
+  const filterItems = (list) => search.trim()
+    ? list.filter(i => i.display.toLowerCase().includes(search.toLowerCase()))
+    : list;
+
+  // ── Analisi ricette in base ai membri posseduti ──
+  const analyzed = React.useMemo(() => {
+    return recipes.map(r => {
+      const ings = flattenIngredients(r.ingredients).map(ing => ({
+        text: ingredientToText(ing), clean: resolveIngId(dictIdx, ing.name),
+      }));
+      const present = ings.filter(i => ownedMembers.includes(i.clean));
+      const missing = ings.filter(i => !ownedMembers.includes(i.clean));
+      const total = ings.length || 1;
+      return { recipe: r, present, missing, total, ratio: present.length / total };
+    }).sort((a, b) => b.ratio - a.ratio);
+  }, [recipes, ownedMembers, dictIdx]);
+
+  const allTagGroupsWithExtra = [...TAG_GROUPS, ...extraTagGroups];
+  const relevantTagGroups = allTagGroupsWithExtra.map(g => ({
+    ...g,
+    tags: g.tags.filter(t => recipes.some(r => r.tags.includes(t)))
+  })).filter(g => g.tags.length > 0);
+
+  const toggleTag = (tag) => setActiveTags(prev =>
+    prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+  );
+
+  const filteredResults = analyzed.filter(a => {
+    if (activeMacro !== "tutte" && a.recipe.macroSection !== activeMacro) return false;
+    if (activeTags.length > 0 && !activeTags.every(t => a.recipe.tags.includes(t))) return false;
+    return true;
+  });
+
+  const nav = (
+    <GlobalNav
+      activeScreen="fridge"
+      onRecipes={onRecipes}
+      onBook={onBook}
+      onMemories={onMemories}
+      onAdd={onAdd}
+      onFridge={() => {}}
+      onShopping={onShopping}
+      onLanding={onLanding}
+      onSearch={() => {}}
+      onFavorites={() => {}}
+      showSearch={false}
+      showFavorites={false}
+      activeLabel="Svuota Frigo"
+    />
+  );
+
+  // ══════════════════════════════════════════════════════════
+  // FASE: SELEZIONE INGREDIENTI
+  // ══════════════════════════════════════════════════════════
+  if (phase === "select") {
+    // Raggruppa le voci per categoria (una voce può comparire in più categorie)
+    const byCategory = sortCategoriesAltroLast(categoryList).map(cat => ({
+      ...cat,
+      items: filterItems(fridgeItems)
+        .filter(it => it.categories.includes(cat.id))
+        .sort((a, b) => a.display.localeCompare(b.display, "it")),
+    })).filter(c => c.items.length > 0);
+
+    const renderItemBtn = (item) => {
+      const sel = isItemOwned(item);
+
+      const openTip = (el) => {
+        if (!item.isAggregate || !el) return;
+        const r = el.getBoundingClientRect();
+        const vw = window.innerWidth || 400;
+        const below = r.top < 110; // se troppo vicino al bordo alto, mostra sotto
+        setTooltipKey({
+          key: item.key,
+          members: item.members,
+          x: Math.min(Math.max(r.left + r.width / 2, 95), vw - 95),
+          y: below ? r.bottom : r.top,
+          below,
+        });
+        suppressClick.current = true; // il rilascio dopo long-press non deve selezionare
+      };
+      const startPress = (e) => {
+        if (!item.isAggregate) return;
+        suppressClick.current = false;
+        const el = e.currentTarget;
+        pressTimer.current = setTimeout(() => openTip(el), 350);
+      };
+      // Rilascio / uscita / scroll col dito → chiudi subito il popup
+      const endPress = () => {
+        if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null; }
+        setTooltipKey(null);
+      };
+
+      return (
+        <button
+          key={item.key}
+          onClick={() => {
+            if (suppressClick.current) { suppressClick.current = false; return; }
+            toggleItem(item);
+          }}
+          onMouseDown={startPress}
+          onMouseUp={endPress}
+          onMouseLeave={endPress}
+          onTouchStart={startPress}
+          onTouchEnd={endPress}
+          onTouchMove={endPress}
+          onTouchCancel={endPress}
+          style={{
+            padding:"7px 12px", borderRadius:20,
+            border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
+            background: sel ? th.appAccent : "transparent",
+            color: sel ? "#fff" : th.appFaded,
+            fontFamily:F.ui, fontSize:12, cursor:"pointer",
+            display:"flex", alignItems:"center", gap:5,
+          }}
+        >
+          {sel && <span style={{ fontSize:11 }}>✓</span>}
+          {item.display}
+          {item.isAggregate && <span style={{ fontSize:10, opacity:0.7 }}>⊕</span>}
+        </button>
+      );
+    };
+
+    const selectedCount = fridgeItems.filter(isItemOwned).length;
+
+    return (
+      <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+        {nav}
+        <div style={{ padding:"14px 20px 6px", display:"flex", alignItems:"flex-start", gap:10 }}>
+          <div style={{ flex:1 }}>
+            <div style={{ fontFamily:F.display, fontSize:22, color:th.appInk }}>🧊 Svuota Frigo</div>
+            <div style={{ fontFamily:F.ui, fontSize:12, color:th.appFaded, marginTop:3, lineHeight:1.5 }}>
+              Seleziona gli ingredienti che hai in casa. Quelli <b>base</b> sono già selezionati (puoi deselezionarli).
+            </div>
+          </div>
+        </div>
+
+        {/* Suggerimento tappabile: apre Organizza */}
+        <button onClick={() => navActions.onOrganize && navActions.onOrganize()} style={{ display:"block", width:"calc(100% - 36px)", textAlign:"left", margin:"6px 18px 0", padding:"8px 12px", background:th.appCard, border:`1px dashed ${th.appBorder}`, borderRadius:10, cursor:"pointer" }}>
+          <span style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, lineHeight:1.5 }}>
+            💡 Per un funzionamento ottimale (categorie, aggregati, equivalenze) compila la sezione <b>🍎 Organizza</b> → <span style={{ color:th.appAccent, fontWeight:700 }}>tocca qui per aprirla</span>.
+          </span>
+        </button>
+
+        {/* Search */}
+        <div style={{ padding:"8px 18px 4px" }}>
+          <div style={{ display:"flex", gap:8, alignItems:"center", background:th.appCard, border:`1.5px solid ${search ? th.appAccent : th.appBorder}`, borderRadius:12, padding:"9px 14px" }}>
+            <span style={{ fontSize:15 }}>🔍</span>
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Cerca un ingrediente…"
+              style={{ flex:1, background:"none", border:"none", fontFamily:F.body, fontSize:14, color:th.appInk, outline:"none" }}
+            />
+            {search && <button onClick={() => setSearch("")} style={{ background:"none", border:"none", color:th.appFaded, cursor:"pointer", fontSize:16 }}>×</button>}
+          </div>
+        </div>
+
+        {selectedCount > 0 && (
+          <div style={{ padding:"4px 20px", fontFamily:F.ui, fontSize:11, color:th.appAccent, fontWeight:600 }}>
+            {selectedCount} selezionat{selectedCount===1?"o":"i"}
+            <button onClick={() => setOwnedMembers([])} style={{ marginLeft:8, background:"none", border:"none", color:th.appFaded, cursor:"pointer", fontFamily:F.ui, fontSize:11, textDecoration:"underline" }}>azzera</button>
+          </div>
+        )}
+
+        {/* Lista per categoria */}
+        <div onScroll={() => tooltipKey && setTooltipKey(null)} style={{ flex:1, overflowY:"auto", padding:"8px 18px 100px" }}>
+          {byCategory.length === 0 ? (
+            <div style={{ textAlign:"center", padding:"30px 0", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>
+              Nessun ingrediente trovato
+            </div>
+          ) : byCategory.map(cat => (
+            <div key={cat.id} style={{ marginBottom:16 }}>
+              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appAccent, textTransform:"uppercase", margin:"4px 0 8px", fontWeight:700 }}>
+                {cat.emoji} {cat.label}
+              </div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                {cat.items.map(renderItemBtn)}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <div style={{ position:"absolute", bottom:0, left:0, right:0, padding:"14px 18px 22px", background:`linear-gradient(transparent, ${th.appBg} 30%)` }}>
+          <button
+            onClick={() => setPhase("results")}
+            disabled={ownedMembers.length === 0}
+            style={{
+              width:"100%", padding:"15px",
+              background: ownedMembers.length===0 ? th.appBorder : th.appAccent,
+              color: ownedMembers.length===0 ? th.appFaded : "#fff",
+              border:"none", borderRadius:14,
+              fontFamily:F.ui, fontSize:14, fontWeight:700,
+              cursor: ownedMembers.length===0 ? "default" : "pointer",
+            }}
+          >
+            {ownedMembers.length===0 ? "Seleziona almeno un ingrediente" : "Mostra ricette →"}
+          </button>
+        </div>
+
+        {/* Popup nuvola — visibile solo mentre si tiene premuto */}
+        {tooltipKey && (
+          <div style={{
+            position:"fixed",
+            left: tooltipKey.x,
+            top: tooltipKey.below ? tooltipKey.y + 10 : tooltipKey.y - 10,
+            transform: tooltipKey.below ? "translate(-50%, 0)" : "translate(-50%, -100%)",
+            zIndex:601, minWidth:140, maxWidth:"min(240px, 80vw)",
+            background:th.appInk, color:"#fff",
+            borderRadius:12, padding:"10px 13px",
+            boxShadow:"0 10px 34px rgba(0,0,0,0.5)",
+            pointerEvents:"none",
+          }}>
+            <div style={{ fontFamily:F.ui, fontSize:9, letterSpacing:1, color:"rgba(255,255,255,0.5)", textTransform:"uppercase", marginBottom:4 }}>Include</div>
+            <div style={{ fontFamily:F.body, fontSize:12, lineHeight:1.5 }}>
+              {tooltipKey.members.length > 0 ? tooltipKey.members.join(", ") : "nessun ingrediente"}
+            </div>
+            {/* codina: sotto se il popup è sopra il pulsante, sopra se è sotto */}
+            {tooltipKey.below ? (
+              <div style={{ position:"absolute", bottom:"100%", left:"50%", transform:"translateX(-50%)", width:0, height:0, borderLeft:"6px solid transparent", borderRight:"6px solid transparent", borderBottom:`6px solid ${th.appInk}` }}/>
+            ) : (
+              <div style={{ position:"absolute", top:"100%", left:"50%", transform:"translateX(-50%)", width:0, height:0, borderLeft:"6px solid transparent", borderRight:"6px solid transparent", borderTop:`6px solid ${th.appInk}` }}/>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // FASE: RISULTATI
+  // ══════════════════════════════════════════════════════════
+  return (
+    <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+      {nav}
+      <div style={{ padding:"12px 20px 6px", display:"flex", alignItems:"center", gap:10 }}>
+        <button onClick={() => setPhase("select")} style={{
+          background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10,
+          padding:"6px 12px", cursor:"pointer", color:th.appInk,
+          fontFamily:F.ui, fontSize:12,
+        }}>‹ Ingredienti</button>
+        <div style={{ flex:1 }}>
+          <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>Ricette per te</div>
+          <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>{ownedMembers.length} ingredienti in casa</div>
+        </div>
+      </div>
+
+      {/* Macro section pills (Tutte / Base / Salati / Dolci) */}
+      <div style={{ display:"flex", gap:6, padding:"4px 16px 8px", overflowX:"auto", scrollbarWidth:"none", flexShrink:0 }}>
+        {[{ id:"tutte", label:"Tutte", emoji:"🍽️" }, ...sortSectionsAltroLast(sectionList).map(s => ({ id:s.id, label:s.label, emoji:s.emoji }))].map(sec => {
+          const on = activeMacro === sec.id;
+          return (
+            <button key={sec.id} onClick={() => setActiveMacro(sec.id)} style={{
+              flexShrink:0, padding:"6px 14px", borderRadius:20,
+              border:`1.5px solid ${on ? th.appAccent : th.appBorder}`,
+              background: on ? th.appAccent : "transparent",
+              color: on ? "#fff" : th.appFaded,
+              fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
+              whiteSpace:"nowrap",
+            }}>{sec.emoji} {sec.label}</button>
+          );
+        })}
+      </div>
+
+      {/* Tag filter */}
+      <div style={{ borderBottom:`1px solid ${th.appBorder}`, flexShrink:0 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 16px", overflowX:"auto", scrollbarWidth:"none" }}>
+          <button
+            onClick={() => setOpenTagGroup(g => g ? null : "open")}
+            style={{
+              flexShrink:0, padding:"5px 12px", borderRadius:20,
+              border:`1.5px solid ${activeTags.length > 0 ? th.appAccent : th.appBorder}`,
+              background: activeTags.length > 0 ? `${th.appAccent}15` : "transparent",
+              color: activeTags.length > 0 ? th.appAccent : th.appFaded,
+              fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
+              display:"flex", alignItems:"center", gap:5,
+            }}
+          >
+            🏷 Filtra
+            {activeTags.length > 0 && <span style={{ background:th.appAccent, color:"#fff", borderRadius:10, padding:"1px 6px", fontSize:10 }}>{activeTags.length}</span>}
+            <span style={{ fontSize:10, opacity:0.6 }}>{openTagGroup ? "▲" : "▼"}</span>
+          </button>
+          {activeTags.map(tag => (
+            <button key={tag} onClick={() => toggleTag(tag)} style={{
+              flexShrink:0, padding:"4px 10px", borderRadius:20,
+              background:th.appAccent, color:"#fff", border:"none",
+              fontFamily:F.ui, fontSize:10, cursor:"pointer",
+              display:"flex", alignItems:"center", gap:4,
+            }}>{tag} <span style={{ opacity:0.7 }}>×</span></button>
+          ))}
+        </div>
+        {openTagGroup && (
+          <div style={{ padding:"0 16px 10px", maxHeight:200, overflowY:"auto" }}>
+            {relevantTagGroups.map(group => (
+              <div key={group.group} style={{ marginBottom:6 }}>
+                <button
+                  onClick={() => setOpenTagGroup(g => g === group.group ? "open" : group.group)}
+                  style={{
+                    width:"100%", display:"flex", justifyContent:"space-between", alignItems:"center",
+                    padding:"7px 10px", background:th.appCard,
+                    border:`1px solid ${th.appBorder}`, borderRadius:10,
+                    cursor:"pointer", fontFamily:F.ui, fontSize:12, color:th.appInk,
+                  }}
+                >
+                  <span>{group.group}</span>
+                  <span style={{ color:th.appFaded, fontSize:11 }}>{openTagGroup === group.group ? "▲" : "▼"}</span>
+                </button>
+                {openTagGroup === group.group && (
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:5, padding:"6px 4px 2px" }}>
+                    {group.tags.map(tag => {
+                      const sel = activeTags.includes(tag);
+                      return (
+                        <button key={tag} onClick={() => toggleTag(tag)} style={{
+                          padding:"5px 10px", borderRadius:20,
+                          border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
+                          background: sel ? th.appAccent : "transparent",
+                          color: sel ? "#fff" : th.appFaded,
+                          fontFamily:F.ui, fontSize:11, cursor:"pointer",
+                        }}>{tag}</button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Risultati */}
+      <div style={{ flex:1, overflowY:"auto", padding:"12px 18px 40px", display:"flex", flexDirection:"column", gap:12 }}>
+        {filteredResults.map(({ recipe, present, missing, total, ratio }) => (
+          <div key={recipe.id} style={{
+            background:th.appCard, border:`1px solid ${th.appBorder}`,
+            borderRadius:16, overflow:"hidden",
+          }}>
+            <div style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px" }}>
+              <div style={{ width:44, height:44, borderRadius:12, background:recipe.color, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>{recipe.dishPhoto ? "📸" : recipe.emoji}</div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontFamily:F.display, fontSize:16, color:th.appInk }}>{recipe.title}</div>
+                <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>{recipe.category} · {recipe.prepTime+recipe.cookTime} min</div>
+              </div>
+              <div style={{ textAlign:"center", flexShrink:0 }}>
+                <div style={{
+                  fontFamily:F.display, fontSize:18, fontWeight:700,
+                  color: ratio === 1 ? "#6B8C6E" : ratio >= 0.6 ? th.appAccent2 : th.appFaded,
+                }}>{present.length}/{total}</div>
+                <div style={{ fontFamily:F.ui, fontSize:9, color:th.appFaded }}>ingredienti</div>
+              </div>
+            </div>
+
+            <div style={{ height:4, background:th.appBorder, margin:"0 14px" }}>
+              <div style={{ height:"100%", width:`${ratio*100}%`, background: ratio===1 ? "#6B8C6E" : th.appAccent, borderRadius:2 }}/>
+            </div>
+
+            <div style={{ padding:"10px 14px" }}>
+              {present.length > 0 && (
+                <div style={{ marginBottom:6 }}>
+                  <span style={{ fontFamily:F.ui, fontSize:10, color:"#6B8C6E", fontWeight:700 }}>✓ HAI: </span>
+                  <span style={{ fontFamily:F.ui, fontSize:11, color:th.appInk }}>
+                    {present.map(p => p.text).join(", ")}
+                  </span>
+                </div>
+              )}
+              {missing.length > 0 ? (
+                <div>
+                  <span style={{ fontFamily:F.ui, fontSize:10, color:"#C4593A", fontWeight:700 }}>✗ MANCA: </span>
+                  <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>
+                    {missing.map(m => m.text).join(", ")}
+                  </span>
+                </div>
+              ) : (
+                <div style={{ fontFamily:F.ui, fontSize:11, color:"#6B8C6E", fontWeight:600 }}>
+                  🎉 Hai tutto per questa ricetta!
+                </div>
+              )}
+            </div>
+
+            <div style={{ display:"flex", gap:6, padding:"0 14px 12px" }}>
+              <button onClick={() => onStartCooking(recipe)} style={{
+                flex:1, padding:"9px 4px", borderRadius:10,
+                border:`1.5px solid ${th.appBorder}`,
+                background:"transparent", color:th.appInk,
+                fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
+                display:"flex", flexDirection:"column", alignItems:"center", gap:2,
+              }}>
+                <span style={{ fontSize:15 }}>📖</span>
+                Ricetta
+              </button>
+              <button
+                onClick={() => setServingsDialog({ mode:"shopping", recipe, missingClean: missing.map(m => m.clean) })}
+                style={{
+                  flex:1, padding:"9px 4px", borderRadius:10,
+                  border:`1.5px solid ${th.appAccent}`,
+                  background:`${th.appAccent}12`, color:th.appAccent,
+                  fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
+                  display:"flex", flexDirection:"column", alignItems:"center", gap:2,
+                }}>
+                <span style={{ fontSize:15 }}>🛒</span>
+                Spesa
+              </button>
+              <button
+                onClick={() => setServingsDialog({ mode:"cooking", recipe, missingClean: null })}
+                style={{
+                  flex:1, padding:"9px 4px", borderRadius:10, border:"none",
+                  background:th.appInk, color:"#fff",
+                  fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
+                  display:"flex", flexDirection:"column", alignItems:"center", gap:2,
+                }}>
+                <span style={{ fontSize:15 }}>👨‍🍳</span>
+                Cucina
+              </button>
+            </div>
+          </div>
+        ))}
+        {filteredResults.length === 0 && (
+          <div style={{ textAlign:"center", padding:"40px 0", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>
+            Nessuna ricetta con questi filtri
+          </div>
+        )}
+      </div>
+
+      {servingsDialog && (
+        <ServingsDialog
+          recipe={servingsDialog.recipe}
+          title={servingsDialog.mode === "shopping" ? "Modalità Spesa" : "Modalità Cucina"}
+          emoji={servingsDialog.mode === "shopping" ? "🛒" : "👨‍🍳"}
+          onConfirm={(scale) => { setActiveMode({ ...servingsDialog, scale }); setServingsDialog(null); }}
+          onClose={() => setServingsDialog(null)}
+        />
+      )}
+      {activeMode?.mode === "shopping" && (
+        <ShoppingMode recipe={activeMode.recipe} scale={activeMode.scale} onAddToList={onAddToShoppingList} preselectClean={activeMode.missingClean} onClose={() => setActiveMode(null)}/>
+      )}
+      {activeMode?.mode === "cooking" && (
+        <CookingMode recipe={activeMode.recipe} scale={activeMode.scale} onClose={() => setActiveMode(null)}/>
+      )}
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN: ORGANIZZA INGREDIENTI (sotto Svuota Frigo)
+// ══════════════════════════════════════════════════════════════
+const OrganizeIngredientsScreen = ({
+  nav, recipes, aggregates, ingredientCategories,
+  onSetIngredientCats, onSaveAggregate, onDeleteAggregate, onBack,
+  categoryList = INGREDIENT_CATEGORIES, onSaveCategory, onDeleteCategory,
+  equivalences = {}, onSaveEquivalence,
+  nutritionMap = {}, onSaveNutritionMapping,
+  customFoods = [], onSaveCustomFood, onDeleteCustomFood,
+  ingredientDict = null, onRenameIngredient,
+}) => {
+  const th = useTheme();
+  const [editing, setEditing] = useState(null); // null | {kind:"ingredient"|"aggregate", ...}
+  const [manageCats, setManageCats] = useState(false); // gestione categorie (nome/icona)
+  const [manageEq, setManageEq] = useState(false);     // gestione equivalenze unità
+  const [manageNutri, setManageNutri] = useState(false); // gestione valori nutrizionali
+  const [nutriSearch, setNutriSearch] = useState({});    // nome ingrediente → testo ricerca aperta
+  const [browseDb, setBrowseDb] = useState(false);       // sfoglia l'intero database
+  const [dbSearch, setDbSearch] = useState("");
+  const [manageAggs, setManageAggs] = useState(false);   // database aggregati (lista)
+  const [foodForm, setFoodForm] = useState(null);        // form alimento personalizzato {id?, name, ...}
+  const [expanded, setExpanded] = useState({});          // nome → "cat"|"nutri"|"eq"|null (editor inline aperto)
+  const [newCat, setNewCat] = useState({ emoji:"", label:"" });
+  const [renameDraft, setRenameDraft] = useState({});   // ingId → testo in modifica (stato nel parent: ItemCard viene rimontata)
+  const [renameErr, setRenameErr] = useState(null);     // ingId con nome rifiutato
+  const [emojiPickerFor, setEmojiPickerFor] = useState(null); // cat.id | "new" | null
+
+  const CATEGORY_EMOJIS = [
+    "🧂","🌾","🥕","🥩","🧀","🫘","🫒","🌿","🍷","🍫","📦","🏷",
+    "🍞","🥖","🍝","🍚","🥔","🍅","🥦","🥬","🍎","🍋","🍇","🍓",
+    "🥚","🐟","🦐","🍗","🥓","🥛","🧈","🍯","🍬","🍰","☕","🍵",
+    "🥜","🌰","🧄","🧅","🌶","🥫","🍄","🫙","🧊","🍾","🥤","🍪",
+  ];
+  const [search, setSearch] = useState("");
+
+  // R2 — fonte unica: il dizionario ingredienti (id → nome visualizzato)
+  const dictM = React.useMemo(
+    () => ingredientDict || buildIngredientDict(recipes),
+    [ingredientDict, recipes]
+  );
+  const dictIdx = React.useMemo(() => ingDictIndex(dictM), [dictM]);
+  const dictName = (id) => dictM[id] || id;
+  // Voci del dizionario ordinate per nome (name = ID, display = nome)
+  const allDictEntries = React.useMemo(
+    () => Object.entries(dictM)
+      .map(([id, display]) => ({ name: id, display }))
+      .sort((a, b) => a.display.localeCompare(b.display, "it")),
+    [dictM]
+  );
+
+  const catLabel = (id) => categoryList.find(c => c.id === id);
+  const orderedCats = sortCategoriesAltroLast(categoryList);
+
+  // ── Database aggregati: lista + crea/modifica ──
+  if (manageAggs) {
+    return (
+      <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+        {nav}
+        <div style={{ padding:"12px 20px 8px", display:"flex", alignItems:"center", gap:10 }}>
+          <button onClick={() => setManageAggs(false)} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
+          <div style={{ flex:1 }}>
+            <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>⊕ Database aggregati</div>
+            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>gruppi di ingredienti equivalenti</div>
+          </div>
+        </div>
+        <div style={{ flex:1, overflowY:"auto", padding:"4px 18px 40px" }}>
+          {aggregates.map(agg => (
+            <div key={agg.id} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:12, padding:"11px 13px", marginBottom:8 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontFamily:F.body, fontSize:14.5, fontWeight:700, color:th.appInk }}>⊕ {agg.name}</div>
+                  <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:2 }}>{(agg.members||[]).map(dictName).join(" · ")}</div>
+                </div>
+                <button onClick={() => { setManageAggs(false); setEditing({ kind:"aggregate", id:agg.id, name:agg.name, members:[...(agg.members||[])], categories:[...(agg.categories||[])] }); }} style={{ background:th.appInk, border:"none", borderRadius:9, padding:"7px 11px", color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0 }}>✏️ Modifica</button>
+              </div>
+            </div>
+          ))}
+          {aggregates.length === 0 && (
+            <div style={{ textAlign:"center", padding:"26px 0", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>Nessun aggregato ancora creato</div>
+          )}
+          <button onClick={() => { setManageAggs(false); setEditing({ kind:"aggregate", name:"", members:[], categories:[] }); }} style={{
+            width:"100%", padding:"12px", borderRadius:12, border:`1.5px dashed ${th.appBorder}`,
+            background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:12.5, fontWeight:600, cursor:"pointer", marginTop:4,
+          }}>＋ Nuovo aggregato</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Gestione valori nutrizionali: ingrediente → voce database ──
+  if (manageNutri) {
+    const allNames = allDictEntries; // [{name: ID, display: nome}]
+    const allFoodsM = [...NUTRITION_DB, ...customFoods];
+    const dbById = new Map(allFoodsM.map(f => [f.id, f]));
+
+    // ── Sfoglia l'intero database di riferimento ──
+    if (browseDb) {
+      const q = dbSearch.trim().toLowerCase();
+      const filtered = q ? NUTRITION_DB.filter(f => f.name.toLowerCase().includes(q)) : NUTRITION_DB;
+      const filteredCustom = q ? customFoods.filter(f => f.name.toLowerCase().includes(q)) : customFoods;
+
+      // ── Form alimento personalizzato ──
+      if (foodForm) {
+        const fields = [
+          ["kcal","Energia (kcal)"], ["carb","Carboidrati (g)"], ["sug","di cui zuccheri (g)"],
+          ["prot","Proteine (g)"], ["fat","Grassi (g)"], ["sat","di cui saturi (g)"],
+          ["fib","Fibre (g)"], ["salt","Sale (g)"],
+        ];
+        const setF = (k, v) => setFoodForm(p => ({ ...p, [k]: v }));
+        const canSaveFood = (foodForm.name || "").trim() && foodForm.kcal !== "";
+        const saveFood = () => {
+          const num = (v) => { const n = parseFloat(String(v).replace(",", ".")); return isNaN(n) ? 0 : n; };
+          onSaveCustomFood({
+            id: foodForm.id || uid("cf"),
+            cat: "Personalizzati",
+            custom: true,
+            name: foodForm.name.trim(),
+            source: (foodForm.source || "").trim() || "personalizzata",
+            kcal: num(foodForm.kcal), carb: num(foodForm.carb), sug: num(foodForm.sug),
+            prot: num(foodForm.prot), fat: num(foodForm.fat), sat: num(foodForm.sat),
+            fib: num(foodForm.fib), salt: num(foodForm.salt),
+          });
+          setFoodForm(null);
+        };
+        return (
+          <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+            {nav}
+            <div style={{ padding:"12px 20px 8px", display:"flex", alignItems:"center", gap:10 }}>
+              <button onClick={() => setFoodForm(null)} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Annulla</button>
+              <div style={{ flex:1 }}>
+                <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>{foodForm.id ? "✏️ Modifica alimento" : "＋ Nuovo alimento"}</div>
+                <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>valori per 100 g · fonte personalizzata</div>
+              </div>
+            </div>
+            <div style={{ flex:1, overflowY:"auto", padding:"6px 18px 40px" }}>
+              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:0.5, color:th.appFaded, textTransform:"uppercase", marginBottom:5 }}>Nome alimento *</div>
+              <input value={foodForm.name || ""} autoFocus onChange={e => setF("name", e.target.value)} placeholder="es. Philadelphia light"
+                style={{ width:"100%", padding:"10px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appCard, fontFamily:F.body, fontSize:13.5, color:th.appInk, outline:"none", boxSizing:"border-box", marginBottom:12 }}/>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"8px 10px", marginBottom:12 }}>
+                {fields.map(([k, label]) => (
+                  <div key={k}>
+                    <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginBottom:3 }}>{label}{k === "kcal" ? " *" : ""}</div>
+                    <input type="text" inputMode="decimal" value={foodForm[k] ?? ""} onChange={e => setF(k, e.target.value)} placeholder="0"
+                      style={{ width:"100%", padding:"9px 10px", border:`1.5px solid ${th.appBorder}`, borderRadius:9, background:th.appCard, fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none", boxSizing:"border-box", textAlign:"center" }}/>
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:0.5, color:th.appFaded, textTransform:"uppercase", marginBottom:5 }}>Fonte dei valori</div>
+              <input value={foodForm.source || ""} onChange={e => setF("source", e.target.value)} placeholder="es. etichetta del prodotto"
+                style={{ width:"100%", padding:"10px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appCard, fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none", boxSizing:"border-box", marginBottom:16 }}/>
+              <button onClick={saveFood} disabled={!canSaveFood} style={{
+                width:"100%", padding:"13px", border:"none", borderRadius:12,
+                background: canSaveFood ? th.appAccent : th.appBorder,
+                color: canSaveFood ? "#fff" : th.appFaded,
+                fontFamily:F.ui, fontSize:13, fontWeight:700, cursor: canSaveFood ? "pointer" : "default",
+              }}>Salva alimento</button>
+            </div>
+          </div>
+        );
+      }
+      // raggruppa per categoria mantenendo l'ordine del database
+      const groups = [];
+      filtered.forEach(f => {
+        let g = groups[groups.length - 1];
+        if (!g || g.cat !== f.cat) { g = { cat: f.cat, foods: [] }; groups.push(g); }
+        g.foods.push(f);
+      });
+      return (
+        <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+          {nav}
+          <div style={{ padding:"12px 20px 8px", display:"flex", alignItems:"center", gap:10 }}>
+            <button onClick={() => { setBrowseDb(false); setDbSearch(""); }} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
+            <div style={{ flex:1 }}>
+              <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>📖 Database alimenti</div>
+              <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>{NUTRITION_DB.length} voci · valori per 100 g</div>
+            </div>
+          </div>
+          <div style={{ padding:"0 18px 8px" }}>
+            <input
+              value={dbSearch}
+              onChange={e => setDbSearch(e.target.value)}
+              placeholder="🔍 Cerca un alimento…"
+              style={{ width:"100%", padding:"10px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:11, background:th.appCard, fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none", boxSizing:"border-box" }}
+            />
+          </div>
+          <div style={{ flex:1, overflowY:"auto", padding:"0 18px 40px" }}>
+            {/* Personalizzati */}
+            {(filteredCustom.length > 0 || !q) && (
+              <div>
+                <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.2, color:th.appAccent, textTransform:"uppercase", fontWeight:700, margin:"14px 0 6px" }}>Personalizzati · fonte utente</div>
+                {filteredCustom.map(f => (
+                  <div key={f.id} style={{ background:th.appCard, border:`1.5px dashed ${th.appBorder}`, borderRadius:10, padding:"9px 12px", marginBottom:5 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontFamily:F.body, fontSize:13, color:th.appInk }}>{f.name}</div>
+                        <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:2 }}>
+                          {macroLine(f)} · sale {String(f.salt).replace(".",",")} g
+                        </div>
+                        <div style={{ fontFamily:F.ui, fontSize:9, color:th.appAccent, marginTop:2 }}>fonte: {f.source || "personalizzata"}</div>
+                      </div>
+                      <button onClick={() => setFoodForm({ ...f, kcal:String(f.kcal), carb:String(f.carb), sug:String(f.sug), prot:String(f.prot), fat:String(f.fat), sat:String(f.sat), fib:String(f.fib), salt:String(f.salt) })} style={{ background:"none", border:"none", fontSize:13, cursor:"pointer", color:th.appFaded, flexShrink:0, padding:"2px 4px" }}>✏️</button>
+                      <button onClick={() => onDeleteCustomFood(f.id)} style={{ background:"none", border:"none", fontSize:14, cursor:"pointer", color:"#C4593A", flexShrink:0, padding:"2px 4px" }}>×</button>
+                    </div>
+                  </div>
+                ))}
+                <button onClick={() => setFoodForm({ name:"", source:"" })} style={{
+                  width:"100%", padding:"11px", borderRadius:11, border:`1.5px dashed ${th.appBorder}`,
+                  background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:11.5, fontWeight:600, cursor:"pointer", marginTop:2,
+                }}>＋ Aggiungi alimento personalizzato</button>
+              </div>
+            )}
+            {groups.map(g => (
+              <div key={g.cat}>
+                <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.2, color:th.appAccent, textTransform:"uppercase", fontWeight:700, margin:"14px 0 6px" }}>{g.cat}</div>
+                {g.foods.map(f => (
+                  <div key={f.id} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"9px 12px", marginBottom:5 }}>
+                    <div style={{ fontFamily:F.body, fontSize:13, color:th.appInk }}>{f.name}</div>
+                    <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:2 }}>
+                      {macroLine(f)} · sale {String(f.salt).replace(".",",")} g
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+            {filtered.length === 0 && filteredCustom.length === 0 && q && (
+              <div style={{ textAlign:"center", padding:"30px 0", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>Nessun alimento trovato</div>
+            )}
+            <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, textAlign:"center", marginTop:14, lineHeight:1.5 }}>
+              Valori indicativi per 100 g, elaborati dalle Tabelle di Composizione degli Alimenti<br/>CREA — alimentinutrizione.it
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+        {nav}
+        <div style={{ padding:"12px 20px 8px", display:"flex", alignItems:"center", gap:10 }}>
+          <button onClick={() => setManageNutri(false)} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
+          <div style={{ flex:1 }}>
+            <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>🍎 Valori nutrizionali</div>
+            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>collega ogni ingrediente a una voce del database</div>
+          </div>
+        </div>
+        <div style={{ padding:"0 18px 8px" }}>
+          <button onClick={() => setBrowseDb(true)} style={{
+            width:"100%", background:"transparent", border:`1.5px dashed ${th.appBorder}`,
+            borderRadius:11, padding:"9px 8px",
+            color:th.appFaded, fontFamily:F.ui, fontSize:11.5, fontWeight:600, cursor:"pointer",
+          }}>📖 Sfoglia tutto il database ({NUTRITION_DB.length} alimenti)</button>
+        </div>
+
+        <div style={{ flex:1, overflowY:"auto", padding:"4px 18px 40px" }}>
+          {allNames.map(({ name, display }) => {
+            const mapping = nutritionMap[name];
+            const linkedFood = mapping?.foodId ? dbById.get(mapping.foodId) : null;
+            const autoFood = !mapping ? allFoodsM.find(f => normName(f.name) === normName(display)) : null;
+            const search = nutriSearch[name];
+            const searching = search !== undefined;
+            const results = searching && search.trim()
+              ? allFoodsM.filter(f => f.name.toLowerCase().includes(search.trim().toLowerCase())).slice(0, 6)
+              : [];
+
+            return (
+              <div key={name} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:12, padding:"10px 12px", marginBottom:8 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontFamily:F.body, fontSize:14, color:th.appInk, fontWeight:700 }}>{display.charAt(0).toUpperCase() + display.slice(1)}</div>
+                    <div style={{ fontFamily:F.ui, fontSize:10.5, color: linkedFood || autoFood || mapping?.custom ? "#6B8C6E" : "#C4593A", marginTop:2 }}>
+                      {mapping?.custom ? "✓ valori manuali"
+                        : linkedFood ? `✓ ${linkedFood.name}`
+                        : autoFood ? `✓ ${autoFood.name} (match automatico)`
+                        : "○ non collegato — escluso dal calcolo"}
+                    </div>
+                    {(linkedFood || autoFood || mapping?.custom) && (
+                      <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:2 }}>
+                        {macroLine(mapping?.custom || linkedFood || autoFood)} <span style={{ opacity:0.7 }}>/100g</span>
+                      </div>
+                    )}
+                  </div>
+                  {(linkedFood || mapping?.custom) && (
+                    <button onClick={() => onSaveNutritionMapping(name, null)} title="Scollega" style={{ background:"none", border:"none", color:"#C4593A", fontSize:14, cursor:"pointer", flexShrink:0, padding:"2px 4px" }}>×</button>
+                  )}
+                  <button onClick={() => setNutriSearch(p => searching ? (({ [name]:_, ...rest }) => rest)(p) : { ...p, [name]:"" })} style={{
+                    background: searching ? th.appInk : th.appAccent, border:"none", borderRadius:9,
+                    padding:"7px 11px", color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0,
+                  }}>{searching ? "Chiudi" : linkedFood || mapping?.custom || autoFood ? "Cambia" : "Collega"}</button>
+                </div>
+
+                {searching && (
+                  <div style={{ marginTop:8 }}>
+                    <input
+                      value={search}
+                      autoFocus
+                      onChange={e => setNutriSearch(p => ({ ...p, [name]: e.target.value }))}
+                      placeholder="Cerca nel database (es. farina, pollo…)"
+                      style={{ width:"100%", padding:"9px 11px", border:`1.5px solid ${th.appBorder}`, borderRadius:9, background:th.appBg, fontFamily:F.body, fontSize:12.5, color:th.appInk, outline:"none", boxSizing:"border-box" }}
+                    />
+                    {results.map(f => (
+                      <button key={f.id} onClick={() => {
+                        onSaveNutritionMapping(name, { foodId: f.id });
+                        setNutriSearch(p => (({ [name]:_, ...rest }) => rest)(p));
+                      }} style={{
+                        display:"flex", justifyContent:"space-between", alignItems:"center", gap:8,
+                        width:"100%", textAlign:"left", padding:"9px 11px", marginTop:4,
+                        background:th.appBg, border:`1px solid ${th.appBorder}`, borderRadius:9,
+                        cursor:"pointer", fontFamily:F.body, fontSize:12.5, color:th.appInk,
+                      }}>
+                        <span style={{ minWidth:0, display:"block" }}>
+                          <span style={{ display:"block", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{f.name}</span>
+                          <span style={{ display:"block", fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:1 }}>{macroLine(f)}</span>
+                        </span>
+                      </button>
+                    ))}
+                    {search.trim() && results.length === 0 && (
+                      <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, padding:"8px 2px" }}>
+                        Nessuna voce trovata nel database.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, textAlign:"center", marginTop:14, lineHeight:1.5 }}>
+            Valori indicativi per 100 g, elaborati dalle Tabelle di Composizione degli Alimenti<br/>CREA — alimentinutrizione.it
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Gestione equivalenze: ingredienti con unità diverse tra ricette ──
+  if (manageEq) {
+    // Rileva automaticamente: nome pulito → insieme delle unità trovate
+    const unitScan = new Map();
+    recipes.forEach(r => {
+      flattenIngredients(r.ingredients).forEach(ing => {
+        if (ing.qty == null) return; // senza quantità: non serve equivalenza
+        const clean = resolveIngId(ingDictIndex(dictM), ing.name); // ID dizionario
+        const unit = UNIT_ALIASES[(ing.unit || "").toLowerCase()] || (ing.unit || "").toLowerCase();
+        if (!unitScan.has(clean)) unitScan.set(clean, new Set());
+        unitScan.get(clean).add(unit);
+      });
+    });
+    // Mostra: (a) ingredienti con 2+ unità diverse, (b) ingredienti con
+    // qualsiasi unità non di peso (serve il fattore per lista spesa e nutrizione)
+    const isWeight = (u) => u in WEIGHT_UNITS;
+    const multiUnit = Array.from(unitScan.entries())
+      .filter(([, units]) => units.size >= 2 || Array.from(units).some(u => !isWeight(u)))
+      .map(([name, units]) => {
+        const arr = Array.from(units).sort();
+        // se serve la conversione a peso ma nessuna unità di peso è presente,
+        // aggiungi "g" alle opzioni di base disponibili
+        if (!arr.some(isWeight)) arr.unshift("g");
+        return { name, units: arr };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, "it"));
+
+    return (
+      <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+        {nav}
+        <div style={{ padding:"12px 20px 8px", display:"flex", alignItems:"center", gap:10 }}>
+          <button onClick={() => setManageEq(false)} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
+          <div style={{ flex:1 }}>
+            <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>⚖️ Equivalenze</div>
+            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>ingredienti con unità diverse o da convertire in grammi</div>
+          </div>
+        </div>
+
+        <div style={{ flex:1, overflowY:"auto", padding:"8px 18px 40px" }}>
+          {multiUnit.length === 0 ? (
+            <div style={{ textAlign:"center", padding:"36px 20px", color:th.appFaded, fontFamily:F.display, fontStyle:"italic", lineHeight:1.6 }}>
+              Nessun ingrediente con unità diverse.<br/>
+              <span style={{ fontFamily:F.ui, fontSize:11, fontStyle:"normal" }}>Quando la stessa cosa apparirà come "100g" in una ricetta e "2 cucchiai" in un'altra, la troverai qui.</span>
+            </div>
+          ) : multiUnit.map(({ name, units }) => {
+            const eq = equivalences[name] || {};
+            const base = eq.base && units.includes(eq.base) ? eq.base : (units.includes("g") ? "g" : units.includes("ml") ? "ml" : units[0]);
+            const factors = eq.factors || {};
+            const display = eq.display || "separate";
+            const others = units.filter(u => u !== base);
+            const save = (patch) => onSaveEquivalence(name, { base, factors, display, ...patch });
+
+            return (
+              <div key={name} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:14, padding:"12px 14px", marginBottom:10 }}>
+                <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:8, flexWrap:"wrap" }}>
+                  <span style={{ fontFamily:F.body, fontSize:15, color:th.appInk, fontWeight:700 }}>{dictName(name).charAt(0).toUpperCase() + dictName(name).slice(1)}</span>
+                  <span style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded }}>unità trovate: {units.map(unitLabel).join(" · ")}</span>
+                </div>
+
+                {/* Unità base */}
+                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
+                  <span style={{ fontFamily:F.ui, fontSize:10, letterSpacing:0.5, color:th.appFaded, textTransform:"uppercase", flexShrink:0 }}>Unità base</span>
+                  <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
+                    {units.map(u => (
+                      <button key={u} onClick={() => save({ base:u, factors:{}, display:"separate" })} style={{
+                        padding:"4px 10px", borderRadius:14,
+                        border:`1.5px solid ${base===u ? th.appAccent : th.appBorder}`,
+                        background: base===u ? th.appAccent : "transparent",
+                        color: base===u ? "#fff" : th.appFaded,
+                        fontFamily:F.ui, fontSize:10.5, cursor:"pointer",
+                      }}>{unitLabel(u)}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Fattori di conversione */}
+                {others.map(u => (
+                  <div key={u} style={{ display:"flex", alignItems:"center", gap:6, marginBottom:6, fontFamily:F.ui, fontSize:12, color:th.appInk }}>
+                    <span style={{ flexShrink:0 }}>1 {unitLabel(u)} =</span>
+                    <input
+                      type="number"
+                      value={factors[u] ?? ""}
+                      onChange={e => {
+                        const v = parseFloat(e.target.value);
+                        const next = { ...factors };
+                        if (isNaN(v) || v <= 0) delete next[u]; else next[u] = v;
+                        save({ factors: next });
+                      }}
+                      placeholder="?"
+                      style={{ width:70, padding:"7px 9px", border:`1.5px solid ${factors[u] ? th.appAccent : th.appBorder}`, borderRadius:9, background:th.appBg, fontFamily:F.body, fontSize:12, color:th.appInk, outline:"none", textAlign:"center" }}
+                    />
+                    <span style={{ flexShrink:0 }}>{unitLabel(base)}</span>
+                  </div>
+                ))}
+
+                {/* Visualizzazione in lista spesa */}
+                <div style={{ marginTop:8, paddingTop:8, borderTop:`1px dashed ${th.appBorder}` }}>
+                  <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:0.5, color:th.appFaded, textTransform:"uppercase", marginBottom:5 }}>Mostra in Lista Spesa come</div>
+                  <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
+                    {units.map(u => {
+                      const enabled = u === base || factors[u] > 0;
+                      const on = display === u;
+                      return (
+                        <button key={u} disabled={!enabled} onClick={() => save({ display:u })} title={!enabled ? "inserisci prima il fattore di conversione" : ""} style={{
+                          padding:"5px 11px", borderRadius:14,
+                          border:`1.5px solid ${on ? th.appAccent : th.appBorder}`,
+                          background: on ? th.appAccent : "transparent",
+                          color: on ? "#fff" : enabled ? th.appInk : th.appFaded,
+                          fontFamily:F.ui, fontSize:10.5, fontWeight:600,
+                          cursor: enabled ? "pointer" : "default",
+                          opacity: enabled ? 1 : 0.5,
+                        }}>{unitLabel(u)}</button>
+                      );
+                    })}
+                    <button onClick={() => save({ display:"separate" })} style={{
+                      padding:"5px 11px", borderRadius:14,
+                      border:`1.5px solid ${display==="separate" ? th.appAccent : th.appBorder}`,
+                      background: display==="separate" ? th.appAccent : "transparent",
+                      color: display==="separate" ? "#fff" : th.appInk,
+                      fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer",
+                    }}>entrambe (senza conversione)</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Gestione categorie: nome, icona, aggiunta, eliminazione ──
+  if (manageCats) {
+    const addNewCat = () => {
+      const label = newCat.label.trim();
+      if (!label) return;
+      const id = uid("cat");
+      onSaveCategory({ id, label, emoji: newCat.emoji.trim() || "🏷" });
+      setNewCat({ emoji:"", label:"" });
+    };
+
+    return (
+      <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+        {nav}
+        <div style={{ padding:"12px 20px 8px", display:"flex", alignItems:"center", gap:10 }}>
+          <button onClick={() => setManageCats(false)} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
+          <div style={{ flex:1 }}>
+            <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>Gestisci categorie</div>
+            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>nome e icona · "Ingredienti base" fissa in cima, "Altro" in fondo</div>
+          </div>
+        </div>
+
+        <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 40px" }}>
+          {orderedCats.map(cat => {
+            const isAltro = cat.id === "altro" || cat.id === "base"; // categorie fisse
+            return (
+              <div key={cat.id} style={{
+                background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:12,
+                padding:"10px 12px", marginBottom:8,
+                display:"flex", alignItems:"center", gap:8,
+                opacity: isAltro ? 0.75 : 1,
+              }}>
+                <button
+                  onClick={() => !isAltro && setEmojiPickerFor(cat.id)}
+                  disabled={isAltro}
+                  style={{ width:44, padding:"8px 4px", textAlign:"center", border:`1.5px solid ${emojiPickerFor===cat.id ? th.appAccent : th.appBorder}`, borderRadius:10, background:th.appBg, fontSize:16, cursor: isAltro ? "default" : "pointer", flexShrink:0 }}
+                >{cat.emoji}</button>
+                <input
+                  value={cat.label}
+                  onChange={e => !isAltro && onSaveCategory({ ...cat, label: e.target.value })}
+                  disabled={isAltro}
+                  style={{ flex:1, padding:"9px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appBg, fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none", minWidth:0 }}
+                />
+                {isAltro ? (
+                  <span style={{ fontFamily:F.ui, fontSize:9, color:th.appFaded, flexShrink:0 }}>fissa</span>
+                ) : (
+                  <button onClick={() => onDeleteCategory(cat.id)} style={{
+                    background:"none", border:"none", color:"#C4593A",
+                    fontSize:17, cursor:"pointer", flexShrink:0, padding:"4px 6px",
+                  }}>🗑</button>
+                )}
+              </div>
+            );
+          }).flatMap((row, i, arr) => {
+            // Note informative sotto le categorie fisse
+            const cat = orderedCats[i];
+            if (cat && cat.id === "base") {
+              return [row, (
+                <div key="base-note" style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, lineHeight:1.5, margin:"-2px 2px 10px 2px", fontStyle:"italic" }}>
+                  ℹ️ Gli ingredienti di questa categoria vengono considerati di default come <b>presenti in dispensa</b>: in Svuota Frigo risultano già selezionati.
+                </div>
+              )];
+            }
+            if (cat && cat.id === "altro") {
+              return [row, (
+                <div key="altro-note" style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, lineHeight:1.5, margin:"-2px 2px 10px 2px", fontStyle:"italic" }}>
+                  ℹ️ Gli ingredienti <b>senza categoria</b> vengono raggruppati qui in automatico.
+                </div>
+              )];
+            }
+            return [row];
+          })}
+
+          {/* Nuova categoria */}
+          <div style={{ marginTop:14, paddingTop:12, borderTop:`1px dashed ${th.appBorder}` }}>
+            <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:8 }}>Nuova categoria</div>
+            <div style={{ display:"flex", gap:8 }}>
+              <button
+                onClick={() => setEmojiPickerFor("new")}
+                style={{ width:44, padding:"8px 4px", textAlign:"center", border:`1.5px solid ${emojiPickerFor==="new" ? th.appAccent : th.appBorder}`, borderRadius:10, background:th.appCard, fontSize:16, cursor:"pointer", flexShrink:0 }}
+              >{newCat.emoji || "🏷"}</button>
+              <input
+                value={newCat.label}
+                onChange={e => setNewCat(p => ({ ...p, label: e.target.value }))}
+                onKeyDown={e => e.key === "Enter" && addNewCat()}
+                placeholder="Nome categoria…"
+                style={{ flex:1, padding:"9px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appCard, fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none", minWidth:0 }}
+              />
+              <button onClick={addNewCat} disabled={!newCat.label.trim()} style={{
+                padding:"9px 14px", borderRadius:10, border:"none",
+                background: newCat.label.trim() ? th.appAccent : th.appBorder,
+                color: newCat.label.trim() ? "#fff" : th.appFaded,
+                fontFamily:F.ui, fontSize:12, fontWeight:700,
+                cursor: newCat.label.trim() ? "pointer" : "default", flexShrink:0,
+              }}>＋</button>
+            </div>
+          </div>
+        </div>
+
+        {/* Popup scelta icona */}
+        {emojiPickerFor && (
+          <div
+            onClick={() => setEmojiPickerFor(null)}
+            style={{ position:"absolute", inset:0, zIndex:500, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}
+          >
+            <div onClick={e => e.stopPropagation()} style={{
+              width:"100%", background:th.appBg, borderRadius:18, padding:"16px",
+              boxShadow:"0 10px 40px rgba(0,0,0,0.4)",
+            }}>
+              <div style={{ fontFamily:F.ui, fontSize:11, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:10, textAlign:"center" }}>
+                Scegli un'icona
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(6, 1fr)", gap:6 }}>
+                {CATEGORY_EMOJIS.map(e => (
+                  <button key={e} onClick={() => {
+                    if (emojiPickerFor === "new") setNewCat(p => ({ ...p, emoji: e }));
+                    else {
+                      const cat = categoryList.find(c => c.id === emojiPickerFor);
+                      if (cat) onSaveCategory({ ...cat, emoji: e });
+                    }
+                    setEmojiPickerFor(null);
+                  }} style={{
+                    aspectRatio:"1", borderRadius:10, border:`1px solid ${th.appBorder}`,
+                    background:th.appCard, fontSize:20, cursor:"pointer",
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                  }}>{e}</button>
+                ))}
+              </div>
+              <button onClick={() => setEmojiPickerFor(null)} style={{
+                width:"100%", marginTop:12, padding:"11px",
+                border:`1.5px solid ${th.appBorder}`, borderRadius:12,
+                background:"transparent", color:th.appFaded,
+                fontFamily:F.ui, fontSize:12, cursor:"pointer",
+              }}>Annulla</button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Editor (categorie + composizione) ──
+  if (editing) {
+    const isAgg = editing.kind === "aggregate";
+    const currentCats = editing.categories || [];
+    const toggleCat = (cid) => {
+      const next = currentCats.includes(cid)
+        ? currentCats.filter(c => c !== cid)
+        : [...currentCats, cid];
+      setEditing({ ...editing, categories: next });
+    };
+
+    const toggleMember = (name) => {
+      const members = editing.members || [];
+      const next = members.includes(name) ? members.filter(m => m !== name) : [...members, name];
+      setEditing({ ...editing, members: next });
+    };
+
+    const save = () => {
+      if (isAgg) {
+        // salva aggregato
+        const agg = {
+          id: editing.id || uid("agg"),
+          name: (editing.name || "").trim(),
+          members: editing.members || [],
+          categories: editing.categories || [],
+        };
+        if (!agg.name || agg.members.length === 0) return;
+        onSaveAggregate(agg);
+      } else {
+        // salva categorie del singolo ingrediente
+        onSetIngredientCats(editing.name, editing.categories || []);
+      }
+      setEditing(null);
+    };
+
+    return (
+      <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+        {nav}
+        <div style={{ padding:"12px 20px 8px", display:"flex", alignItems:"center", gap:10 }}>
+          <button onClick={() => setEditing(null)} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
+          <div style={{ flex:1, fontFamily:F.display, fontSize:18, color:th.appInk }}>
+            {isAgg ? (editing.id ? "Modifica aggregato" : "Nuovo aggregato") : "Categorie ingrediente"}
+          </div>
+        </div>
+
+        <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 40px" }}>
+          {/* Nome */}
+          {isAgg ? (
+            <div style={{ marginBottom:16 }}>
+              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:6 }}>Nome aggregato</div>
+              <input
+                value={editing.name || ""}
+                onChange={e => setEditing({ ...editing, name: e.target.value })}
+                placeholder="es. Zucchero, Olio da frittura…"
+                style={{ width:"100%", padding:"10px 14px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appCard, fontFamily:F.body, fontSize:14, color:th.appInk, outline:"none", boxSizing:"border-box" }}
+              />
+            </div>
+          ) : (
+            <div style={{ marginBottom:16 }}>
+              <div style={{ fontFamily:F.display, fontSize:20, color:th.appInk }}>{editing.display}</div>
+              <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>ingrediente singolo</div>
+            </div>
+          )}
+
+          {/* Categorie */}
+          <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:8 }}>Categorie (multiple)</div>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:20 }}>
+            {orderedCats.map(cat => {
+              const sel = currentCats.includes(cat.id);
+              return (
+                <button key={cat.id} onClick={() => toggleCat(cat.id)} style={{
+                  padding:"6px 12px", borderRadius:20,
+                  border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
+                  background: sel ? th.appAccent : "transparent",
+                  color: sel ? "#fff" : th.appFaded,
+                  fontFamily:F.ui, fontSize:11, cursor:"pointer",
+                }}>{cat.emoji} {cat.label}</button>
+              );
+            })}
+          </div>
+
+          {/* Composizione aggregato */}
+          {isAgg && (
+            <>
+              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:8 }}>
+                Ingredienti inclusi ({(editing.members || []).length})
+              </div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                {allDictEntries.map(({ name, display }) => {
+                  const sel = (editing.members || []).includes(name);
+                  return (
+                    <button key={name} onClick={() => toggleMember(name)} style={{
+                      padding:"6px 12px", borderRadius:20,
+                      border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
+                      background: sel ? th.appAccent : "transparent",
+                      color: sel ? "#fff" : th.appFaded,
+                      fontFamily:F.ui, fontSize:11, cursor:"pointer",
+                      display:"flex", alignItems:"center", gap:4,
+                    }}>{sel && <span style={{ fontSize:10 }}>✓</span>}{display}</button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Save */}
+        <div style={{ padding:"12px 18px 22px", display:"flex", gap:8, borderTop:`1px solid ${th.appBorder}` }}>
+          {isAgg && editing.id && (
+            <button onClick={() => { onDeleteAggregate(editing.id); setEditing(null); }} style={{
+              padding:"14px 16px", borderRadius:12, border:`1.5px solid #C4593A`,
+              background:"transparent", color:"#C4593A",
+              fontFamily:F.ui, fontSize:13, fontWeight:600, cursor:"pointer",
+            }}>🗑</button>
+          )}
+          <button onClick={save} style={{
+            flex:1, padding:"14px", borderRadius:12, border:"none",
+            background:th.appAccent, color:"#fff",
+            fontFamily:F.ui, fontSize:14, fontWeight:700, cursor:"pointer",
+          }}>Salva</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ══ VISTA PRINCIPALE: 4 database + schede ingrediente/aggregato ══
+  const allFoods = [...NUTRITION_DB, ...customFoods];
+  const dbById = new Map(allFoods.map(f => [f.id, f]));
+  const dbByName = new Map(allFoods.map(f => [normName(f.name), f]));
+  const catsSorted = sortCategoriesAltroLast(categoryList);
+  const catOf = (id) => catsSorted.find(c => c.id === id);
+
+  const allIngs = allDictEntries; // [{name: ID, display: nome}] ordinati
+  // unità usate per ingrediente (per l'editor equivalenze inline) — keyed per ID
+  const unitsByIng = new Map();
+  recipes.forEach(r => flattenIngredients(r.ingredients).forEach(ing => {
+    if (ing.qty == null) return;
+    const k = resolveIngId(dictIdx, ing.name);
+    if (!unitsByIng.has(k)) unitsByIng.set(k, new Set());
+    unitsByIng.get(k).add(normUnit(ing.unit));
+  }));
+  const recipesFor = (ids) => recipes.filter(r =>
+    flattenIngredients(r.ingredients).some(i => ids.includes(resolveIngId(dictIdx, i.name))));
+
+  const q = search.trim().toLowerCase();
+  const visibleAggs = aggregates.filter(a => !q || a.name.toLowerCase().includes(q) || (a.members||[]).some(m => dictName(m).toLowerCase().includes(q)));
+  const visibleIngs = allIngs.filter(i => !q || i.display.toLowerCase().includes(q));
+
+  const toggleExpand = (key, kind) => setExpanded(p => ({ ...p, [key]: p[key] === kind ? null : kind }));
+
+  const nutriStatusOf = (ingId) => {
+    const mapping = nutritionMap[ingId];
+    if (mapping?.custom) return { ok:true, label:"valori manuali", values: mapping.custom };
+    const food = mapping?.foodId ? dbById.get(mapping.foodId) : dbByName.get(normName(dictName(ingId)));
+    return food ? { ok:true, label:food.name, values:food, auto: !mapping } : { ok:false };
+  };
+  const eqSummary = (name) => {
+    const eq = equivalences[name];
+    if (!eq || !eq.factors || Object.keys(eq.factors).length === 0) return null;
+    return Object.entries(eq.factors).map(([u,f]) => `1 ${unitLabel(u)} = ${String(f).replace(".",",")} ${unitLabel(eq.base)}`).join(" · ");
+  };
+
+  // ── Editor inline: categorie ──
+  const CatEditor = ({ current, onToggle }) => (
+    <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginTop:8 }}>
+      {catsSorted.map(c => {
+        const on = current.includes(c.id);
+        return (
+          <button key={c.id} onClick={() => onToggle(c.id)} style={{
+            padding:"5px 10px", borderRadius:14,
+            border:`1.5px solid ${on ? th.appAccent : th.appBorder}`,
+            background: on ? th.appAccent : "transparent",
+            color: on ? "#fff" : th.appFaded,
+            fontFamily:F.ui, fontSize:10.5, cursor:"pointer",
+          }}>{c.emoji} {c.label}</button>
+        );
+      })}
+    </div>
+  );
+
+  // ── Editor inline: collegamento nutrizionale ──
+  const NutriEditor = ({ name }) => {
+    const s = nutriSearch[name] ?? "";
+    const results = s.trim() ? allFoods.filter(f => f.name.toLowerCase().includes(s.trim().toLowerCase())).slice(0, 5) : [];
+    return (
+      <div style={{ marginTop:8 }}>
+        <input
+          value={s}
+          autoFocus
+          onChange={e => setNutriSearch(p => ({ ...p, [name]: e.target.value }))}
+          placeholder="Cerca nel database (es. farina, pollo…)"
+          style={{ width:"100%", padding:"9px 11px", border:`1.5px solid ${th.appBorder}`, borderRadius:9, background:th.appBg, fontFamily:F.body, fontSize:12.5, color:th.appInk, outline:"none", boxSizing:"border-box" }}
+        />
+        {results.map(f => (
+          <button key={f.id} onClick={() => {
+            onSaveNutritionMapping(name, { foodId: f.id });
+            setNutriSearch(p => (({ [name]:_, ...rest }) => rest)(p));
+            setExpanded(p => ({ ...p, [name]: null }));
+          }} style={{
+            display:"block", width:"100%", textAlign:"left", padding:"8px 11px", marginTop:4,
+            background:th.appBg, border:`1px solid ${th.appBorder}`, borderRadius:9,
+            cursor:"pointer", fontFamily:F.body, fontSize:12, color:th.appInk,
+          }}>
+            {f.name}{f.custom && <span style={{ fontFamily:F.ui, fontSize:9, color:th.appAccent }}> · personalizzato</span>}
+            <span style={{ display:"block", fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:1 }}>{macroLine(f, {fib:false})}</span>
+          </button>
+        ))}
+        {nutritionMap[name] && (
+          <button onClick={() => { onSaveNutritionMapping(name, null); setExpanded(p => ({ ...p, [name]: null })); }} style={{ marginTop:6, background:"none", border:"none", color:"#C4593A", fontFamily:F.ui, fontSize:10.5, cursor:"pointer", textDecoration:"underline", padding:0 }}>× Scollega dal database</button>
+        )}
+      </div>
+    );
+  };
+
+  // ── Editor inline: equivalenze ──
+  const EqEditor = ({ name }) => {
+    const found = Array.from(unitsByIng.get(name) || []);
+    const units = found.some(u => u in WEIGHT_UNITS) ? found : ["g", ...found];
+    const eq = equivalences[name] || {};
+    const base = eq.base && units.includes(eq.base) ? eq.base : (units.includes("g") ? "g" : units[0]);
+    const factors = eq.factors || {};
+    const display = eq.display || "separate";
+    const others = units.filter(u => u !== base);
+    const save = (patch) => onSaveEquivalence(name, { base, factors, display, ...patch });
+    return (
+      <div style={{ marginTop:8 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, flexWrap:"wrap" }}>
+          <span style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, textTransform:"uppercase" }}>Unità base</span>
+          {units.map(u => (
+            <button key={u} onClick={() => save({ base:u, factors:{}, display:"separate" })} style={{
+              padding:"4px 10px", borderRadius:14,
+              border:`1.5px solid ${base===u ? th.appAccent : th.appBorder}`,
+              background: base===u ? th.appAccent : "transparent",
+              color: base===u ? "#fff" : th.appFaded,
+              fontFamily:F.ui, fontSize:10.5, cursor:"pointer",
+            }}>{unitLabel(u)}</button>
+          ))}
+        </div>
+        {others.map(u => (
+          <div key={u} style={{ display:"flex", alignItems:"center", gap:6, marginBottom:6, fontFamily:F.ui, fontSize:12, color:th.appInk }}>
+            <span style={{ flexShrink:0 }}>1 {unitLabel(u)} =</span>
+            <input
+              type="number"
+              value={factors[u] ?? ""}
+              onChange={e => {
+                const v = parseFloat(e.target.value);
+                const next = { ...factors };
+                if (isNaN(v) || v <= 0) delete next[u]; else next[u] = v;
+                save({ factors: next });
+              }}
+              placeholder="?"
+              style={{ width:70, padding:"7px 9px", border:`1.5px solid ${factors[u] ? th.appAccent : th.appBorder}`, borderRadius:9, background:th.appBg, fontFamily:F.body, fontSize:12, color:th.appInk, outline:"none", textAlign:"center" }}
+            />
+            <span style={{ flexShrink:0 }}>{unitLabel(base)}</span>
+          </div>
+        ))}
+        {others.length === 0 && (
+          <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded }}>Una sola unità in uso: nessuna conversione necessaria.</div>
+        )}
+      </div>
+    );
+  };
+
+  // ── Scheda unificata (ingrediente o aggregato) ──
+  const ItemCard = ({ name, display, isAgg, agg }) => {
+    const key = isAgg ? "agg_" + agg.id : name;
+    const cats = isAgg ? (agg.categories || []) : (ingredientCategories[name] || []);
+    const nutri = !isAgg ? nutriStatusOf(name) : null;
+    const eqS = !isAgg ? eqSummary(name) : null;
+    const linked = recipesFor(isAgg ? (agg.members || []) : [name]);
+    const exp = expanded[key];
+    // ── Segnalazioni: dove è utile agire ──
+    const RED = "#C4593A";
+    const issueNoCat = cats.length === 0;
+    const issueNoNutri = !isAgg && !nutri.ok;
+    const multiUnits = !isAgg && (unitsByIng.get(name)?.size || 0) >= 2;
+    const issueNoEq = multiUnits && !eqS;
+    const hasIssues = issueNoCat || issueNoNutri || issueNoEq;
+    const toggleCat = (catId) => {
+      if (isAgg) {
+        const next = cats.includes(catId) ? cats.filter(c => c !== catId) : [...cats, catId];
+        onSaveAggregate({ ...agg, categories: next });
+      } else {
+        const next = cats.includes(catId) ? cats.filter(c => c !== catId) : [...cats, catId];
+        onSetIngredientCats(name, next);
+      }
+    };
+
+    const attrBtn = (label, kind, active) => (
+      <button onClick={() => toggleExpand(key, kind)} style={{
+        padding:"6px 10px", borderRadius:10,
+        border:`1.5px solid ${exp === kind ? th.appAccent : th.appBorder}`,
+        background: exp === kind ? th.appAccent + "18" : "transparent",
+        color: exp === kind ? th.appAccent : th.appFaded,
+        fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer",
+      }}>{label}</button>
+    );
+
+    return (
+      <div style={{ background:th.appCard, border:`1.5px solid ${hasIssues ? RED + "66" : th.appBorder}`, borderRadius:13, padding:"12px 13px", marginBottom:9 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontFamily:F.body, fontSize:14.5, fontWeight:700, color:th.appInk }}>
+              {isAgg && <span style={{ color:th.appAccent }}>⊕ </span>}
+              {display.charAt(0).toUpperCase() + display.slice(1)}
+              {hasIssues && <span style={{ fontSize:11, marginLeft:5 }}>⚠️</span>}
+            </div>
+            {isAgg && <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, marginTop:1 }}>{(agg.members||[]).map(dictName).join(" · ")}</div>}
+          </div>
+          {isAgg ? (
+            <button onClick={() => setEditing({ kind:"aggregate", id:agg.id, name:agg.name, members:[...(agg.members||[])], categories:[...(agg.categories||[])] })} style={{ background:"none", border:"none", fontSize:14, cursor:"pointer", color:th.appFaded, flexShrink:0, padding:"2px 4px" }}>✏️</button>
+          ) : (onRenameIngredient && (
+            <button
+              title="Rinomina ingrediente"
+              onClick={() => {
+                setRenameDraft(p => ({ ...p, [name]: display }));
+                setRenameErr(null);
+                toggleExpand(key, "rename");
+              }}
+              style={{ background:"none", border:"none", fontSize:14, cursor:"pointer", color:th.appFaded, flexShrink:0, padding:"2px 4px" }}
+            >✏️</button>
+          ))}
+        </div>
+
+        {/* Attributi */}
+        <div style={{ marginTop:7, display:"flex", flexDirection:"column", gap:3 }}>
+          <div style={{ fontFamily:F.ui, fontSize:10.5, color: issueNoCat ? RED : th.appFaded, fontWeight: issueNoCat ? 600 : 400 }}>
+            🏷 {cats.length > 0 ? cats.map(c => { const cc = catOf(c); return cc ? `${cc.emoji} ${cc.label}` : c; }).join(" · ") : "senza categoria — assegnane una"}
+          </div>
+          {!isAgg && (
+            <div style={{ fontFamily:F.ui, fontSize:10.5, color: nutri.ok ? th.appFaded : RED, fontWeight: nutri.ok ? 400 : 600 }}>
+              🍎 {nutri.ok ? <>{nutri.label}{nutri.auto ? " (auto)" : ""} · <span style={{ opacity:0.8 }}>{macroLine(nutri.values, {fib:false})}</span></> : "non collegato al database valori nutrizionali"}
+            </div>
+          )}
+          {!isAgg && (
+            <div style={{ fontFamily:F.ui, fontSize:10.5, color: issueNoEq ? RED : th.appFaded, fontWeight: issueNoEq ? 600 : 400 }}>
+              ⚖️ {eqS || (issueNoEq ? "più unità in uso senza equivalenze — definiscile" : "nessuna equivalenza definita")}
+            </div>
+          )}
+          <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded }}>
+            📖 {linked.length > 0
+              ? linked.slice(0, 3).map(r => r.title).join(", ") + (linked.length > 3 ? ` +${linked.length - 3}` : "")
+              : "in nessuna ricetta"}
+          </div>
+        </div>
+
+        {/* Pulsanti modifica */}
+        <div style={{ display:"flex", gap:6, marginTop:9, flexWrap:"wrap" }}>
+          {attrBtn("🏷 Categorie", "cat")}
+          {!isAgg && attrBtn("🍎 Nutrizione", "nutri")}
+          {!isAgg && attrBtn("⚖️ Equivalenze", "eq")}
+        </div>
+
+        {exp === "cat" && <CatEditor current={cats} onToggle={toggleCat}/>}
+        {exp === "nutri" && !isAgg && <NutriEditor name={name}/>}
+        {exp === "eq" && !isAgg && <EqEditor name={name}/>}
+        {exp === "rename" && !isAgg && (
+          <div style={{ marginTop:8 }}>
+            <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:0.5, color:th.appFaded, textTransform:"uppercase", marginBottom:5 }}>Nuovo nome — aggiornato in tutte le ricette</div>
+            <div style={{ display:"flex", gap:6 }}>
+              <input
+                value={renameDraft[name] ?? display}
+                autoFocus
+                onChange={e => { setRenameDraft(p => ({ ...p, [name]: e.target.value })); setRenameErr(null); }}
+                onKeyDown={e => {
+                  if (e.key !== "Enter") return;
+                  if (onRenameIngredient(name, renameDraft[name] ?? display)) toggleExpand(key, "rename");
+                  else setRenameErr(name);
+                }}
+                style={{ flex:1, padding:"9px 11px", border:`1.5px solid ${renameErr === name ? "#C4593A" : th.appBorder}`, borderRadius:9, background:th.appBg, fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none", minWidth:0 }}
+              />
+              <button
+                onClick={() => {
+                  if (onRenameIngredient(name, renameDraft[name] ?? display)) toggleExpand(key, "rename");
+                  else setRenameErr(name);
+                }}
+                style={{ padding:"9px 14px", borderRadius:9, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer", flexShrink:0 }}
+              >Salva</button>
+            </div>
+            {renameErr === name && (
+              <div style={{ fontFamily:F.ui, fontSize:10.5, color:"#C4593A", marginTop:5, fontWeight:600 }}>Nome non valido o già in uso da un altro ingrediente.</div>
+            )}
+            <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:5, lineHeight:1.4 }}>Categorie, nutrizione ed equivalenze restano collegate: sono agganciate all'ingrediente, non al nome.</div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+      {nav}
+
+      {/* ── GESTISCI DATABASE ── */}
+      <div style={{ padding:"14px 20px 0" }}>
+        <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.2, color:th.appAccent, textTransform:"uppercase", fontWeight:700, marginBottom:8 }}>Gestisci database</div>
+      </div>
+      <div style={{ padding:"0 18px 4px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+        {[
+          ["⊕", "Database aggregati", () => setManageAggs(true)],
+          ["🏷", "Database categorie", () => setManageCats(true)],
+          ["⚖️", "Database equivalenze", () => setManageEq(true)],
+          ["🍎", "Database valori nutrizionali", () => setManageNutri(true)],
+        ].map(([icon, title, go]) => (
+          <button key={title} onClick={go} style={{
+            background:th.appCard, border:`1.5px solid ${th.appBorder}`, borderRadius:14,
+            padding:"13px 8px", cursor:"pointer",
+            display:"flex", flexDirection:"column", alignItems:"center", gap:5,
+          }}>
+            <span style={{ fontSize:24 }}>{icon}</span>
+            <span style={{ fontFamily:F.ui, fontSize:10.5, fontWeight:700, color:th.appInk, textAlign:"center", lineHeight:1.3 }}>{title}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* ── GESTISCI INGREDIENTI ── */}
+      <div style={{ padding:"16px 20px 0" }}>
+        <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.2, color:th.appAccent, textTransform:"uppercase", fontWeight:700, marginBottom:8 }}>Gestisci ingredienti</div>
+      </div>
+      {/* Ricerca */}
+      <div style={{ padding:"0 18px 0" }}>
+        <div style={{ display:"flex", gap:8, alignItems:"center", background:th.appCard, border:`1.5px solid ${search ? th.appAccent : th.appBorder}`, borderRadius:12, padding:"9px 14px" }}>
+          <span style={{ fontSize:15 }}>🔍</span>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Cerca ingrediente o aggregato…"
+            style={{ flex:1, border:"none", background:"transparent", outline:"none", fontFamily:F.body, fontSize:13.5, color:th.appInk, minWidth:0 }}
+          />
+          {search && <button onClick={() => setSearch("")} style={{ background:"none", border:"none", color:th.appFaded, cursor:"pointer", fontSize:14, padding:0 }}>×</button>}
+        </div>
+      </div>
+
+      {/* Lista ingredienti/aggregati */}
+      <div style={{ flex:1, overflowY:"auto", padding:"10px 18px 40px" }}>
+        {visibleAggs.length > 0 && (
+          <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.2, color:th.appAccent, textTransform:"uppercase", fontWeight:700, margin:"2px 0 7px" }}>Aggregati</div>
+        )}
+        {visibleAggs.map(agg => (
+          <ItemCard key={"agg_"+agg.id} name={normName(agg.name)} display={agg.name} isAgg agg={agg}/>
+        ))}
+        {visibleIngs.length > 0 && (
+          <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.2, color:th.appFaded, textTransform:"uppercase", fontWeight:700, margin:"10px 0 7px" }}>Ingredienti</div>
+        )}
+        {visibleIngs.map(({ name, display }) => (
+          <ItemCard key={name} name={name} display={display} isAgg={false}/>
+        ))}
+        {visibleAggs.length === 0 && visibleIngs.length === 0 && (
+          <div style={{ textAlign:"center", padding:"30px 0", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>Nessun risultato</div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN: LISTA SPESA — ingredienti aggregati da più ricette
+// ══════════════════════════════════════════════════════════════
+const ShoppingListScreen = ({
+  entries, onRemoveEntry, onRemoveRecipe, onRemoveItem, onClearAll, aggregates = [],
+  equivalences = {}, ingredientDict = null,
+  onLanding, onRecipes, onBook, onMemories, onAdd, onFridge,
+  onShopping = () => {},
+}) => {
+  const th = useTheme();
+  const navActions = useNavActions();
+  const [copied, setCopied] = useState(false);
+
+  // ── Aggrega gli ingredienti di tutte le entry ──
+  // Raggruppa per (nome pulito + unità); somma le quantità quando possibile.
+  const aggregated = React.useMemo(() => {
+    // Se un ingrediente appartiene a un aggregato, la voce si raggruppa sotto
+    // il nome dell'aggregato (es. "Zucchero" per bianco + di canna) e ogni
+    // riga di dettaglio indica il sotto-ingrediente e la ricetta.
+    const dictIdx = ingredientDict ? ingDictIndex(ingredientDict) : null;
+    const findAggregate = (ingId) =>
+      aggregates.find(a => (a.members || []).includes(ingId));
+
+    const map = new Map(); // key → { display, unit, total, hasNumbers, isAggregate, parts:[{recipe, amount, member}] }
+    // Unità normalizzata (plurali → singolare) per raggruppare ed equivalenze
+    entries.forEach(entry => {
+      entry.items.forEach(it => {
+        // it = { name, qty (già scalata), unit, note? } — nessun parsing necessario
+        const clean = normName(it.name);
+        const ingId = resolveIngId(dictIdx, clean); // ID dizionario per aggregati/equivalenze
+        const displayName = (it.name || "").trim();
+        let qty = it.qty;
+        let unit = normUnit(it.unit);
+        if (unit === "q.b.") unit = "";
+        // Testo originale per il dettaglio
+        const rawAmount = qty != null
+          ? `${fmtQty(qty)}${it.unit && it.unit !== "q.b." ? " " + it.unit : ""}`.trim()
+          : (it.unit === "q.b." ? "q.b." : "—");
+        // ── Equivalenze: converti nell'unità di visualizzazione scelta ──
+        const eq = equivalences[ingId];
+        if (qty != null && eq && eq.display && eq.display !== "separate") {
+          const fOf = (u) => u === eq.base ? 1 : (eq.factors && eq.factors[u] > 0 ? eq.factors[u] : null);
+          const fIn = fOf(unit), fOut = fOf(eq.display);
+          if (fIn && fOut) {
+            qty = qty * fIn / fOut;
+            unit = eq.display;
+          }
+        }
+        const agg = findAggregate(ingId);
+        const groupName = agg ? agg.name : displayName;
+        const key = (agg ? "agg_" + agg.id : "ing_" + clean) + "|" + (qty != null ? unit : "");
+        if (!map.has(key)) {
+          map.set(key, {
+            display: groupName.charAt(0).toUpperCase() + groupName.slice(1),
+            unit, total: 0, hasNumbers: false, isAggregate: !!agg, parts: [],
+          });
+        }
+        const g = map.get(key);
+        const member = agg ? displayName.toLowerCase() : null;
+        const partRef = { recipe: entry.recipeTitle, amount: rawAmount, member, entryId: entry.id, ingName: it.name };
+        if (qty != null) {
+          g.total += qty;
+          g.hasNumbers = true;
+          g.parts.push(partRef);
+        } else {
+          g.parts.push(partRef);
+        }
+      });
+    });
+    return Array.from(map.values()).sort((a,b) => a.display.localeCompare(b.display, "it"));
+  }, [entries, aggregates, equivalences]);
+
+  const copyAll = () => {
+    const lines = aggregated.map(g => {
+      const unitTxt = g.unit ? (["g","kg","ml","l","cl","dl"].includes(g.unit) ? g.unit : " " + unitLabel(g.unit)) : "";
+      const tot = g.hasNumbers ? ` ${String(Math.round(g.total*100)/100).replace(".",",")}${unitTxt}` : "";
+      const detail = g.parts.length > 1
+        ? ` (${g.parts.map(p => `${p.amount}${p.member ? " di " + p.member : ""} per ${p.recipe}`).join(", ")})`
+        : g.parts[0]?.member ? ` (${g.parts[0].member} per ${g.parts[0].recipe})` : "";
+      return `• ${g.display}${tot}${detail}`;
+    });
+    const full = `🛒 Lista della spesa\n\n${lines.join("\n")}`;
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(full).catch(()=>{});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const nav = (
+    <GlobalNav
+      activeScreen="shopping"
+      onRecipes={onRecipes}
+      onBook={onBook}
+      onMemories={onMemories}
+      onAdd={onAdd}
+      onFridge={onFridge}
+      onShopping={onShopping}
+      onLanding={onLanding}
+      onSearch={() => {}}
+      onFavorites={() => {}}
+      showSearch={false}
+      showFavorites={false}
+      activeLabel="Lista Spesa"
+    />
+  );
+
+  // ── Organizza ingredienti (stessa schermata di Svuota Frigo) ──
+  return (
+    <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+      {nav}
+
+      <div style={{ padding:"14px 20px 6px", display:"flex", alignItems:"flex-start", gap:10 }}>
+        <div style={{ flex:1 }}>
+          <div style={{ fontFamily:F.display, fontSize:22, color:th.appInk }}>🛒 Lista Spesa</div>
+          <div style={{ fontFamily:F.ui, fontSize:12, color:th.appFaded, marginTop:3 }}>
+            {entries.length === 0 ? "vuota" : `da ${entries.length} ricett${entries.length===1?"a":"e"}`}
+          </div>
+        </div>
+        {entries.length > 0 && (
+          <button onClick={onClearAll} style={{
+            background:"transparent", border:`1.5px solid #C4593A`, borderRadius:10,
+            padding:"7px 12px", cursor:"pointer", color:"#C4593A",
+            fontFamily:F.ui, fontSize:11, fontWeight:600, flexShrink:0,
+          }}>🗑 Svuota</button>
+        )}
+      </div>
+
+      {/* Suggerimento tappabile: apre Organizza */}
+      <button onClick={() => navActions.onOrganize && navActions.onOrganize()} style={{ display:"block", width:"calc(100% - 36px)", textAlign:"left", margin:"4px 18px 0", padding:"8px 12px", background:th.appCard, border:`1px dashed ${th.appBorder}`, borderRadius:10, cursor:"pointer" }}>
+        <span style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, lineHeight:1.5 }}>
+          💡 Aggregazioni e conversioni si basano sulla sezione <b>🍎 Organizza</b> → <span style={{ color:th.appAccent, fontWeight:700 }}>tocca qui per aprirla</span>.
+        </span>
+      </button>
+
+      {entries.length === 0 ? (
+        <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"0 40px", textAlign:"center" }}>
+          <div style={{ fontSize:48, marginBottom:12 }}>🛒</div>
+          <div style={{ fontFamily:F.display, fontSize:17, color:th.appInk, fontStyle:"italic", marginBottom:6 }}>La lista è vuota</div>
+          <div style={{ fontFamily:F.ui, fontSize:12, color:th.appFaded, lineHeight:1.5 }}>
+            Apri una ricetta, tocca 🛒 Spesa e aggiungi gli ingredienti che ti servono.
+          </div>
+        </div>
+      ) : (
+        <div style={{ flex:1, overflowY:"auto", padding:"8px 18px 110px" }}>
+          {/* Ingredienti aggregati */}
+          {aggregated.map((g, i) => (
+            <div key={i} style={{
+              background:th.appCard, border:`1px solid ${th.appBorder}`,
+              borderRadius:12, padding:"11px 14px", marginBottom:8,
+            }}>
+              <div style={{ display:"flex", alignItems:"baseline", gap:8 }}>
+                <span style={{ fontFamily:F.body, fontSize:14, color:th.appInk, fontWeight:600, flex:1 }}>{g.display}</span>
+                {g.hasNumbers && (
+                  <span style={{ fontFamily:F.display, fontSize:15, color:th.appAccent, fontWeight:700 }}>
+                    {String(Math.round(g.total*100)/100).replace(".",",")}{g.unit && !UNIT_ALIASES[g.unit] ? g.unit : g.unit ? (["g","kg","ml","l","cl","dl"].includes(g.unit) ? g.unit : " " + unitLabel(g.unit)) : ""}
+                  </span>
+                )}
+                {g.parts.length === 1 && (
+                  <button onClick={() => onRemoveItem && onRemoveItem(g.parts[0].entryId, g.parts[0].ingName)} title="Rimuovi dalla lista" style={{
+                    background:"none", border:"none", color:th.appFaded, cursor:"pointer",
+                    fontSize:17, lineHeight:1, padding:"0 2px", flexShrink:0,
+                  }}>×</button>
+                )}
+              </div>
+              {g.parts.length > 1 ? (
+                <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:4, lineHeight:1.7 }}>
+                  {g.parts.map((p, j) => (
+                    <div key={j} style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <span style={{ flex:1 }}>{p.amount}{p.member ? <> di <b>{p.member}</b></> : null} per <i>{p.recipe}</i></span>
+                      <button onClick={() => onRemoveItem && onRemoveItem(p.entryId, p.ingName)} title="Rimuovi questo" style={{
+                        background:"none", border:"none", color:th.appFaded, cursor:"pointer",
+                        fontSize:14, lineHeight:1, padding:"0 2px", flexShrink:0,
+                      }}>×</button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:3 }}>
+                  {g.parts[0].member ? <><b>{g.parts[0].member}</b> · </> : (!g.hasNumbers && g.parts[0].amount !== "q.b." ? g.parts[0].amount + " · " : null)}per <i>{g.parts[0].recipe}</i>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* Ricette attive nella lista — rimozione in un clic di tutti gli ingredienti */}
+          <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appFaded, textTransform:"uppercase", margin:"16px 0 8px", fontWeight:700 }}>
+            Ricette attive
+          </div>
+          {(() => {
+            // Raggruppa le entry per ricetta (più aggiunte della stessa ricetta = una riga)
+            const byRecipe = [];
+            const idx = {};
+            entries.forEach(entry => {
+              if (idx[entry.recipeId] == null) { idx[entry.recipeId] = byRecipe.length; byRecipe.push({ recipeId: entry.recipeId, title: entry.recipeTitle, count: 0, labels: [] }); }
+              const g = byRecipe[idx[entry.recipeId]];
+              g.count += entry.items.length;
+              if (!g.labels.includes(entry.scaleLabel)) g.labels.push(entry.scaleLabel);
+            });
+            return byRecipe.map(g => (
+              <div key={g.recipeId} style={{
+                background:`${th.appBorder}44`, border:`1px solid ${th.appBorder}`,
+                borderRadius:12, padding:"10px 12px", marginBottom:6,
+                display:"flex", alignItems:"center", gap:10,
+              }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontFamily:F.body, fontSize:13, color:th.appInk, fontWeight:600 }}>{g.title}</div>
+                  <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded }}>{g.count} ingredienti · {g.labels.join(" + ")}</div>
+                </div>
+                <button onClick={() => onRemoveRecipe(g.recipeId)} title={`Rimuovi tutti gli ingredienti di ${g.title}`} style={{
+                  background:"none", border:`1px solid #C4593A`, color:"#C4593A",
+                  fontFamily:F.ui, fontSize:10.5, fontWeight:700, cursor:"pointer",
+                  flexShrink:0, padding:"6px 10px", borderRadius:9, display:"flex", alignItems:"center", gap:5,
+                }}>🗑 Rimuovi</button>
+              </div>
+            ));
+          })()}
+        </div>
+      )}
+
+      {/* Copia tutto */}
+      {entries.length > 0 && (
+        <div style={{ position:"absolute", bottom:0, left:0, right:0, padding:"14px 18px 22px", background:`linear-gradient(transparent, ${th.appBg} 30%)` }}>
+          <button onClick={copyAll} style={{
+            width:"100%", padding:"15px",
+            background: copied ? "#6B8C6E" : th.appAccent,
+            color:"#fff", border:"none", borderRadius:14,
+            fontFamily:F.ui, fontSize:14, fontWeight:700, cursor:"pointer",
+            transition:"background 0.2s",
+          }}>
+            {copied ? "✓ Copiato negli appunti!" : "📋 Copia tutto negli appunti"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN: I MIEI RICETTARI — selezione, membri, trasferimento, codici
+// ══════════════════════════════════════════════════════════════
+const BooksScreen = ({
+  books, activeBookId, me, activeRecipes,
+  onSwitch, onCreate, onRename, onAddMember, onRemoveMember,
+  onCopyRecipes, onExportCode, onImportCode,
+  defaultBookId, onSetDefault,
+  onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping,
+}) => {
+  const th = useTheme();
+  const [phase, setPhase] = useState("list"); // "list" | "transfer"
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newEmails, setNewEmails] = useState("");
+  const [renaming, setRenaming] = useState(null); // book id
+  const [renameVal, setRenameVal] = useState("");
+  const [memberInput, setMemberInput] = useState({}); // bookId → email
+  const [importOpen, setImportOpen] = useState(false);
+  const [importVal, setImportVal] = useState("");
+  const [importMsg, setImportMsg] = useState(null);
+  // transfer phase
+  const [selIds, setSelIds] = useState([]);
+  const [shareCode, setShareCode] = useState(null);
+  const [copiedMsg, setCopiedMsg] = useState(null);
+
+  const activeBook = books.find(b => b.id === activeBookId);
+  const otherBooks = books.filter(b => b.id !== activeBookId);
+
+  const nav = (
+    <GlobalNav
+      activeScreen="books"
+      onRecipes={onRecipes}
+      onBook={onBook}
+      onMemories={onMemories}
+      onAdd={onAdd}
+      onFridge={onFridge}
+      onShopping={onShopping}
+      onLanding={onLanding}
+      onSearch={() => {}}
+      onFavorites={() => {}}
+      showSearch={false}
+      showFavorites={false}
+      activeLabel="I miei Ricettari"
+    />
+  );
+
+  // ══ FASE TRASFERIMENTO / CONDIVISIONE ══
+  if (phase === "transfer") {
+    const toggle = (id) => setSelIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    return (
+      <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+        {nav}
+        <div style={{ padding:"12px 20px 6px", display:"flex", alignItems:"center", gap:10 }}>
+          <button onClick={() => { setPhase("list"); setSelIds([]); setShareCode(null); }} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
+          <div style={{ flex:1 }}>
+            <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>Esporta ricette</div>
+            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>da: {activeBook?.name}</div>
+          </div>
+        </div>
+
+        {shareCode ? (
+          <div style={{ flex:1, overflowY:"auto", padding:"12px 20px 40px" }}>
+            <div style={{ fontFamily:F.ui, fontSize:12, color:th.appInk, marginBottom:10, lineHeight:1.5 }}>
+              🔗 <b>Codice di condivisione</b> per {selIds.length} ricett{selIds.length===1?"a":"e"}. Invialo a chi vuoi (WhatsApp, email…): dal suo ricettario potrà importarle con "Importa da codice".
+            </div>
+            <textarea
+              readOnly
+              value={shareCode}
+              onClick={e => e.target.select()}
+              style={{ width:"100%", height:140, padding:"10px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:12, background:th.appCard, fontFamily:"monospace", fontSize:10, color:th.appInk, boxSizing:"border-box", resize:"none" }}
+            />
+            <button onClick={() => {
+              if (navigator.clipboard?.writeText) navigator.clipboard.writeText(shareCode).catch(()=>{});
+              setCopiedMsg("✓ Codice copiato!");
+              setTimeout(() => setCopiedMsg(null), 2000);
+            }} style={{ width:"100%", marginTop:10, padding:"13px", border:"none", borderRadius:12, background: copiedMsg ? "#6B8C6E" : th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:13, fontWeight:700, cursor:"pointer" }}>
+              {copiedMsg || "📋 Copia codice"}
+            </button>
+            <button onClick={() => setShareCode(null)} style={{ width:"100%", marginTop:8, padding:"11px", border:`1.5px solid ${th.appBorder}`, borderRadius:12, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:12, cursor:"pointer" }}>‹ Torna alla selezione</button>
+          </div>
+        ) : (
+          <>
+            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, padding:"4px 20px 8px" }}>
+              Seleziona una o più ricette, poi scegli dove copiarle.
+            </div>
+            <div style={{ flex:1, overflowY:"auto", padding:"0 18px 150px" }}>
+              {activeRecipes.map(r => {
+                const on = selIds.includes(r.id);
+                return (
+                  <button key={r.id} onClick={() => toggle(r.id)} style={{
+                    width:"100%", display:"flex", alignItems:"center", gap:10,
+                    background:th.appCard, border:`1.5px solid ${on ? th.appAccent : th.appBorder}`,
+                    borderRadius:12, padding:"10px 12px", marginBottom:7, cursor:"pointer", textAlign:"left",
+                  }}>
+                    <div style={{
+                      width:20, height:20, borderRadius:6, flexShrink:0,
+                      border:`1.5px solid ${on ? th.appAccent : th.appBorder}`,
+                      background: on ? th.appAccent : "transparent",
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      color:"#fff", fontSize:12,
+                    }}>{on && "✓"}</div>
+                    <div style={{ width:34, height:34, borderRadius:9, background:r.color, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", fontSize:17 }}>{r.emoji}</div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontFamily:F.display, fontSize:14, color:th.appInk, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.title}</div>
+                      <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded }}>{r.category}</div>
+                    </div>
+                  </button>
+                );
+              })}
+              {activeRecipes.length === 0 && (
+                <div style={{ textAlign:"center", padding:"30px 0", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>Nessuna ricetta in questo ricettario</div>
+              )}
+            </div>
+
+            {/* Azioni fisse in basso */}
+            <div style={{ position:"absolute", bottom:0, left:0, right:0, padding:"12px 18px 20px", background:`linear-gradient(transparent, ${th.appBg} 25%)` }}>
+              {copiedMsg && (
+                <div style={{ textAlign:"center", fontFamily:F.ui, fontSize:12, color:"#6B8C6E", fontWeight:700, marginBottom:8 }}>{copiedMsg}</div>
+              )}
+              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:6 }}>
+                Copia in un altro tuo ricettario
+              </div>
+              <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:10 }}>
+                {otherBooks.map(b => (
+                  <button key={b.id} disabled={selIds.length===0} onClick={() => {
+                    onCopyRecipes(b.id, selIds);
+                    setCopiedMsg(`✓ ${selIds.length} ricett${selIds.length===1?"a copiata":"e copiate"} in "${b.name}"`);
+                    setSelIds([]);
+                    setTimeout(() => setCopiedMsg(null), 2500);
+                  }} style={{
+                    padding:"9px 13px", borderRadius:11, border:"none",
+                    background: selIds.length===0 ? th.appBorder : th.appAccent,
+                    color: selIds.length===0 ? th.appFaded : "#fff",
+                    fontFamily:F.ui, fontSize:12, fontWeight:700,
+                    cursor: selIds.length===0 ? "default" : "pointer",
+                  }}>📚 {b.name}</button>
+                ))}
+                {otherBooks.length === 0 && (
+                  <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>crea prima un altro ricettario</div>
+                )}
+              </div>
+              <button disabled={selIds.length===0} onClick={() => setShareCode(onExportCode(selIds))} style={{
+                width:"100%", padding:"13px", borderRadius:12,
+                border:`1.5px solid ${selIds.length===0 ? th.appBorder : th.appInk}`,
+                background:"transparent",
+                color: selIds.length===0 ? th.appFaded : th.appInk,
+                fontFamily:F.ui, fontSize:13, fontWeight:700,
+                cursor: selIds.length===0 ? "default" : "pointer",
+              }}>🔗 Genera codice per esterni ({selIds.length})</button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // ══ FASE LISTA RICETTARI ══
+  return (
+    <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+      {nav}
+      <div style={{ padding:"14px 20px 6px" }}>
+        <div style={{ fontFamily:F.display, fontSize:22, color:th.appInk }}>📚 I miei Ricettari</div>
+        <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginTop:3 }}>
+          account: {me} <span style={{ opacity:0.6 }}>(simulato — arriverà dal login Google)</span>
+        </div>
+      </div>
+
+      <div style={{ flex:1, overflowY:"auto", padding:"10px 18px 40px" }}>
+        {books.map(b => {
+          const active = b.id === activeBookId;
+          const isRen = renaming === b.id;
+          return (
+            <div key={b.id} style={{
+              background:th.appCard,
+              border:`1.5px solid ${active ? th.appAccent : th.appBorder}`,
+              borderRadius:14, padding:"12px 14px", marginBottom:10,
+            }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:20 }}>{b.type === "personale" ? "🔒" : "👥"}</span>
+                {isRen ? (
+                  <input
+                    value={renameVal}
+                    autoFocus
+                    onChange={e => setRenameVal(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") { onRename(b.id, renameVal.trim() || b.name); setRenaming(null); } if (e.key === "Escape") setRenaming(null); }}
+                    style={{ flex:1, padding:"7px 10px", border:`1.5px solid ${th.appAccent}`, borderRadius:9, background:th.appBg, fontFamily:F.display, fontSize:15, color:th.appInk, outline:"none", minWidth:0 }}
+                  />
+                ) : (
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontFamily:F.display, fontSize:16, color:th.appInk }}>{b.name}</div>
+                    <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded }}>
+                      {b.type === "personale" ? "personale" : `condiviso · ${b.members.length} membri`}
+                      {active && <span style={{ color:th.appAccent, fontWeight:700 }}> · attivo</span>}
+                    </div>
+                  </div>
+                )}
+                {isRen ? (
+                  <button onClick={() => { onRename(b.id, renameVal.trim() || b.name); setRenaming(null); }} style={{ background:th.appAccent, border:"none", borderRadius:9, padding:"7px 11px", color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0 }}>✓</button>
+                ) : (
+                  <button onClick={() => { setRenaming(b.id); setRenameVal(b.name); }} title="Rinomina" style={{ background:"none", border:"none", fontSize:15, cursor:"pointer", color:th.appFaded, flexShrink:0, padding:"4px 6px" }}>✏️</button>
+                )}
+                {!active && !isRen && (
+                  <button onClick={() => onSwitch(b.id)} style={{ background:th.appInk, border:"none", borderRadius:9, padding:"8px 13px", color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0 }}>Apri</button>
+                )}
+              </div>
+
+              {/* Predefinito all'avvio */}
+              <button
+                onClick={() => b.id !== defaultBookId && onSetDefault(b.id)}
+                style={{
+                  marginTop:8, background:"none", border:"none",
+                  cursor: b.id === defaultBookId ? "default" : "pointer",
+                  fontFamily:F.ui, fontSize:10.5, padding:0,
+                  color: b.id === defaultBookId ? th.appAccent : th.appFaded,
+                  display:"flex", alignItems:"center", gap:4,
+                }}
+              >
+                {b.id === defaultBookId
+                  ? <><span>⭐</span> Predefinito all'avvio dell'app</>
+                  : <><span style={{ opacity:0.5 }}>☆</span> <span style={{ textDecoration:"underline", textUnderlineOffset:2 }}>Imposta come predefinito all'avvio</span></>}
+              </button>
+
+              {/* Membri (solo condivisi) */}
+              {b.type === "condiviso" && (
+                <div style={{ marginTop:10, paddingTop:10, borderTop:`1px dashed ${th.appBorder}` }}>
+                  <div style={{ fontFamily:F.ui, fontSize:9, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:6 }}>Membri (sincronizzati)</div>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginBottom:8 }}>
+                    {b.members.map(m => (
+                      <span key={m} style={{ display:"flex", alignItems:"center", gap:4, fontFamily:F.ui, fontSize:10.5, color:th.appInk, background:th.appBg, border:`1px solid ${th.appBorder}`, borderRadius:14, padding:"4px 9px" }}>
+                        {m}{m === b.owner && " 👑"}
+                        {m !== b.owner && (
+                          <button onClick={() => onRemoveMember(b.id, m)} style={{ background:"none", border:"none", color:"#C4593A", cursor:"pointer", fontSize:12, padding:0 }}>×</button>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                  <div style={{ display:"flex", gap:6 }}>
+                    <input
+                      value={memberInput[b.id] || ""}
+                      onChange={e => setMemberInput(p => ({ ...p, [b.id]: e.target.value }))}
+                      onKeyDown={e => { if (e.key === "Enter") { onAddMember(b.id, memberInput[b.id] || ""); setMemberInput(p => ({ ...p, [b.id]: "" })); } }}
+                      placeholder="email@esempio.it"
+                      style={{ flex:1, padding:"8px 11px", border:`1.5px solid ${th.appBorder}`, borderRadius:9, background:th.appBg, fontFamily:F.body, fontSize:12, color:th.appInk, outline:"none", minWidth:0 }}
+                    />
+                    <button onClick={() => { onAddMember(b.id, memberInput[b.id] || ""); setMemberInput(p => ({ ...p, [b.id]: "" })); }} style={{ background:th.appAccent, border:"none", borderRadius:9, padding:"8px 12px", color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer", flexShrink:0 }}>＋ Invita</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Crea nuovo condiviso */}
+        {creating ? (
+          <div style={{ background:th.appCard, border:`1.5px dashed ${th.appAccent}`, borderRadius:14, padding:"12px 14px", marginBottom:10 }}>
+            <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:6 }}>Nuovo ricettario condiviso</div>
+            <input
+              value={newName}
+              autoFocus
+              onChange={e => setNewName(e.target.value)}
+              placeholder="Nome (es. Ricette di famiglia)"
+              style={{ width:"100%", padding:"9px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appBg, fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none", boxSizing:"border-box", marginBottom:8 }}
+            />
+            <input
+              value={newEmails}
+              onChange={e => setNewEmails(e.target.value)}
+              placeholder="Email membri, separate da virgola (opzionale)"
+              style={{ width:"100%", padding:"9px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appBg, fontFamily:F.body, fontSize:12, color:th.appInk, outline:"none", boxSizing:"border-box", marginBottom:10 }}
+            />
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={() => { setCreating(false); setNewName(""); setNewEmails(""); }} style={{ flex:1, padding:"11px", border:`1.5px solid ${th.appBorder}`, borderRadius:11, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:12, cursor:"pointer" }}>Annulla</button>
+              <button onClick={() => {
+                onCreate(newName, newEmails.split(",").map(s => s.trim().toLowerCase()).filter(Boolean));
+                setCreating(false); setNewName(""); setNewEmails("");
+              }} disabled={!newName.trim()} style={{ flex:2, padding:"11px", border:"none", borderRadius:11, background: newName.trim() ? th.appAccent : th.appBorder, color: newName.trim() ? "#fff" : th.appFaded, fontFamily:F.ui, fontSize:12, fontWeight:700, cursor: newName.trim() ? "pointer" : "default" }}>Crea ricettario</button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setCreating(true)} style={{
+            width:"100%", padding:"13px", borderRadius:14,
+            border:`1.5px dashed ${th.appBorder}`, background:"transparent",
+            color:th.appFaded, fontFamily:F.ui, fontSize:13, fontWeight:600, cursor:"pointer", marginBottom:10,
+          }}>＋ Nuovo ricettario condiviso</button>
+        )}
+
+        {/* Azioni: trasferisci / importa */}
+        <div style={{ marginTop:14, paddingTop:14, borderTop:`1px solid ${th.appBorder}` }}>
+          <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appFaded, textTransform:"uppercase", marginBottom:8, fontWeight:700 }}>Condivisione ricette</div>
+          <button onClick={() => setPhase("transfer")} style={{
+            width:"100%", padding:"13px", borderRadius:12, border:"none",
+            background:th.appAccent, color:"#fff",
+            fontFamily:F.ui, fontSize:13, fontWeight:700, cursor:"pointer", marginBottom:8,
+          }}>📤 Esporta ricette da "{activeBook?.name}"</button>
+
+          {importOpen ? (
+            <div style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:12, padding:"12px" }}>
+              <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginBottom:8 }}>
+                Incolla il codice ricevuto: le ricette verranno copiate in "{activeBook?.name}".
+              </div>
+              <textarea
+                value={importVal}
+                onChange={e => setImportVal(e.target.value)}
+                placeholder="Incolla qui il codice…"
+                style={{ width:"100%", height:80, padding:"9px 11px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appBg, fontFamily:"monospace", fontSize:10, color:th.appInk, boxSizing:"border-box", resize:"none", marginBottom:8 }}
+              />
+              {importMsg && (
+                <div style={{ fontFamily:F.ui, fontSize:11.5, fontWeight:700, color: importMsg.ok ? "#6B8C6E" : "#C4593A", marginBottom:8 }}>
+                  {importMsg.ok ? `✓ ${importMsg.count} ricett${importMsg.count===1?"a importata":"e importate"}!` : "⚠ Codice non valido"}
+                </div>
+              )}
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={() => { setImportOpen(false); setImportVal(""); setImportMsg(null); }} style={{ flex:1, padding:"10px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:12, cursor:"pointer" }}>Chiudi</button>
+                <button onClick={() => {
+                  const res = onImportCode(importVal);
+                  setImportMsg(res);
+                  if (res.ok) setImportVal("");
+                }} disabled={!importVal.trim()} style={{ flex:2, padding:"10px", border:"none", borderRadius:10, background: importVal.trim() ? th.appInk : th.appBorder, color: importVal.trim() ? "#fff" : th.appFaded, fontFamily:F.ui, fontSize:12, fontWeight:700, cursor: importVal.trim() ? "pointer" : "default" }}>Importa</button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setImportOpen(true)} style={{
+              width:"100%", padding:"13px", borderRadius:12,
+              border:`1.5px solid ${th.appInk}`, background:"transparent",
+              color:th.appInk, fontFamily:F.ui, fontSize:13, fontWeight:700, cursor:"pointer",
+            }}>📥 Importa da codice</button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN: LANDING — choose what to do
+// ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// GUIDA IN-APP — stessa struttura del manuale utente
+// ══════════════════════════════════════════════════════════════
+const GuideScreen = ({ onBack }) => {
+  const th = useTheme();
+  const [open, setOpen] = useState("idea"); // capitolo espanso (il primo, all'apertura)
+
+  const Chapter = ({ id, icon, title, children }) => {
+    const isOpen = open === id;
+    return (
+      <div style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:13, marginBottom:8, overflow:"hidden" }}>
+        <button onClick={() => setOpen(isOpen ? null : id)} style={{
+          width:"100%", display:"flex", alignItems:"center", gap:10, padding:"13px 14px",
+          background:"none", border:"none", cursor:"pointer", textAlign:"left",
+        }}>
+          <span style={{ fontSize:18 }}>{icon}</span>
+          <span style={{ flex:1, fontFamily:F.ui, fontSize:13, fontWeight:700, color:th.appInk }}>
+            {title}
+          </span>
+          <span style={{ color:th.appFaded, fontSize:12 }}>{isOpen ? "▴" : "▾"}</span>
+        </button>
+        {isOpen && (
+          <div style={{ padding:"0 15px 15px", fontFamily:F.body, fontSize:12.5, color:th.appInk, lineHeight:1.65 }}>
+            {children}
+          </div>
+        )}
+      </div>
+    );
+  };
+  const Key = ({ children }) => (
+    <div style={{ background:"#faf5e6", borderLeft:"3px solid #b8973a", borderRadius:7, padding:"9px 11px", margin:"10px 0", fontSize:11.5, color:"#6f5c25", lineHeight:1.55 }}>{children}</div>
+  );
+  const Tip = ({ children }) => (
+    <div style={{ background:"#eef3ee", borderLeft:"3px solid #6b8c6e", borderRadius:7, padding:"9px 11px", margin:"10px 0", fontSize:11.5, color:"#41603f", lineHeight:1.55 }}>{children}</div>
+  );
+
+  return (
+    <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+      <div style={{ padding:"12px 18px 6px", display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
+        <button onClick={onBack} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
+        <div style={{ flex:1 }}>
+          <div style={{ fontFamily:F.display, fontSize:17, color:th.appInk }}>Guida</div>
+          <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded }}>come funziona l'app</div>
+        </div>
+      </div>
+
+      <div style={{ flex:1, overflowY:"auto", padding:"8px 16px 36px" }}>
+
+        <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.1, color:th.appAccent, fontWeight:700, textTransform:"uppercase", margin:"2px 0 7px" }}>Come funziona</div>
+
+        <Chapter id="idea" icon="💡" title="L'idea in un minuto">
+          <p style={{margin:"6px 0"}}>Questa è la vostra cucina digitale condivisa: le ricette di famiglia, cosa comprare, cosa cucinare con quello che avete in casa, quante calorie ha un piatto — e i ricordi legati ai piatti che fate.</p>
+          <p style={{margin:"6px 0"}}>La parte speciale: <b>le sezioni non sono scollegate</b>. Se scrivi bene una ricetta e compili le impostazioni, l'app usa quelle informazioni ovunque, senza che tu ripeta niente.</p>
+          <Key>🔑 <b>La regola d'oro:</b> più curi le ricette e la sezione Organizza, più l'app diventa intelligente. Insegni una volta, raccogli i frutti sempre.</Key>
+          <Tip>💡 Non serve capire tutto subito: parti dalle ricette, il resto lo aggiungi quando ti serve.</Tip>
+        </Chapter>
+
+        <Chapter id="mappa" icon="🗺️" title="Come tutto si collega">
+          <p style={{margin:"6px 0"}}>Una ricetta nasce in <b>tre modi</b>: la scrivi a mano ✏️, la fotografi 📷, o scegli una foto dalla galleria 🗃️. In tutti i casi finisce nello stesso posto.</p>
+          <div style={{ background:th.appBg, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"12px 10px", margin:"10px 0", textAlign:"center", fontFamily:F.ui, fontSize:11, lineHeight:1.9 }}>
+            <div style={{ color:th.appFaded, fontSize:9.5 }}>✏️ a mano · 📷 foto · 🗃️ galleria</div>
+            <div style={{ color:th.appFaded }}>↓</div>
+            <div style={{ fontWeight:700, color:th.appAccent, fontSize:12.5 }}>📖 LA RICETTA</div>
+            <div style={{ color:th.appFaded, fontSize:9.5 }}>↓ i suoi ingredienti alimentano ↓</div>
+            <div style={{ fontWeight:700, color:th.appInk }}>🧊 Frigo · 🛒 Spesa · 🍎 Nutrizione</div>
+            <div style={{ color:"#b8973a", fontStyle:"italic", fontSize:9.5 }}>↑ le regole arrivano a tutte e tre ↑</div>
+            <div style={{ fontWeight:700, color:"#b8973a" }}>🍎⚙️ ORGANIZZA</div>
+          </div>
+          <p style={{margin:"6px 0"}}><b>Dall'alto:</b> gli ingredienti che scrivi in una ricetta alimentano da soli Frigo, Spesa e Nutrizione. Non li reinserisci mai.</p>
+          <p style={{margin:"6px 0"}}><b>Dal basso:</b> le regole che imposti in <b>Organizza</b> (conversioni, categorie, collegamenti) arrivano a tutte e tre. Le definisci una volta, valgono sempre.</p>
+          <p style={{margin:"6px 0"}}>Quando è ora di cucinare, la stessa ricetta si apre in <b>Modalità Cucina</b>: lì il lavoro delle altre sezioni diventa un piatto in tavola.</p>
+          <Key>🔑 <b>Esempio:</b> in Organizza dici una volta che «1 cucchiaio di farina = 10 g». Da allora la Spesa somma bene anche se una ricetta usa cucchiai e un'altra grammi, e la Nutrizione sa quanti grammi contare.</Key>
+          <Tip>💡 Se salti Organizza l'app funziona lo stesso, ma "alla cieca": non unisce cipolla bianca e rossa nella spesa, non calcola le calorie di ciò che non è collegato.</Tip>
+        </Chapter>
+
+        <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.1, color:th.appAccent, fontWeight:700, textTransform:"uppercase", margin:"16px 0 7px" }}>Cosa ci metti dentro</div>
+
+        <Chapter id="ricette" icon="📖" title="Le ricette">
+          <p style={{margin:"6px 0"}}>In <b>Libro Ricette</b> tocca <b>＋ Nuova ricetta</b> in alto. Puoi scriverla a mano, fotografare una pagina di ricettario, o scegliere una foto dalla galleria: negli ultimi due casi l'app legge il testo e ti porta allo <b>stesso form già compilato</b>, così controlli e correggi prima di salvare.</p>
+          <p style={{margin:"6px 0"}}>Scrivi bene nome, quantità e unità di ogni ingrediente (es. <i>Farina — 100 — g</i>): sono la base per spesa, dosi e calorie.</p>
+          <p style={{margin:"6px 0"}}><b>Trovare una ricetta:</b> la ricerca 🔍 è sempre in alto; le pillole filtrano per sezione (Dolci, Salati…) e ⭐ Preferiti. Una ricetta si segna come preferita col ☆ nella sua scheda.</p>
+          <p style={{margin:"6px 0"}}><b>Etichette:</b> puoi assegnare tag (Vegetariano, Feste, Forno…) per ritrovare le ricette per occasione o caratteristica.</p>
+          <Tip>💡 Puoi <b>rinominare</b> un ingrediente in Organizza senza rompere nulla: i suoi collegamenti (calorie, categorie) restano attaccati.</Tip>
+        </Chapter>
+
+        <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.1, color:th.appAccent, fontWeight:700, textTransform:"uppercase", margin:"16px 0 7px" }}>Come la usi ogni giorno</div>
+
+        <Chapter id="cucina" icon="👨‍🍳" title="Modalità Cucina">
+          <p style={{margin:"6px 0"}}>Il momento per cui esiste l'app. Da una ricetta tocca <b>👨‍🍳 Cucina</b>: parte una guida a schermo intero.</p>
+          <p style={{margin:"6px 0"}}><b>1. Prima gli ingredienti</b> — tutto ciò che serve, già nelle dosi che hai scelto: prepari il piano prima di iniziare.</p>
+          <p style={{margin:"6px 0"}}><b>2. Un passo alla volta</b> — solo l'istruzione corrente, grande e leggibile da lontano.</p>
+          <p style={{margin:"6px 0"}}><b>3. Spunti mentre procedi</b> — la barra in alto mostra a che punto sei; toccando un pallino torni a quel passo.</p>
+          <Key>👆 <b>I comandi al tocco</b> (per le mani impegnate):<br/>· metà <b>destra</b> dello schermo → passo <b>successivo</b><br/>· metà <b>sinistra</b> → passo <b>precedente</b><br/>· <b>doppio tocco</b> → segna il passo come fatto ✓ e avanza</Key>
+          <Tip>💡 Usa automaticamente le dosi impostate col Calcolo dosi: niente conti a mente davanti ai fornelli.</Tip>
+        </Chapter>
+
+        <Chapter id="dosi" icon="⚖️" title="Il calcolo dosi">
+          <p style={{margin:"6px 0"}}>Dentro ogni ricetta, il pulsante <b>⚖️ Calcolo dosi</b> ti fa scegliere:</p>
+          <p style={{margin:"6px 0"}}>· <b>Standard</b> — le dosi scritte nella ricetta.</p>
+          <p style={{margin:"6px 0"}}>· <b>Per persone</b> — ricalcola per il numero di commensali (da 16 a 32 porzioni: raddoppia tutto).</p>
+          <p style={{margin:"6px 0"}}>· <b>Per ingrediente</b> — «ho solo 200 g di farina, quanto viene?»: scala tutto di conseguenza.</p>
+          <Key>🔑 La dose scelta viene usata <b>automaticamente</b> dalla Lista Spesa e dalla Modalità Cucina, e le quantità mostrate negli ingredienti sono già ricalcolate. Si azzera a "standard" quando riapri la ricetta.</Key>
+        </Chapter>
+
+        <Chapter id="nutri" icon="🍎" title="I valori nutrizionali">
+          <p style={{margin:"6px 0"}}>Nella scheda ricetta, la tab <b>Nutrizione</b> (accanto a Ingredienti e Preparazione) mostra calorie, carboidrati, proteine e grassi — <b>per porzione</b> o <b>per 100 g</b>.</p>
+          <p style={{margin:"6px 0"}}>Sotto trovi l'elenco degli ingredienti col loro contributo. Ognuno ha una <b>pesatura</b> (0–100%): quanto conta nel calcolo. Es. l'olio per friggere di cui poco resta nel piatto → impostalo al 10%. Si regola con una barra, dal form ingredienti (icona 🍎).</p>
+          <Tip>⚠️ Un ingrediente conta solo se <b>collegato</b> al database alimenti in Organizza. Se manca il collegamento, l'app te lo segnala e non lo conteggia.</Tip>
+        </Chapter>
+
+        <Chapter id="spesa" icon="🛒" title="La Lista Spesa">
+          <p style={{margin:"6px 0"}}>Da una ricetta tocca <b>🛒 Spesa</b>, spunta cosa ti serve e aggiungi alla lista. L'app poi:</p>
+          <p style={{margin:"6px 0"}}>· <b>somma</b> le quantità uguali (100 g + 100 g = 200 g);</p>
+          <p style={{margin:"6px 0"}}>· <b>unisce gli aggregati</b> (cipolla bianca + rossa = cipolla) — regola presa da Organizza;</p>
+          <p style={{margin:"6px 0"}}>· <b>raggruppa per ricetta</b> in fondo, così sai da dove viene ogni cosa.</p>
+          <p style={{margin:"6px 0"}}>Togli un singolo ingrediente con la <b>×</b> accanto alla voce, un'intera ricetta con <b>🗑 Rimuovi</b>, o azzeri tutto con <b>Svuota lista</b>.</p>
+          <Key>🔑 La lista resta <b>collegata</b> alla ricetta: se modifichi una ricetta già in lista, l'app ti chiede se <b>aggiornare</b> le quantità, <b>mantenerle</b> com'erano o <b>toglierla</b> dalla spesa.</Key>
+        </Chapter>
+
+        <Chapter id="frigo" icon="🧊" title="Svuota Frigo">
+          <p style={{margin:"6px 0"}}>Segni cosa hai in casa e l'app confronta con tutte le tue ricette, dicendoti <b>cosa puoi già cucinare</b> e cosa ti manca di poco.</p>
+          <p style={{margin:"6px 0"}}>Gli ingredienti sono ordinati per scaffale (verdure, latticini, dispensa…): quegli scaffali sono le <b>categorie</b> che imposti in Organizza.</p>
+        </Chapter>
+
+        <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.1, color:th.appAccent, fontWeight:700, textTransform:"uppercase", margin:"16px 0 7px" }}>Come la rendi tua</div>
+
+        <Chapter id="organizza" icon="⚙️" title="Organizza">
+          <p style={{margin:"6px 0"}}>Il cervello dell'app: qui stanno le regole che rendono intelligenti tutte le altre sezioni. Due parti: <b>Gestisci database</b> (le quattro impostazioni) e <b>Gestisci ingredienti</b> (la lista con ricerca, dove colleghi e rinomini).</p>
+          <p style={{margin:"6px 0"}}><b>⊕ Aggregati</b> — uniscono ingredienti simili sotto un nome unico («passata» e «pelati» → «pomodoro»). Servono a Spesa e Frigo.</p>
+          <p style={{margin:"6px 0"}}><b>🏷 Categorie</b> — gli scaffali (verdura, latticini…): ordinano Frigo e Spesa.</p>
+          <p style={{margin:"6px 0"}}><b>⚖️ Equivalenze</b> — le conversioni («1 cucchiaio = 10 g», «1 uovo = 60 g»): fanno sommare la Spesa e calcolare la Nutrizione.</p>
+          <p style={{margin:"6px 0"}}><b>🍎 Valori nutrizionali</b> — collegano i tuoi ingredienti al database alimenti (con calorie e macro ufficiali). Puoi anche creare alimenti personalizzati.</p>
+          <Key>🔑 Qui imposti le regole <b>una volta</b> e valgono per <b>ogni ricetta</b>, presente e futura. È l'investimento che ripaga di più.</Key>
+          <Tip>💡 Non serve fare tutto subito: compila man mano che l'app ti segnala cosa manca (le schede con l'avviso rosso, o i suggerimenti 💡 in Frigo e Spesa che ti portano qui).</Tip>
+        </Chapter>
+
+        <Chapter id="ricordi" icon="📸" title="I Ricordi">
+          <p style={{margin:"6px 0"}}>In <b>Libro dei Ricordi</b> leghi <b>foto vere</b> (dal telefono o dalla galleria) e un <b>racconto</b> a una ricetta: «la prima volta che l'abbiamo fatta insieme», una cena speciale. Tocca <b>＋ Nuovo ricordo</b> in alto, scegli la foto, scrivi un titolo breve e — se vuoi — il racconto di com'è andata, poi associa una o più ricette.</p>
+          <p style={{margin:"6px 0"}}>I ricordi sono ordinati come un <b>diario</b>, dal più recente, con intestazioni per periodo (es. "Inverno 2024"). Con l'interruttore <b>▦ / 📖</b> passi dalla vista a schede alla <b>vista libro</b>, che apre i ricordi a piena pagina (due per pagina) con foto grande e racconto. I ricordi compaiono anche nella scheda della ricetta collegata.</p>
+          <div style={{ background:"#fdece8", borderLeft:"3px solid #c4593a", borderRadius:7, padding:"9px 11px", margin:"10px 0", fontSize:11.5, color:"#8f3a29", lineHeight:1.55 }}>
+            ❤️ Se Organizza è il cervello dell'app, questo è il suo cuore: non solo cosa cucinate, ma i momenti attorno al cibo.
+          </div>
+        </Chapter>
+
+        <Chapter id="libri" icon="📚" title="Libri e condivisione">
+          <p style={{margin:"6px 0"}}>Puoi avere <b>più libri</b> (es. "Casa nostra", "Ricette della nonna") e passare dall'uno all'altro: ogni libro ha le sue ricette e le sue impostazioni. Li gestisci dal pulsante <b>📚 libri</b> in Home.</p>
+          <p style={{margin:"10px 0 4px", fontWeight:700, color:th.appAccent}}>Due modi per condividere</p>
+          <p style={{margin:"6px 0"}}><b>1 · Un intero ricettario, sincronizzato 👥</b><br/>Dalla schermata Libri, ogni libro ha la sua lista <b>Membri (sincronizzati)</b>: scrivi l'<b>email</b> della persona e tocca <b>＋ Invita</b>. Da quel momento condividete lo <b>stesso libro</b>: ricette, lista spesa e impostazioni sono in comune, e le modifiche di uno si vedono anche all'altro. È il modo pensato per una coppia o una famiglia. Puoi rimuovere un membro con la <b>×</b> (il proprietario del libro non si può rimuovere).</p>
+          <p style={{margin:"6px 0"}}><b>2 · Solo alcune ricette, come copia 🔗</b><br/>Seleziona le ricette e genera un <b>codice</b>; chi lo riceve (WhatsApp, email…) lo incolla nel suo ricettario con <b>"Importa da codice"</b>. Sono <b>copie indipendenti</b>: restano sue, e le vostre modifiche non si toccano più. Utile per passare una ricetta a un amico.</p>
+          <Key>🔑 In breve: <b>invito email</b> = stesso libro condiviso e sincronizzato · <b>codice</b> = regali una copia delle ricette.</Key>
+          <p style={{margin:"6px 0"}}><b>Esportare (link o PDF):</b> dalla scheda di una ricetta, il tasto 📤 chiede se vuoi esportare <b>solo quella ricetta</b> o <b>sceglierne più di una</b> (con una schermata a spunte e "seleziona tutto il ricettario"). Poi scegli il formato: un <b>link</b> (codice da incollare in un altro ricettario) o un <b>PDF</b> da stampare o inviare.</p>
+          <p style={{margin:"6px 0"}}>Puoi anche <b>copiare ricette</b> da un libro all'altro e scegliere quale libro aprire all'avvio.</p>
+          <Tip>💡 Nel prototipo la sincronizzazione è simulata sul dispositivo. Nella versione finale, con l'account, i libri condivisi si aggiorneranno davvero in tempo reale tra i vostri telefoni.</Tip>
+        </Chapter>
+
+        <Chapter id="aspetto" icon="🎨" title="L'aspetto">
+          <p style={{margin:"6px 0"}}>Dal pulsante <b>🎨 temi</b> in Home cambi i colori e lo stile del ricettario.</p>
+          <p style={{margin:"6px 0"}}>La <b>copertina</b> è la schermata d'apertura: toccala per entrare. In <b>Libro Ricette</b>, nel banner in alto trovi un interruttore <b>▦ / 📖</b>: passa dalla vista a <b>schede</b> (la lista) alla vista <b>libro</b>, che sfoglia tutte le ricette pagina per pagina. E dalla scheda di una singola ricetta puoi passare alla vista Libro (interruttore 📖) che la mostra come una pagina di ricettario stampato.</p>
+        </Chapter>
+
+        <Chapter id="faq" icon="❓" title="Domande frequenti">
+          <p style={{margin:"8px 0 2px", fontWeight:700}}>Da dove comincio?</p>
+          <p style={{margin:"0 0 8px"}}>Inserisci due o tre ricette che fate spesso. Poi prova la Modalità Cucina. Organizza compilalo dopo, quando l'app ti segnala che manca qualcosa.</p>
+          <p style={{margin:"8px 0 2px", fontWeight:700}}>Devo compilare Organizza per usare l'app?</p>
+          <p style={{margin:"0 0 8px"}}>No, ma compilandola l'app diventa molto più utile (somme corrette, calorie, scaffali). Fallo con calma, un pezzo alla volta.</p>
+          <p style={{margin:"8px 0 2px", fontWeight:700}}>Se rinomino un ingrediente perdo i suoi dati?</p>
+          <p style={{margin:"0 0 8px"}}>No: calorie, categorie ed equivalenze restano attaccate. L'app lo riconosce col nome nuovo.</p>
+          <p style={{margin:"8px 0 2px", fontWeight:700}}>Se cambio una ricetta, la spesa si aggiorna?</p>
+          <p style={{margin:"0 0 8px"}}>Te lo chiede: puoi aggiornarla, lasciarla com'era, o togliere quella ricetta dalla lista.</p>
+          <p style={{margin:"8px 0 2px", fontWeight:700}}>Perché una ricetta non mostra le calorie?</p>
+          <p style={{margin:"0 0 8px"}}>Perché i suoi ingredienti non sono ancora collegati al database in Organizza › 🍎 Valori nutrizionali.</p>
+          <p style={{margin:"8px 0 2px", fontWeight:700}}>I dati sono condivisi tra me e la mia compagna?</p>
+          <p style={{margin:"0 0 8px"}}>Sì: invitala come <b>membro</b> del libro con la sua email (📚 libri › Membri › ＋ Invita) e condividete lo stesso ricettario. In alternativa, per passare solo alcune ricette, usa il codice di condivisione. Nel prototipo la sincronizzazione è simulata; nella versione finale sarà reale tra i vostri telefoni.</p>
+        </Chapter>
+
+        <div style={{ textAlign:"center", fontFamily:F.ui, fontSize:10, color:th.appFaded, marginTop:14 }}>
+          Il mio Ricettario · guida · versione prototipo
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const LandingScreen = ({ recipes = [], bookName = "Il mio Ricettario", onBooks, onRecipes, onBook, onMemories, onAdd, onAddMemory, onFridge, onShopping, onOrganize, onTheme, onCover, onGuide }) => {
+  const th = useTheme();
+
+  const mainItems = [
+    { emoji:"🍽️", label:"Libro Ricette",         desc:"Sfoglia, cerca e aggiungi",   fn:onRecipes, color:th.appAccent },
+    { emoji:"📒", label:"Libro dei Ricordi",     desc:"Tutte le fotografie",         fn:onMemories,color:"#6B8C6E" },
+    { emoji:"🧊", label:"Svuota Frigo",          desc:"Cosa cucino con ciò che ho",  fn:onFridge,  color:"#5B7FA6" },
+    { emoji:"🛒", label:"Lista Spesa",           desc:"Gli ingredienti da comprare", fn:onShopping,color:"#8C6E4A" },
+    { emoji:<OrganizeIcon/>, label:"Organizza Ingredienti", desc:"Aggregati, categorie, nutrizione", fn:onOrganize, color:"#7A5EA6" },
+  ];
+
+  return (
+    <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+
+      {/* Top row: copertina · info · stile — icone uniformi */}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", padding:"8px 20px 0" }}>
+        <button onClick={onCover} style={{ background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:2, padding:0, width:44 }}>
+          <span style={{ width:26, height:26, borderRadius:7, background:th.appCard, border:`1.5px solid ${th.appBorder}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:15, boxSizing:"border-box" }}>📕</span>
+          <span style={{ fontFamily:F.ui, fontSize:8, color:th.appFaded }}>copertina</span>
+        </button>
+        <div style={{ display:"flex", gap:10 }}>
+          <button onClick={onGuide} style={{ background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:2, padding:0, width:44 }}>
+            <span style={{ width:26, height:26, borderRadius:7, background:th.appCard, border:`1.5px solid ${th.appBorder}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:15, boxSizing:"border-box" }}>ℹ️</span>
+            <span style={{ fontFamily:F.ui, fontSize:8, color:th.appFaded }}>info</span>
+          </button>
+          <button onClick={onTheme} style={{ background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:2, padding:0, width:44 }}>
+            <span style={{ width:26, height:26, borderRadius:7, background:th.coverBg, border:`1.5px solid ${th.appBorder}`, display:"block", boxSizing:"border-box" }}/>
+            <span style={{ fontFamily:F.ui, fontSize:8, color:th.appFaded }}>stile</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Title */}
+      <div style={{ textAlign:"center", padding:"20px 24px 8px" }}>
+        <div style={{ fontFamily:F.ui, fontSize:11, letterSpacing:3, color:th.appFaded, textTransform:"uppercase" }}>Il mio</div>
+        <div style={{ fontFamily:F.display, fontSize:36, color:th.appInk, fontStyle:"italic" }}>Ricettario</div>
+        {/* Selettore ricettario attivo */}
+        <div style={{ marginTop:8 }}>
+          <button onClick={onBooks} style={{
+            background:th.appCard, border:`1.5px solid ${th.appBorder}`,
+            borderRadius:20, padding:"7px 14px", cursor:"pointer",
+            fontFamily:F.ui, fontSize:11, color:th.appInk,
+            display:"inline-flex", alignItems:"center", gap:6,
+            maxWidth:"88%",
+          }}>
+            📚 <span style={{ color:th.appFaded }}>Ricettario attivo:</span>
+            <span style={{ fontWeight:700, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{bookName}</span>
+            <span style={{ color:th.appFaded }}>▾</span>
+          </button>
+        </div>
+        {/* Sottotitolo: apri in modalità libro */}
+        <div style={{ display:"flex", alignItems:"center", gap:10, margin:"10px 0" }}>
+          <div style={{ flex:1, height:1, background:th.appBorder }}/>
+          <span style={{ color:th.appAccent2, fontSize:12 }}>✦</span>
+          <div style={{ flex:1, height:1, background:th.appBorder }}/>
+        </div>
+      </div>
+
+      {/* Main navigation cards */}
+      <div style={{ padding:"0 24px", display:"flex", flexDirection:"column", gap:12, flex:1 }}>
+        {mainItems.map(item => (
+          <button key={item.label} onClick={item.fn} style={{
+            width:"100%", padding:"16px 18px",
+            background:th.appCard, border:`1px solid ${th.appBorder}`,
+            borderRadius:18, cursor:"pointer", textAlign:"left",
+            display:"flex", alignItems:"center", gap:14,
+            boxShadow:`0 2px 12px rgba(0,0,0,0.05)`,
+          }}>
+            <div style={{ width:48, height:48, borderRadius:13, background:item.color, display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, flexShrink:0 }}>{item.emoji}</div>
+            <div>
+              <div style={{ fontFamily:F.display, fontSize:16, color:th.appInk, marginBottom:2 }}>{item.label}</div>
+              <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>{item.desc}</div>
+            </div>
+            <span style={{ marginLeft:"auto", color:th.appFaded, fontSize:18 }}>›</span>
+          </button>
+        ))}
+
+      </div>
+
+      <div style={{ height:32 }}/>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN: MEMORIES BOOK — all photos, each linked to recipes
+// ══════════════════════════════════════════════════════════════
+// Etichetta periodo da una data ISO (stagione + anno) per le intestazioni del diario
+const memoryPeriodLabel = (dateISO) => {
+  if (!dateISO) return "Data sconosciuta";
+  const d = new Date(dateISO);
+  if (isNaN(d)) return "Data sconosciuta";
+  const m = d.getMonth();
+  const y = d.getFullYear();
+  const season = m <= 1 || m === 11 ? "Inverno" : m <= 4 ? "Primavera" : m <= 7 ? "Estate" : "Autunno";
+  // L'inverno di dicembre appartiene "all'anno successivo" nel linguaggio comune, ma teniamolo semplice: stagione + anno
+  return `${season} ${y}`;
+};
+// Ordinamento cronologico (dal più recente): usa dateISO se c'è, altrimenti prova a interpretare date
+const memorySortKey = (mem) => {
+  if (mem.dateISO) return mem.dateISO;
+  return "0000-00-00";
+};
+
+// Rende la "foto" di un ricordo: immagine reale (dataURL) o emoji grande
+const MemoryPhoto = ({ mem, height, fontSize = 44, rounded = false }) => {
+  const th = useTheme();
+  if (mem.photoIsImage && mem.photo) {
+    return <img src={mem.photo} alt={mem.caption || "ricordo"} style={{ width:"100%", height, objectFit:"cover", display:"block", borderRadius: rounded ? 12 : 0 }}/>;
+  }
+  return (
+    <div style={{ height, display:"flex", alignItems:"center", justifyContent:"center", fontSize, background:`${th.appAccent}15`, borderRadius: rounded ? 12 : 0 }}>
+      {mem.photo || "📸"}
+    </div>
+  );
+};
+
+// Vista "ricordo aperto" a piena pagina — modalità libro, due ricordi per pagina
+const MemoryOpenPage = ({ mems, linkedFor, onRecipe, th }) => (
+  <div style={{ display:"flex", flexDirection:"column", gap:14, padding:"6px 4px" }}>
+    {mems.map(mem => {
+      const linked = linkedFor(mem);
+      return (
+        <div key={mem.id} style={{ background:th.bookBg || "#f5efe2", borderRadius:16, overflow:"hidden", border:`1px solid ${th.bookBorder || th.appBorder}`, boxShadow:"0 2px 8px rgba(0,0,0,0.06)" }}>
+          <MemoryPhoto mem={mem} height={190}/>
+          <div style={{ padding:"12px 16px 16px" }}>
+            <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginBottom:5 }}>📅 {mem.date}</div>
+            {mem.caption && <div style={{ fontFamily:F.display, fontSize:17, color:th.appInk, fontStyle:"italic", marginBottom:7, lineHeight:1.3 }}>"{mem.caption}"</div>}
+            {mem.story && <div style={{ fontFamily:F.body, fontSize:13, color:th.appInk, lineHeight:1.6, marginBottom:10 }}>{mem.story}</div>}
+            <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginTop:4 }}>
+              {linked.map(r => (
+                <button key={r.id} onClick={() => onRecipe(r)} style={{
+                  display:"flex", alignItems:"center", gap:5,
+                  background:`${r.color}18`, border:`1px solid ${r.color}30`,
+                  borderRadius:9, padding:"5px 10px", cursor:"pointer",
+                }}>
+                  <span style={{ fontSize:13 }}>{r.emoji}</span>
+                  <span style={{ fontFamily:F.ui, fontSize:11, color:r.color, fontWeight:600 }}>{r.title}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    })}
+  </div>
+);
+
+const MemoriesBookScreen = ({ recipes, onBack, onRecipe, onRecipes, onBook, onAdd, onFridge, onShopping }) => {
+  const th = useTheme();
+  const [lightbox, setLightbox] = useState(null);
+  const [viewMode, setViewMode] = useState("cards"); // "cards" | "book"
+  const [pageIndex, setPageIndex] = useState(0);
+
+  // Raccoglie tutti i ricordi da tutte le ricette, deduplica per id
+  const allMemories = [];
+  const seen = new Set();
+  recipes.forEach(r => {
+    (r.memories||[]).forEach(m => {
+      if (!seen.has(m.id)) {
+        seen.add(m.id);
+        allMemories.push({ ...m, recipeIds: m.recipeIds || [r.id] });
+      }
+    });
+  });
+  // Ordine cronologico dal più recente
+  allMemories.sort((a, b) => memorySortKey(b).localeCompare(memorySortKey(a)));
+
+  const getRecipesForMemory = (mem) =>
+    (mem.recipeIds||[]).map(rid => recipes.find(r => r.id === rid)).filter(Boolean);
+
+  // Raggruppa per periodo (per le intestazioni del diario)
+  const groups = [];
+  let lastPeriod = null;
+  allMemories.forEach(mem => {
+    const p = memoryPeriodLabel(mem.dateISO);
+    if (p !== lastPeriod) { groups.push({ period:p, items:[] }); lastPeriod = p; }
+    groups[groups.length-1].items.push(mem);
+  });
+
+  // Pagine per la vista libro: 2 ricordi per pagina
+  const pages = [];
+  for (let i=0; i<allMemories.length; i+=2) pages.push(allMemories.slice(i, i+2));
+  const safePage = Math.min(pageIndex, Math.max(0, pages.length-1));
+
+  return (
+    <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+      {lightbox && <PhotoLightbox photo={lightbox.photo} caption={lightbox.caption} date={lightbox.date} isImage={lightbox.isImage} onClose={() => setLightbox(null)}/>}
+      <GlobalNav
+        activeScreen="memories"
+        onRecipes={onRecipes}
+        onBook={onBook}
+        onMemories={() => {}}
+        onAdd={onAdd}
+        onFridge={onFridge}
+        onShopping={onShopping}
+        onLanding={onBack}
+        activeLabel="Libro dei Ricordi"
+        viewToggle={allMemories.length > 0 ? {
+          isBook: viewMode === "book",
+          onCards: () => setViewMode("cards"),
+          onBook: () => setViewMode("book"),
+        } : null}
+      />
+
+      {/* Nuovo ricordo */}
+      <div style={{ padding:"10px 24px 2px", textAlign:"center" }}>
+        <button onClick={() => onAdd("memory")} style={{
+          padding:"9px 20px", borderRadius:20,
+          background:th.appAccent, border:"none", cursor:"pointer",
+          color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700,
+        }}>＋ Nuovo ricordo</button>
+      </div>
+
+      {allMemories.length === 0 ? (
+        <div style={{ textAlign:"center", padding:"40px 24px", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>
+          Nessun ricordo ancora — aggiungine uno da qui o dalla scheda di una ricetta!
+        </div>
+      ) : viewMode === "cards" ? (
+        // ─────────── VISTA SCHEDE (diario per periodo) ───────────
+        <div style={{ flex:1, overflowY:"auto", padding:"6px 16px 40px" }}>
+          {groups.map(group => (
+            <div key={group.period} style={{ marginBottom:18 }}>
+              <div style={{ fontFamily:F.display, fontSize:14, color:th.appAccent, fontStyle:"italic", margin:"6px 2px 10px", display:"flex", alignItems:"center", gap:8 }}>
+                {group.period}
+                <span style={{ flex:1, height:1, background:th.appBorder }}/>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                {group.items.map(mem => {
+                  const linked = getRecipesForMemory(mem);
+                  return (
+                    <div key={mem.id} style={{
+                      background:th.appCard, border:`1px solid ${th.appBorder}`,
+                      borderRadius:14, overflow:"hidden",
+                    }}>
+                      <div onClick={() => setLightbox({ photo:mem.photo, caption:mem.caption, date:mem.date, isImage:mem.photoIsImage })}
+                        style={{ cursor:"pointer", position:"relative" }}>
+                        <MemoryPhoto mem={mem} height={110}/>
+                        <div style={{ position:"absolute", bottom:4, right:6, fontSize:12, opacity:0.55, color:"#fff", textShadow:"0 1px 2px rgba(0,0,0,0.5)" }}>⤢</div>
+                      </div>
+                      <div style={{ padding:"8px 10px 10px" }}>
+                        {mem.caption && <div style={{ fontFamily:F.body, fontSize:12, color:th.appInk, fontStyle:"italic", lineHeight:1.4, marginBottom:4 }}>"{mem.caption}"</div>}
+                        {mem.story && <div style={{ fontFamily:F.body, fontSize:11, color:th.appFaded, lineHeight:1.45, marginBottom:5, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>{mem.story}</div>}
+                        <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, marginBottom:6 }}>📅 {mem.date}</div>
+                        {linked.map(r => (
+                          <button key={r.id} onClick={() => onRecipe(r)} style={{
+                            display:"flex", alignItems:"center", gap:5, marginBottom:3,
+                            background:`${r.color}18`, border:`1px solid ${r.color}30`,
+                            borderRadius:8, padding:"3px 8px", cursor:"pointer",
+                          }}>
+                            <span style={{ fontSize:12 }}>{r.emoji}</span>
+                            <span style={{ fontFamily:F.ui, fontSize:10, color:r.color, fontWeight:600 }}>{r.title}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        // ─────────── VISTA LIBRO (ricordo aperto, 2 per pagina) ───────────
+        <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
+          <div style={{ flex:1, overflowY:"auto", padding:"8px 16px 12px" }}>
+            {pages[safePage] && (
+              <MemoryOpenPage mems={pages[safePage]} linkedFor={getRecipesForMemory} onRecipe={onRecipe} th={th}/>
+            )}
+          </div>
+          {/* Controlli pagina */}
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 20px", borderTop:`1px solid ${th.appBorder}`, background:th.appBg, flexShrink:0 }}>
+            <button onClick={() => setPageIndex(p => Math.max(0, p-1))} disabled={safePage===0} style={{
+              background:"none", border:"none", cursor: safePage===0 ? "default" : "pointer",
+              color: safePage===0 ? th.appBorder : th.appInk, fontFamily:F.ui, fontSize:13,
+            }}>‹ Prec.</button>
+            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>pagina {safePage+1} di {pages.length}</div>
+            <button onClick={() => setPageIndex(p => Math.min(pages.length-1, p+1))} disabled={safePage>=pages.length-1} style={{
+              background:"none", border:"none", cursor: safePage>=pages.length-1 ? "default" : "pointer",
+              color: safePage>=pages.length-1 ? th.appBorder : th.appInk, fontFamily:F.ui, fontSize:13,
+            }}>Succ. ›</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════
+// COMPONENT: Top navbar for book/recipes view
+// ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// COMPONENT: TopNav — reorganised with back-to-home always visible
+// ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// COMPONENT: GlobalNav — unified nav bar used across all screens
+// ══════════════════════════════════════════════════════════════
+//
+// Layout:
+//   Row 1 (function buttons): 🍝 📖 📸 ✏️ 🖼  (5 main functions)
+//   Row 2 (utility bar):      🏠 · active label · 🔍 ⭐
+//
+// Props:
+//   activeScreen: "recipes"|"book"|"memories"|"addRecipe"|"addMemory"|null
+//   onRecipes, onBook, onMemories, onAddRecipe, onAddMemory — nav callbacks
+//   onLanding, onSearch, onFavorites — utility callbacks
+//   showSearch, showFavorites — active states for utility buttons
+
+const NAV_ITEMS = [
+  { id:"recipes",   icon:"🍽️", label:"Ricette" },
+  { id:"memories",  icon:"📒", label:"Ricordi" },
+  { id:"fridge",    icon:"🧊", label:"Frigo" },
+  { id:"shopping",  icon:"🛒", label:"Spesa" },
+  { id:"organize",  icon:<OrganizeIcon/>, label:"Organizza" },
+];
+
+const GlobalNav = ({
+  activeScreen,
+  onRecipes, onBook, onMemories, onAdd, onFridge, onShopping,
+  onLanding, onSearch, onFavorites,
+  showSearch, showFavorites,
+  activeLabel, extraAction, bookView = false, viewToggle = null,
+}) => {
+  const th = useTheme();
+  const navActions = useNavActions();
+
+  // "recipes" e la vista libro condividono la stessa tab attiva (Ricette) e lo stesso banner.
+  const inRecipes = activeScreen === "recipes" || bookView;
+  // Interruttore schede/libro: nel Libro Ricette (recipes/book) o quando fornito esplicitamente (viewToggle)
+  const showViewToggle = activeScreen === "recipes" || bookView || !!viewToggle;
+
+  const handlers = {
+    recipes: () => onRecipes(),
+    book:    () => onBook(),
+    memories:() => onMemories(),
+    fridge:  () => onFridge && onFridge(),
+    shopping:() => onShopping && onShopping(),
+    organize:() => { navActions.onOrganize && navActions.onOrganize(); },
+  };
+
+  return (
+    <div style={{ position:"sticky", top:0, zIndex:100, boxShadow:"0 2px 16px rgba(0,0,0,0.2)" }}>
+      {/* Row 1 — 4 tabs */}
+      <div style={{ display:"flex", background:th.appInk, borderBottom:"1px solid rgba(255,255,255,0.08)" }}>
+        {NAV_ITEMS.map(item => {
+          const active = activeScreen === item.id
+            || (item.id==="recipes" && inRecipes)
+            || (item.id==="add" && ["addRecipe","addMemory","addRecipeHub","new","scan"].includes(activeScreen));
+          return (
+            <button
+              key={item.id}
+              onClick={handlers[item.id]}
+              style={{
+                flex:1, padding:"10px 4px 8px",
+                background: active ? "rgba(255,255,255,0.15)" : "none",
+                border:"none",
+                borderBottom: active ? `2px solid ${th.appAccent2}` : "2px solid transparent",
+                cursor:"pointer",
+                display:"flex", flexDirection:"column", alignItems:"center", gap:2,
+                transition:"all 0.2s",
+              }}
+            >
+              <span style={{ fontSize:item.id==="add" ? 24 : 18, background: item.id==="add" && !active ? `${th.appAccent}55` : "none", borderRadius: item.id==="add" ? "50%" : 0, width: item.id==="add" ? 32 : "auto", height: item.id==="add" ? 32 : "auto", display:"flex", alignItems:"center", justifyContent:"center" }}>{item.icon}</span>
+              <span style={{
+                fontFamily:F.ui, fontSize:9, fontWeight:600,
+                color: active ? th.appAccent2 : "rgba(255,255,255,0.5)",
+                letterSpacing:0.5,
+              }}>{item.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Row 2 — utility bar */}
+      <div style={{
+        display:"flex", alignItems:"center",
+        background:`${th.appInk}ee`,
+        padding:"6px 12px", gap:8,
+      }}>
+        <button onClick={onLanding} style={{
+          background:"rgba(255,255,255,0.1)", border:"none",
+          borderRadius:8, padding:"5px 8px", cursor:"pointer",
+          color:"rgba(255,255,255,0.85)", fontSize:14, flexShrink:0,
+        }}>🏠</button>
+
+        {/* Spaziatore sinistro: 🏠(≈34) + questo ≈ larghezza interruttore(≈62), così il titolo è centrato */}
+        {showViewToggle && <div style={{ width:28, flexShrink:0 }}/>}
+
+        <div style={{
+          flex:1, fontFamily:F.display, fontSize:13, fontStyle:"italic",
+          color:"rgba(255,255,255,0.8)", textAlign:"center",
+        }}>{activeLabel || "Il mio Ricettario"}</div>
+
+        {/* Interruttore schede/libro — posizione fissa all'estrema destra */}
+        {showViewToggle ? (
+          <div style={{ display:"flex", borderRadius:8, overflow:"hidden", border:"1px solid rgba(255,255,255,0.2)", flexShrink:0 }}>
+            <button onClick={viewToggle ? viewToggle.onCards : onRecipes} title="Vista schede" style={{
+              padding:"5px 9px", border:"none", cursor:"pointer", fontSize:13,
+              background: (viewToggle ? !viewToggle.isBook : !bookView) ? th.appAccent : "rgba(255,255,255,0.08)",
+              color: (viewToggle ? !viewToggle.isBook : !bookView) ? "#fff" : "rgba(255,255,255,0.7)",
+            }}>▦</button>
+            <button onClick={viewToggle ? viewToggle.onBook : onBook} title="Sfoglia come libro" style={{
+              padding:"5px 9px", border:"none", cursor:"pointer", fontSize:13,
+              background: (viewToggle ? viewToggle.isBook : bookView) ? th.appAccent : "rgba(255,255,255,0.08)",
+              color: (viewToggle ? viewToggle.isBook : bookView) ? "#fff" : "rgba(255,255,255,0.7)",
+            }}>📖</button>
+          </div>
+        ) : (
+          <div style={{ width:34, flexShrink:0 }}/> // bilancia 🏠 sugli altri schermi
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN: RECIPES — list only, no book mode here
+// ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// COMPONENT: RecipeFilterBar — barra filtri condivisa (schede + libro)
+// Gestisce ricerca, sezioni, tag, preferiti; espone la lista filtrata
+// tramite render-prop: <RecipeFilterBar ...>{(list) => (...)}</RecipeFilterBar>
+// ══════════════════════════════════════════════════════════════
+const RecipeFilterBar = ({ recipes, extraTagGroups = [], sectionList = MACRO_SECTIONS, compact = false, bookMode = false, renderNav = null, topAction = null, children }) => {
+  const th = useTheme();
+  const [activeSection, setActiveSection] = useState(null);
+  const [activeTags, setActiveTags] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [openTagGroup, setOpenTagGroup] = useState(null);
+
+  const goSection = (id) => {
+    setActiveSection(id === activeSection ? null : id);
+    setActiveTags([]);
+    setOpenTagGroup(null);
+    setShowFavorites(false);
+  };
+  const goFavorites = () => setShowFavorites(f => !f);
+  const toggleTag = (tag) => setActiveTags(prev =>
+    prev.includes(tag) ? prev.filter(t=>t!==tag) : [...prev, tag]
+  );
+
+  const sectionFiltered = activeSection
+    ? recipes.filter(r => r.macroSection === activeSection)
+    : recipes;
+  const tagFiltered = activeTags.length > 0
+    ? sectionFiltered.filter(r => activeTags.every(t => r.tags.includes(t)))
+    : sectionFiltered;
+  const favFiltered = showFavorites ? tagFiltered.filter(r => r.favorite) : tagFiltered;
+  const displayRecipes = searchQuery.trim()
+    ? favFiltered.filter(r => r.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    : favFiltered;
+
+  const allTagGroupsWithExtra = [ ...TAG_GROUPS, ...extraTagGroups ];
+  const relevantTagGroups = allTagGroupsWithExtra.map(g => ({
+    ...g,
+    tags: g.tags.filter(t => sectionFiltered.some(r => r.tags.includes(t)))
+  })).filter(g => g.tags.length > 0);
+
+  return (
+    <>
+      {renderNav && renderNav()}
+      {topAction}
+      {/* Ricerca */}
+      <div style={{ padding:"8px 16px 4px" }}>
+        <div style={{ display:"flex", gap:8, alignItems:"center", background:th.appCard, border:`1.5px solid ${searchQuery ? th.appAccent : th.appBorder}`, borderRadius:12, padding:"9px 14px" }}>
+          <span style={{ fontSize:15 }}>🔍</span>
+          <input
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Cerca ricetta…"
+            style={{ flex:1, background:"none", border:"none", fontFamily:F.body, fontSize:14, color:th.appInk, outline:"none" }}
+          />
+          {searchQuery && <button onClick={() => setSearchQuery("")} style={{ background:"none", border:"none", color:th.appFaded, cursor:"pointer", fontSize:16 }}>×</button>}
+        </div>
+      </div>
+
+      {/* Pillole sezione */}
+      <div style={{ display:"flex", flexWrap:"wrap", gap:6, padding:"8px 16px 8px", borderBottom:`1px solid ${th.appBorder}`, flexShrink:0 }}>
+        <button onClick={() => goSection(null)} style={{
+          padding:"6px 14px", borderRadius:20, border:"none", flexShrink:0,
+          background: !activeSection && !showFavorites ? th.appInk : th.appBorder,
+          color: !activeSection && !showFavorites ? "#fff" : th.appFaded,
+          fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
+        }}>Tutte</button>
+        {sortSectionsAltroLast(sectionList).map(sec => {
+          const active = activeSection === sec.id;
+          const count = recipes.filter(r => r.macroSection === sec.id).length;
+          return (
+            <button key={sec.id} onClick={() => goSection(sec.id)} style={{
+              padding:"6px 12px", borderRadius:20, flexShrink:0,
+              border:`1.5px solid ${active ? th.appAccent : th.appBorder}`,
+              background: active ? th.appAccent : "transparent",
+              color: active ? "#fff" : th.appFaded,
+              fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
+              display:"flex", alignItems:"center", gap:4, transition:"all 0.2s",
+            }}>
+              <span>{sec.emoji}</span>
+              <span>{sec.label.split(" ").slice(-1)[0]}</span>
+              <span style={{ fontSize:10, background: active ? "rgba(255,255,255,0.25)" : th.appBorder, borderRadius:10, padding:"1px 5px", color: active ? "#fff" : th.appFaded }}>{count}</span>
+            </button>
+          );
+        })}
+        <button onClick={goFavorites} style={{
+          padding:"6px 12px", borderRadius:20, flexShrink:0,
+          border:`1.5px solid ${showFavorites ? th.appAccent : th.appBorder}`,
+          background: showFavorites ? th.appAccent : "transparent",
+          color: showFavorites ? "#fff" : th.appFaded,
+          fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
+        }}>⭐ Preferiti</button>
+      </div>
+
+      {/* Tag (accordion) */}
+      <div style={{ borderBottom:`1px solid ${th.appBorder}`, flexShrink:0 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 16px", overflowX:"auto", scrollbarWidth:"none" }}>
+          <button onClick={() => setOpenTagGroup(g => g ? null : "open")} style={{
+            flexShrink:0, padding:"5px 12px", borderRadius:20,
+            border:`1.5px solid ${activeTags.length > 0 ? th.appAccent : th.appBorder}`,
+            background: activeTags.length > 0 ? `${th.appAccent}15` : "transparent",
+            color: activeTags.length > 0 ? th.appAccent : th.appFaded,
+            fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
+            display:"flex", alignItems:"center", gap:5,
+          }}>
+            🏷 Filtra per tag
+            {activeTags.length > 0 && (
+              <span style={{ background:th.appAccent, color:"#fff", borderRadius:10, padding:"1px 6px", fontSize:10 }}>{activeTags.length}</span>
+            )}
+            <span style={{ fontSize:10, opacity:0.6 }}>{openTagGroup ? "▲" : "▼"}</span>
+          </button>
+          {activeTags.map(tag => (
+            <button key={tag} onClick={() => toggleTag(tag)} style={{
+              flexShrink:0, padding:"4px 10px", borderRadius:20,
+              background:th.appAccent, color:"#fff", border:"none",
+              fontFamily:F.ui, fontSize:10, cursor:"pointer",
+              display:"flex", alignItems:"center", gap:4,
+            }}>{tag} <span style={{ opacity:0.7 }}>×</span></button>
+          ))}
+          {activeTags.length > 0 && (
+            <button onClick={() => setActiveTags([])} style={{
+              flexShrink:0, padding:"4px 10px", borderRadius:20,
+              background:"none", border:`1px solid ${th.appBorder}`,
+              color:th.appFaded, fontFamily:F.ui, fontSize:10, cursor:"pointer",
+            }}>Azzera</button>
+          )}
+        </div>
+        {openTagGroup && (
+          <div style={{ padding:"0 16px 10px", maxHeight:240, overflowY:"auto" }}>
+            {relevantTagGroups.map(group => (
+              <div key={group.group} style={{ marginBottom:6 }}>
+                <button onClick={() => setOpenTagGroup(g => g === group.group ? "open" : group.group)} style={{
+                  width:"100%", display:"flex", justifyContent:"space-between",
+                  alignItems:"center", padding:"7px 10px",
+                  background: th.appCard, border:`1px solid ${th.appBorder}`,
+                  borderRadius:10, cursor:"pointer",
+                  fontFamily:F.ui, fontSize:12, color:th.appInk,
+                }}>
+                  <span>
+                    {group.group}
+                    {group.tags.filter(t => activeTags.includes(t)).length > 0 && (
+                      <span style={{ marginLeft:6, background:th.appAccent, color:"#fff", borderRadius:10, padding:"1px 6px", fontSize:10 }}>
+                        {group.tags.filter(t => activeTags.includes(t)).length}
+                      </span>
+                    )}
+                  </span>
+                  <span style={{ color:th.appFaded, fontSize:11 }}>{openTagGroup === group.group ? "▲" : "▼"}</span>
+                </button>
+                {openTagGroup === group.group && (
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:5, padding:"6px 4px 2px" }}>
+                    {group.tags.map(tag => {
+                      const sel = activeTags.includes(tag);
+                      const count = sectionFiltered.filter(r => r.tags.includes(tag)).length;
+                      return (
+                        <button key={tag} onClick={() => toggleTag(tag)} style={{
+                          padding:"5px 10px", borderRadius:20,
+                          border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
+                          background: sel ? th.appAccent : "transparent",
+                          color: sel ? "#fff" : th.appFaded,
+                          fontFamily:F.ui, fontSize:11, cursor:"pointer",
+                          display:"flex", alignItems:"center", gap:4,
+                        }}>{tag} <span style={{ fontSize:9, opacity:0.7 }}>({count})</span></button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Render-prop: la lista filtrata */}
+      {children(displayRecipes, { activeSection, activeTags, showFavorites, searchQuery })}
+    </>
+  );
+};
+
+const RecipesScreen = ({ recipes, onRecipe, onLanding, onBook, onMemories, onAdd, onFridge, onShopping, extraTagGroups=[], sectionList=MACRO_SECTIONS }) => {
+  const th = useTheme();
+  const [activeSection, setActiveSection] = useState(null);
+  const [activeTags, setActiveTags] = useState([]);
+  const [openTagGroup, setOpenTagGroup] = useState(null);
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const goSection = (id) => {
+    setActiveSection(id === activeSection ? null : id);
+    setActiveTags([]);
+    setOpenTagGroup(null);
+    setShowFavorites(false);
+  };
+  const goFavorites = () => setShowFavorites(f => !f);
+  const toggleTag = (tag) => setActiveTags(prev =>
+    prev.includes(tag) ? prev.filter(t=>t!==tag) : [...prev, tag]
+  );
+
+  // ── Hierarchical filter ──────────────────────────────────────
+  // Level 1: section (macroSection)
+  const sectionFiltered = activeSection
+    ? recipes.filter(r => r.macroSection === activeSection)
+    : recipes;
+
+  // Level 2: tags (within section)
+  const tagFiltered = activeTags.length > 0
+    ? sectionFiltered.filter(r => activeTags.every(t => r.tags.includes(t)))
+    : sectionFiltered;
+
+  // Level 3: preferiti e ricerca (sempre attiva, combinabili)
+  const favFiltered = showFavorites ? tagFiltered.filter(r => r.favorite) : tagFiltered;
+  const displayRecipes = searchQuery.trim()
+    ? favFiltered.filter(r => r.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    : favFiltered;
+
+  // Only show tag groups that have at least one recipe in current section
+  const allTagGroupsWithExtra = [
+    ...TAG_GROUPS,
+    ...extraTagGroups,
+  ];
+  const relevantTagGroups = allTagGroupsWithExtra.map(g => ({
+    ...g,
+    tags: g.tags.filter(t => sectionFiltered.some(r => r.tags.includes(t)))
+  })).filter(g => g.tags.length > 0);
+
+  return (
+    <div style={{ background:th.appBg, minHeight:"100%", position:"relative" }}>
+      <GlobalNav
+        activeScreen="recipes"
+        onRecipes={() => {}}
+        onBook={onBook}
+        onMemories={onMemories}
+        onAdd={onAdd}
+        onFridge={onFridge}
+        onShopping={onShopping}
+        onLanding={onLanding}
+        activeLabel={activeSection ? MACRO_SECTIONS.find(s=>s.id===activeSection)?.label : "Libro Ricette"}
+      />
+
+      {/* ── Pulsante nuova ricetta (in alto al centro, come nei Ricordi) ── */}
+      <div style={{ padding:"10px 24px 2px", textAlign:"center" }}>
+        <button onClick={() => onAdd("recipe")} title="Nuova ricetta" style={{
+          padding:"9px 20px", borderRadius:20,
+          background:th.appAccent, border:"none", cursor:"pointer",
+          color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700,
+        }}>＋ Nuova ricetta</button>
+      </div>
+
+      {/* ── Ricerca sempre visibile (come nelle altre sezioni) ── */}
+      <div style={{ padding:"8px 16px 4px" }}>
+        <div style={{ display:"flex", gap:8, alignItems:"center", background:th.appCard, border:`1.5px solid ${searchQuery ? th.appAccent : th.appBorder}`, borderRadius:12, padding:"9px 14px" }}>
+          <span style={{ fontSize:15 }}>🔍</span>
+          <input
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Cerca ricetta…"
+            style={{ flex:1, background:"none", border:"none", fontFamily:F.body, fontSize:14, color:th.appInk, outline:"none" }}
+          />
+          {searchQuery && <button onClick={() => setSearchQuery("")} style={{ background:"none", border:"none", color:th.appFaded, cursor:"pointer", fontSize:16 }}>×</button>}
+        </div>
+      </div>
+
+      {/* ── Level 1: Section filter pills ── */}
+      <div style={{
+        display:"flex", flexWrap:"wrap", gap:6, padding:"8px 16px 8px",
+        borderBottom:`1px solid ${th.appBorder}`, flexShrink:0,
+      }}>
+        <button
+          onClick={() => goSection(null)}
+          style={{
+            padding:"6px 14px", borderRadius:20, border:"none", flexShrink:0,
+            background: !activeSection && !showFavorites ? th.appInk : th.appBorder,
+            color: !activeSection && !showFavorites ? "#fff" : th.appFaded,
+            fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
+          }}
+        >Tutte</button>
+        {sortSectionsAltroLast(sectionList).map(sec => {
+          const active = activeSection === sec.id;
+          const count = recipes.filter(r => r.macroSection === sec.id).length;
+          return (
+            <button key={sec.id} onClick={() => goSection(sec.id)} style={{
+              padding:"6px 12px", borderRadius:20, flexShrink:0,
+              border:`1.5px solid ${active ? th.appAccent : th.appBorder}`,
+              background: active ? th.appAccent : "transparent",
+              color: active ? "#fff" : th.appFaded,
+              fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
+              display:"flex", alignItems:"center", gap:4, transition:"all 0.2s",
+            }}>
+              <span>{sec.emoji}</span>
+              <span>{sec.label.split(" ").slice(-1)[0]}</span>
+              <span style={{ fontSize:10, background: active ? "rgba(255,255,255,0.25)" : th.appBorder, borderRadius:10, padding:"1px 5px", color: active ? "#fff" : th.appFaded }}>{count}</span>
+            </button>
+          );
+        })}
+        <button onClick={goFavorites} style={{
+          padding:"6px 12px", borderRadius:20, flexShrink:0,
+          border:`1.5px solid ${showFavorites ? th.appAccent : th.appBorder}`,
+          background: showFavorites ? th.appAccent : "transparent",
+          color: showFavorites ? "#fff" : th.appFaded,
+          fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
+        }}>⭐ Preferiti</button>
+      </div>
+
+      {/* ── Level 2: Tag filter (accordion) ── */}
+      <div style={{ borderBottom:`1px solid ${th.appBorder}`, flexShrink:0 }}>
+        {/* Active tags summary row */}
+        <div style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 16px", overflowX:"auto", scrollbarWidth:"none" }}>
+          <button
+            onClick={() => setOpenTagGroup(g => g ? null : "open")}
+            style={{
+              flexShrink:0, padding:"5px 12px", borderRadius:20,
+              border:`1.5px solid ${activeTags.length > 0 ? th.appAccent : th.appBorder}`,
+              background: activeTags.length > 0 ? `${th.appAccent}15` : "transparent",
+              color: activeTags.length > 0 ? th.appAccent : th.appFaded,
+              fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
+              display:"flex", alignItems:"center", gap:5,
+            }}
+          >
+            🏷 Filtra per tag
+            {activeTags.length > 0 && (
+              <span style={{ background:th.appAccent, color:"#fff", borderRadius:10, padding:"1px 6px", fontSize:10 }}>{activeTags.length}</span>
+            )}
+            <span style={{ fontSize:10, opacity:0.6 }}>{openTagGroup ? "▲" : "▼"}</span>
+          </button>
+
+          {/* Active tag chips */}
+          {activeTags.map(tag => (
+            <button key={tag} onClick={() => toggleTag(tag)} style={{
+              flexShrink:0, padding:"4px 10px", borderRadius:20,
+              background:th.appAccent, color:"#fff",
+              border:"none", fontFamily:F.ui, fontSize:10, cursor:"pointer",
+              display:"flex", alignItems:"center", gap:4,
+            }}>
+              {tag} <span style={{ opacity:0.7 }}>×</span>
+            </button>
+          ))}
+
+          {activeTags.length > 0 && (
+            <button onClick={() => setActiveTags([])} style={{
+              flexShrink:0, padding:"4px 10px", borderRadius:20,
+              background:"none", border:`1px solid ${th.appBorder}`,
+              color:th.appFaded, fontFamily:F.ui, fontSize:10, cursor:"pointer",
+            }}>Azzera</button>
+          )}
+        </div>
+
+        {/* Tag group accordion */}
+        {openTagGroup && (
+          <div style={{ padding:"0 16px 10px", maxHeight:240, overflowY:"auto" }}>
+            {relevantTagGroups.map(group => (
+              <div key={group.group} style={{ marginBottom:6 }}>
+                <button
+                  onClick={() => setOpenTagGroup(g => g === group.group ? "open" : group.group)}
+                  style={{
+                    width:"100%", display:"flex", justifyContent:"space-between",
+                    alignItems:"center", padding:"7px 10px",
+                    background: th.appCard, border:`1px solid ${th.appBorder}`,
+                    borderRadius:10, cursor:"pointer",
+                    fontFamily:F.ui, fontSize:12, color:th.appInk,
+                  }}
+                >
+                  <span>
+                    {group.group}
+                    {group.tags.filter(t => activeTags.includes(t)).length > 0 && (
+                      <span style={{ marginLeft:6, background:th.appAccent, color:"#fff", borderRadius:10, padding:"1px 6px", fontSize:10 }}>
+                        {group.tags.filter(t => activeTags.includes(t)).length}
+                      </span>
+                    )}
+                  </span>
+                  <span style={{ color:th.appFaded, fontSize:11 }}>{openTagGroup === group.group ? "▲" : "▼"}</span>
+                </button>
+
+                {openTagGroup === group.group && (
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:5, padding:"6px 4px 2px" }}>
+                    {group.tags.map(tag => {
+                      const sel = activeTags.includes(tag);
+                      const count = sectionFiltered.filter(r => r.tags.includes(tag)).length;
+                      return (
+                        <button key={tag} onClick={() => toggleTag(tag)} style={{
+                          padding:"5px 10px", borderRadius:20,
+                          border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
+                          background: sel ? th.appAccent : "transparent",
+                          color: sel ? "#fff" : th.appFaded,
+                          fontFamily:F.ui, fontSize:11, cursor:"pointer",
+                          display:"flex", alignItems:"center", gap:4,
+                        }}>
+                          {tag}
+                          <span style={{ fontSize:9, opacity:0.7 }}>({count})</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Results count */}
+      <div style={{ padding:"6px 20px 2px", fontFamily:F.ui, fontSize:11, color:th.appFaded }}>
+        {displayRecipes.length} ricett{displayRecipes.length===1?"a":"e"}
+        {activeSection && ` · ${MACRO_SECTIONS.find(s=>s.id===activeSection)?.label}`}
+        {activeTags.length > 0 && ` · ${activeTags.length} tag`}
+        {showFavorites && " · ⭐ Preferiti"}
+      </div>
+
+      {/* Recipe list */}
+      <div style={{ padding:"6px 20px 60px", display:"flex", flexDirection:"column", gap:10 }}>
+        {displayRecipes.length === 0
+          ? <div style={{ textAlign:"center", padding:"40px 0", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>
+              Nessuna ricetta trovata
+            </div>
+          : displayRecipes.map(r => (
+              <RecipeCardList key={r.id} recipe={r} onClick={() => onRecipe(r)}/>
+            ))
+        }
+      </div>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN: BOOK VIEW — page-turn animation between recipes
+// ══════════════════════════════════════════════════════════════
+const BookViewScreen = ({ recipes, onLanding, onRecipe, onRecipes, onMemories, onAdd, onFridge, onShopping, extraTagGroups=[], sectionList=MACRO_SECTIONS }) => {
+  const th = useTheme();
+  const [pageIndex, setPageIndex] = useState(0);
+  const [turning, setTurning] = useState(null);
+
+  return (
+    <RecipeFilterBarBook
+      recipes={recipes}
+      extraTagGroups={extraTagGroups}
+      sectionList={sectionList}
+      pageIndex={pageIndex}
+      setPageIndex={setPageIndex}
+      turning={turning}
+      setTurning={setTurning}
+      onLanding={onLanding}
+      onRecipe={onRecipe}
+      onRecipes={onRecipes}
+      onMemories={onMemories}
+      onAdd={onAdd}
+      onFridge={onFridge}
+      onShopping={onShopping}
+    />
+  );
+};
+
+// Wrapper che usa RecipeFilterBar sopra la pagina del libro, restringendo le pagine sfogliabili al filtro
+const RecipeFilterBarBook = ({ recipes, extraTagGroups, sectionList, pageIndex, setPageIndex, turning, setTurning, onLanding, onRecipe, onRecipes, onMemories, onAdd, onFridge, onShopping }) => {
+  const th = useTheme();
+  return (
+    <RecipeFilterBar recipes={recipes} extraTagGroups={extraTagGroups} sectionList={sectionList} bookMode
+      renderNav={() => (
+        <GlobalNav
+          activeScreen="book"
+          bookView={true}
+          onRecipes={onRecipes}
+          onBook={() => {}}
+          onMemories={onMemories}
+          onAdd={onAdd}
+          onFridge={onFridge}
+          onShopping={onShopping}
+          onLanding={onLanding}
+          activeLabel="Libro Ricette"
+        />
+      )}
+      topAction={(
+        <div style={{ padding:"10px 24px 2px", textAlign:"center" }}>
+          <button onClick={() => onAdd("recipe")} title="Nuova ricetta" style={{
+            padding:"9px 20px", borderRadius:20,
+            background:th.appAccent, border:"none", cursor:"pointer",
+            color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700,
+          }}>＋ Nuova ricetta</button>
+        </div>
+      )}
+    >
+      {(sectionRecipes) => {
+        const totalPages = sectionRecipes.length;
+        const safeIndex = Math.min(pageIndex, Math.max(0, totalPages - 1));
+        const currentRecipe = sectionRecipes[safeIndex];
+        const turnPage = (dir) => {
+          const nextIdx = dir === "next" ? safeIndex + 1 : safeIndex - 1;
+          if (nextIdx < 0 || nextIdx >= totalPages) return;
+          setTurning(dir);
+          setTimeout(() => { setPageIndex(nextIdx); setTurning(null); }, 350);
+        };
+        return (
+    <div style={{ background:th.bookBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+      <style>{`
+        @keyframes turnNext {
+          0%   { transform: rotateY(0deg);   opacity:1; }
+          50%  { transform: rotateY(-12deg); opacity:0.6; }
+          100% { transform: rotateY(0deg);   opacity:1; }
+        }
+        @keyframes turnPrev {
+          0%   { transform: rotateY(0deg);  opacity:1; }
+          50%  { transform: rotateY(12deg); opacity:0.6; }
+          100% { transform: rotateY(0deg);  opacity:1; }
+        }
+      `}</style>
+
+      {/* Page counter + prev/next */}
+      {totalPages > 0 ? (
+        <>
+          <div style={{
+            display:"flex", alignItems:"center", justifyContent:"space-between",
+            padding:"8px 16px",
+            background:th.bookBg,
+            borderBottom:`1px solid ${th.bookBorder}`,
+            flexShrink:0,
+          }}>
+            <button
+              onClick={() => turnPage("prev")}
+              disabled={safeIndex === 0}
+              style={{
+                background:"none", border:`1px solid ${th.bookBorder}`,
+                borderRadius:8, padding:"6px 14px",
+                cursor: safeIndex===0 ? "default" : "pointer",
+                color: safeIndex===0 ? th.bookBorder : th.bookInk,
+                fontFamily:F.ui, fontSize:13,
+              }}
+            >‹ Prec.</button>
+
+            <div style={{ textAlign:"center" }}>
+              <div style={{ fontFamily:F.ui, fontSize:11, color:th.bookFaded }}>
+                pagina {safeIndex+1} di {totalPages}
+              </div>
+              <div style={{ fontFamily:F.display, fontSize:12, color:th.appAccent, fontStyle:"italic", marginTop:1 }}>
+                {currentRecipe?.title}
+              </div>
+            </div>
+
+            <button
+              onClick={() => turnPage("next")}
+              disabled={safeIndex === totalPages-1}
+              style={{
+                background:"none", border:`1px solid ${th.bookBorder}`,
+                borderRadius:8, padding:"6px 14px",
+                cursor: safeIndex===totalPages-1 ? "default" : "pointer",
+                color: safeIndex===totalPages-1 ? th.bookBorder : th.bookInk,
+                fontFamily:F.ui, fontSize:13,
+              }}
+            >Succ. ›</button>
+          </div>
+
+          {/* Animated page */}
+          <div style={{
+            flex:1, overflowY:"auto",
+            animation: turning ? `turn${turning==="next"?"Next":"Prev"} 0.35s ease` : "none",
+            transformOrigin:"center center",
+          }}>
+            {currentRecipe ? (
+              <div style={{ padding:"0 0 40px" }}>
+                <RecipeCardBook recipe={currentRecipe}/>
+              </div>
+            ) : onlyFavorites ? (
+              <div style={{ padding:"60px 30px", textAlign:"center", fontFamily:F.ui, fontSize:13, color:th.bookInk || "#5a4f42" }}>
+                ⭐ Nessuna ricetta preferita.<br/>Segna una ricetta col ☆ nella sua scheda per ritrovarla qui.
+              </div>
+            ) : null}
+          </div>
+
+          {/* Bottom prev/next with titles */}
+          <div style={{ display:"flex", background:th.appInk, flexShrink:0 }}>
+            <button
+              onClick={() => turnPage("prev")}
+              disabled={safeIndex===0}
+              style={{
+                flex:1, padding:"12px",
+                background:"none", border:"none",
+                color: safeIndex===0 ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.75)",
+                fontFamily:F.ui, fontSize:12,
+                cursor: safeIndex===0 ? "default" : "pointer",
+                borderRight:"1px solid rgba(255,255,255,0.1)",
+              }}
+            >‹ {safeIndex>0 ? sectionRecipes[safeIndex-1]?.title.substring(0,20)+"…" : "—"}</button>
+            <button
+              onClick={() => turnPage("next")}
+              disabled={safeIndex===totalPages-1}
+              style={{
+                flex:1, padding:"12px",
+                background:"none", border:"none",
+                color: safeIndex===totalPages-1 ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.75)",
+                fontFamily:F.ui, fontSize:12,
+                cursor: safeIndex===totalPages-1 ? "default" : "pointer",
+              }}
+            >{safeIndex<totalPages-1 ? sectionRecipes[safeIndex+1]?.title.substring(0,20)+"…" : "—"} ›</button>
+          </div>
+        </>
+      ) : (
+        <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <div style={{ textAlign:"center", color:th.bookFaded, fontFamily:F.display, fontStyle:"italic", fontSize:16 }}>
+            Nessuna ricetta con questi filtri
+          </div>
+        </div>
+      )}
+    </div>
+        );
+      }}
+    </RecipeFilterBar>
+  );
+};
+const SearchScreen = ({ recipes, onBack, onRecipe }) => {
+  const th = useTheme();
+  const [query, setQuery] = useState("");
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [openGroup, setOpenGroup] = useState(null);
+
+  const toggleTag = (tag) => setSelectedTags(prev =>
+    prev.includes(tag) ? prev.filter(t=>t!==tag) : [...prev, tag]
+  );
+
+  const results = recipes.filter(r => {
+    const matchQuery = !query || r.title.toLowerCase().includes(query.toLowerCase());
+    const matchTags = selectedTags.length === 0 || selectedTags.every(t => r.tags.includes(t));
+    return matchQuery && matchTags;
+  });
+
+  return (
+    <div style={{ background:th.appBg, minHeight:"100%" }}>
+      <div style={{ padding:"8px 20px 0", display:"flex", alignItems:"center", gap:12 }}>
+        <BackBtn onBack={onBack} label="Indietro"/>
+        <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>Cerca</div>
+      </div>
+
+      {/* Search input */}
+      <div style={{ padding:"12px 20px 0" }}>
+        <div style={{ display:"flex", gap:8, alignItems:"center", background:th.appCard, border:`1.5px solid ${query ? th.appAccent : th.appBorder}`, borderRadius:12, padding:"10px 14px" }}>
+          <span style={{ fontSize:16 }}>🔍</span>
+          <input
+            value={query} onChange={e => setQuery(e.target.value)}
+            placeholder="Cerca per nome…"
+            autoFocus
+            style={{ flex:1, background:"none", border:"none", fontFamily:F.body, fontSize:15, color:th.appInk, outline:"none" }}
+          />
+          {query && <button onClick={() => setQuery("")} style={{ background:"none", border:"none", color:th.appFaded, cursor:"pointer", fontSize:16 }}>×</button>}
+        </div>
+      </div>
+
+      {/* Tag filters by group */}
+      <div style={{ padding:"12px 20px 0" }}>
+        <div style={{ fontFamily:F.ui, fontSize:11, letterSpacing:1.5, color:th.appFaded, textTransform:"uppercase", marginBottom:8 }}>Filtra per tag</div>
+        {TAG_GROUPS.map(group => (
+          <div key={group.group} style={{ marginBottom:6 }}>
+            <button onClick={() => setOpenGroup(openGroup===group.group ? null : group.group)} style={{
+              width:"100%", display:"flex", justifyContent:"space-between", alignItems:"center",
+              padding:"8px 12px", background:th.appCard, border:`1px solid ${th.appBorder}`,
+              borderRadius:10, cursor:"pointer", fontFamily:F.ui, fontSize:13, color:th.appInk,
+            }}>
+              <span>{group.group}
+                {group.tags.filter(t => selectedTags.includes(t)).length > 0 &&
+                  <span style={{ marginLeft:8, background:th.appAccent, color:"#fff", borderRadius:10, padding:"1px 7px", fontSize:10 }}>
+                    {group.tags.filter(t => selectedTags.includes(t)).length}
+                  </span>
+                }
+              </span>
+              <span style={{ color:th.appFaded }}>{openGroup===group.group ? "▲" : "▼"}</span>
+            </button>
+            {openGroup===group.group && (
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6, padding:"8px 4px 4px" }}>
+                {group.tags.map(tag => (
+                  <button key={tag} onClick={() => toggleTag(tag)} style={{
+                    padding:"5px 12px", borderRadius:20,
+                    border:`1.5px solid ${selectedTags.includes(tag) ? th.appAccent : th.appBorder}`,
+                    background: selectedTags.includes(tag) ? th.appAccent : "transparent",
+                    color: selectedTags.includes(tag) ? "#fff" : th.appFaded,
+                    fontFamily:F.ui, fontSize:11, cursor:"pointer",
+                  }}>{tag}</button>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Results */}
+      <div style={{ padding:"16px 20px 40px" }}>
+        <div style={{ fontFamily:F.ui, fontSize:12, color:th.appFaded, marginBottom:10 }}>
+          {results.length} {results.length===1 ? "ricetta trovata" : "ricette trovate"}
+          {selectedTags.length > 0 && <button onClick={() => setSelectedTags([])} style={{ marginLeft:8, background:"none", border:"none", color:th.appAccent, cursor:"pointer", fontFamily:F.ui, fontSize:12 }}>Azzera filtri</button>}
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+          {results.map(r => <RecipeCardList key={r.id} recipe={r} onClick={() => onRecipe(r)}/>)}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN: RECIPES VIEW — list with macro sections + favorites + search
+// ══════════════════════════════════════════════════════════════
+
+// R9 — Error boundary: se una schermata va in errore durante il disegno,
+// mostra un messaggio con possibilità di ricaricare invece dello schermo bianco.
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false, msg: "" }; }
+  static getDerivedStateFromError(err) { return { hasError: true, msg: (err && err.message) || "Errore imprevisto" }; }
+  componentDidCatch(err, info) { try { console.error("App error:", err, info); } catch (e) {} }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", padding:24, fontFamily:"system-ui, sans-serif", background:"#e8e4dc" }}>
+          <div style={{ maxWidth:340, textAlign:"center", background:"#fff", borderRadius:16, padding:"28px 22px", boxShadow:"0 4px 20px rgba(0,0,0,0.12)" }}>
+            <div style={{ fontSize:40, marginBottom:12 }}>🍳</div>
+            <div style={{ fontSize:16, fontWeight:700, color:"#3a3229", marginBottom:8 }}>Qualcosa è andato storto</div>
+            <div style={{ fontSize:13, color:"#7A6E5F", lineHeight:1.5, marginBottom:18 }}>
+              C'è stato un problema nel mostrare questa schermata. I tuoi dati sono al sicuro.
+            </div>
+            <button onClick={() => this.setState({ hasError:false, msg:"" })} style={{
+              padding:"11px 22px", borderRadius:12, border:"none", background:"#C4593A",
+              color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer",
+            }}>Riprova</button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function AppInner() {
+  const [screen, setScreen] = useState("cover");
+  // screen: cover | landing | recipes | book | memories | recipe | new | edit | scan | theme
+  const [selected, setSelected] = useState(null);
+  const [scanDraft, setScanDraft] = useState(null); // draft precompilato da una scansione
+  const [pendingShopUpdate, setPendingShopUpdate] = useState(null); // {updated} ricetta modificata già in lista spesa
+  const [prevScreen, setPrevScreen] = useState("landing");
+  const [recipes, setRecipes] = useState(RECIPES);
+  const [bookTheme, setBookTheme] = useState(BOOK_THEMES[0]);
+  // Custom tag groups added by user — shared across whole app
+  const [extraTagGroups, setExtraTagGroups] = useState([]);
+
+  const addTagGroup = (groupName) => {
+    if (extraTagGroups.find(g => g.group === groupName)) return;
+    setExtraTagGroups(prev => [...prev, { group:groupName, tags:[] }]);
+  };
+
+  const addTagToGroup = (groupName, tag) => {
+    setExtraTagGroups(prev => prev.map(g =>
+      g.group === groupName && !g.tags.includes(tag)
+        ? { ...g, tags:[...g.tags, tag] }
+        : g
+    ));
+  };
+
+  // ── Sezioni del ricettario (modificabili: aggiunta con icona) ──
+  const [sectionList, setSectionList] = useState(MACRO_SECTIONS);
+  const addSection = (sec) => setSectionList(prev => sortSectionsAltroLast([...prev, sec]));
+  const updateSection = (sec) => setSectionList(prev => sortSectionsAltroLast(prev.map(s => s.id === sec.id ? sec : s)));
+  // Elimina sezione ("altro" è fissa): le ricette della sezione passano in "altro"
+  const deleteSection = (id) => {
+    if (id === "altro") return;
+    setSectionList(prev => prev.filter(s => s.id !== id));
+    setRecipes(prev => prev.map(r => r.macroSection === id ? { ...r, macroSection:"altro" } : r));
+  };
+
+  // ── Sistema ingredienti per Svuota Frigo (condiviso) ──
+  // Lista delle categorie (modificabile: nome, icona, aggiunta, eliminazione)
+  const [categoryList, setCategoryList] = useState(INGREDIENT_CATEGORIES);
+
+  const saveCategory = (cat) => {
+    setCategoryList(prev => {
+      const exists = prev.find(c => c.id === cat.id);
+      const next = exists ? prev.map(c => c.id === cat.id ? cat : c) : [...prev, cat];
+      return sortCategoriesAltroLast(next);
+    });
+  };
+
+  const deleteCategory = (id) => {
+    if (id === "altro" || id === "base") return; // categorie fisse: non eliminabili
+    setCategoryList(prev => prev.filter(c => c.id !== id));
+    // Pulisci i riferimenti alla categoria eliminata
+    setIngredientCategories(prev => {
+      const next = {};
+      Object.entries(prev).forEach(([name, cats]) => { next[name] = cats.filter(c => c !== id); });
+      return next;
+    });
+    setAggregates(prev => prev.map(a => ({ ...a, categories: (a.categories||[]).filter(c => c !== id) })));
+  };
+
+  // ingredientCategories: { "<nomePulito>": ["base","grassi", ...] }
+  const [ingredientCategories, setIngredientCategories] = useState({});
+  // aggregates: [ { id, name, members:["zucchero di canna", ...], categories:[...] } ]
+  const [aggregates, setAggregates] = useState([]);
+
+  const setIngredientCats = (name, cats) => {
+    setIngredientCategories(prev => ({ ...prev, [name]: cats }));
+  };
+
+  // equivalences: { "<nome>": { base:"g", factors:{ cucchiaio:10 }, display:"g"|"separate"|<unità> } }
+  const [equivalences, setEquivalences] = useState(INITIAL_EQUIVALENCES);
+  // nutritionMap: { "<nome>": { foodId } | { custom:{kcal,carb,...} } } — mappa ingrediente → voce database
+  const [nutritionMap, setNutritionMap] = useState(INITIAL_NUTRITION_MAP);
+  // customFoods: alimenti aggiunti dall'utente (fonte: personalizzata)
+  const [customFoods, setCustomFoods] = useState([]);
+  // R2 — dizionario ingredienti del libro attivo (id → nome visualizzato)
+  const [ingredientDict, setIngredientDict] = useState(() => buildIngredientDict(RECIPES));
+  useEffect(() => {
+    setIngredientDict(d => buildIngredientDict(recipes, d));
+  }, [recipes]);
+  // Rinomina: aggiorna il nome nel dizionario E in tutte le ricette.
+  // Le mappe keyed per id restano intatte. Ritorna false se il nome è già in uso.
+  const renameIngredient = (ingId, newName) => {
+    const clean = (newName || "").trim();
+    if (!clean || !ingredientDict[ingId]) return false;
+    const idx = ingDictIndex(ingredientDict);
+    const existing = idx.get(normName(clean));
+    if (existing && existing !== ingId) return false;
+    const oldKey = normName(ingredientDict[ingId]);
+    setIngredientDict(d => ({ ...d, [ingId]: clean }));
+    setRecipes(prev => prev.map(r => ({
+      ...r,
+      ingredients: mapIngredientsStruct(r.ingredients, ing =>
+        normName(ing.name) === oldKey ? { ...ing, name: clean } : ing),
+    })));
+    return true;
+  };
+  const saveCustomFood = (food) => {
+    setCustomFoods(prev => {
+      const exists = prev.some(f => f.id === food.id);
+      return exists ? prev.map(f => f.id === food.id ? food : f) : [...prev, food];
+    });
+  };
+  const deleteCustomFood = (id) => setCustomFoods(prev => prev.filter(f => f.id !== id));
+  const saveNutritionMapping = (name, mapping) => {
+    setNutritionMap(prev => {
+      const next = { ...prev };
+      if (mapping) next[name] = mapping; else delete next[name];
+      return next;
+    });
+  };
+  const saveEquivalence = (name, eq) => {
+    setEquivalences(prev => ({ ...prev, [name]: eq }));
+  };
+
+  const saveAggregate = (agg) => {
+    setAggregates(prev => {
+      const exists = prev.find(a => a.id === agg.id);
+      if (exists) return prev.map(a => a.id === agg.id ? agg : a);
+      return [...prev, agg];
+    });
+  };
+
+  const deleteAggregate = (id) => {
+    setAggregates(prev => prev.filter(a => a.id !== id));
+  };
+
+  // ── Lista Spesa globale ──
+  // entries: [{ id, recipeId, recipeTitle, scaleLabel, items:[{text, original}] }]
+  const [shoppingList, setShoppingList] = useState([]);
+
+  const addToShoppingList = (recipe, scale, items) => {
+    setShoppingList(prev => [...prev, {
+      id: uid("r"),
+      recipeId: recipe.id,
+      recipeTitle: recipe.title,
+      scaleLabel: scale?.label || "dosi originali",
+      factor: scale?.factor ?? 1,              // R6: memorizza la scala per poter ricalcolare
+      selectedNames: items.map(it => normName(it.ing.name)), // quali ingredienti erano scelti
+      items: items.map(it => ({ ...it.ing })), // { name, qty (scalata), unit, note? }
+    }]);
+  };
+
+  // R6 — ricalcola le voci di un'entry dalla ricetta corrente × fattore salvato,
+  // mantenendo solo gli ingredienti che erano stati selezionati (per nome).
+  const recomputeEntry = (entry, recipe) => {
+    const sel = new Set(entry.selectedNames || []);
+    const items = flattenIngredients(recipe.ingredients)
+      .filter(ing => sel.size === 0 || sel.has(normName(ing.name)))
+      .map(ing => ({ ...scaleIngredient(ing, entry.factor ?? 1) }));
+    return { ...entry, recipeTitle: recipe.title, items };
+  };
+
+  const removeShoppingEntry = (id) => setShoppingList(prev => prev.filter(e => e.id !== id));
+  // Rimuove un singolo ingrediente da una entry (se l'entry resta vuota, la elimina)
+  const removeShoppingItem = (entryId, ingName) => {
+    const key = normName(ingName);
+    setShoppingList(prev => prev.flatMap(e => {
+      if (e.id !== entryId) return [e];
+      const items = e.items.filter(it => normName(it.name) !== key);
+      if (items.length === 0) return []; // entry svuotata → via
+      return [{ ...e, items, selectedNames: (e.selectedNames || []).filter(n => n !== key) }];
+    }));
+  };
+  const removeShoppingRecipe = (recipeId) => setShoppingList(prev => prev.filter(e => e.recipeId !== recipeId));
+  const clearShoppingList = () => setShoppingList([]);
+
+  // ══ Multi-ricettario (simulato: nella PWA sarà su Firestore) ══
+  const ME = "tu@esempio.it"; // utente simulato — nella PWA arriverà dal login Google
+  const emptyBookData = () => ({
+    recipes: [], extraTagGroups: [],
+    sectionList: MACRO_SECTIONS, categoryList: INGREDIENT_CATEGORIES,
+    ingredientCategories: {}, aggregates: [], shoppingList: [], equivalences: {}, nutritionMap: {}, customFoods: [], ingredientDict: {},
+  });
+  // data:null per il libro attivo = i dati vivono negli stati correnti
+  const [books, setBooks] = useState([
+    { id:"b1", name:"Il mio Ricettario", type:"personale", owner:ME, members:[ME], data:null },
+  ]);
+  // Ricettario predefinito: quello caricato all'avvio dell'app
+  // (nella PWA sarà salvato nel profilo utente su Firestore)
+  const [defaultBookId, setDefaultBookId] = useState("b1");
+  const [activeBookId, setActiveBookId] = useState("b1"); // all'avvio = predefinito
+  const activeBook = books.find(b => b.id === activeBookId);
+
+  const snapshotData = () => ({
+    recipes, extraTagGroups, sectionList, categoryList,
+    ingredientCategories, aggregates, shoppingList, equivalences, nutritionMap, customFoods, ingredientDict,
+  });
+  const loadData = (d) => {
+    setRecipes(d.recipes); setExtraTagGroups(d.extraTagGroups);
+    setSectionList(d.sectionList); setCategoryList(d.categoryList);
+    setIngredientCategories(d.ingredientCategories); setAggregates(d.aggregates);
+    setShoppingList(d.shoppingList); setEquivalences(d.equivalences || {});
+    setNutritionMap(d.nutritionMap || {});
+    setCustomFoods(d.customFoods || []);
+    setIngredientDict(d.ingredientDict || {});
+  };
+
+  const switchBook = (id) => {
+    if (id === activeBookId) return;
+    const target = books.find(b => b.id === id);
+    if (!target) return;
+    // salva lo stato corrente nel libro che lascio, carica quello nuovo
+    setBooks(prev => prev.map(b =>
+      b.id === activeBookId ? { ...b, data: snapshotData() } :
+      b.id === id ? { ...b, data: null } : b
+    ));
+    loadData(target.data || emptyBookData());
+    setActiveBookId(id);
+    setSelected(null);
+  };
+
+  const createBook = (name, memberEmails) => {
+    const id = uid("b");
+    const members = [ME, ...memberEmails.filter(e => e && e !== ME)];
+    setBooks(prev => [...prev, { id, name: name.trim() || "Nuovo ricettario", type:"condiviso", owner:ME, members, data: emptyBookData() }]);
+  };
+
+  const renameBook = (id, name) => {
+    setBooks(prev => prev.map(b => b.id === id ? { ...b, name } : b));
+  };
+
+  const addMember = (id, email) => {
+    const e = email.trim().toLowerCase();
+    if (!e || !e.includes("@")) return;
+    setBooks(prev => prev.map(b =>
+      b.id === id && !b.members.includes(e) ? { ...b, members:[...b.members, e] } : b
+    ));
+  };
+
+  const removeMember = (id, email) => {
+    setBooks(prev => prev.map(b =>
+      b.id === id && email !== b.owner ? { ...b, members: b.members.filter(m => m !== email) } : b
+    ));
+  };
+
+  // Copia ricette (per id) dal libro ATTIVO verso un altro libro — copie indipendenti
+  const copyRecipesToBook = (targetId, recipeIds) => {
+    const sel = recipes.filter(r => recipeIds.includes(r.id));
+    if (sel.length === 0 || targetId === activeBookId) return;
+    const copies = sel.map((r) => ({ ...r, id: uid("r"), memories:[], comments:[], favorite:false }));
+    setBooks(prev => prev.map(b => {
+      if (b.id !== targetId) return b;
+      const d = b.data || emptyBookData();
+      return { ...b, data: { ...d, recipes:[...d.recipes, ...copies] } };
+    }));
+  };
+
+  // ── Condivisione esterna: codice testuale copiabile (import/export reale) ──
+  const exportShareCode = (recipeIds) => {
+    const sel = recipes.filter(r => recipeIds.includes(r.id))
+      .map(({ memories, comments, favorite, ...rest }) => rest); // solo la ricetta
+    const json = JSON.stringify({ v:2, recipes: sel });
+    return btoa(unescape(encodeURIComponent(json)));
+  };
+
+  // Esporta PDF di una o più ricette (per id)
+  const exportRecipesPDFByIds = (recipeIds) => {
+    const sel = recipes.filter(r => recipeIds.includes(r.id));
+    if (sel.length === 1) { exportRecipePDF(sel[0]); }
+    else if (sel.length > 1) { exportBookPDF(sel, sectionList); }
+  };
+
+  const importShareCode = (code) => {
+    try {
+      const json = decodeURIComponent(escape(atob(code.trim())));
+      const parsed = JSON.parse(json);
+      if (!parsed || !Array.isArray(parsed.recipes)) return { ok:false };
+      // Conversione legacy v1: ingredienti stringa → oggetti {name, qty, unit}
+      const legacyToObj = (it) => {
+        if (typeof it !== "string") return it;
+        const d = decomposeIngredient(it);
+        const n = parseFloat((d.qty || "").replace(",", "."));
+        return { name: d.name.trim(), qty: isNaN(n) ? null : n, unit: (d.unit || "").trim() };
+      };
+      const convIngs = (ings) => !Array.isArray(ings) ? [] :
+        (ings.length > 0 && typeof ings[0] === "object" && "section" in ings[0])
+          ? ings.map(s => ({ ...s, items: (s.items || []).map(legacyToObj) }))
+          : ings.map(legacyToObj);
+      const copies = parsed.recipes.map((r, i) => ({
+        ...r, id: uid("r"), memories:[], comments:[], favorite:false,
+        macroSection: r.macroSection || "altro",
+        ingredients: convIngs(r.ingredients),
+      }));
+      setRecipes(prev => [...prev, ...copies]);
+      return { ok:true, count: copies.length };
+    } catch {
+      return { ok:false };
+    }
+  };
+
+  const goTo = (s) => { setPrevScreen(screen); setScreen(s); };
+
+  const updateRecipe = (updated) => {
+    setRecipes(prev => prev.map(r => r.id===updated.id ? updated : r));
+    setSelected(updated);
+    // R6: se la ricetta è nella lista spesa, chiedi cosa fare
+    if (shoppingList.some(e => e.recipeId === updated.id)) {
+      setPendingShopUpdate({ updated });
+    }
+  };
+  // Applica la scelta del dialogo R6
+  const resolveShopUpdate = (action) => {
+    const upd = pendingShopUpdate?.updated;
+    if (upd) {
+      if (action === "update") {
+        setShoppingList(prev => prev.map(e => e.recipeId === upd.id ? recomputeEntry(e, upd) : e));
+      } else if (action === "remove") {
+        setShoppingList(prev => prev.filter(e => e.recipeId !== upd.id));
+      } // "keep" = non tocca nulla
+    }
+    setPendingShopUpdate(null);
+  };
+
+
+  // Normalizza gli ingredienti del form: qty stringa → numero|null, scarta righe senza nome
+  const normalizeIngredients = (ings) => {
+    const normOne = (it) => {
+      if (typeof it === "string") return null; // legacy, non dovrebbe accadere
+      const name = (it.name || "").trim();
+      if (!name) return null;
+      let qty = it.qty;
+      if (typeof qty === "string") {
+        const n = parseFloat(qty.replace(",", "."));
+        qty = isNaN(n) ? null : n;
+      }
+      const out = { name, qty: qty ?? null, unit: (it.unit || "").trim() };
+      if (it.note) out.note = it.note;
+      // Percentuale che concorre ai valori nutrizionali (es. olio da frittura ~10%)
+      let pct = it.nutriPct;
+      if (typeof pct === "string") { const p = parseFloat(pct.replace(",", ".")); pct = isNaN(p) ? null : p; }
+      if (typeof pct === "number" && pct >= 0 && pct < 100) out.nutriPct = Math.round(pct * 10) / 10;
+      return out;
+    };
+    if (isSectioned(ings)) {
+      return ings.map(sec => ({ ...sec, items: sec.items.map(normOne).filter(Boolean) }))
+                 .filter(sec => sec.items.length > 0 || sec.section);
+    }
+    return (ings || []).map(normOne).filter(Boolean);
+  };
+
+  const saveNewRecipe = (draft) => {
+    const newR = {
+      ...draft,
+      id: uid("r"),
+      macroSection: draft.macroSection || "altro",
+      favorite: false,
+      sourceUrl: draft.sourceUrl || "",
+      category: draft.tags[0] || "Altro",
+      ingredients: normalizeIngredients(draft.ingredients),
+      steps: draft.steps.filter(s => s.trim ? s.trim() : s),
+      memories: [],
+      comments: [],
+    };
+    setRecipes(prev => [...prev, newR]);
+    setSelected(newR);
+    setScreen("recipe");
+  };
+
+  // Dopo la scansione: NON salva subito, ma apre il form manuale precompilato
+  // con i dati letti dalla foto, così si possono correggere prima di salvare.
+  const saveScanned = (name, tags, ocrData, emoji, color, macroSection) => {
+    setScanDraft({
+      title: name || ocrData?.title || "",
+      source: "", prepTime: ocrData?.prepTime || 0, cookTime: ocrData?.cookTime || 0,
+      servings: ocrData?.servings || 4,
+      note: ocrData?.note || "",
+      ingredients: (ocrData?.ingredients && ocrData.ingredients.length) ? ocrData.ingredients : [{ name:"", qty:"", unit:"" }],
+      steps: (ocrData?.steps && ocrData.steps.length) ? ocrData.steps : [""],
+      tags: tags.length ? tags : [],
+      color: color || "#6B8C6E",
+      emoji: emoji || "🍝",
+      dishPhoto: null,
+      macroSection: macroSection || "altro",
+    });
+    setScreen("new");
+  };
+
+  const currentRecipe = selected ? recipes.find(r=>r.id===selected.id) : null;
+
+  const deleteRecipe = (id) => {
+    setRecipes(prev => prev.filter(r => r.id !== id));
+    setSelected(null);
+    setScreen(prevScreen === "recipe" ? "recipes" : prevScreen);
+  };
+
+  const addMemory = (mem) => {
+    // mem.recipeIds = array of recipe ids to link
+    const memId = uid("mem");
+    setRecipes(prev => prev.map(r => {
+      if (!(mem.recipeIds||[]).includes(r.id)) return r;
+      const newMem = { ...mem, id:memId };
+      return { ...r, memories: [...(r.memories||[]), newMem] };
+    }));
+  };
+
+  const deleteMemory = (memId) => {
+    setRecipes(prev => prev.map(r => {
+      if (r.id !== selected?.id) return r;
+      return { ...r, memories: (r.memories||[]).filter(m => m.id !== memId) };
+    }));
+  };
+
+  const openRecipe = (r) => { setSelected(r); setPrevScreen(screen); setScreen("recipe"); };
+
+  return (
+    <ThemeCtx.Provider value={bookTheme}>
+    <NavCtx.Provider value={{ onOrganize: () => goTo("organize") }}>
+    <div style={{
+      minHeight:"100vh",
+      background:`radial-gradient(ellipse at 60% 20%, ${bookTheme.appCard} 0%, ${bookTheme.appBorder} 100%)`,
+      display:"flex", flexDirection:"column", alignItems:"center",
+      justifyContent:"center", padding:"40px 20px", gap:20,
+      transition:"background 0.4s",
+    }}>
+      <div style={{ textAlign:"center", color:bookTheme.appInk }}>
+        <div style={{ fontFamily:"'Georgia',serif", fontSize:26, marginBottom:4 }}>Il mio Ricettario</div>
+        <div style={{ fontFamily:"sans-serif", fontSize:12, opacity:0.6 }}>Prototipo v17 · tocca la copertina per entrare</div>
+      </div>
+
+      <IPhone>
+        {screen==="cover" && (
+          <CoverScreen onEnter={() => setScreen("landing")}/>
+        )}
+        {screen==="guide" && (
+          <GuideScreen onBack={() => setScreen(prevScreen === "guide" ? "landing" : prevScreen)}/>
+        )}
+
+        {screen==="landing" && (
+          <LandingScreen
+            recipes={recipes}
+            bookName={activeBook?.name}
+            onBooks={() => goTo("books")}
+            onOrganize={() => goTo("organize")}
+            onRecipes={() => setScreen("recipes")}
+            onBook={() => setScreen("book")}
+            onMemories={() => setScreen("memories")}
+            onAdd={(type) => goTo(type==="memory" ? "addMemory" : "addRecipeHub")}
+            onScan={() => goTo("scan")}
+            onAddMemory={() => goTo("addMemory")}
+            onFridge={() => setScreen("fridge")}
+            onShopping={() => setScreen("shoppingList")}
+            onTheme={() => goTo("theme")}
+            onCover={() => setScreen("cover")}
+            onGuide={() => goTo("guide")}
+          />
+        )}
+        {screen==="organize" && (
+          <OrganizeIngredientsScreen
+            ingredientDict={ingredientDict}
+            onRenameIngredient={renameIngredient}
+            nav={
+              <GlobalNav
+                activeScreen="organize"
+                onRecipes={() => setScreen("recipes")}
+                onBook={() => setScreen("book")}
+                onMemories={() => setScreen("memories")}
+                onAdd={(type) => goTo(type==="memory" ? "addMemory" : "addRecipeHub")}
+                onFridge={() => setScreen("fridge")}
+                onShopping={() => setScreen("shoppingList")}
+                onLanding={() => setScreen("landing")}
+                onSearch={() => {}}
+                onFavorites={() => {}}
+                showSearch={false}
+                showFavorites={false}
+                activeLabel="Organizza Ingredienti"
+              />
+            }
+            recipes={recipes}
+            aggregates={aggregates}
+            ingredientCategories={ingredientCategories}
+            onSetIngredientCats={setIngredientCats}
+            onSaveAggregate={saveAggregate}
+            onDeleteAggregate={deleteAggregate}
+            categoryList={categoryList}
+            onSaveCategory={saveCategory}
+            onDeleteCategory={deleteCategory}
+            equivalences={equivalences}
+            onSaveEquivalence={saveEquivalence}
+            nutritionMap={nutritionMap}
+            onSaveNutritionMapping={saveNutritionMapping}
+            customFoods={customFoods}
+            onSaveCustomFood={saveCustomFood}
+            onDeleteCustomFood={deleteCustomFood}
+            onBack={() => setScreen("landing")}
+          />
+        )}
+        {screen==="books" && (
+          <BooksScreen
+            books={books}
+            activeBookId={activeBookId}
+            me={ME}
+            activeRecipes={recipes}
+            onSwitch={(id) => { switchBook(id); setScreen("landing"); }}
+            onCreate={createBook}
+            onRename={renameBook}
+            onAddMember={addMember}
+            onRemoveMember={removeMember}
+            onCopyRecipes={copyRecipesToBook}
+            onExportCode={exportShareCode}
+            onImportCode={importShareCode}
+            defaultBookId={defaultBookId}
+            onSetDefault={setDefaultBookId}
+            onLanding={() => setScreen("landing")}
+            onRecipes={() => setScreen("recipes")}
+            onBook={() => setScreen("book")}
+            onMemories={() => setScreen("memories")}
+            onAdd={(type) => goTo(type==="memory" ? "addMemory" : "addRecipeHub")}
+            onFridge={() => setScreen("fridge")}
+            onShopping={() => setScreen("shoppingList")}
+          />
+        )}
+        {screen==="shoppingList" && (
+          <ShoppingListScreen
+            entries={shoppingList}
+            aggregates={aggregates}
+            equivalences={equivalences}
+            ingredientDict={ingredientDict}
+            onRemoveEntry={removeShoppingEntry}
+            onRemoveRecipe={removeShoppingRecipe}
+            onRemoveItem={removeShoppingItem}
+            onClearAll={clearShoppingList}
+            onLanding={() => setScreen("landing")}
+            onRecipes={() => setScreen("recipes")}
+            onBook={() => setScreen("book")}
+            onMemories={() => setScreen("memories")}
+            onAdd={(type) => goTo(type==="memory" ? "addMemory" : "addRecipeHub")}
+            onFridge={() => setScreen("fridge")}
+            onShopping={() => setScreen("shoppingList")}
+          />
+        )}
+        {screen==="fridge" && (
+          <EmptyFridgeScreen
+            recipes={recipes}
+            sectionList={sectionList}
+            onLanding={() => setScreen("landing")}
+            onRecipes={() => setScreen("recipes")}
+            onBook={() => setScreen("book")}
+            onMemories={() => setScreen("memories")}
+            onAdd={(type) => goTo(type==="memory" ? "addMemory" : "addRecipeHub")}
+            onFridge={() => setScreen("fridge")}
+            onShopping={() => setScreen("shoppingList")}
+            onStartCooking={(r) => { setSelected(r); setPrevScreen("fridge"); setScreen("recipe"); }}
+            onAddToShoppingList={addToShoppingList}
+            extraTagGroups={extraTagGroups}
+            aggregates={aggregates}
+            ingredientCategories={ingredientCategories}
+            categoryList={categoryList}
+            ingredientDict={ingredientDict}
+          />
+        )}
+        {screen==="recipes" && (
+          <RecipesScreen
+            recipes={recipes}
+            sectionList={sectionList}
+            onRecipe={openRecipe}
+            onLanding={() => setScreen("landing")}
+            onBook={() => setScreen("book")}
+            onMemories={() => setScreen("memories")}
+            onAdd={(type) => goTo(type==="memory" ? "addMemory" : "addRecipeHub")}
+            onFridge={() => setScreen("fridge")}
+            onShopping={() => setScreen("shoppingList")}
+            extraTagGroups={extraTagGroups}
+          />
+        )}
+        {screen==="book" && (
+          <BookViewScreen
+            recipes={recipes}
+            sectionList={sectionList}
+            extraTagGroups={extraTagGroups}
+            onLanding={() => setScreen("landing")}
+            onRecipe={openRecipe}
+            onRecipes={() => setScreen("recipes")}
+            onMemories={() => setScreen("memories")}
+            onAdd={(type) => goTo(type==="memory" ? "addMemory" : "addRecipeHub")}
+            onFridge={() => setScreen("fridge")}
+            onShopping={() => setScreen("shoppingList")}
+          />
+        )}
+        {screen==="memories" && (
+          <MemoriesBookScreen
+            recipes={recipes}
+            onBack={() => setScreen("landing")}
+            onRecipe={openRecipe}
+            onRecipes={() => setScreen("recipes")}
+            onBook={() => setScreen("book")}
+            onAdd={(type) => goTo(type==="memory" ? "addMemory" : "addRecipeHub")}
+            onFridge={() => setScreen("fridge")}
+            onShopping={() => setScreen("shoppingList")}
+          />
+        )}
+        {screen==="theme" && (
+          <ThemePickerScreen
+            onBack={() => setScreen(prevScreen)}
+            onSelect={(t) => { setBookTheme(t); setScreen("cover"); }}
+          />
+        )}
+        {screen==="addRecipeHub" && (
+          <AddRecipeHubScreen
+            onManual={() => setScreen("new")}
+            onScan={() => setScreen("scan")}
+            onLanding={() => setScreen("landing")}
+            onRecipes={() => setScreen("recipes")}
+            onBook={() => setScreen("book")}
+            onMemories={() => setScreen("memories")}
+            onAdd={(type) => setScreen(type==="memory" ? "addMemory" : "addRecipeHub")}
+            onFridge={() => setScreen("fridge")}
+            onShopping={() => setScreen("shoppingList")}
+          />
+        )}
+        {screen==="new" && (
+          <NewRecipeScreen
+            onBack={() => { setScanDraft(null); setScreen("addRecipeHub"); }}
+            onSave={(d) => { setScanDraft(null); saveNewRecipe(d); }}
+            initialDraft={scanDraft}
+            onLanding={() => setScreen("landing")}
+            onRecipes={() => setScreen("recipes")}
+            onBook={() => setScreen("book")}
+            onMemories={() => setScreen("memories")}
+            onAdd={(type) => setScreen(type==="memory" ? "addMemory" : "addRecipeHub")}
+            onFridge={() => setScreen("fridge")}
+            onShopping={() => setScreen("shoppingList")}
+            extraTagGroups={extraTagGroups}
+            onAddGroup={addTagGroup}
+            onAddTagToGroup={addTagToGroup}
+            sectionList={sectionList}
+            onAddSection={addSection}
+            onUpdateSection={updateSection}
+            onDeleteSection={deleteSection}
+            allRecipes={recipes}
+          />
+        )}
+        {screen==="addMemory" && (
+          <AddMemoryScreen
+            recipes={recipes}
+            onBack={() => setScreen(prevScreen)}
+            onSave={(mem) => { addMemory(mem); setScreen(prevScreen); }}
+            onLanding={() => setScreen("landing")}
+            onRecipes={() => setScreen("recipes")}
+            onBook={() => setScreen("book")}
+            onMemories={() => setScreen("memories")}
+            onAdd={(type) => setScreen(type==="memory" ? "addMemory" : "addRecipeHub")}
+            onFridge={() => setScreen("fridge")}
+            onShopping={() => setScreen("shoppingList")}
+          />
+        )}
+        {screen==="recipe" && currentRecipe && (
+          <RecipeScreen
+            recipe={currentRecipe}
+            nutritionMap={nutritionMap}
+            equivalences={equivalences}
+            customFoods={customFoods}
+            ingredientDict={ingredientDict}
+            onBack={() => setScreen(prevScreen === "recipe" ? "recipes" : prevScreen)}
+            onUpdate={updateRecipe}
+            onEdit={() => goTo("edit")}
+            onDelete={deleteRecipe}
+            onDeleteMemory={deleteMemory}
+            onAddToShoppingList={addToShoppingList}
+            allRecipes={recipes}
+            sectionList={sectionList}
+            onExportPDF={exportRecipesPDFByIds}
+            onExportCode={exportShareCode}
+          />
+        )}
+        {screen==="edit" && currentRecipe && (
+          <EditScreen
+            recipe={currentRecipe}
+            onBack={() => setScreen("recipe")}
+            onSave={(updated) => { updateRecipe({ ...updated, ingredients: normalizeIngredients(updated.ingredients) }); setScreen("recipe"); }}
+            extraTagGroups={extraTagGroups}
+            onAddGroup={addTagGroup}
+            onAddTagToGroup={addTagToGroup}
+            sectionList={sectionList}
+            onAddSection={addSection}
+            onUpdateSection={updateSection}
+            onDeleteSection={deleteSection}
+            allRecipes={recipes}
+          />
+        )}
+        {screen==="scan" && (
+          <ScanScreen
+            onBack={() => setScreen("addRecipeHub")}
+            onSave={saveScanned}
+            sectionList={sectionList}
+            onAddSection={addSection}
+            onUpdateSection={updateSection}
+            onDeleteSection={deleteSection}
+            onLanding={() => setScreen("landing")}
+            onRecipes={() => setScreen("recipes")}
+            onBook={() => setScreen("book")}
+            onMemories={() => setScreen("memories")}
+            onAdd={(type) => setScreen(type==="memory" ? "addMemory" : "addRecipeHub")}
+            onFridge={() => setScreen("fridge")}
+            onShopping={() => setScreen("shoppingList")}
+          />
+        )}
+
+        {/* R6 — Dialogo: ricetta modificata già in lista spesa */}
+        {pendingShopUpdate && (() => {
+          const upd = pendingShopUpdate.updated;
+          const entry = shoppingList.find(e => e.recipeId === upd.id);
+          const th = bookTheme;
+          return (
+            <div style={{ position:"absolute", inset:0, zIndex:500, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+              <div style={{ width:"100%", background:th.appBg, borderRadius:20, padding:"22px 20px", textAlign:"center", maxHeight:"90%", overflowY:"auto" }}>
+                <div style={{ fontSize:32, marginBottom:6 }}>🛒</div>
+                <div style={{ fontFamily:F.display, fontSize:19, color:th.appInk, marginBottom:6 }}>Ricetta già nella lista spesa</div>
+                <div style={{ fontFamily:F.ui, fontSize:12.5, color:th.appFaded, lineHeight:1.5, marginBottom:18 }}>
+                  Hai modificato <b style={{ color:th.appInk }}>{upd.title}</b>, che è nella tua lista spesa{entry?.scaleLabel ? ` (${entry.scaleLabel})` : ""}. Cosa vuoi fare?
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:9 }}>
+                  <button onClick={() => resolveShopUpdate("update")} style={{
+                    padding:"13px", borderRadius:12, border:"none", background:th.appAccent,
+                    color:"#fff", fontFamily:F.ui, fontSize:13, fontWeight:700, cursor:"pointer",
+                  }}>🔄 Aggiorna le quantità nella spesa</button>
+                  <button onClick={() => resolveShopUpdate("keep")} style={{
+                    padding:"13px", borderRadius:12, border:`1.5px solid ${th.appBorder}`, background:"transparent",
+                    color:th.appInk, fontFamily:F.ui, fontSize:13, fontWeight:600, cursor:"pointer",
+                  }}>📌 Mantieni le vecchie quantità</button>
+                  <button onClick={() => resolveShopUpdate("remove")} style={{
+                    padding:"13px", borderRadius:12, border:"none", background:"transparent",
+                    color:"#C0392B", fontFamily:F.ui, fontSize:12.5, fontWeight:600, cursor:"pointer",
+                  }}>🗑 Rimuovi dalla lista spesa</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </IPhone>
+
+      <div style={{ display:"flex", gap:16, color:bookTheme.appFaded, fontFamily:"sans-serif", fontSize:12, flexWrap:"wrap", justifyContent:"center" }}>
+        <span>📕 Tocca la copertina</span>
+        <span>🍝 Ricette · 📖 Libro · 📸 Ricordi</span>
+        <span>🔍 Cerca · ⭐ Preferiti · 🎨 Temi</span>
+      </div>
+    </div>
+    </NavCtx.Provider>
+    </ThemeCtx.Provider>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppInner/>
+    </ErrorBoundary>
+  );
+}
