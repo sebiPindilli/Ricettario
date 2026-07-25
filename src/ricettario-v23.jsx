@@ -2274,16 +2274,18 @@ const MemoriesSection = ({ memories, color, onAdd, onDelete }) => {
 // ══════════════════════════════════════════════════════════════
 const AddMemoryScreen = ({ recipes, onBack, onSave, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping }) => {
   const th = useTheme();
+  const todayISO = new Date().toISOString().slice(0,10);
+  const dateLabel = (iso) => new Date(iso).toLocaleDateString("it-IT", { day:"numeric", month:"short", year:"numeric" });
   const [caption, setCaption] = useState("");
   const [story, setStory] = useState("");
   const [chosenPhoto, setChosenPhoto] = useState(null); // emoji o dataURL immagine
   const [photoIsImage, setPhotoIsImage] = useState(false);
   const [selectedRecipeIds, setSelectedRecipeIds] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(todayISO);
   const fileInputRef = React.useRef(null);
 
   const MEMORY_EMOJIS = ["🍽","🥂","🎉","👨‍👩‍👦","🌿","🌅","🏠","🎂","⛺","🌊","❄️","🫂","🎄","🌸","🍂","✨","🫶","🥳"];
-  const today = new Date().toLocaleDateString("it-IT", { day:"numeric", month:"short", year:"numeric" });
-  const todayISO = new Date().toISOString().slice(0,10);
+  const today = dateLabel(selectedDate);
 
   const handleFile = (e) => {
     const file = e.target.files && e.target.files[0];
@@ -2319,7 +2321,7 @@ const AddMemoryScreen = ({ recipes, onBack, onSave, onLanding, onRecipes, onBook
       <div style={{ padding:"8px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
         <BackBtn onBack={onBack} label="Annulla"/>
         <button
-          onClick={() => canSave && onSave({ photo:chosenPhoto, photoIsImage, caption, story, date:today, dateISO:todayISO, recipeIds:selectedRecipeIds })}
+          onClick={() => canSave && onSave({ photo:chosenPhoto, photoIsImage, caption, story, date:today, dateISO:selectedDate, recipeIds:selectedRecipeIds })}
           style={{
             background: canSave ? th.appAccent : th.appBorder,
             color: canSave ? "#fff" : th.appFaded,
@@ -2336,6 +2338,27 @@ const AddMemoryScreen = ({ recipes, onBack, onSave, onLanding, onRecipes, onBook
       </div>
 
       <div style={{ flex:1, overflowY:"auto", padding:"0 20px 40px", display:"flex", flexDirection:"column", gap:16 }}>
+
+        {/* Data del ricordo */}
+        <div>
+          <EditLabel text="Quando è successo"/>
+          <input
+            type="date"
+            value={selectedDate}
+            max={todayISO}
+            onChange={e => setSelectedDate(e.target.value)}
+            style={{
+              width:"100%", padding:"11px 14px",
+              border:`1.5px solid ${th.appBorder}`,
+              borderRadius:12, background:th.appCard,
+              fontFamily:F.body, fontSize:14, color:th.appInk,
+              outline:"none", boxSizing:"border-box",
+            }}
+          />
+          <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginTop:6 }}>
+            Predefinita a oggi. Cambiala se il momento è di un altro giorno.
+          </div>
+        </div>
 
         {/* Photo — caricamento reale con anteprima */}
         <div>
@@ -2451,7 +2474,7 @@ const AddMemoryScreen = ({ recipes, onBack, onSave, onLanding, onRecipes, onBook
 
         {/* Save */}
         <button
-          onClick={() => canSave && onSave({ photo:chosenPhoto, photoIsImage, caption, story, date:today, dateISO:todayISO, recipeIds:selectedRecipeIds })}
+          onClick={() => canSave && onSave({ photo:chosenPhoto, photoIsImage, caption, story, date:today, dateISO:selectedDate, recipeIds:selectedRecipeIds })}
           style={{
             width:"100%", padding:"15px",
             background: canSave ? th.appAccent : th.appBorder,
