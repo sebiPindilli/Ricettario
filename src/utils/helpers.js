@@ -174,7 +174,7 @@ export const macroLine = (v, opts = {}) => {
 // Usa unità dirette (g/kg/ml…) o i fattori delle equivalenze (verso base peso).
 // ml→g approssimato 1:1 (ragionevole per liquidi acquosi). null = non convertibile.
 export const WEIGHT_UNITS = { g:1, kg:1000, ml:1, l:1000, cl:10, dl:100 };
-export const ingredientToGrams = (ing, equivalences = {}, dictIdx = null, aggregates = []) => {
+export const ingredientToGrams = (ing, equivalences = {}, dictIdx = null, aggregates = [], sourceByIngredient) => {
   if (ing.qty == null) return null;
   const unit = normUnit(ing.unit);
   if (unit in WEIGHT_UNITS) return ing.qty * WEIGHT_UNITS[unit];
@@ -182,7 +182,7 @@ export const ingredientToGrams = (ing, equivalences = {}, dictIdx = null, aggreg
   // Se l'ingrediente appartiene a un aggregato con equivalenze proprie,
   // quelle vincono (stessa priorità già applicata per la nutrizione).
   const ingKey = resolveIngId(dictIdx, ing.name);
-  const effKey = effectiveEquivalenceKey(ingKey, aggregates, equivalences);
+  const effKey = effectiveEquivalenceKey(ingKey, aggregates, equivalences, sourceByIngredient);
   const eq = equivalences[effKey];
   if (eq && eq.base) {
     const base = normUnit(eq.base);

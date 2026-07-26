@@ -797,7 +797,7 @@ const SectionPicker = ({ value, onChange, sections = MACRO_SECTIONS, onAddSectio
 // ── Calcolo nutrizionale di una ricetta ──
 // nutritionMap: { "<nome normalizzato>": { foodId } | { custom:{kcal,...} } }
 // Ritorna { total, perServing, covered, excluded:[{name, reason}] }
-const computeRecipeNutrition = (recipe, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null, aggregates = []) => {
+const computeRecipeNutrition = (recipe, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null, aggregates = [], sourceByIngredient) => {
   const dictIdx = ingredientDict ? ingDictIndex(ingredientDict) : null;
   const allFoods = [...NUTRITION_DB, ...customFoods];
   const dbById = new Map(allFoods.map(f => [f.id, f]));
@@ -812,7 +812,7 @@ const computeRecipeNutrition = (recipe, nutritionMap = {}, equivalences = {}, cu
     const key = resolveIngId(dictIdx, ing.name);
     // Se l'ingrediente appartiene a un aggregato con nutrizione propria,
     // usa quella (agg.id); altrimenti resta la chiave del singolo.
-    const effKey = effectiveNutritionKey(key, aggregates, nutritionMap);
+    const effKey = effectiveNutritionKey(key, aggregates, nutritionMap, sourceByIngredient);
     const mapping = nutritionMap[effKey];
     // 1) mappatura esplicita → 2) match esatto sul nome del database
     const values = mapping?.custom
@@ -831,7 +831,7 @@ const computeRecipeNutrition = (recipe, nutritionMap = {}, equivalences = {}, cu
       details.push({ name: ing.name, status: "unlinked" });
       return;
     }
-    const grams = ingredientToGrams(ing, equivalences, dictIdx, aggregates);
+    const grams = ingredientToGrams(ing, equivalences, dictIdx, aggregates, sourceByIngredient);
     if (grams == null) {
       excluded.push({ name: ing.name, reason: `unità "${ing.unit || "?"}" non convertibile in grammi` });
       details.push({ name: ing.name, status: "nounit", unit: ing.unit, foodName });
@@ -1088,24 +1088,24 @@ const ShoppingMode = ({ recipe, scale, onClose, onAddToList, preselectClean = nu
 // ══════════════════════════════════════════════════════════════
 // NUTRITION CARD — tabella valori nella scheda ricetta
 // ══════════════════════════════════════════════════════════════
-const NutritionCard = ({ recipe, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null, aggregates = [], standalone = false }) => {
+const NutritionCard = ({ recipe, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null, aggregates = [], sourceByIngredient = {}, standalone = false }) => {
   const th = useTheme();
   const [open, setOpen] = useState(standalone);
   const [view, setView] = useState("serving"); // "serving" | "per100" | "total"
 
   const nutri = React.useMemo(
-    () => computeRecipeNutrition(recipe, nutritionMap, equivalences, customFoods, ingredientDict, aggregates),
-    [recipe, nutritionMap, equivalences, customFoods, ingredientDict, aggregates]
+    () => computeRecipeNutrition(recipe, nutritionMap, equivalences, customFoods, ingredientDict, aggregates, sourceByIngredient),
+    [recipe, nutritionMap, equivalences, customFoods, ingredientDict, aggregates, sourceByIngredient]
   );
   // Conta gli ingredienti mappati (anche se non convertibili in grammi)
   const mappedCount = React.useMemo(() => {
     const dbByName = new Map([...NUTRITION_DB, ...customFoods].map(f => [normName(f.name), f]));
     const idx = ingredientDict ? ingDictIndex(ingredientDict) : null;
     return flattenIngredients(recipe.ingredients).filter(ing => {
-      const key = effectiveNutritionKey(resolveIngId(idx, ing.name), aggregates, nutritionMap);
+      const key = effectiveNutritionKey(resolveIngId(idx, ing.name), aggregates, nutritionMap, sourceByIngredient);
       return nutritionMap[key] || dbByName.has(normName(ing.name));
     }).length;
-  }, [recipe, nutritionMap, customFoods, ingredientDict, aggregates]);
+  }, [recipe, nutritionMap, customFoods, ingredientDict, aggregates, sourceByIngredient]);
 
   if (nutri.covered === 0 && mappedCount === 0) return null; // nessuna mappatura: nulla da mostrare
 
@@ -1385,7 +1385,7 @@ const ExportFlow = ({ current, allRecipes = [], sectionList = MACRO_SECTIONS, on
   );
 };
 
-const RecipeScreen = ({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemory, onAddToShoppingList, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null, aggregates = [], allRecipes = [], sectionList = MACRO_SECTIONS, onExportPDF, onExportCode }) => {
+const RecipeScreen = ({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemory, onAddToShoppingList, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null, aggregates = [], sourceByIngredient = {}, allRecipes = [], sectionList = MACRO_SECTIONS, onExportPDF, onExportCode }) => {
   const th = useTheme();
   const [tab, setTab] = useState("ingredienti");
   const [toast, setToast] = useState({ msg:"", visible:false });
@@ -1747,7 +1747,7 @@ const RecipeScreen = ({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemo
                 const dbByName = new Map([...NUTRITION_DB, ...customFoods].map(f => [normName(f.name), f]));
                 const idx = ingredientDict ? ingDictIndex(ingredientDict) : null;
                 const anyMapped = flattenIngredients(recipe.ingredients).some(ing => {
-                  const key = effectiveNutritionKey(resolveIngId(idx, ing.name), aggregates, nutritionMap);
+                  const key = effectiveNutritionKey(resolveIngId(idx, ing.name), aggregates, nutritionMap, sourceByIngredient);
                   return nutritionMap[key] || dbByName.has(normName(ing.name));
                 });
                 if (!anyMapped) {
@@ -1761,7 +1761,7 @@ const RecipeScreen = ({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemo
                     </div>
                   );
                 }
-                return <NutritionCard recipe={recipe} nutritionMap={nutritionMap} equivalences={equivalences} customFoods={customFoods} ingredientDict={ingredientDict} aggregates={aggregates} standalone/>;
+                return <NutritionCard recipe={recipe} nutritionMap={nutritionMap} equivalences={equivalences} customFoods={customFoods} ingredientDict={ingredientDict} aggregates={aggregates} sourceByIngredient={sourceByIngredient} standalone/>;
               })()
             )}
 
@@ -5786,9 +5786,18 @@ function AppInner() {
   const [ingredientCategories, setIngredientCategories] = useState({});
   // aggregates: [ { id, name, members:["zucchero di canna", ...], categories:[...] } ]
   const [aggregates, setAggregates] = useState([]);
+  // sourceByIngredient: { [ingId]: ["ingredient", aggId, ...] } — ordine di
+  // priorità delle fonti per l'ereditarietà (categorie/nutrizione/equivalenze).
+  // Sparso: un'entry esiste solo per gli ingredienti su cui è stato
+  // personalizzato; altrimenti il risolutore usa un ordine di default.
+  const [sourceByIngredient, setSourceByIngredient] = useState({});
 
   const setIngredientCats = (name, cats) => {
     setIngredientCategories(prev => ({ ...prev, [name]: cats }));
+  };
+
+  const setIngredientSourcePriority = (ingId, priority) => {
+    setSourceByIngredient(prev => ({ ...prev, [ingId]: priority }));
   };
 
   // equivalences: { "<nome>": { base:"g", factors:{ cucchiaio:10 }, display:"g"|"separate"|<unità> } }
@@ -5894,7 +5903,7 @@ function AppInner() {
   const emptyBookData = () => ({
     recipes: [], extraTagGroups: [],
     sectionList: MACRO_SECTIONS, categoryList: INGREDIENT_CATEGORIES,
-    ingredientCategories: {}, aggregates: [], shoppingList: [], equivalences: {}, nutritionMap: {}, customFoods: [], ingredientDict: {},
+    ingredientCategories: {}, aggregates: [], shoppingList: [], equivalences: {}, nutritionMap: {}, customFoods: [], ingredientDict: {}, sourceByIngredient: {},
   });
   // data:null per il libro attivo = i dati vivono negli stati correnti
   const [books, setBooks] = useState([
@@ -5908,7 +5917,7 @@ function AppInner() {
 
   const snapshotData = () => ({
     recipes, extraTagGroups, sectionList, categoryList,
-    ingredientCategories, aggregates, shoppingList, equivalences, nutritionMap, customFoods, ingredientDict,
+    ingredientCategories, aggregates, shoppingList, equivalences, nutritionMap, customFoods, ingredientDict, sourceByIngredient,
   });
   const loadData = (d) => {
     setRecipes(d.recipes); setExtraTagGroups(d.extraTagGroups);
@@ -5918,6 +5927,7 @@ function AppInner() {
     setNutritionMap(d.nutritionMap || {});
     setCustomFoods(d.customFoods || []);
     setIngredientDict(d.ingredientDict || {});
+    setSourceByIngredient(d.sourceByIngredient || {});
   };
 
   const switchBook = (id) => {
@@ -6192,6 +6202,8 @@ function AppInner() {
             }
             recipes={recipes}
             aggregates={aggregates}
+            sourceByIngredient={sourceByIngredient}
+            onSetSourcePriority={setIngredientSourcePriority}
             ingredientCategories={ingredientCategories}
             onSetIngredientCats={setIngredientCats}
             onSaveAggregate={saveAggregate}
@@ -6376,6 +6388,7 @@ function AppInner() {
             customFoods={customFoods}
             ingredientDict={ingredientDict}
             aggregates={aggregates}
+            sourceByIngredient={sourceByIngredient}
             onBack={() => setScreen(prevScreen === "recipe" ? "recipes" : prevScreen)}
             onUpdate={updateRecipe}
             onEdit={() => goTo("edit")}

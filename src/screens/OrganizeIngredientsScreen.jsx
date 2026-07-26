@@ -7,13 +7,13 @@ import {
   normName, uid, macroLine, resolveIngId, flattenIngredients,
   UNIT_ALIASES, WEIGHT_UNITS, unitLabel, normUnit,
 } from "../utils/helpers.js";
-import { resolveAggregateFor, effectiveCategories } from "../utils/aggregates.js";
+import { effectiveCategories, effectiveNutritionKey, sourcePriorityFor } from "../utils/aggregates.js";
 
 // ══════════════════════════════════════════════════════════════
 // SCREEN: ORGANIZZA INGREDIENTI (sotto Svuota Frigo)
 // ══════════════════════════════════════════════════════════════
 export default function OrganizeIngredientsScreen({
-  nav, recipes, aggregates, ingredientCategories,
+  nav, recipes, aggregates, ingredientCategories, sourceByIngredient = {}, onSetSourcePriority,
   onSetIngredientCats, onSaveAggregate, onDeleteAggregate, onBack,
   categoryList = INGREDIENT_CATEGORIES, onSaveCategory, onDeleteCategory,
   equivalences = {}, onSaveEquivalence,
@@ -36,6 +36,7 @@ export default function OrganizeIngredientsScreen({
   const [renameDraft, setRenameDraft] = useState({});   // ingId → testo in modifica (stato nel parent: ItemCard viene rimontata)
   const [renameErr, setRenameErr] = useState(null);     // ingId con nome rifiutato
   const [emojiPickerFor, setEmojiPickerFor] = useState(null); // cat.id | "new" | null
+  const [priorityPopupFor, setPriorityPopupFor] = useState(null); // ingId di cui è aperto il popup ordine priorità, o null
 
   const CATEGORY_EMOJIS = [
     "🧂","🌾","🥕","🥩","🧀","🫘","🫒","🌿","🍷","🍫","📦","🏷",
@@ -906,16 +907,28 @@ export default function OrganizeIngredientsScreen({
     // altrimenti ereditate dall'aggregato di appartenenza (se ne ha).
     const catsResult = isAgg
       ? { categories: agg.categories || [], inheritedFrom: null }
-      : effectiveCategories(name, aggregates, ingredientCategories);
+      : effectiveCategories(name, aggregates, ingredientCategories, sourceByIngredient);
     const cats = catsResult.categories;
     const catsInheritedFrom = catsResult.inheritedFrom;
-    // Se l'ingrediente appartiene a un aggregato che ha una nutrizione
-    // propria, quella vince (stessa priorità del calcolo): la card non
-    // deve segnalare un falso allarme, ma indicare da dove eredita.
-    const ownerAgg = !isAgg ? resolveAggregateFor(name, aggregates) : null;
-    const nutriInheritedFrom = (ownerAgg && nutritionMap[ownerAgg.id]) ? ownerAgg : null;
-    const nutri = nutriStatusOf(nutriInheritedFrom ? nutriInheritedFrom.id : dataKey);
+    // Chiave nutrizionale secondo l'ordine di priorità delle fonti: se
+    // punta a un aggregato invece che all'ingrediente stesso, la card
+    // deve indicare da dove eredita invece di segnalare un falso allarme.
+    const nutriKey = !isAgg ? effectiveNutritionKey(name, aggregates, nutritionMap, sourceByIngredient) : dataKey;
+    const nutriInheritedFrom = (!isAgg && nutriKey !== name) ? (aggregates || []).find(a => a.id === nutriKey) : null;
+    const nutri = nutriStatusOf(nutriKey);
     const eqS = eqSummary(dataKey);
+    // Ordine di priorità delle fonti (ingrediente + suoi aggregati): solo
+    // per un ingrediente che appartiene ad almeno un aggregato (priority
+    // ha più di un elemento).
+    const priority = !isAgg ? sourcePriorityFor(name, aggregates, sourceByIngredient) : [];
+    const sourceLabel = (src) => src === "ingredient" ? display : ((aggregates || []).find(a => a.id === src)?.name || "?");
+    const moveSource = (idx, dir) => {
+      const target = idx + dir;
+      if (target < 0 || target >= priority.length) return;
+      const next = [...priority];
+      [next[idx], next[target]] = [next[target], next[idx]];
+      onSetSourcePriority(name, next);
+    };
     const linked = recipesFor(isAgg ? (agg.members || []) : [name]);
     const exp = expanded[key];
     // ── Segnalazioni: dove è utile agire ──
@@ -953,6 +966,7 @@ export default function OrganizeIngredientsScreen({
     );
 
     return (
+      <>
       <div style={{ background:th.appCard, border:`1.5px solid ${hasIssues ? RED + "66" : th.appBorder}`, borderRadius:13, padding:"12px 13px", marginBottom:9 }}>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
           <div style={{ flex:1, minWidth:0 }}>
@@ -977,6 +991,36 @@ export default function OrganizeIngredientsScreen({
             >✏️</button>
           ))}
         </div>
+
+        {/* Appartenenza ad aggregati (sola lettura) + accesso all'ordine di priorità */}
+        {priority.length > 1 && (
+          <div style={{ marginTop:8 }}>
+            <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, lineHeight:1.4 }}>
+              È presente nei seguenti aggregati:{" "}
+              <span style={{ color:th.appInk, fontWeight:600 }}>
+                {priority.filter(src => src !== "ingredient")
+                  .map(src => (aggregates || []).find(a => a.id === src)?.name)
+                  .filter(Boolean).join(", ")}
+              </span>
+            </div>
+            <button
+              onClick={() => setPriorityPopupFor(name)}
+              style={{
+                display:"inline-flex", alignItems:"center", gap:6, marginTop:6,
+                padding:"6px 10px", borderRadius:10,
+                border:`1.5px solid ${th.appBorder}`, background:"transparent",
+                color:th.appFaded, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer",
+              }}
+            >
+              <span style={{ display:"flex", flexDirection:"column", alignItems:"center", lineHeight:1 }}>
+                <span style={{ fontSize:7 }}>1</span>
+                <span style={{ fontSize:12, margin:"-1px 0" }}>↕</span>
+                <span style={{ fontSize:7 }}>2</span>
+              </span>
+              Gestisci priorità
+            </button>
+          </div>
+        )}
 
         {/* Attributi */}
         <div style={{ marginTop:7, display:"flex", flexDirection:"column", gap:3 }}>
@@ -1044,6 +1088,57 @@ export default function OrganizeIngredientsScreen({
           </div>
         )}
       </div>
+
+      {/* Popup: ordine di priorità delle fonti */}
+      {priorityPopupFor === name && (
+        <div
+          onClick={() => setPriorityPopupFor(null)}
+          style={{ position:"absolute", inset:0, zIndex:500, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{
+            width:"100%", maxWidth:360, background:th.appBg, borderRadius:18, padding:"18px",
+            boxShadow:"0 10px 40px rgba(0,0,0,0.4)",
+          }}>
+            <div style={{ fontFamily:F.display, fontSize:16, color:th.appInk, marginBottom:4 }}>Ordine di priorità</div>
+            <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginBottom:14, lineHeight:1.4 }}>
+              Per categoria, nutrizione ed equivalenze si usa la prima fonte di questa lista che possiede il dato.
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+              {priority.map((src, i) => (
+                <div key={src} style={{
+                  display:"flex", alignItems:"center", gap:8,
+                  border:`1.5px solid ${i === 0 ? th.appAccent : th.appBorder}`,
+                  borderRadius:11, padding:"9px 11px", background:th.appCard,
+                }}>
+                  <span style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, flexShrink:0, width:14 }}>{i + 1}.</span>
+                  <span style={{
+                    flex:1, minWidth:0, overflowWrap:"break-word", wordBreak:"break-word",
+                    fontFamily:F.body, fontSize:13.5, fontWeight: i === 0 ? 700 : 500,
+                    color: i === 0 ? th.appAccent : th.appInk,
+                  }}>{sourceLabel(src).charAt(0).toUpperCase() + sourceLabel(src).slice(1)}</span>
+                  <button
+                    onClick={() => moveSource(i, -1)}
+                    disabled={i === 0}
+                    style={{ background:"none", border:"none", fontSize:14, padding:"4px 6px", color:th.appFaded, flexShrink:0, cursor: i === 0 ? "default" : "pointer", opacity: i === 0 ? 0.3 : 1 }}
+                  >▲</button>
+                  <button
+                    onClick={() => moveSource(i, 1)}
+                    disabled={i === priority.length - 1}
+                    style={{ background:"none", border:"none", fontSize:14, padding:"4px 6px", color:th.appFaded, flexShrink:0, cursor: i === priority.length - 1 ? "default" : "pointer", opacity: i === priority.length - 1 ? 0.3 : 1 }}
+                  >▼</button>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setPriorityPopupFor(null)} style={{
+              width:"100%", marginTop:14, padding:"11px",
+              border:`1.5px solid ${th.appBorder}`, borderRadius:12,
+              background:"transparent", color:th.appFaded,
+              fontFamily:F.ui, fontSize:12, cursor:"pointer",
+            }}>Fatto</button>
+          </div>
+        </div>
+      )}
+      </>
     );
   };
 
