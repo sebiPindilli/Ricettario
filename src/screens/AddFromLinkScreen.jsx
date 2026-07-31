@@ -2,14 +2,14 @@ import React from "react";
 import ComingSoon from "../components/ComingSoon.jsx";
 
 // ══════════════════════════════════════════════════════════════
-// SCREEN: SCAN — segnaposto in attesa della vera scansione AI
+// SCREEN: ADD FROM LINK — segnaposto in attesa della vera importazione AI
 // ══════════════════════════════════════════════════════════════
-export default function ScanScreen({ onBack }) {
+export default function AddFromLinkScreen({ onBack }) {
   return (
     <ComingSoon
-      icon="📷"
-      title="Scansione in arrivo"
-      message="Presto potrai scansionare le ricette da una foto: il riconoscimento del testo (con l'AI) le trascriverà per te, pronte da rivedere e salvare."
+      icon="🔗"
+      title="Aggiungi da link — in arrivo"
+      message="Presto potrai incollare il link di una ricetta trovata online: l'AI la leggerà e la importerà per te, pronta da rivedere e salvare."
       onBack={onBack}
     />
   );

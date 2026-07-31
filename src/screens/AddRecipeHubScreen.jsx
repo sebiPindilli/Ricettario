@@ -6,7 +6,7 @@ import BackBtn from "../components/BackBtn.jsx";
 // ══════════════════════════════════════════════════════════════
 // SCREEN: ADD RECIPE HUB — choose how to add
 // ══════════════════════════════════════════════════════════════
-export default function AddRecipeHubScreen({ onBack, onManual, onScan, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping }) {
+export default function AddRecipeHubScreen({ onBack, onManual, onScan, onLink, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping }) {
   const th = useTheme();
   return (
     <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
@@ -41,6 +41,13 @@ export default function AddRecipeHubScreen({ onBack, onManual, onScan, onLanding
             desc:"Scegli una foto già scattata dalla tua libreria fotografica",
             fn:() => onScan("gallery"),
             color:"#6B4A8B",
+          },
+          {
+            icon:"🔗",
+            label:"Aggiungi da link",
+            desc:"Incolla il link di una ricetta trovata online — l'AI la importa per te",
+            fn:onLink,
+            color:th.appAccent2,
           },
         ].map(item => (
           <button key={item.label} onClick={item.fn} style={{

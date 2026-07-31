@@ -54,6 +54,7 @@ import SectionPicker from "./components/SectionPicker.jsx";
 import EditSectionedList from "./components/EditSectionedList.jsx";
 import EditSectionedSteps from "./components/EditSectionedSteps.jsx";
 import ScanScreen from "./screens/ScanScreen.jsx";
+import AddFromLinkScreen from "./screens/AddFromLinkScreen.jsx";
 
 // ── Subsection data helpers ────────────────────────────────────
 // ingredients and steps can be either:
@@ -4086,6 +4087,7 @@ function AppInner() {
             onBack={() => setScreen(prevScreen)}
             onManual={() => setScreen("new")}
             onScan={() => setScreen("scan")}
+            onLink={() => setScreen("addFromLink")}
             onLanding={() => setScreen("landing")}
             onRecipes={() => setScreen("recipes")}
             onBook={() => setScreen("book")}
@@ -4183,6 +4185,9 @@ function AppInner() {
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
           />
+        )}
+        {screen==="addFromLink" && (
+          <AddFromLinkScreen onBack={() => setScreen("addRecipeHub")}/>
         )}
 
         {/* R6 — Dialogo: ricetta modificata già in lista spesa */}
