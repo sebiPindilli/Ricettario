@@ -68,6 +68,19 @@ export const stripPhotolessStep = (s) => {
   return photos.length > 0 ? { text: s?.text ?? "", photos } : (s?.text ?? "");
 };
 
+// Foto principale (dishPhoto) di una ricetta: stessa logica di scarto dei
+// placeholder finti usata per le foto degli step, ma per un valore singolo.
+export const dishPhotoOf = (recipe) => isRealStepPhoto(recipe?.dishPhoto) ? recipe.dishPhoto : null;
+
+// Legge un file immagine e restituisce la dataURL via callback — stesso
+// meccanismo già usato per le foto dei Ricordi (FileReader.readAsDataURL).
+export const readImageFile = (file, onLoaded) => {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => onLoaded(ev.target.result);
+  reader.readAsDataURL(file);
+};
+
 // Nome normalizzato per confronti esatti (frigo, aggregati, suggerimenti)
 export const normName = (name) => (name || "").trim().toLowerCase();
 // R9 — id univoci robusti (evita collisioni tra copie create nello stesso istante)

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 import { flattenSteps, flattenIngredients, ingredientToText, scaleIngredient, stepNumberLabel } from "../utils/helpers.js";
+import PhotoLightbox from "../components/PhotoLightbox.jsx";
 
 // ══════════════════════════════════════════════════════════════
 // MODALITÀ CUCINA — step by step a schermo intero, tap per avanzare
@@ -20,6 +21,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
   // idx: -1 = intro ingredienti, 0..steps.length-1 = step, steps.length = fine
   const [idx, setIdx] = useState(-1);
   const [completed, setCompleted] = useState([]); // indici step completati
+  const [lightbox, setLightbox] = useState(null);
   const isIntro = idx === -1;
   const isDone = idx >= steps.length;
   const step = steps[idx];
@@ -197,9 +199,21 @@ export default function CookingMode({ recipe, scale, onClose }) {
             {step.section && (
               <div style={{ fontFamily:F.ui, fontSize:11, letterSpacing:2, color:th.appAccent2, textTransform:"uppercase", marginBottom:10 }}>{step.section}</div>
             )}
-            <div style={{ display:"flex", alignItems:"flex-start", gap:16, marginBottom:16 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:16 }}>
               <div style={{ minWidth:44, height:44, padding:"0 8px", borderRadius:22, background:th.appAccent, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:F.ui, fontSize:18, fontWeight:700, flexShrink:0 }}>{stepNumberLabel(step.sectionIndex, step.indexInSection)}</div>
-              {step.photo && <div style={{ fontSize:40 }}>{step.photo === "PLACEHOLDER" ? "📸" : step.photo}</div>}
+              {step.photos && step.photos.length > 0 && (
+                <div style={{ display:"flex", gap:8, overflowX:"auto" }}>
+                  {step.photos.map((photo, pi) => (
+                    <img
+                      key={pi}
+                      src={photo}
+                      alt=""
+                      onClick={(e) => { e.stopPropagation(); setLightbox({ photo, caption:step.text, date:"", isImage:true }); }}
+                      style={{ width:60, height:60, objectFit:"cover", borderRadius:10, flexShrink:0, cursor:"pointer" }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
             <div style={{ fontFamily:F.body, fontSize:22, lineHeight:1.6, color:"rgba(255,255,255,0.95)" }}>{step.text}</div>
             <div style={{ fontFamily:F.ui, fontSize:11, color:"rgba(255,255,255,0.3)", marginTop:28, textAlign:"center", lineHeight:1.6 }}>
@@ -215,6 +229,16 @@ export default function CookingMode({ recipe, scale, onClose }) {
           <button onClick={(e) => { e.stopPropagation(); prev(); }} disabled={isIntro} style={{ flex:1, padding:"16px", background:"none", border:"none", color: isIntro ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.75)", fontFamily:F.ui, fontSize:14, cursor: isIntro ? "default" : "pointer", borderRight:"1px solid rgba(255,255,255,0.1)" }}>‹ Indietro</button>
           <button onClick={(e) => { e.stopPropagation(); markCompleteAndNext(); }} style={{ flex:1, padding:"16px", background:"none", border:"none", color:th.appAccent2, fontFamily:F.ui, fontSize:14, fontWeight:700, cursor:"pointer" }}>{isIntro ? "Inizia →" : idx === steps.length-1 ? "Fine ✓" : "Avanti ›"}</button>
         </div>
+      )}
+
+      {lightbox && (
+        <PhotoLightbox
+          photo={lightbox.photo}
+          caption={lightbox.caption}
+          date={lightbox.date}
+          isImage={lightbox.isImage}
+          onClose={() => setLightbox(null)}
+        />
       )}
     </div>
   );

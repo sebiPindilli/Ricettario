@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   sortSectionsAltroLast, sortCategoriesAltroLast,
   isSectioned, toSectioned, fromSectioned, stripPhotolessStep, stepPhotosOf,
-  stepNumbers, stepNumberLabel,
+  stepNumbers, stepNumberLabel, dishPhotoOf, readImageFile,
   normName, uid, fmtQty, ingredientToText, scaleIngredient,
   flattenIngredients, collectAllIngredients, buildIngredientDict,
   ingDictIndex, resolveIngId, mapIngredientsStruct, flattenSteps,
@@ -321,6 +321,7 @@ const IngredientsView = ({ ingredients, recipeColor, scaleFactor = 1 }) => {
 // Renders steps (flat or sectioned, items can be string or {text,photos})
 const StepsView = ({ steps, recipeColor }) => {
   const th = useTheme();
+  const [lightbox, setLightbox] = useState(null);
   if (!steps || steps.length === 0) return null;
   const numbers = stepNumbers(steps);
   let flatI = 0;
@@ -342,43 +343,59 @@ const StepsView = ({ steps, recipeColor }) => {
           <p style={{ fontFamily:F.body, fontSize:14, color:th.appInk, lineHeight:1.55, margin:0 }}>{text}</p>
         </div>
         {photos.length > 0 && (
-          <div
-            style={{
-              marginTop:8, marginLeft:38, height:90, borderRadius:10,
-              background:`${color || recipeColor}22`,
-              display:"flex", alignItems:"center", justifyContent:"center",
-              fontSize:28, border:`1px solid ${(color||recipeColor)}22`,
-              cursor:"pointer", position:"relative",
-            }}
-          >
-            📸
-            <div style={{ position:"absolute", bottom:4, right:8, fontSize:14, opacity:0.5 }}>⤢</div>
+          <div style={{ display:"flex", gap:8, overflowX:"auto", marginTop:8, marginLeft:38, paddingBottom:2 }}>
+            {photos.map((photo, pi) => (
+              <img
+                key={pi}
+                src={photo}
+                alt=""
+                onClick={() => setLightbox({ photo, caption:text, date:"", isImage:true })}
+                style={{
+                  height:90, width:120, objectFit:"cover", borderRadius:10,
+                  flexShrink:0, cursor:"pointer",
+                  border:`1px solid ${(color||recipeColor)}33`,
+                }}
+              />
+            ))}
           </div>
         )}
       </div>
     );
   };
 
-  if (isSectioned(steps)) {
-    return (
-      <div>
-        {steps.map((sec, si) => (
-          <div key={si}>
-            <SectionBadge label={sec.section} color={recipeColor}/>
-            {sec.items.map((step, i) => {
-              const { sectionIndex, indexInSection } = numbers[flatI++];
-              return renderStep(step, i, stepNumberLabel(sectionIndex, indexInSection), recipeColor);
-            })}
-          </div>
-        ))}
-      </div>
-    );
-  }
+  const body = isSectioned(steps) ? (
+    <div>
+      {steps.map((sec, si) => (
+        <div key={si}>
+          <SectionBadge label={sec.section} color={recipeColor}/>
+          {sec.items.map((step, i) => {
+            const { sectionIndex, indexInSection } = numbers[flatI++];
+            return renderStep(step, i, stepNumberLabel(sectionIndex, indexInSection), recipeColor);
+          })}
+        </div>
+      ))}
+    </div>
+  ) : (
+    <div>{steps.map((step, i) => {
+      const { sectionIndex, indexInSection } = numbers[flatI++];
+      return renderStep(step, i, stepNumberLabel(sectionIndex, indexInSection), recipeColor);
+    })}</div>
+  );
 
-  return <div>{steps.map((step, i) => {
-    const { sectionIndex, indexInSection } = numbers[flatI++];
-    return renderStep(step, i, stepNumberLabel(sectionIndex, indexInSection), recipeColor);
-  })}</div>;
+  return (
+    <>
+      {body}
+      {lightbox && (
+        <PhotoLightbox
+          photo={lightbox.photo}
+          caption={lightbox.caption}
+          date={lightbox.date}
+          isImage={lightbox.isImage}
+          onClose={() => setLightbox(null)}
+        />
+      )}
+    </>
+  );
 };
 
 
@@ -1023,6 +1040,7 @@ const RecipeScreen = ({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemo
   const [commentInput, setCommentInput] = useState("");
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editingText, setEditingText] = useState("");
+  const dishPhotoInputRef = useRef(null);
 
   const addComment = () => {
     const text = commentInput.trim();
@@ -1073,11 +1091,21 @@ const RecipeScreen = ({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemo
     setTimeout(() => setToast({ msg:"", visible:false }), 2000);
   };
 
-  const addDishPhoto = () => {
-    const wasPresent = !!recipe.dishPhoto;
+  // Caricamento foto reale — stesso meccanismo dei Ricordi (input file
+  // nascosto + FileReader → dataURL).
+  const openDishPhotoPicker = () => {
     setShowPhotoOptions(false);
-    onUpdate({ ...recipe, dishPhoto: "PLACEHOLDER" });
-    showToast(wasPresent ? "📸 Foto piatto aggiornata!" : "📸 Foto piatto aggiunta!");
+    dishPhotoInputRef.current && dishPhotoInputRef.current.click();
+  };
+  const handleDishPhotoFile = (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    const wasPresent = !!dishPhotoOf(recipe);
+    readImageFile(file, (dataUrl) => {
+      onUpdate({ ...recipe, dishPhoto: dataUrl });
+      showToast(wasPresent ? "📸 Foto piatto aggiornata!" : "📸 Foto piatto aggiunta!");
+    });
   };
 
   return (
@@ -1191,9 +1219,13 @@ const RecipeScreen = ({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemo
           photo={lightbox.photo}
           caption={lightbox.caption}
           date={lightbox.date}
+          isImage={lightbox.isImage}
           onClose={() => setLightbox(null)}
         />
       )}
+
+      {/* Input file nascosto per la foto principale — stesso meccanismo dei Ricordi */}
+      <input ref={dishPhotoInputRef} type="file" accept="image/*" onChange={handleDishPhotoFile} style={{ display:"none" }}/>
 
       {viewMode === "app" ? (
         // ── App view ────────────────────────────────────────────
@@ -1201,23 +1233,18 @@ const RecipeScreen = ({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemo
           {/* Hero */}
           <div style={{
             margin:"12px 20px",
-            background: recipe.dishPhoto ? `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url(data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>)` : recipe.color,
+            background: dishPhotoOf(recipe) ? `linear-gradient(rgba(0,0,0,0.15), rgba(0,0,0,0.35)), url(${dishPhotoOf(recipe)})` : recipe.color,
+            backgroundSize:"cover", backgroundPosition:"center",
             borderRadius:20,
             padding:"28px 24px",
             position:"relative", overflow:"hidden",
           }}>
-            {recipe.dishPhoto && (
+            {dishPhotoOf(recipe) && (
               <div
-                onClick={() => setLightbox({ photo:"📸", caption:recipe.title, date:"" })}
-                style={{
-                  position:"absolute", inset:0, borderRadius:20,
-                  background:`${recipe.color}cc`,
-                  display:"flex", alignItems:"center", justifyContent:"center",
-                  fontSize:60, cursor:"pointer",
-                }}
+                onClick={() => setLightbox({ photo:dishPhotoOf(recipe), caption:recipe.title, date:"", isImage:true })}
+                style={{ position:"absolute", inset:0, cursor:"pointer" }}
               >
-                📸
-                <div style={{ position:"absolute", bottom:10, right:14, fontSize:18, opacity:0.7 }}>⤢</div>
+                <div style={{ position:"absolute", bottom:10, right:14, fontSize:18, opacity:0.7, color:"#fff" }}>⤢</div>
               </div>
             )}
             <div style={{ position:"relative", zIndex:1 }}>
@@ -1249,7 +1276,7 @@ const RecipeScreen = ({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemo
                 display:"flex", alignItems:"center", justifyContent:"center",
                 fontSize:17, cursor:"pointer",
               }}
-              title={recipe.dishPhoto ? "Modifica foto piatto" : "Aggiungi foto piatto"}
+              title={dishPhotoOf(recipe) ? "Modifica foto piatto" : "Aggiungi foto piatto"}
             >📷</button>
           </div>
 
@@ -1261,19 +1288,17 @@ const RecipeScreen = ({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemo
               borderRadius:12, overflow:"hidden",
             }}>
               <div style={{ padding:"10px 16px 4px", fontFamily:F.ui, fontSize:10, letterSpacing:1, color:"#7A6E5F", textTransform:"uppercase" }}>
-                {recipe.dishPhoto ? "Modifica foto del piatto" : "Aggiungi foto del piatto"}
+                {dishPhotoOf(recipe) ? "Modifica foto del piatto" : "Aggiungi foto del piatto"}
               </div>
-              {[["📷","Scatta una foto"],["🖼","Scegli dalla galleria"]].map(([icon, label]) => (
-                <button key={label} onClick={addDishPhoto} style={{
-                  width:"100%", padding:"12px 16px",
-                  background:"none", border:"none",
-                  borderTop:`1px solid ${"#EDE6D4"}`,
-                  fontFamily:F.ui, fontSize:14, color:"#2C2416",
-                  textAlign:"left", cursor:"pointer",
-                  display:"flex", alignItems:"center", gap:10,
-                }}><span>{icon}</span>{label}</button>
-              ))}
-              {recipe.dishPhoto && (
+              <button onClick={openDishPhotoPicker} style={{
+                width:"100%", padding:"12px 16px",
+                background:"none", border:"none",
+                borderTop:`1px solid ${"#EDE6D4"}`,
+                fontFamily:F.ui, fontSize:14, color:"#2C2416",
+                textAlign:"left", cursor:"pointer",
+                display:"flex", alignItems:"center", gap:10,
+              }}><span>📷</span>Scatta o scegli dalla galleria</button>
+              {dishPhotoOf(recipe) && (
                 <button onClick={() => { onUpdate({ ...recipe, dishPhoto: null }); setShowPhotoOptions(false); showToast("🗑 Foto rimossa"); }} style={{
                   width:"100%", padding:"12px 16px",
                   background:"none", border:"none",
@@ -1922,8 +1947,10 @@ const BookPageView = ({ recipe }) => {
         <div key={top} style={{ position:"absolute", left:-8, top, width:12, height:12, borderRadius:"50%", background:th.appBorder, border:`1px solid ${th.bookBorder}` }}/>
       ))}
       <div style={{ textAlign:"center", fontSize:17, fontWeight:"bold", color:th.bookInk, marginBottom:14 }}>{recipe.title}</div>
-      <div style={{ width:180, height:130, margin:"0 auto 14px", background:th.appBorder, border:`1px solid ${th.bookBorder}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:40 }}>
-        {recipe.dishPhoto ? "📸" : <span style={{ opacity:0.35 }}>{recipe.emoji}</span>}
+      <div style={{ width:180, height:130, margin:"0 auto 14px", background:th.appBorder, border:`1px solid ${th.bookBorder}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:40, overflow:"hidden" }}>
+        {dishPhotoOf(recipe)
+          ? <img src={dishPhotoOf(recipe)} alt={recipe.title} style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
+          : <span style={{ opacity:0.35 }}>{recipe.emoji}</span>}
       </div>
       <div style={{ fontSize:12, color:th.bookFaded, lineHeight:2 }}>
         <div>Tempo di prep.(min): {recipe.prepTime}</div>

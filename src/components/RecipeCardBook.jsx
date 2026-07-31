@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
-import { isSectioned, ingredientToText } from "../utils/helpers.js";
+import { isSectioned, ingredientToText, stepPhotosOf, dishPhotoOf } from "../utils/helpers.js";
 import PhotoLightbox from "./PhotoLightbox.jsx";
 
 export default function RecipeCardBook({ recipe }) {
@@ -23,6 +23,7 @@ export default function RecipeCardBook({ recipe }) {
           photo={lightbox.photo}
           caption={lightbox.caption}
           date={lightbox.date}
+          isImage={lightbox.isImage}
           onClose={() => setLightbox(null)}
         />
       )}
@@ -56,18 +57,18 @@ export default function RecipeCardBook({ recipe }) {
 
         {/* Photo */}
         <div
-          onClick={() => recipe.dishPhoto && setLightbox({ photo:"📸", caption:recipe.title, date:"" })}
+          onClick={() => dishPhotoOf(recipe) && setLightbox({ photo:dishPhotoOf(recipe), caption:recipe.title, date:"", isImage:true })}
           style={{
             width:190, height:140, margin:"0 auto 16px",
             background: th.appBorder,
             border:`1px solid ${th.bookBorder}`,
             display:"flex", alignItems:"center", justifyContent:"center",
-            fontSize:44, cursor: recipe.dishPhoto ? "pointer" : "default",
-            position:"relative",
+            fontSize:44, cursor: dishPhotoOf(recipe) ? "pointer" : "default",
+            position:"relative", overflow:"hidden",
           }}
         >
-          {recipe.dishPhoto
-            ? <><span style={{ fontSize:44 }}>📸</span><div style={{ position:"absolute", bottom:4, right:6, fontSize:13, opacity:0.5 }}>⤢</div></>
+          {dishPhotoOf(recipe)
+            ? <><img src={dishPhotoOf(recipe)} alt={recipe.title} style={{ width:"100%", height:"100%", objectFit:"cover" }}/><div style={{ position:"absolute", bottom:4, right:6, fontSize:13, opacity:0.5, color:"#fff" }}>⤢</div></>
             : <span style={{ opacity:0.35 }}>{recipe.emoji}</span>
           }
         </div>
@@ -162,7 +163,7 @@ export default function RecipeCardBook({ recipe }) {
                 )}
                 {sec.items.map((step, i) => {
                   const text = typeof step === "string" ? step : step.text;
-                  const photo = typeof step === "string" ? null : step.photo;
+                  const photos = stepPhotosOf(step);
                   return (
                     <div key={i} style={{ marginBottom:12 }}>
                       <div style={{ display:"flex", gap:8, alignItems:"flex-start" }}>
@@ -175,19 +176,17 @@ export default function RecipeCardBook({ recipe }) {
                         }}>{stepN + i + 1}</div>
                         <p style={{ fontSize:12, color:th.bookInk, lineHeight:1.65, margin:0 }}>{text}</p>
                       </div>
-                      {photo && (
+                      {photos.length > 0 && (
                         <div
-                          onClick={() => setLightbox({ photo:"📸", caption:`Passo ${stepN+i+1}`, date:"" })}
+                          onClick={() => setLightbox({ photo:photos[0], caption:`Passo ${stepN+i+1}`, date:"", isImage:true })}
                           style={{
-                            marginTop:6, marginLeft:28, height:70, borderRadius:6,
-                            background:`${recipe.color}18`,
-                            display:"flex", alignItems:"center", justifyContent:"center",
-                            fontSize:24, cursor:"pointer", position:"relative",
+                            marginTop:6, marginLeft:28, height:70, width:70, borderRadius:6,
+                            cursor:"pointer", position:"relative", overflow:"hidden",
                             border:`1px solid ${th.bookBorder}`,
                           }}
                         >
-                          📸
-                          <div style={{ position:"absolute", bottom:3, right:6, fontSize:12, opacity:0.4 }}>⤢</div>
+                          <img src={photos[0]} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+                          <div style={{ position:"absolute", bottom:3, right:6, fontSize:12, opacity:0.6, color:"#fff" }}>⤢</div>
                         </div>
                       )}
                     </div>
@@ -199,7 +198,7 @@ export default function RecipeCardBook({ recipe }) {
         ) : (
           recipe.steps.map((step, i) => {
             const text = typeof step === "string" ? step : step.text;
-            const photo = typeof step === "string" ? null : step.photo;
+            const photos = stepPhotosOf(step);
             return (
               <div key={i} style={{ marginBottom:12 }}>
                 <div style={{ display:"flex", gap:8, alignItems:"flex-start" }}>
@@ -212,19 +211,17 @@ export default function RecipeCardBook({ recipe }) {
                   }}>{i+1}</div>
                   <p style={{ fontSize:12, color:th.bookInk, lineHeight:1.65, margin:0 }}>{text}</p>
                 </div>
-                {photo && (
+                {photos.length > 0 && (
                   <div
-                    onClick={() => setLightbox({ photo:"📸", caption:`Passo ${i+1}`, date:"" })}
+                    onClick={() => setLightbox({ photo:photos[0], caption:`Passo ${i+1}`, date:"", isImage:true })}
                     style={{
-                      marginTop:6, marginLeft:28, height:70, borderRadius:6,
-                      background:`${recipe.color}18`,
-                      display:"flex", alignItems:"center", justifyContent:"center",
-                      fontSize:24, cursor:"pointer", position:"relative",
+                      marginTop:6, marginLeft:28, height:70, width:70, borderRadius:6,
+                      cursor:"pointer", position:"relative", overflow:"hidden",
                       border:`1px solid ${th.bookBorder}`,
                     }}
                   >
-                    📸
-                    <div style={{ position:"absolute", bottom:3, right:6, fontSize:12, opacity:0.4 }}>⤢</div>
+                    <img src={photos[0]} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+                    <div style={{ position:"absolute", bottom:3, right:6, fontSize:12, opacity:0.6, color:"#fff" }}>⤢</div>
                   </div>
                 )}
               </div>

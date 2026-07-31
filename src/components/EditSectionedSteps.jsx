@@ -1,11 +1,13 @@
-import React from "react";
+import React, { useState, useRef } from "react";
 import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
-import { stepPhotosOf, stepNumbers, stepNumberLabel } from "../utils/helpers.js";
+import { stepPhotosOf, stepNumbers, stepNumberLabel, MAX_STEP_PHOTOS, readImageFile } from "../utils/helpers.js";
 
 // ── Editable sectioned steps ─────────────────────────────────────
 export default function EditSectionedSteps({ data, color, onUpdate }) {
   const th = useTheme();
+  const fileInputRef = useRef(null);
+  const [pendingTarget, setPendingTarget] = useState(null); // {si, ii} in attesa di una foto
   // Difesa: normalizza sempre gli item a oggetti {text, photos}, qualunque
   // sia il formato di provenienza (stringa, vecchio photo singolo, o già photos)
   const sections = data.map(sec => ({
@@ -44,6 +46,29 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
     onUpdate(sections.map((s,i) => i!==si ? s : { ...s, items: nextItems }));
   };
 
+  // Caricamento foto reale — stesso meccanismo dei Ricordi (input file
+  // nascosto + FileReader → dataURL), condiviso da tutti i passaggi:
+  // un solo input, il target (quale passaggio) è tenuto in pendingTarget.
+  const openPhotoPicker = (si, ii) => {
+    setPendingTarget({ si, ii });
+    fileInputRef.current && fileInputRef.current.click();
+  };
+  const handleFile = (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = ""; // permette di riselezionare lo stesso file
+    if (!file || !pendingTarget) return;
+    const { si, ii } = pendingTarget;
+    readImageFile(file, (dataUrl) => {
+      const current = sections[si]?.items[ii]?.photos || [];
+      if (current.length >= MAX_STEP_PHOTOS) return;
+      updateStep(si, ii, "photos", [...current, dataUrl]);
+    });
+  };
+  const removePhoto = (si, ii, pi) => {
+    const current = sections[si].items[ii].photos;
+    updateStep(si, ii, "photos", current.filter((_, k) => k !== pi));
+  };
+
   // Numerazione gerarchica coerente con StepsView/CookingMode: passaggi
   // sciolti (sottosezione senza nome) numerati semplici, passaggi dentro
   // una sottosezione con nome numerati "N.M".
@@ -52,6 +77,7 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
 
   return (
     <div>
+      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFile} style={{ display:"none" }}/>
       <div style={{ fontFamily:F.ui, fontSize:12, color:th.appFaded, marginBottom:12 }}>
         Scrivi i passi e, se vuoi, raggruppali in sottosezioni (es. "Pasta", "Salsa", "Impiattamento")
       </div>
@@ -149,22 +175,27 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
                     boxSizing:"border-box",
                   }}
                 />
-                {step.photos.length > 0 ? (
-                  <div style={{ margin:"0 12px 12px", position:"relative" }}>
-                    <div style={{ width:"100%", height:90, borderRadius:10, background:`${color}22`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:32 }}>📸</div>
-                    <button onClick={() => updateStep(si, ii, "photos", [])} style={{ position:"absolute", top:6, right:6, width:22, height:22, borderRadius:"50%", background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", cursor:"pointer", fontSize:11 }}>×</button>
-                  </div>
-                ) : (
-                  <div style={{ display:"flex", gap:6, padding:"0 12px 12px" }}>
-                    {["📷 Scatta","🖼 Libreria"].map(lbl => (
-                      <button key={lbl} onClick={() => updateStep(si, ii, "photos", ["PHOTO_PLACEHOLDER"])} style={{
-                        flex:1, padding:"7px", border:`1.5px dashed ${th.appBorder}`,
-                        borderRadius:10, background:"transparent",
-                        color:th.appFaded, fontFamily:F.ui, fontSize:11, cursor:"pointer",
-                      }}>{lbl}</button>
-                    ))}
-                  </div>
-                )}
+                <div style={{ padding:"0 12px 12px" }}>
+                  {step.photos.length > 0 && (
+                    <div style={{ display:"flex", gap:8, overflowX:"auto", paddingBottom:4, marginBottom: step.photos.length < MAX_STEP_PHOTOS ? 8 : 0 }}>
+                      {step.photos.map((photo, pi) => (
+                        <div key={pi} style={{ position:"relative", flexShrink:0 }}>
+                          <img src={photo} alt={`Foto ${pi+1} del passo ${stepN}`} style={{ width:70, height:70, objectFit:"cover", borderRadius:10, display:"block" }}/>
+                          <button onClick={() => removePhoto(si, ii, pi)} style={{ position:"absolute", top:-6, right:-6, width:20, height:20, borderRadius:"50%", background:"rgba(0,0,0,0.6)", color:"#fff", border:"none", cursor:"pointer", fontSize:11, lineHeight:1 }}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {step.photos.length < MAX_STEP_PHOTOS && (
+                    <button onClick={() => openPhotoPicker(si, ii)} style={{
+                      width:"100%", padding:"7px",
+                      border:`1.5px dashed ${th.appBorder}`,
+                      borderRadius:10, background:"transparent",
+                      color:th.appFaded, fontFamily:F.ui, fontSize:11, cursor:"pointer",
+                      display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+                    }}>📷 Aggiungi foto{step.photos.length > 0 ? ` (${step.photos.length}/${MAX_STEP_PHOTOS})` : ""}</button>
+                  )}
+                </div>
               </div>
             );
           })}
