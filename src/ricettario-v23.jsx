@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   sortSectionsAltroLast, sortCategoriesAltroLast,
-  isSectioned, toSectioned, fromSectioned,
+  isSectioned, toSectioned, fromSectioned, stripPhotolessStep,
   normName, uid, fmtQty, ingredientToText, scaleIngredient,
   flattenIngredients, collectAllIngredients, buildIngredientDict,
   ingDictIndex, resolveIngId, mapIngredientsStruct, flattenSteps,
@@ -2458,11 +2458,13 @@ const EditScreen = ({ recipe, onBack, onSave, extraTagGroups=[], onAddGroup, onA
   };
 
   // Before saving, convert steps back to plain strings if no photo
+  // (sectioned-aware: con sottosezioni ripulisce gli item di ciascuna,
+  // mai il wrapper {section, items} — vedi bug #steps-sezionati)
   const handleSave = () => {
-    onSave({
-      ...draft,
-      steps: draft.steps.map(s => s.photo ? s : s.text),
-    });
+    const steps = isSectioned(draft.steps)
+      ? draft.steps.map(sec => ({ ...sec, items: sec.items.map(stripPhotolessStep) }))
+      : draft.steps.map(stripPhotolessStep);
+    onSave({ ...draft, steps });
   };
 
 
@@ -4242,7 +4244,13 @@ function AppInner() {
       sourceUrl: draft.sourceUrl || "",
       category: draft.tags[0] || "Altro",
       ingredients: normalizeIngredients(draft.ingredients),
-      steps: draft.steps.filter(s => s.trim ? s.trim() : s),
+      // sectioned-aware, come normalizeIngredients: ripulisce gli item di
+      // ciascuna sottosezione (mai il wrapper), scarta le sezioni rimaste vuote
+      steps: isSectioned(draft.steps)
+        ? draft.steps
+            .map(sec => ({ ...sec, items: sec.items.map(stripPhotolessStep).filter(s => s.trim ? s.trim() : s) }))
+            .filter(sec => sec.items.length > 0 || sec.section)
+        : draft.steps.map(stripPhotolessStep).filter(s => s.trim ? s.trim() : s),
       memories: [],
       comments: [],
     };

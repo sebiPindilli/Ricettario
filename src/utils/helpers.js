@@ -40,6 +40,12 @@ export const fromSectioned = (sections) => {
   return sections;
 };
 
+// Un passo (step) senza foto torna stringa semplice (formato legacy);
+// un passo con foto resta oggetto {text, photo}. Va applicato agli ITEM
+// dentro ciascuna sottosezione, mai al wrapper {section, items} — vedi
+// isSectioned/toSectioned/fromSectioned qui sopra.
+export const stripPhotolessStep = (s) => typeof s === "string" ? s : (s && s.photo ? s : (s?.text ?? ""));
+
 // Nome normalizzato per confronti esatti (frigo, aggregati, suggerimenti)
 export const normName = (name) => (name || "").trim().toLowerCase();
 // R9 — id univoci robusti (evita collisioni tra copie create nello stesso istante)
