@@ -302,13 +302,13 @@ const exportRecipePDF = (recipe) => {
     ? recipe.ingredients.flatMap(s => s.section ? [`── ${s.section} ──`, ...s.items.map(ingredientToText)] : s.items.map(ingredientToText))
     : recipe.ingredients.map(ingredientToText);
 
-  // Steps carry {text, photo}; section markers use {section:true}
+  // Steps carry {text, photos}; section markers use {section:true}
   const flatSteps = isSec(recipe.steps)
     ? recipe.steps.flatMap(s => {
-        const items = s.items.map(st => typeof st === "string" ? { text: st, photo: null } : { text: st.text, photo: st.photo });
+        const items = s.items.map(st => ({ text: typeof st === "string" ? st : st.text, photos: stepPhotosOf(st) }));
         return s.section ? [{ sectionLabel: s.section }, ...items] : items;
       })
-    : recipe.steps.map(st => typeof st === "string" ? { text: st, photo: null } : { text: st.text, photo: st.photo });
+    : recipe.steps.map(st => ({ text: typeof st === "string" ? st : st.text, photos: stepPhotosOf(st) }));
 
   const html = `<!DOCTYPE html>
 <html lang="it">
@@ -327,17 +327,20 @@ const exportRecipePDF = (recipe) => {
   .section-label { font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1.5px; color: #8B4520; margin: 10px 0 4px; }
   .step { display: flex; gap: 12px; margin-bottom: 12px; }
   .step-n { width: 24px; height: 24px; border-radius: 50%; background: #8B4520; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; flex-shrink: 0; margin-top: 2px; font-family: sans-serif; }
+  .step-content { flex: 1; }
   .step-t { font-size: 13px; line-height: 1.65; }
   .divider { text-align: center; color: #B8973A; margin: 20px 0; font-size: 16px; }
-  .dish-photo { width: 200px; height: 150px; margin: 0 auto 18px; border: 1px solid #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 64px; background: #fafaf8; }
-  .step-photo { font-size: 34px; margin-left: 12px; }
+  .dish-photo { width: 200px; height: 150px; margin: 0 auto 18px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: #fafaf8; }
+  .dish-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .step-photos { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .step-photo { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; }
   @media print { body { padding: 20px; } }
 </style>
 </head>
 <body>
   <h1>${recipe.title}</h1>
   ${recipe.source ? `<div class="source">Ricetta di ${recipe.source}</div>` : ""}
-  ${recipe.dishPhoto ? `<div class="dish-photo">${recipe.dishPhoto === "PLACEHOLDER" ? "🍽️" : recipe.dishPhoto}</div>` : ""}
+  ${dishPhotoOf(recipe) ? `<div class="dish-photo"><img src="${dishPhotoOf(recipe)}" alt="${recipe.title}"></div>` : ""}
   <div class="meta">
     <span>Prep: ${recipe.prepTime} min</span>
     <span>·</span>
@@ -360,7 +363,7 @@ const exportRecipePDF = (recipe) => {
     let n = 0;
     return flatSteps.map(step => step.sectionLabel
       ? `<div class="section-label">${step.sectionLabel}</div>`
-      : `<div class="step"><div class="step-n">${++n}</div><div class="step-t">${step.text}</div>${step.photo && step.photo !== "PLACEHOLDER" ? `<div class="step-photo">${step.photo}</div>` : ""}</div>`
+      : `<div class="step"><div class="step-n">${++n}</div><div class="step-content"><div class="step-t">${step.text}</div>${step.photos && step.photos.length > 0 ? `<div class="step-photos">${step.photos.map(p => `<img class="step-photo" src="${p}" alt="">`).join("")}</div>` : ""}</div></div>`
     ).join("");
   })()}
 </body>
@@ -394,16 +397,16 @@ const exportBookPDF = (recipes, sections = MACRO_SECTIONS) => {
       : recipe.ingredients.map(ingredientToText);
     const flatSteps = isSec(recipe.steps)
       ? recipe.steps.flatMap(s => {
-          const items = s.items.map(st => typeof st === "string" ? { text: st, photo: null } : { text: st.text, photo: st.photo });
+          const items = s.items.map(st => ({ text: typeof st === "string" ? st : st.text, photos: stepPhotosOf(st) }));
           return s.section ? [{ sectionLabel: s.section }, ...items] : items;
         })
-      : recipe.steps.map(st => typeof st === "string" ? { text: st, photo: null } : { text: st.text, photo: st.photo });
+      : recipe.steps.map(st => ({ text: typeof st === "string" ? st : st.text, photos: stepPhotosOf(st) }));
     let n = 0;
     return `
   <div class="recipe">
     <h1>${recipe.title}</h1>
     ${recipe.source ? `<div class="source">Ricetta di ${recipe.source}</div>` : ""}
-    ${recipe.dishPhoto ? `<div class="dish-photo">${recipe.dishPhoto === "PLACEHOLDER" ? "🍽️" : recipe.dishPhoto}</div>` : ""}
+    ${dishPhotoOf(recipe) ? `<div class="dish-photo"><img src="${dishPhotoOf(recipe)}" alt="${recipe.title}"></div>` : ""}
     <div class="meta">
       <span>Prep: ${recipe.prepTime} min</span><span>·</span>
       <span>Cottura: ${recipe.cookTime} min</span><span>·</span>
@@ -419,7 +422,7 @@ const exportBookPDF = (recipes, sections = MACRO_SECTIONS) => {
     <h2>Preparazione</h2>
     ${flatSteps.map(step => step.sectionLabel
       ? `<div class="section-label">${step.sectionLabel}</div>`
-      : `<div class="step"><div class="step-n">${++n}</div><div class="step-t">${step.text}</div>${step.photo && step.photo !== "PLACEHOLDER" ? `<div class="step-photo">${step.photo}</div>` : ""}</div>`
+      : `<div class="step"><div class="step-n">${++n}</div><div class="step-content"><div class="step-t">${step.text}</div>${step.photos && step.photos.length > 0 ? `<div class="step-photos">${step.photos.map(p => `<img class="step-photo" src="${p}" alt="">`).join("")}</div>` : ""}</div></div>`
     ).join("")}
   </div>`;
   };
@@ -461,7 +464,8 @@ const exportBookPDF = (recipes, sections = MACRO_SECTIONS) => {
   .recipe { page-break-before: always; padding: 40px; }
   .recipe h1 { font-size: 26px; font-style: italic; text-align: center; margin-bottom: 4px; }
   .source { text-align: center; font-size: 13px; color: #666; margin-bottom: 12px; }
-  .dish-photo { width: 170px; height: 128px; margin: 0 auto 14px; border: 1px solid #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 54px; background: #fafaf8; }
+  .dish-photo { width: 170px; height: 128px; margin: 0 auto 14px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: #fafaf8; }
+  .dish-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .meta { display: flex; justify-content: center; gap: 20px; font-size: 12px; color: #555; border-top: 1px solid #ddd; border-bottom: 1px solid #ddd; padding: 7px 0; margin-bottom: 14px; }
   .note { border: 1px solid #ccc; padding: 9px 13px; font-style: italic; font-size: 12.5px; color: #555; margin-bottom: 14px; background: #fafaf8; }
   h2 { font-size: 14px; text-align: center; letter-spacing: 2px; text-transform: uppercase; margin: 16px 0 9px; color: #333; }
@@ -469,8 +473,10 @@ const exportBookPDF = (recipes, sections = MACRO_SECTIONS) => {
   .section-label { font-size: 10.5px; font-weight: bold; text-transform: uppercase; letter-spacing: 1.5px; color: #8B4520; margin: 9px 0 4px; }
   .step { display: flex; gap: 11px; margin-bottom: 11px; }
   .step-n { width: 22px; height: 22px; border-radius: 50%; background: #8B4520; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: bold; flex-shrink: 0; margin-top: 2px; font-family: sans-serif; }
+  .step-content { flex: 1; }
   .step-t { font-size: 12.5px; line-height: 1.6; }
-  .step-photo { font-size: 30px; margin-left: 10px; }
+  .step-photos { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
+  .step-photo { width: 50px; height: 50px; object-fit: cover; border-radius: 5px; border: 1px solid #ddd; }
   .divider { text-align: center; color: #B8973A; margin: 16px 0; font-size: 15px; }
   @media print { .page, .recipe { padding: 24px; } }
 </style>

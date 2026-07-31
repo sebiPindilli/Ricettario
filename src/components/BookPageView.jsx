@@ -1,7 +1,7 @@
 import React from "react";
 import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
-import { isSectioned, ingredientToText, dishPhotoOf, stepNumbers, stepNumberLabel } from "../utils/helpers.js";
+import { isSectioned, ingredientToText, dishPhotoOf, stepPhotosOf, stepNumbers, stepNumberLabel } from "../utils/helpers.js";
 
 export default function BookPageView({ recipe }) {
   const th = useTheme();
@@ -50,7 +50,19 @@ export default function BookPageView({ recipe }) {
               const text = typeof step === "string" ? step : step.text;
               const { sectionIndex, indexInSection } = numbers[flatI++];
               const label = stepNumberLabel(sectionIndex, indexInSection);
-              return <p key={i} style={{ fontSize:12, color:th.bookInk, lineHeight:1.65, marginBottom:8, marginTop:0 }}><b>{label}.</b> {text}</p>;
+              const photos = stepPhotosOf(step);
+              return (
+                <div key={i} style={{ marginBottom:8 }}>
+                  <p style={{ fontSize:12, color:th.bookInk, lineHeight:1.65, margin:0 }}><b>{label}.</b> {text}</p>
+                  {photos.length > 0 && (
+                    <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginTop:5 }}>
+                      {photos.map((photo, pi) => (
+                        <img key={pi} src={photo} alt="" style={{ width:70, height:70, objectFit:"cover", borderRadius:6, border:`1px solid ${th.bookBorder}` }}/>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
             })}
           </div>
         ))
@@ -59,7 +71,19 @@ export default function BookPageView({ recipe }) {
           const text = typeof step === "string" ? step : step.text;
           const { sectionIndex, indexInSection } = numbers[flatI++];
           const label = stepNumberLabel(sectionIndex, indexInSection);
-          return <p key={i} style={{ fontSize:12, color:th.bookInk, lineHeight:1.65, marginBottom:8, marginTop:0 }}><b>{label}.</b> {text}</p>;
+          const photos = stepPhotosOf(step);
+          return (
+            <div key={i} style={{ marginBottom:8 }}>
+              <p style={{ fontSize:12, color:th.bookInk, lineHeight:1.65, margin:0 }}><b>{label}.</b> {text}</p>
+              {photos.length > 0 && (
+                <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginTop:5 }}>
+                  {photos.map((photo, pi) => (
+                    <img key={pi} src={photo} alt="" style={{ width:70, height:70, objectFit:"cover", borderRadius:6, border:`1px solid ${th.bookBorder}` }}/>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
         })
       )}
     </div>
