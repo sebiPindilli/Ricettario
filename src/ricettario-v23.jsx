@@ -59,6 +59,7 @@ import EditScreen from "./screens/EditScreen.jsx";
 import NutritionCard from "./components/NutritionCard.jsx";
 import ExportFlow from "./components/ExportFlow.jsx";
 import MemoriesSection from "./components/MemoriesSection.jsx";
+import BookPageView from "./components/BookPageView.jsx";
 
 // ── Subsection data helpers ────────────────────────────────────
 // ingredients and steps can be either:
@@ -1446,66 +1447,6 @@ const AddMemoryScreen = ({ recipes, onBack, onSave, onLanding, onRecipes, onBook
     </div>
   );
 };
-
-
-
-const BookPageView = ({ recipe }) => {
-  const th = useTheme();
-  return (
-    <div style={{ background:th.bookBg, margin:"12px 16px", padding:"24px 20px", border:`1px solid ${th.bookBorder}`, boxShadow:"0 2px 12px rgba(0,0,0,0.06)", fontFamily:F.book, color:th.bookInk, minHeight:600, position:"relative" }}>
-      {[60,120,180].map(top => (
-        <div key={top} style={{ position:"absolute", left:-8, top, width:12, height:12, borderRadius:"50%", background:th.appBorder, border:`1px solid ${th.bookBorder}` }}/>
-      ))}
-      <div style={{ textAlign:"center", fontSize:17, fontWeight:"bold", color:th.bookInk, marginBottom:14 }}>{recipe.title}</div>
-      <div style={{ width:180, height:130, margin:"0 auto 14px", background:th.appBorder, border:`1px solid ${th.bookBorder}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:40, overflow:"hidden" }}>
-        {dishPhotoOf(recipe)
-          ? <img src={dishPhotoOf(recipe)} alt={recipe.title} style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
-          : <span style={{ opacity:0.35 }}>{recipe.emoji}</span>}
-      </div>
-      <div style={{ fontSize:12, color:th.bookFaded, lineHeight:2 }}>
-        <div>Tempo di prep.(min): {recipe.prepTime}</div>
-        <div>Tempo di cottura (min): {recipe.cookTime}</div>
-        <div>Porzioni: {recipe.servings}</div>
-      </div>
-      {recipe.note && (
-        <div style={{ border:`1px solid ${th.bookNoteBorder}`, background:th.bookNote, padding:"8px 12px", margin:"12px 0", fontSize:11, fontStyle:"italic", color:th.bookFaded, lineHeight:1.65 }}>
-          {recipe.source && <span>Ricetta di {recipe.source} — </span>}{recipe.note}
-        </div>
-      )}
-      <div style={{ textAlign:"center", fontSize:14, fontWeight:"bold", color:th.bookInk, margin:"12px 0 8px" }}>Ingredienti</div>
-      {isSectioned(recipe.ingredients) ? (
-        recipe.ingredients.map((sec, si) => (
-          <div key={si}>
-            {sec.section && <div style={{ fontSize:10, fontWeight:"bold", color:recipe.color, textTransform:"uppercase", letterSpacing:1.5, margin:"8px 0 3px", paddingBottom:2, borderBottom:`1px solid ${th.bookBorder}` }}>{sec.section}</div>}
-            {sec.items.map((ing,i) => <div key={i} style={{ fontSize:12, color:th.bookInk, lineHeight:1.8 }}>{ingredientToText(ing)}</div>)}
-          </div>
-        ))
-      ) : (
-        recipe.ingredients.map((ing,i) => (
-          <div key={i} style={{ fontSize:12, color:th.bookInk, lineHeight:1.8 }}>{ingredientToText(ing)}</div>
-        ))
-      )}
-      <div style={{ textAlign:"center", fontSize:14, fontWeight:"bold", color:th.bookInk, margin:"14px 0 8px" }}>Preparazione</div>
-      {isSectioned(recipe.steps) ? (
-        recipe.steps.map((sec, si) => (
-          <div key={si}>
-            {sec.section && <div style={{ fontSize:10, fontWeight:"bold", color:recipe.color, textTransform:"uppercase", letterSpacing:1.5, margin:"10px 0 5px", paddingBottom:2, borderBottom:`1px solid ${th.bookBorder}` }}>{sec.section}</div>}
-            {sec.items.map((step,i) => {
-              const text = typeof step === "string" ? step : step.text;
-              return <p key={i} style={{ fontSize:12, color:th.bookInk, lineHeight:1.65, marginBottom:8, marginTop:0 }}>{text}</p>;
-            })}
-          </div>
-        ))
-      ) : (
-        recipe.steps.map((step,i) => {
-          const text = typeof step === "string" ? step : step.text;
-          return <p key={i} style={{ fontSize:12, color:th.bookInk, lineHeight:1.65, marginBottom:8, marginTop:0 }}>{text}</p>;
-        })
-      )}
-    </div>
-  );
-};
-
 
 // ══════════════════════════════════════════════════════════════
 // ROOT
