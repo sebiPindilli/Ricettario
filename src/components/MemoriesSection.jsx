@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 import PhotoLightbox from "./PhotoLightbox.jsx";
+import MemoryPhoto from "./MemoryPhoto.jsx";
 
 // ── Memories Section ───────────────────────────────────────────
 export default function MemoriesSection({ memories, color, onAdd, onDelete }) {
@@ -18,6 +19,7 @@ export default function MemoriesSection({ memories, color, onAdd, onDelete }) {
           photo={lightbox.photo}
           caption={lightbox.caption}
           date={lightbox.date}
+          isImage={lightbox.isImage}
           onClose={() => setLightbox(null)}
         />
       )}
@@ -58,16 +60,14 @@ export default function MemoriesSection({ memories, color, onAdd, onDelete }) {
             }}>
               {/* Photo — tappable to open lightbox */}
               <div
-                onClick={() => setLightbox({ photo:mem.photo, caption:mem.caption, date:mem.date })}
+                onClick={() => setLightbox({ photo:mem.photo, caption:mem.caption, date:mem.date, isImage:mem.photoIsImage })}
                 style={{
-                  height:110, cursor:"pointer",
-                  display:"flex", alignItems:"center", justifyContent:"center",
-                  fontSize:44,
+                  cursor:"pointer",
                   background:`linear-gradient(135deg, ${color}20, ${color}08)`,
                   position:"relative",
                 }}
               >
-                {mem.photo}
+                <MemoryPhoto mem={mem} height={110}/>
                 {/* Expand hint */}
                 <div style={{
                   position:"absolute", bottom:4, right:6,
