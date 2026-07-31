@@ -1,30 +1,18 @@
 import React from "react";
 import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
-import GlobalNav from "../components/GlobalNav.jsx";
+import BackBtn from "../components/BackBtn.jsx";
 
 // ══════════════════════════════════════════════════════════════
 // SCREEN: ADD RECIPE HUB — choose how to add
 // ══════════════════════════════════════════════════════════════
-export default function AddRecipeHubScreen({ onManual, onScan, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping }) {
+export default function AddRecipeHubScreen({ onBack, onManual, onScan, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping }) {
   const th = useTheme();
   return (
     <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
-      <GlobalNav
-        activeScreen="add"
-        onRecipes={onRecipes}
-        onBook={onBook}
-        onMemories={onMemories}
-        onAdd={onAdd}
-        onFridge={onFridge}
-        onShopping={onShopping}
-        onLanding={onLanding}
-        onSearch={() => {}}
-        onFavorites={() => {}}
-        showSearch={false}
-        showFavorites={false}
-        activeLabel="Aggiungi"
-      />
+      <div style={{ padding:"8px 20px 0" }}>
+        <BackBtn onBack={onBack} label="Annulla"/>
+      </div>
 
       <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"32px 28px", gap:16 }}>
         <div style={{ textAlign:"center", marginBottom:8 }}>

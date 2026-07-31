@@ -2099,21 +2099,6 @@ const ScanScreen = ({ onBack, onSave, onLanding, onRecipes, onBook, onMemories, 
 
   return (
     <div style={{ background:bgColor, minHeight:"100%", display:"flex", flexDirection:"column" }}>
-      <GlobalNav
-        activeScreen="add"
-        onRecipes={onRecipes}
-        onBook={onBook}
-        onMemories={onMemories}
-        onAdd={onAdd}
-        onFridge={onFridge}
-        onShopping={onShopping}
-        onLanding={onLanding}
-        onSearch={() => {}}
-        onFavorites={() => {}}
-        showSearch={false}
-        showFavorites={false}
-        activeLabel="Scansiona Ricetta"
-      />
       <div style={{ padding:"8px 24px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
         <BackBtn onBack={onBack} label="Annulla" dark={!isDark}/>
         {/* Demo toggle */}
@@ -4539,6 +4524,7 @@ function AppInner() {
         )}
         {screen==="addRecipeHub" && (
           <AddRecipeHubScreen
+            onBack={() => setScreen(prevScreen)}
             onManual={() => setScreen("new")}
             onScan={() => setScreen("scan")}
             onLanding={() => setScreen("landing")}
