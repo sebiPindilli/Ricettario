@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
-import { flattenSteps, flattenIngredients, ingredientToText, scaleIngredient } from "../utils/helpers.js";
+import { flattenSteps, flattenIngredients, ingredientToText, scaleIngredient, stepNumberLabel } from "../utils/helpers.js";
 
 // ══════════════════════════════════════════════════════════════
 // MODALITÀ CUCINA — step by step a schermo intero, tap per avanzare
@@ -93,20 +93,21 @@ export default function CookingMode({ recipe, scale, onClose }) {
             {group.items.map(it => {
               const active = idx === it.globalIdx;
               const done = completed.includes(it.globalIdx);
+              const label = stepNumberLabel(it.sectionIndex, it.indexInSection);
               return (
                 <button
                   key={it.globalIdx}
                   onClick={() => goTo(it.globalIdx)}
-                  title={`Passo ${it.globalIdx + 1}`}
+                  title={`Passo ${label}`}
                   style={{
-                    width:30, height:30, borderRadius:"50%", flexShrink:0, cursor:"pointer",
+                    minWidth:30, height:30, padding:"0 6px", borderRadius:15, flexShrink:0, cursor:"pointer",
                     border: active ? `2px solid ${th.appAccent2}` : done ? "2px solid #6B8C6E" : "2px solid rgba(255,255,255,0.2)",
                     background: active ? th.appAccent : done ? "#6B8C6E" : "rgba(255,255,255,0.08)",
                     color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700,
                     display:"flex", alignItems:"center", justifyContent:"center",
                     transition:"all 0.2s",
                   }}
-                >{done ? "✓" : it.globalIdx + 1}</button>
+                >{done ? "✓" : label}</button>
               );
             })}
           </React.Fragment>
@@ -197,7 +198,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
               <div style={{ fontFamily:F.ui, fontSize:11, letterSpacing:2, color:th.appAccent2, textTransform:"uppercase", marginBottom:10 }}>{step.section}</div>
             )}
             <div style={{ display:"flex", alignItems:"flex-start", gap:16, marginBottom:16 }}>
-              <div style={{ width:44, height:44, borderRadius:"50%", background:th.appAccent, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:F.ui, fontSize:18, fontWeight:700, flexShrink:0 }}>{idx+1}</div>
+              <div style={{ minWidth:44, height:44, padding:"0 8px", borderRadius:22, background:th.appAccent, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:F.ui, fontSize:18, fontWeight:700, flexShrink:0 }}>{stepNumberLabel(step.sectionIndex, step.indexInSection)}</div>
               {step.photo && <div style={{ fontSize:40 }}>{step.photo === "PLACEHOLDER" ? "📸" : step.photo}</div>}
             </div>
             <div style={{ fontFamily:F.body, fontSize:22, lineHeight:1.6, color:"rgba(255,255,255,0.95)" }}>{step.text}</div>

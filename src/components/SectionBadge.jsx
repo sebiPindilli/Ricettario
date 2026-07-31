@@ -3,7 +3,11 @@ import { F } from "../data/constants.js";
 
 export default function SectionBadge({ label, color }) {
   const th = useTheme();
-  if (!label) return null;
+  if (!label) {
+    // Sottosezione senza titolo (passaggi/ingredienti sciolti): solo la
+    // linea, senza etichetta colorata, per segnare comunque l'inizio del blocco.
+    return <div style={{ height:1, background:th.appBorder, margin:"14px 0 6px" }}/>;
+  }
   return (
     <div style={{
       display:"flex", alignItems:"center", gap:8,

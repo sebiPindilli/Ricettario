@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   sortSectionsAltroLast, sortCategoriesAltroLast,
   isSectioned, toSectioned, fromSectioned, stripPhotolessStep, stepPhotosOf,
+  stepNumbers, stepNumberLabel,
   normName, uid, fmtQty, ingredientToText, scaleIngredient,
   flattenIngredients, collectAllIngredients, buildIngredientDict,
   ingDictIndex, resolveIngId, mapIngredientsStruct, flattenSteps,
@@ -321,21 +322,23 @@ const IngredientsView = ({ ingredients, recipeColor, scaleFactor = 1 }) => {
 const StepsView = ({ steps, recipeColor }) => {
   const th = useTheme();
   if (!steps || steps.length === 0) return null;
+  const numbers = stepNumbers(steps);
+  let flatI = 0;
 
-  const renderStep = (step, idx, color) => {
+  const renderStep = (step, key, label, color) => {
     const text = typeof step === "string" ? step : step.text;
     const photos = stepPhotosOf(step);
     return (
-      <div key={idx} style={{ marginBottom:16 }}>
+      <div key={key} style={{ marginBottom:16 }}>
         <div style={{ display:"flex", gap:12 }}>
           <div style={{
-            width:26, height:26, borderRadius:"50%",
+            minWidth:26, height:26, padding:"0 5px", borderRadius:13,
             background: color || recipeColor,
             color:"#fff",
             display:"flex", alignItems:"center", justifyContent:"center",
             fontFamily:F.ui, fontSize:12, fontWeight:700,
             flexShrink:0, marginTop:2,
-          }}>{idx+1}</div>
+          }}>{label}</div>
           <p style={{ fontFamily:F.body, fontSize:14, color:th.appInk, lineHeight:1.55, margin:0 }}>{text}</p>
         </div>
         {photos.length > 0 && (
@@ -357,20 +360,25 @@ const StepsView = ({ steps, recipeColor }) => {
   };
 
   if (isSectioned(steps)) {
-    // restart counter per section
     return (
       <div>
         {steps.map((sec, si) => (
           <div key={si}>
             <SectionBadge label={sec.section} color={recipeColor}/>
-            {sec.items.map((step, i) => renderStep(step, i, recipeColor))}
+            {sec.items.map((step, i) => {
+              const { sectionIndex, indexInSection } = numbers[flatI++];
+              return renderStep(step, i, stepNumberLabel(sectionIndex, indexInSection), recipeColor);
+            })}
           </div>
         ))}
       </div>
     );
   }
 
-  return <div>{steps.map((step, i) => renderStep(step, i, recipeColor))}</div>;
+  return <div>{steps.map((step, i) => {
+    const { sectionIndex, indexInSection } = numbers[flatI++];
+    return renderStep(step, i, stepNumberLabel(sectionIndex, indexInSection), recipeColor);
+  })}</div>;
 };
 
 

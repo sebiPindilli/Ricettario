@@ -1,7 +1,7 @@
 import React from "react";
 import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
-import { stepPhotosOf } from "../utils/helpers.js";
+import { stepPhotosOf, stepNumbers, stepNumberLabel } from "../utils/helpers.js";
 
 // ── Editable sectioned steps ─────────────────────────────────────
 export default function EditSectionedSteps({ data, color, onUpdate }) {
@@ -28,9 +28,27 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
   }));
   const addSection = () => onUpdate([...sections, { section:"", items:[{ text:"", photos:[] }] }]);
   const removeSection = (si) => onUpdate(sections.filter((_,i) => i!==si));
+  const moveSection = (si, dir) => {
+    const target = si + dir;
+    if (target < 0 || target >= sections.length) return;
+    const next = [...sections];
+    [next[si], next[target]] = [next[target], next[si]];
+    onUpdate(next);
+  };
+  const moveStep = (si, ii, dir) => {
+    const items = sections[si].items;
+    const target = ii + dir;
+    if (target < 0 || target >= items.length) return;
+    const nextItems = [...items];
+    [nextItems[ii], nextItems[target]] = [nextItems[target], nextItems[ii]];
+    onUpdate(sections.map((s,i) => i!==si ? s : { ...s, items: nextItems }));
+  };
 
-  // running step count across sections
-  let globalIdx = 0;
+  // Numerazione gerarchica coerente con StepsView/CookingMode: passaggi
+  // sciolti (sottosezione senza nome) numerati semplici, passaggi dentro
+  // una sottosezione con nome numerati "N.M".
+  const numbers = stepNumbers(sections);
+  let flatI = 0;
 
   return (
     <div>
@@ -40,7 +58,7 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
       {sections.map((sec, si) => (
         <div key={si} style={{ marginBottom:18 }}>
           {/* Section name */}
-          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom: sec.section ? 4 : 10 }}>
             <div style={{ width:4, alignSelf:"stretch", borderRadius:2, background: sec.section ? color : th.appBorder, flexShrink:0 }}/>
             <input
               value={sec.section}
@@ -56,6 +74,18 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
                 outline:"none",
               }}
             />
+            <div style={{ display:"flex", flexDirection:"column", flexShrink:0 }}>
+              <button onClick={() => moveSection(si, -1)} disabled={si === 0} title="Sposta su" style={{
+                background:"none", border:"none", padding:0, height:14, lineHeight:"14px",
+                fontSize:11, color: si === 0 ? "#ddd" : th.appFaded,
+                cursor: si === 0 ? "default" : "pointer",
+              }}>▲</button>
+              <button onClick={() => moveSection(si, 1)} disabled={si === sections.length - 1} title="Sposta giù" style={{
+                background:"none", border:"none", padding:0, height:14, lineHeight:"14px",
+                fontSize:11, color: si === sections.length - 1 ? "#ddd" : th.appFaded,
+                cursor: si === sections.length - 1 ? "default" : "pointer",
+              }}>▼</button>
+            </div>
             {sections.length > 1 && (
               <button onClick={() => removeSection(si)} style={{
                 background:"none", border:"none", color:"#ccc",
@@ -63,10 +93,17 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
               }}>🗑</button>
             )}
           </div>
+          {/* Linea che raggruppa visivamente i passaggi sotto la sottosezione
+              con nome — stessa idea del divisore di SectionBadge in visualizzazione.
+              Assente per i passaggi sciolti (sottosezione senza nome). */}
+          {sec.section && (
+            <div style={{ height:1, background:`${color}44`, margin:"0 0 10px 12px" }}/>
+          )}
 
           {/* Steps */}
           {sec.items.map((step, ii) => {
-            const stepN = ++globalIdx;
+            const { sectionIndex, indexInSection } = numbers[flatI++];
+            const stepN = stepNumberLabel(sectionIndex, indexInSection);
             return (
               <div key={ii} style={{
                 marginBottom:12, paddingLeft:12,
@@ -76,12 +113,24 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
               }}>
                 <div style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 12px 6px" }}>
                   <div style={{
-                    width:24, height:24, borderRadius:"50%",
+                    minWidth:24, height:24, padding:"0 5px", borderRadius:12,
                     background:color, color:"#fff",
                     display:"flex", alignItems:"center", justifyContent:"center",
                     fontFamily:F.ui, fontSize:11, fontWeight:700, flexShrink:0,
                   }}>{stepN}</div>
                   <div style={{ flex:1, fontFamily:F.ui, fontSize:11, color:th.appFaded }}>Passo {stepN}</div>
+                  <div style={{ display:"flex", flexDirection:"column", flexShrink:0 }}>
+                    <button onClick={() => moveStep(si, ii, -1)} disabled={ii === 0} title="Sposta su" style={{
+                      background:"none", border:"none", padding:0, height:14, lineHeight:"14px",
+                      fontSize:11, color: ii === 0 ? "#ddd" : th.appFaded,
+                      cursor: ii === 0 ? "default" : "pointer",
+                    }}>▲</button>
+                    <button onClick={() => moveStep(si, ii, 1)} disabled={ii === sec.items.length - 1} title="Sposta giù" style={{
+                      background:"none", border:"none", padding:0, height:14, lineHeight:"14px",
+                      fontSize:11, color: ii === sec.items.length - 1 ? "#ddd" : th.appFaded,
+                      cursor: ii === sec.items.length - 1 ? "default" : "pointer",
+                    }}>▼</button>
+                  </div>
                   <button onClick={() => removeStep(si, ii)} style={{
                     background:"none", border:"none", color:"#ccc",
                     fontSize:16, cursor:"pointer",

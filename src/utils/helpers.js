@@ -156,26 +156,78 @@ export const mapIngredientsStruct = (ingredients, fn) => {
   return ingredients.map(fn);
 };
 
+// ── Numerazione gerarchica dei passaggi ───────────────────────────
+// Regola: i passaggi SCIOLTI (in gruppi senza nome, "section:"") hanno
+// un numero semplice, continuo su tutta la ricetta (1,2,3…) — un'intera
+// sequenza di passaggi sciolti consecutivi conta come UN solo blocco.
+// Ogni sottosezione con nome è invece un blocco a sé: i suoi passaggi
+// condividono un solo numero di primo livello (la posizione del blocco
+// nella sequenza generale — dove un'intera sequenza sciolta vale una
+// posizione) e ricevono "N.M" (M = posizione dentro la sottosezione).
+// Senza sottosezioni: numerazione semplice 1,2,3… identica a prima. Un
+// solo posto per il calcolo, così StepsView e CookingMode mostrano
+// sempre lo stesso numero per lo stesso passaggio — l'ordine restituito
+// è lo stesso di flattenSteps.
+export const stepNumbers = (steps) => {
+  if (!isSectioned(steps)) {
+    return (steps || []).map((_, i) => ({ sectionIndex: i + 1, indexInSection: null }));
+  }
+  let blockCounter = 0;  // posizione del blocco corrente (sottosezione, o intera sequenza sciolta)
+  let looseCounter = 0;  // numero semplice, continuo, dei passaggi sciolti
+  let inLooseRun = false;
+  const out = [];
+  steps.forEach(sec => {
+    const named = !!sec.section;
+    if (named) {
+      blockCounter++;
+      inLooseRun = false;
+      const sectionTop = blockCounter;
+      (sec.items || []).forEach((_, i) => {
+        out.push({ sectionIndex: sectionTop, indexInSection: i + 1 });
+      });
+    } else {
+      if (!inLooseRun) { blockCounter++; inLooseRun = true; }
+      (sec.items || []).forEach(() => {
+        out.push({ sectionIndex: ++looseCounter, indexInSection: null });
+      });
+    }
+  });
+  return out;
+};
+
+// Formatta l'etichetta numerica di un passaggio: "N.M" se dentro una
+// sottosezione, altrimenti solo "N".
+export const stepNumberLabel = (sectionIndex, indexInSection) =>
+  indexInSection != null ? `${sectionIndex}.${indexInSection}` : `${sectionIndex}`;
+
 export const flattenSteps = (steps) => {
   if (!Array.isArray(steps)) return [];
+  const numbers = stepNumbers(steps);
+  let n = 0;
   if (steps.length > 0 && typeof steps[0] === "object" && "section" in steps[0]) {
     return steps.flatMap(s => s.items.map(it => {
       const photos = stepPhotosOf(it);
+      const { sectionIndex, indexInSection } = numbers[n++];
       return {
         text: typeof it === "string" ? it : it.text,
         photo: photos[0] ?? null, // compat: primo dei consumatori che leggono ancora photo singolo
         photos,
         section: s.section,
+        sectionIndex,
+        indexInSection,
       };
     }));
   }
   return steps.map(it => {
     const photos = stepPhotosOf(it);
+    const { sectionIndex, indexInSection } = numbers[n++];
     return {
       text: typeof it === "string" ? it : it.text,
       photo: photos[0] ?? null,
       photos,
       section: null,
+      sectionIndex,
+      indexInSection,
     };
   });
 };
