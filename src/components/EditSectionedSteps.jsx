@@ -1,16 +1,19 @@
 import React from "react";
 import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
+import { stepPhotosOf } from "../utils/helpers.js";
 
 // ── Editable sectioned steps ─────────────────────────────────────
 export default function EditSectionedSteps({ data, color, onUpdate }) {
   const th = useTheme();
-  // Difesa: normalizza sempre gli item a oggetti {text, photo}
+  // Difesa: normalizza sempre gli item a oggetti {text, photos}, qualunque
+  // sia il formato di provenienza (stringa, vecchio photo singolo, o già photos)
   const sections = data.map(sec => ({
     ...sec,
-    items: (sec.items || []).map(s =>
-      typeof s === "string" ? { text:s, photo:null } : (s || { text:"", photo:null })
-    ),
+    items: (sec.items || []).map(s => ({
+      text: typeof s === "string" ? s : (s?.text ?? ""),
+      photos: stepPhotosOf(s),
+    })),
   }));
 
   const updateSection = (si, key, val) => onUpdate(sections.map((s,i) => i===si ? {...s,[key]:val} : s));
@@ -18,12 +21,12 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
     ...s, items: s.items.map((it,j) => j===ii ? {...it,[field]:val} : it)
   }));
   const addStep = (si) => onUpdate(sections.map((s,i) => i!==si ? s : {
-    ...s, items:[...s.items, { text:"", photo:null }]
+    ...s, items:[...s.items, { text:"", photos:[] }]
   }));
   const removeStep = (si, ii) => onUpdate(sections.map((s,i) => i!==si ? s : {
     ...s, items: s.items.filter((_,j) => j!==ii)
   }));
-  const addSection = () => onUpdate([...sections, { section:"", items:[{ text:"", photo:null }] }]);
+  const addSection = () => onUpdate([...sections, { section:"", items:[{ text:"", photos:[] }] }]);
   const removeSection = (si) => onUpdate(sections.filter((_,i) => i!==si));
 
   // running step count across sections
@@ -97,15 +100,15 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
                     boxSizing:"border-box",
                   }}
                 />
-                {step.photo ? (
+                {step.photos.length > 0 ? (
                   <div style={{ margin:"0 12px 12px", position:"relative" }}>
                     <div style={{ width:"100%", height:90, borderRadius:10, background:`${color}22`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:32 }}>📸</div>
-                    <button onClick={() => updateStep(si, ii, "photo", null)} style={{ position:"absolute", top:6, right:6, width:22, height:22, borderRadius:"50%", background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", cursor:"pointer", fontSize:11 }}>×</button>
+                    <button onClick={() => updateStep(si, ii, "photos", [])} style={{ position:"absolute", top:6, right:6, width:22, height:22, borderRadius:"50%", background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", cursor:"pointer", fontSize:11 }}>×</button>
                   </div>
                 ) : (
                   <div style={{ display:"flex", gap:6, padding:"0 12px 12px" }}>
                     {["📷 Scatta","🖼 Libreria"].map(lbl => (
-                      <button key={lbl} onClick={() => updateStep(si, ii, "photo", "PHOTO_PLACEHOLDER")} style={{
+                      <button key={lbl} onClick={() => updateStep(si, ii, "photos", ["PHOTO_PLACEHOLDER"])} style={{
                         flex:1, padding:"7px", border:`1.5px dashed ${th.appBorder}`,
                         borderRadius:10, background:"transparent",
                         color:th.appFaded, fontFamily:F.ui, fontSize:11, cursor:"pointer",

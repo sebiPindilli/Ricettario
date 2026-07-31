@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useTheme } from "../context.js";
 import { F, MACRO_SECTIONS, DEFAULT_UNIT_SUGGESTIONS } from "../data/constants.js";
-import { collectAllIngredients, flattenIngredients, toSectioned, fromSectioned } from "../utils/helpers.js";
+import { collectAllIngredients, flattenIngredients, toSectioned, fromSectioned, stripPhotolessStep } from "../utils/helpers.js";
 import BackBtn from "../components/BackBtn.jsx";
 import EditLabel from "../components/EditLabel.jsx";
 import EditField from "../components/EditField.jsx";
@@ -206,19 +206,16 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
         {/* PREPARAZIONE */}
         {activeSection==="preparazione" && (
           <EditSectionedSteps
-            data={toSectioned(draft.steps || []).map(sec => ({
-              ...sec,
-              items: sec.items.map(s => typeof s === "string" ? { text:s, photo:null } : (s || { text:"", photo:null })),
-            }))}
+            data={toSectioned(draft.steps || [])}
             color={draft.color}
             onUpdate={(sections) => {
               const flat = fromSectioned(sections);
               if (Array.isArray(flat) && flat.length > 0 && !("section" in flat[0])) {
-                set("steps", flat.map(s => typeof s === "string" ? s : (s && s.photo ? s : (s?.text ?? ""))));
+                set("steps", flat.map(stripPhotolessStep));
               } else {
                 set("steps", sections.map(sec => ({
                   section: sec.section,
-                  items: sec.items.map(s => typeof s === "string" ? s : (s && s.photo ? s : (s?.text ?? ""))),
+                  items: sec.items.map(stripPhotolessStep),
                 })));
               }
             }}

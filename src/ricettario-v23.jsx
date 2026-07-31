@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   sortSectionsAltroLast, sortCategoriesAltroLast,
-  isSectioned, toSectioned, fromSectioned, stripPhotolessStep,
+  isSectioned, toSectioned, fromSectioned, stripPhotolessStep, stepPhotosOf,
   normName, uid, fmtQty, ingredientToText, scaleIngredient,
   flattenIngredients, collectAllIngredients, buildIngredientDict,
   ingDictIndex, resolveIngId, mapIngredientsStruct, flattenSteps,
@@ -317,14 +317,14 @@ const IngredientsView = ({ ingredients, recipeColor, scaleFactor = 1 }) => {
   );
 };
 
-// Renders steps (flat or sectioned, items can be string or {text,photo})
+// Renders steps (flat or sectioned, items can be string or {text,photos})
 const StepsView = ({ steps, recipeColor }) => {
   const th = useTheme();
   if (!steps || steps.length === 0) return null;
 
   const renderStep = (step, idx, color) => {
     const text = typeof step === "string" ? step : step.text;
-    const photo = typeof step === "string" ? null : step.photo;
+    const photos = stepPhotosOf(step);
     return (
       <div key={idx} style={{ marginBottom:16 }}>
         <div style={{ display:"flex", gap:12 }}>
@@ -338,7 +338,7 @@ const StepsView = ({ steps, recipeColor }) => {
           }}>{idx+1}</div>
           <p style={{ fontFamily:F.body, fontSize:14, color:th.appInk, lineHeight:1.55, margin:0 }}>{text}</p>
         </div>
-        {photo && (
+        {photos.length > 0 && (
           <div
             style={{
               marginTop:8, marginLeft:38, height:90, borderRadius:10,
@@ -2423,10 +2423,16 @@ const ScanPreviewUncertain = ({ ocrData, recipeName, setRecipeName }) => {
 // ══════════════════════════════════════════════════════════════
 const EditScreen = ({ recipe, onBack, onSave, extraTagGroups=[], onAddGroup, onAddTagToGroup, sectionList=MACRO_SECTIONS, onAddSection, onUpdateSection, onDeleteSection, allRecipes=[] }) => {
   const th = useTheme();
-  // Normalise steps: can be string or {text, photo}
-  const normaliseSteps = (steps) => (steps || []).map(s =>
-    typeof s === "string" ? { text: s, photo: null } : s
-  );
+  // Normalise steps: can be string or {text, photos} (o vecchio {text, photo}).
+  // Sectioned-aware: se ci sono sottosezioni, normalizza gli item dentro
+  // ciascuna, mai il wrapper {section, items} (vedi bug #steps-sezionati).
+  const normaliseSteps = (steps) => {
+    const normOne = (s) =>
+      typeof s === "string" ? { text: s, photos: [] } : { text: s?.text ?? "", photos: stepPhotosOf(s) };
+    return isSectioned(steps)
+      ? steps.map(sec => ({ ...sec, items: (sec.items || []).map(normOne) }))
+      : (steps || []).map(normOne);
+  };
 
   const [draft, setDraft] = useState({ ...recipe, steps: normaliseSteps(recipe.steps) });
   const [activeSection, setActiveSection] = useState("info");
@@ -2582,21 +2588,18 @@ const EditScreen = ({ recipe, onBack, onSave, extraTagGroups=[], onAddGroup, onA
         {/* ── PREPARAZIONE ── */}
         {activeSection==="preparazione" && (
           <EditSectionedSteps
-            data={toSectioned(draft.steps).map(sec => ({
-              ...sec,
-              items: sec.items.map(s => typeof s === "string" ? { text:s, photo:null } : s)
-            }))}
+            data={toSectioned(draft.steps)}
             color={draft.color}
             onUpdate={(sections) => {
               const flat = fromSectioned(sections);
               // if flat array, strip photo-less steps back to strings
               if (Array.isArray(flat) && flat.length > 0 && !("section" in flat[0])) {
-                set("steps", flat.map(s => typeof s === "string" ? s : (s && s.photo ? s : (s?.text ?? ""))));
+                set("steps", flat.map(stripPhotolessStep));
               } else {
                 // sectioned: keep structure, strip photo-less items
                 set("steps", sections.map(sec => ({
                   section: sec.section,
-                  items: sec.items.map(s => typeof s === "string" ? s : (s && s.photo ? s : (s?.text ?? ""))),
+                  items: sec.items.map(stripPhotolessStep),
                 })));
               }
             }}

@@ -40,11 +40,33 @@ export const fromSectioned = (sections) => {
   return sections;
 };
 
-// Un passo (step) senza foto torna stringa semplice (formato legacy);
-// un passo con foto resta oggetto {text, photo}. Va applicato agli ITEM
-// dentro ciascuna sottosezione, mai al wrapper {section, items} — vedi
-// isSectioned/toSectioned/fromSectioned qui sopra.
-export const stripPhotolessStep = (s) => typeof s === "string" ? s : (s && s.photo ? s : (s?.text ?? ""));
+// ── Foto dei passaggi (step) ──────────────────────────────────────
+// Un passo può avere più foto (fino a MAX_STEP_PHOTOS), salvate come
+// dataURL in step.photos. Compatibilità con dati precedenti: un vecchio
+// step.photo singolo viene promosso a lista; i valori finti usati prima
+// che il caricamento reale esistesse ("PHOTO_PLACEHOLDER"/"PLACEHOLDER")
+// non sono foto vere e vengono sempre scartati, ovunque.
+export const MAX_STEP_PHOTOS = 4;
+const FAKE_STEP_PHOTOS = new Set(["PHOTO_PLACEHOLDER", "PLACEHOLDER"]);
+const isRealStepPhoto = (p) => typeof p === "string" && p.length > 0 && !FAKE_STEP_PHOTOS.has(p);
+// Normalizza le foto di uno step (stringa, {photo} legacy o {photos}) in un
+// array pulito di foto vere, qualunque sia il formato di provenienza.
+export const stepPhotosOf = (step) => {
+  if (!step || typeof step === "string") return [];
+  if (Array.isArray(step.photos)) return step.photos.filter(isRealStepPhoto).slice(0, MAX_STEP_PHOTOS);
+  if (step.photo != null) return isRealStepPhoto(step.photo) ? [step.photo] : [];
+  return [];
+};
+
+// Un passo senza foto torna stringa semplice (formato legacy); un passo
+// con almeno una foto resta oggetto {text, photos}. Va applicato agli
+// ITEM dentro ciascuna sottosezione, mai al wrapper {section, items} —
+// vedi isSectioned/toSectioned/fromSectioned qui sopra.
+export const stripPhotolessStep = (s) => {
+  if (typeof s === "string") return s;
+  const photos = stepPhotosOf(s);
+  return photos.length > 0 ? { text: s?.text ?? "", photos } : (s?.text ?? "");
+};
 
 // Nome normalizzato per confronti esatti (frigo, aggregati, suggerimenti)
 export const normName = (name) => (name || "").trim().toLowerCase();
@@ -137,17 +159,25 @@ export const mapIngredientsStruct = (ingredients, fn) => {
 export const flattenSteps = (steps) => {
   if (!Array.isArray(steps)) return [];
   if (steps.length > 0 && typeof steps[0] === "object" && "section" in steps[0]) {
-    return steps.flatMap(s => s.items.map(it => ({
-      text: typeof it === "string" ? it : it.text,
-      photo: typeof it === "string" ? null : it.photo,
-      section: s.section,
-    })));
+    return steps.flatMap(s => s.items.map(it => {
+      const photos = stepPhotosOf(it);
+      return {
+        text: typeof it === "string" ? it : it.text,
+        photo: photos[0] ?? null, // compat: primo dei consumatori che leggono ancora photo singolo
+        photos,
+        section: s.section,
+      };
+    }));
   }
-  return steps.map(it => ({
-    text: typeof it === "string" ? it : it.text,
-    photo: typeof it === "string" ? null : it.photo,
-    section: null,
-  }));
+  return steps.map(it => {
+    const photos = stepPhotosOf(it);
+    return {
+      text: typeof it === "string" ? it : it.text,
+      photo: photos[0] ?? null,
+      photos,
+      section: null,
+    };
+  });
 };
 
 // Estrae il primo numero (con eventuale unità) da un testo ingrediente
