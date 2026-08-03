@@ -210,7 +210,7 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
           </div>
           {nutri.excluded.length > 0 && (
             <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, marginTop:8, lineHeight:1.5 }}>
-              ⚠ Per includere gli esclusi: ⚙️ Organizza › 🍎 Valori nutrizionali (collegamenti) o ⚖️ Equivalenze (unità).
+              ⚠️ Per includere gli esclusi: ⚙️ Organizza › 🍎 Valori nutrizionali (collegamenti) o ⚖️ Equivalenze (unità).
             </div>
           )}
           <div style={{ fontFamily:F.ui, fontSize:9, color:th.appFaded, marginTop:8, textAlign:"center" }}>

@@ -241,7 +241,7 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
               </div>
             </div>
             <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:24 }}>
-              <button onClick={() => { onUpdate({ ...recipe, dishPhoto: null }); setShowRemovePhotoConfirm(false); showToast("🗑 Foto rimossa"); }} style={{
+              <button onClick={() => { onUpdate({ ...recipe, dishPhoto: null }); setShowRemovePhotoConfirm(false); showToast("🗑️ Foto rimossa"); }} style={{
                 width:"100%", padding:"15px",
                 background:"#D93025", color:"#fff",
                 border:"none", borderRadius:14,

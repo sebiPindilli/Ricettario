@@ -1195,7 +1195,7 @@ function AppInner() {
                   <button onClick={() => resolveShopUpdate("remove")} style={{
                     padding:"13px", borderRadius:12, border:"none", background:"transparent",
                     color:"#C0392B", fontFamily:F.ui, fontSize:12.5, fontWeight:600, cursor:"pointer",
-                  }}>🗑 Rimuovi dalla lista spesa</button>
+                  }}>🗑️ Rimuovi dalla lista spesa</button>
                 </div>
               </div>
             </div>

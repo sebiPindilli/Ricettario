@@ -39,7 +39,7 @@ export default function OrganizeIngredientsScreen({
   const [priorityPopupFor, setPriorityPopupFor] = useState(null); // ingId di cui è aperto il popup ordine priorità, o null
 
   const CATEGORY_EMOJIS = [
-    "🧂","🌾","🥕","🥩","🧀","🫘","🫒","🌿","🍷","🍫","📦","🏷",
+    "🧂","🌾","🥕","🥩","🧀","🫘","🫒","🌿","🍷","🍫","📦","🏷️",
     "🍞","🥖","🍝","🍚","🥔","🍅","🥦","🥬","🍎","🍋","🍇","🍓",
     "🥚","🐟","🦐","🍗","🥓","🥛","🧈","🍯","🍬","🍰","☕","🍵",
     "🥜","🌰","🧄","🧅","🌶","🥫","🍄","🫙","🧊","🍾","🥤","🍪",
@@ -382,7 +382,7 @@ export default function OrganizeIngredientsScreen({
       const label = newCat.label.trim();
       if (!label) return;
       const id = uid("cat");
-      onSaveCategory({ id, label, emoji: newCat.emoji.trim() || "🏷" });
+      onSaveCategory({ id, label, emoji: newCat.emoji.trim() || "🏷️" });
       setNewCat({ emoji:"", label:"" });
     };
 
@@ -424,7 +424,7 @@ export default function OrganizeIngredientsScreen({
                   <button onClick={() => onDeleteCategory(cat.id)} style={{
                     background:"none", border:"none", color:"#C4593A",
                     fontSize:17, cursor:"pointer", flexShrink:0, padding:"4px 6px",
-                  }}>🗑</button>
+                  }}>🗑️</button>
                 )}
               </div>
             );
@@ -455,7 +455,7 @@ export default function OrganizeIngredientsScreen({
               <button
                 onClick={() => setEmojiPickerFor("new")}
                 style={{ width:44, padding:"8px 4px", textAlign:"center", border:`1.5px solid ${emojiPickerFor==="new" ? th.appAccent : th.appBorder}`, borderRadius:10, background:th.appCard, fontSize:16, cursor:"pointer", flexShrink:0 }}
-              >{newCat.emoji || "🏷"}</button>
+              >{newCat.emoji || "🏷️"}</button>
               <input
                 value={newCat.label}
                 onChange={e => setNewCat(p => ({ ...p, label: e.target.value }))}
@@ -637,7 +637,7 @@ export default function OrganizeIngredientsScreen({
               padding:"14px 16px", borderRadius:12, border:`1.5px solid #C4593A`,
               background:"transparent", color:"#C4593A",
               fontFamily:F.ui, fontSize:13, fontWeight:600, cursor:"pointer",
-            }}>🗑</button>
+            }}>🗑️</button>
           )}
           <button onClick={save} disabled={!canSaveAgg} style={{
             flex:1, padding:"14px", borderRadius:12, border:"none",
@@ -975,7 +975,7 @@ export default function OrganizeIngredientsScreen({
         {/* Attributi */}
         <div style={{ marginTop:7, display:"flex", flexDirection:"column", gap:3 }}>
           <div style={{ fontFamily:F.ui, fontSize:10.5, color: issueNoCat ? RED : th.appFaded, fontWeight: issueNoCat ? 600 : 400 }}>
-            🏷 {cats.length > 0 ? (
+            🏷️ {cats.length > 0 ? (
               <>{catsInheritedFrom && <>eredita da «{catsInheritedFrom.name}» · </>}{cats.map(c => { const cc = catOf(c); return cc ? `${cc.emoji} ${cc.label}` : c; }).join(" · ")}</>
             ) : "senza categoria — assegnane una"}
           </div>
@@ -1000,7 +1000,7 @@ export default function OrganizeIngredientsScreen({
 
         {/* Pulsanti modifica */}
         <div style={{ display:"flex", gap:6, marginTop:9, flexWrap:"wrap" }}>
-          {attrBtn("🏷 Categorie", "cat")}
+          {attrBtn("🏷️ Categorie", "cat")}
           {attrBtn("🍎 Nutrizione", "nutri")}
           {attrBtn("⚖️ Equivalenze", "eq")}
         </div>

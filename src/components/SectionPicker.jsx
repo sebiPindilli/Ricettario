@@ -152,7 +152,7 @@ export default function SectionPicker({ value, onChange, sections = MACRO_SECTIO
                         confirmDelId === sec.id ? (
                           <button onClick={() => { onDeleteSection(sec.id); if (value === sec.id) onChange("altro"); setConfirmDelId(null); }} style={{ flexShrink:0, padding:"8px 10px", border:"none", borderRadius:10, background:"#D93025", color:"#fff", fontFamily:F.ui, fontSize:10, fontWeight:700, cursor:"pointer" }}>Confermi?</button>
                         ) : (
-                          <button onClick={() => setConfirmDelId(sec.id)} title="Elimina sezione" style={{ flexShrink:0, background:"none", border:"none", color:"#ccc", fontSize:15, cursor:"pointer", padding:"0 2px" }}>🗑</button>
+                          <button onClick={() => setConfirmDelId(sec.id)} title="Elimina sezione" style={{ flexShrink:0, background:"none", border:"none", color:"#ccc", fontSize:15, cursor:"pointer", padding:"0 2px" }}>🗑️</button>
                         )
                       )}
                     </div>
@@ -160,7 +160,7 @@ export default function SectionPicker({ value, onChange, sections = MACRO_SECTIO
                 })}
                 {onDeleteSection && (
                   <div style={{ fontFamily:F.ui, fontSize:9.5, color:"#7A6E5F", margin:"2px 0 6px", lineHeight:1.4 }}>
-                    🗑 elimina la sezione: le sue ricette passano in "Altro".
+                    🗑️ elimina la sezione: le sue ricette passano in "Altro".
                   </div>
                 )}
                 <button onClick={() => { setManaging(false); setConfirmDelId(null); }} style={{ width:"100%", marginTop:8, padding:"12px", border:"none", borderRadius:12, background:"#C4593A", color:"#fff", fontFamily:F.ui, fontSize:13, fontWeight:700, cursor:"pointer" }}>Fatto ✓</button>

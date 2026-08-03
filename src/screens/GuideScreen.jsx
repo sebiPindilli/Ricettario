@@ -152,7 +152,7 @@ export default function GuideScreen({ onBack }) {
           <p style={{margin:"6px 0"}}>· <b>somma</b> le quantità uguali (100 g + 100 g = 200 g);</p>
           <p style={{margin:"6px 0"}}>· <b>unisce gli aggregati</b> (cipolla bianca + rossa = cipolla) — regola presa da Organizza;</p>
           <p style={{margin:"6px 0"}}>· <b>raggruppa per ricetta</b> in fondo, così sai da dove viene ogni cosa.</p>
-          <p style={{margin:"6px 0"}}>Togli un singolo ingrediente con la <b>×</b> accanto alla voce, un'intera ricetta con <b>🗑 Rimuovi</b>, o azzeri tutto con <b>Svuota lista</b>.</p>
+          <p style={{margin:"6px 0"}}>Togli un singolo ingrediente con la <b>×</b> accanto alla voce, un'intera ricetta con <b>🗑️ Rimuovi</b>, o azzeri tutto con <b>Svuota lista</b>.</p>
           <Key>🔑 La lista resta <b>collegata</b> alla ricetta: se modifichi una ricetta già in lista, l'app ti chiede se <b>aggiornare</b> le quantità, <b>mantenerle</b> com'erano o <b>toglierla</b> dalla spesa.</Key>
         </Chapter>
 
@@ -166,7 +166,7 @@ export default function GuideScreen({ onBack }) {
         <Chapter id="organizza" icon="⚙️" title="Organizza">
           <p style={{margin:"6px 0"}}>Il cervello dell'app: qui stanno le regole che rendono intelligenti tutte le altre sezioni. Due parti: <b>Gestisci database</b> (le quattro impostazioni) e <b>Gestisci ingredienti</b> (la lista con ricerca, dove colleghi e rinomini).</p>
           <p style={{margin:"6px 0"}}><b>⊕ Aggregati</b> — uniscono ingredienti simili sotto un nome unico («passata» e «pelati» → «pomodoro»). Servono a Spesa e Frigo.</p>
-          <p style={{margin:"6px 0"}}><b>🏷 Categorie</b> — gli scaffali (verdura, latticini…): ordinano Frigo e Spesa.</p>
+          <p style={{margin:"6px 0"}}><b>🏷️ Categorie</b> — gli scaffali (verdura, latticini…): ordinano Frigo e Spesa.</p>
           <p style={{margin:"6px 0"}}><b>⚖️ Equivalenze</b> — le conversioni («1 cucchiaio = 10 g», «1 uovo = 60 g»): fanno sommare la Spesa e calcolare la Nutrizione.</p>
           <p style={{margin:"6px 0"}}><b>🍎 Valori nutrizionali</b> — collegano i tuoi ingredienti al database alimenti (con calorie e macro ufficiali). Puoi anche creare alimenti personalizzati.</p>
           <Key>🔑 Qui imposti le regole <b>una volta</b> e valgono per <b>ogni ricetta</b>, presente e futura. È l'investimento che ripaga di più.</Key>

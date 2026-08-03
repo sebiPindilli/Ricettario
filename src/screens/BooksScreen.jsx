@@ -308,7 +308,7 @@ export default function BooksScreen({
               />
               {importMsg && (
                 <div style={{ fontFamily:F.ui, fontSize:11.5, fontWeight:700, color: importMsg.ok ? "#6B8C6E" : "#C4593A", marginBottom:8 }}>
-                  {importMsg.ok ? `✓ ${importMsg.count} ricett${importMsg.count===1?"a importata":"e importate"}!` : "⚠ Codice non valido"}
+                  {importMsg.ok ? `✓ ${importMsg.count} ricett${importMsg.count===1?"a importata":"e importate"}!` : "⚠️ Codice non valido"}
                 </div>
               )}
               <div style={{ display:"flex", gap:8 }}>

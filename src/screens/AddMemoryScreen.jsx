@@ -17,7 +17,7 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
   const [selectedDate, setSelectedDate] = useState(todayISO);
   const fileInputRef = React.useRef(null);
 
-  const MEMORY_EMOJIS = ["🍽","🥂","🎉","👨‍👩‍👦","🌿","🌅","🏠","🎂","⛺","🌊","❄️","🫂","🎄","🌸","🍂","✨","🫶","🥳"];
+  const MEMORY_EMOJIS = ["🍽️","🥂","🎉","👨‍👩‍👦","🌿","🌅","🏠","🎂","⛺","🌊","❄️","🫂","🎄","🌸","🍂","✨","🫶","🥳"];
   const today = dateLabel(selectedDate);
 
   const handleFile = (e) => {

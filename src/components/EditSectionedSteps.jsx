@@ -116,7 +116,7 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
               <button onClick={() => removeSection(si)} style={{
                 background:"none", border:"none", color:"#ccc",
                 fontSize:16, cursor:"pointer", flexShrink:0,
-              }}>🗑</button>
+              }}>🗑️</button>
             )}
           </div>
           {/* Linea che raggruppa visivamente i passaggi sotto la sottosezione

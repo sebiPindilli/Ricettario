@@ -106,7 +106,7 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
             fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
             display:"flex", alignItems:"center", gap:5,
           }}>
-            🏷 Filtra per tag
+            🏷️ Filtra per tag
             {activeTags.length > 0 && (
               <span style={{ background:th.appAccent, color:"#fff", borderRadius:10, padding:"1px 6px", fontSize:10 }}>{activeTags.length}</span>
             )}

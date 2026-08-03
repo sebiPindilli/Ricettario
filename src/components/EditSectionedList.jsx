@@ -62,7 +62,7 @@ export default function EditSectionedList({ data, color, itemType, onUpdate, nam
               <button onClick={() => removeSection(si)} style={{
                 background:"none", border:"none", color:"#ccc",
                 fontSize:16, cursor:"pointer", flexShrink:0,
-              }}>🗑</button>
+              }}>🗑️</button>
             )}
           </div>
 

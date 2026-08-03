@@ -129,7 +129,7 @@ export default function ShoppingListScreen({
             background:"transparent", border:`1.5px solid #C4593A`, borderRadius:10,
             padding:"7px 12px", cursor:"pointer", color:"#C4593A",
             fontFamily:F.ui, fontSize:11, fontWeight:600, flexShrink:0,
-          }}>🗑 Svuota</button>
+          }}>🗑️ Svuota</button>
         )}
       </div>
 
@@ -178,7 +178,7 @@ export default function ShoppingListScreen({
                   background:"none", border:`1px solid #C4593A`, color:"#C4593A",
                   fontFamily:F.ui, fontSize:10.5, fontWeight:700, cursor:"pointer",
                   flexShrink:0, padding:"6px 10px", borderRadius:9, display:"flex", alignItems:"center", gap:5,
-                }}>🗑 Rimuovi</button>
+                }}>🗑️ Rimuovi</button>
               </div>
             ));
           })()}
