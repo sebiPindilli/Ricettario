@@ -443,6 +443,7 @@ function AppInner() {
   // screen: cover | landing | recipes | book | memories | recipe | new | edit | scan | theme
   const [selected, setSelected] = useState(null);
   const [memoryPrefillRecipeId, setMemoryPrefillRecipeId] = useState(null);
+  const [organizeFilter, setOrganizeFilter] = useState({ recipeId:null, onlyIssues:false });
   const [scanDraft, setScanDraft] = useState(null); // draft precompilato da una scansione
   const [pendingShopUpdate, setPendingShopUpdate] = useState(null); // {updated} ricetta modificata già in lista spesa
   const [prevScreen, setPrevScreen] = useState("landing");
@@ -742,6 +743,7 @@ function AppInner() {
 
   const goTo = (s) => { setPrevScreen(screen); setScreen(s); };
   const openAddMemory = (recipeId = null) => { setMemoryPrefillRecipeId(recipeId); goTo("addMemory"); };
+  const openOrganize = (recipeId = null, onlyIssues = false) => { setOrganizeFilter({ recipeId, onlyIssues }); goTo("organize"); };
 
   const updateRecipe = (updated) => {
     setRecipes(prev => prev.map(r => r.id===updated.id ? updated : r));
@@ -863,7 +865,7 @@ function AppInner() {
 
   return (
     <ThemeCtx.Provider value={bookTheme}>
-    <NavCtx.Provider value={{ onOrganize: () => goTo("organize") }}>
+    <NavCtx.Provider value={{ onOrganize: () => openOrganize() }}>
     <div style={{
       minHeight:"100vh",
       background:`radial-gradient(ellipse at 60% 20%, ${bookTheme.appCard} 0%, ${bookTheme.appBorder} 100%)`,
@@ -889,7 +891,7 @@ function AppInner() {
             recipes={recipes}
             bookName={activeBook?.name}
             onBooks={() => goTo("books")}
-            onOrganize={() => goTo("organize")}
+            onOrganize={() => openOrganize()}
             onRecipes={() => setScreen("recipes")}
             onBook={() => setScreen("book")}
             onMemories={() => setScreen("memories")}
@@ -907,6 +909,8 @@ function AppInner() {
           <OrganizeIngredientsScreen
             ingredientDict={ingredientDict}
             onRenameIngredient={renameIngredient}
+            initialFilterRecipeId={organizeFilter.recipeId}
+            initialOnlyIssues={organizeFilter.onlyIssues}
             nav={
               <GlobalNav
                 activeScreen="organize"
@@ -1122,6 +1126,7 @@ function AppInner() {
             onDelete={deleteRecipe}
             onDeleteMemory={deleteMemory}
             onAddMemory={(recipeId) => openAddMemory(recipeId)}
+            onManageIngredients={(recipeId) => openOrganize(recipeId, true)}
             onAddToShoppingList={addToShoppingList}
             allRecipes={recipes}
             sectionList={sectionList}

@@ -20,15 +20,15 @@ export default function OrganizeIngredientsScreen({
   nutritionMap = {}, onSaveNutritionMapping,
   customFoods = [], onSaveCustomFood, onDeleteCustomFood,
   ingredientDict = null, onRenameIngredient,
+  initialFilterRecipeId = null, initialOnlyIssues = false,
 }) {
   const th = useTheme();
   const [editing, setEditing] = useState(null); // null | {kind:"ingredient"|"aggregate", ...}
   const [manageCats, setManageCats] = useState(false); // gestione categorie (nome/icona)
   const [manageEq, setManageEq] = useState(false);     // gestione equivalenze unità
-  const [manageNutri, setManageNutri] = useState(false); // gestione valori nutrizionali
+  const [manageNutri, setManageNutri] = useState(false); // sfoglia database alimenti (ufficiale + personalizzati)
   const [nutriSearch, setNutriSearch] = useState({});    // nome ingrediente → testo ricerca aperta
-  const [browseDb, setBrowseDb] = useState(false);       // sfoglia l'intero database
-  const [dbSearch, setDbSearch] = useState("");
+  const [dbSearch, setDbSearch] = useState("");          // ricerca nel database alimenti
   const [manageAggs, setManageAggs] = useState(false);   // database aggregati (lista)
   const [foodForm, setFoodForm] = useState(null);        // form alimento personalizzato {id?, name, ...}
   const [expanded, setExpanded] = useState({});          // nome → "cat"|"nutri"|"eq"|null (editor inline aperto)
@@ -45,6 +45,8 @@ export default function OrganizeIngredientsScreen({
     "🥜","🌰","🧄","🧅","🌶","🥫","🍄","🫙","🧊","🍾","🥤","🍪",
   ];
   const [search, setSearch] = useState("");
+  const [filterRecipeId, setFilterRecipeId] = useState(initialFilterRecipeId != null ? String(initialFilterRecipeId) : "");
+  const [onlyIssues, setOnlyIssues] = useState(!!initialOnlyIssues);
 
   // R2 — fonte unica: il dizionario ingredienti (id → nome visualizzato)
   const dictM = React.useMemo(
@@ -100,242 +102,141 @@ export default function OrganizeIngredientsScreen({
     );
   }
 
-  // ── Gestione valori nutrizionali: ingrediente → voce database ──
+  // ── Database alimenti: sfoglia database ufficiale + personalizzati ──
+  // (il collegamento ingrediente → alimento si fa da Organizza ingredienti,
+  // nell'editor nutrizionale di ciascuna scheda: qui si gestisce solo il
+  // database di riferimento, non le singole associazioni.)
   if (manageNutri) {
-    const allNames = allDictEntries; // [{name: ID, display: nome}]
-    const allFoodsM = [...NUTRITION_DB, ...customFoods];
-    const dbById = new Map(allFoodsM.map(f => [f.id, f]));
+    const q = dbSearch.trim().toLowerCase();
+    const filtered = q ? NUTRITION_DB.filter(f => f.name.toLowerCase().includes(q)) : NUTRITION_DB;
+    const filteredCustom = q ? customFoods.filter(f => f.name.toLowerCase().includes(q)) : customFoods;
 
-    // ── Sfoglia l'intero database di riferimento ──
-    if (browseDb) {
-      const q = dbSearch.trim().toLowerCase();
-      const filtered = q ? NUTRITION_DB.filter(f => f.name.toLowerCase().includes(q)) : NUTRITION_DB;
-      const filteredCustom = q ? customFoods.filter(f => f.name.toLowerCase().includes(q)) : customFoods;
-
-      // ── Form alimento personalizzato ──
-      if (foodForm) {
-        const fields = [
-          ["kcal","Energia (kcal)"], ["carb","Carboidrati (g)"], ["sug","di cui zuccheri (g)"],
-          ["prot","Proteine (g)"], ["fat","Grassi (g)"], ["sat","di cui saturi (g)"],
-          ["fib","Fibre (g)"], ["salt","Sale (g)"],
-        ];
-        const setF = (k, v) => setFoodForm(p => ({ ...p, [k]: v }));
-        const canSaveFood = (foodForm.name || "").trim() && foodForm.kcal !== "";
-        const saveFood = () => {
-          const num = (v) => { const n = parseFloat(String(v).replace(",", ".")); return isNaN(n) ? 0 : n; };
-          onSaveCustomFood({
-            id: foodForm.id || uid("cf"),
-            cat: "Personalizzati",
-            custom: true,
-            name: foodForm.name.trim(),
-            source: (foodForm.source || "").trim() || "personalizzata",
-            kcal: num(foodForm.kcal), carb: num(foodForm.carb), sug: num(foodForm.sug),
-            prot: num(foodForm.prot), fat: num(foodForm.fat), sat: num(foodForm.sat),
-            fib: num(foodForm.fib), salt: num(foodForm.salt),
-          });
-          setFoodForm(null);
-        };
-        return (
-          <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
-            {nav}
-            <div style={{ padding:"12px 20px 8px", display:"flex", alignItems:"center", gap:10 }}>
-              <button onClick={() => setFoodForm(null)} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Annulla</button>
-              <div style={{ flex:1 }}>
-                <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>{foodForm.id ? "✏️ Modifica alimento" : "＋ Nuovo alimento"}</div>
-                <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>valori per 100 g · fonte personalizzata</div>
-              </div>
-            </div>
-            <div style={{ flex:1, overflowY:"auto", padding:"6px 18px 40px" }}>
-              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:0.5, color:th.appFaded, textTransform:"uppercase", marginBottom:5 }}>Nome alimento *</div>
-              <input value={foodForm.name || ""} autoFocus onChange={e => setF("name", e.target.value)} placeholder="es. Philadelphia light"
-                style={{ width:"100%", padding:"10px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appCard, fontFamily:F.body, fontSize:13.5, color:th.appInk, outline:"none", boxSizing:"border-box", marginBottom:12 }}/>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"8px 10px", marginBottom:12 }}>
-                {fields.map(([k, label]) => (
-                  <div key={k}>
-                    <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginBottom:3 }}>{label}{k === "kcal" ? " *" : ""}</div>
-                    <input type="text" inputMode="decimal" value={foodForm[k] ?? ""} onChange={e => setF(k, e.target.value)} placeholder="0"
-                      style={{ width:"100%", padding:"9px 10px", border:`1.5px solid ${th.appBorder}`, borderRadius:9, background:th.appCard, fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none", boxSizing:"border-box", textAlign:"center" }}/>
-                  </div>
-                ))}
-              </div>
-              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:0.5, color:th.appFaded, textTransform:"uppercase", marginBottom:5 }}>Fonte dei valori</div>
-              <input value={foodForm.source || ""} onChange={e => setF("source", e.target.value)} placeholder="es. etichetta del prodotto"
-                style={{ width:"100%", padding:"10px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appCard, fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none", boxSizing:"border-box", marginBottom:16 }}/>
-              <button onClick={saveFood} disabled={!canSaveFood} style={{
-                width:"100%", padding:"13px", border:"none", borderRadius:12,
-                background: canSaveFood ? th.appAccent : th.appBorder,
-                color: canSaveFood ? "#fff" : th.appFaded,
-                fontFamily:F.ui, fontSize:13, fontWeight:700, cursor: canSaveFood ? "pointer" : "default",
-              }}>Salva alimento</button>
-            </div>
-          </div>
-        );
-      }
-      // raggruppa per categoria mantenendo l'ordine del database
-      const groups = [];
-      filtered.forEach(f => {
-        let g = groups[groups.length - 1];
-        if (!g || g.cat !== f.cat) { g = { cat: f.cat, foods: [] }; groups.push(g); }
-        g.foods.push(f);
-      });
+    // ── Form alimento personalizzato ──
+    if (foodForm) {
+      const fields = [
+        ["kcal","Energia (kcal)"], ["carb","Carboidrati (g)"], ["sug","di cui zuccheri (g)"],
+        ["prot","Proteine (g)"], ["fat","Grassi (g)"], ["sat","di cui saturi (g)"],
+        ["fib","Fibre (g)"], ["salt","Sale (g)"],
+      ];
+      const setF = (k, v) => setFoodForm(p => ({ ...p, [k]: v }));
+      const canSaveFood = (foodForm.name || "").trim() && foodForm.kcal !== "";
+      const saveFood = () => {
+        const num = (v) => { const n = parseFloat(String(v).replace(",", ".")); return isNaN(n) ? 0 : n; };
+        onSaveCustomFood({
+          id: foodForm.id || uid("cf"),
+          cat: "Personalizzati",
+          custom: true,
+          name: foodForm.name.trim(),
+          source: (foodForm.source || "").trim() || "personalizzata",
+          kcal: num(foodForm.kcal), carb: num(foodForm.carb), sug: num(foodForm.sug),
+          prot: num(foodForm.prot), fat: num(foodForm.fat), sat: num(foodForm.sat),
+          fib: num(foodForm.fib), salt: num(foodForm.salt),
+        });
+        setFoodForm(null);
+      };
       return (
         <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
           {nav}
           <div style={{ padding:"12px 20px 8px", display:"flex", alignItems:"center", gap:10 }}>
-            <button onClick={() => { setBrowseDb(false); setDbSearch(""); }} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
+            <button onClick={() => setFoodForm(null)} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Annulla</button>
             <div style={{ flex:1 }}>
-              <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>📖 Database alimenti</div>
-              <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>{NUTRITION_DB.length} voci · valori per 100 g</div>
+              <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>{foodForm.id ? "✏️ Modifica alimento" : "＋ Nuovo alimento"}</div>
+              <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>valori per 100 g · fonte personalizzata</div>
             </div>
           </div>
-          <div style={{ padding:"0 18px 8px" }}>
-            <input
-              value={dbSearch}
-              onChange={e => setDbSearch(e.target.value)}
-              placeholder="🔍 Cerca un alimento…"
-              style={{ width:"100%", padding:"10px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:11, background:th.appCard, fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none", boxSizing:"border-box" }}
-            />
-          </div>
-          <div style={{ flex:1, overflowY:"auto", padding:"0 18px 40px" }}>
-            {/* Personalizzati */}
-            {(filteredCustom.length > 0 || !q) && (
-              <div>
-                <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.2, color:th.appAccent, textTransform:"uppercase", fontWeight:700, margin:"14px 0 6px" }}>Personalizzati · fonte utente</div>
-                {filteredCustom.map(f => (
-                  <div key={f.id} style={{ background:th.appCard, border:`1.5px dashed ${th.appBorder}`, borderRadius:10, padding:"9px 12px", marginBottom:5 }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ fontFamily:F.body, fontSize:13, color:th.appInk }}>{f.name}</div>
-                        <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:2 }}>
-                          {macroLine(f)} · sale {String(f.salt).replace(".",",")} g
-                        </div>
-                        <div style={{ fontFamily:F.ui, fontSize:9, color:th.appAccent, marginTop:2 }}>fonte: {f.source || "personalizzata"}</div>
-                      </div>
-                      <button onClick={() => setFoodForm({ ...f, kcal:String(f.kcal), carb:String(f.carb), sug:String(f.sug), prot:String(f.prot), fat:String(f.fat), sat:String(f.sat), fib:String(f.fib), salt:String(f.salt) })} style={{ background:"none", border:"none", fontSize:13, cursor:"pointer", color:th.appFaded, flexShrink:0, padding:"2px 4px" }}>✏️</button>
-                      <button onClick={() => onDeleteCustomFood(f.id)} style={{ background:"none", border:"none", fontSize:14, cursor:"pointer", color:"#C4593A", flexShrink:0, padding:"2px 4px" }}>×</button>
-                    </div>
-                  </div>
-                ))}
-                <button onClick={() => setFoodForm({ name:"", source:"" })} style={{
-                  width:"100%", padding:"11px", borderRadius:11, border:`1.5px dashed ${th.appBorder}`,
-                  background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:11.5, fontWeight:600, cursor:"pointer", marginTop:2,
-                }}>＋ Aggiungi alimento personalizzato</button>
-              </div>
-            )}
-            {groups.map(g => (
-              <div key={g.cat}>
-                <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.2, color:th.appAccent, textTransform:"uppercase", fontWeight:700, margin:"14px 0 6px" }}>{g.cat}</div>
-                {g.foods.map(f => (
-                  <div key={f.id} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"9px 12px", marginBottom:5 }}>
-                    <div style={{ fontFamily:F.body, fontSize:13, color:th.appInk }}>{f.name}</div>
-                    <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:2 }}>
-                      {macroLine(f)} · sale {String(f.salt).replace(".",",")} g
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ))}
-            {filtered.length === 0 && filteredCustom.length === 0 && q && (
-              <div style={{ textAlign:"center", padding:"30px 0", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>Nessun alimento trovato</div>
-            )}
-            <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, textAlign:"center", marginTop:14, lineHeight:1.5 }}>
-              Valori indicativi per 100 g, elaborati dalle Tabelle di Composizione degli Alimenti<br/>CREA — alimentinutrizione.it
+          <div style={{ flex:1, overflowY:"auto", padding:"6px 18px 40px" }}>
+            <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:0.5, color:th.appFaded, textTransform:"uppercase", marginBottom:5 }}>Nome alimento *</div>
+            <input value={foodForm.name || ""} autoFocus onChange={e => setF("name", e.target.value)} placeholder="es. Philadelphia light"
+              style={{ width:"100%", padding:"10px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appCard, fontFamily:F.body, fontSize:13.5, color:th.appInk, outline:"none", boxSizing:"border-box", marginBottom:12 }}/>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"8px 10px", marginBottom:12 }}>
+              {fields.map(([k, label]) => (
+                <div key={k}>
+                  <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginBottom:3 }}>{label}{k === "kcal" ? " *" : ""}</div>
+                  <input type="text" inputMode="decimal" value={foodForm[k] ?? ""} onChange={e => setF(k, e.target.value)} placeholder="0"
+                    style={{ width:"100%", padding:"9px 10px", border:`1.5px solid ${th.appBorder}`, borderRadius:9, background:th.appCard, fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none", boxSizing:"border-box", textAlign:"center" }}/>
+                </div>
+              ))}
             </div>
+            <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:0.5, color:th.appFaded, textTransform:"uppercase", marginBottom:5 }}>Fonte dei valori</div>
+            <input value={foodForm.source || ""} onChange={e => setF("source", e.target.value)} placeholder="es. etichetta del prodotto"
+              style={{ width:"100%", padding:"10px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appCard, fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none", boxSizing:"border-box", marginBottom:16 }}/>
+            <button onClick={saveFood} disabled={!canSaveFood} style={{
+              width:"100%", padding:"13px", border:"none", borderRadius:12,
+              background: canSaveFood ? th.appAccent : th.appBorder,
+              color: canSaveFood ? "#fff" : th.appFaded,
+              fontFamily:F.ui, fontSize:13, fontWeight:700, cursor: canSaveFood ? "pointer" : "default",
+            }}>Salva alimento</button>
           </div>
         </div>
       );
     }
-
+    // raggruppa per categoria mantenendo l'ordine del database
+    const groups = [];
+    filtered.forEach(f => {
+      let g = groups[groups.length - 1];
+      if (!g || g.cat !== f.cat) { g = { cat: f.cat, foods: [] }; groups.push(g); }
+      g.foods.push(f);
+    });
     return (
       <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
         {nav}
         <div style={{ padding:"12px 20px 8px", display:"flex", alignItems:"center", gap:10 }}>
-          <button onClick={() => setManageNutri(false)} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
+          <button onClick={() => { setManageNutri(false); setDbSearch(""); }} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
           <div style={{ flex:1 }}>
-            <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>🍎 Valori nutrizionali</div>
-            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>collega ogni ingrediente a una voce del database</div>
+            <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>📖 Database alimenti</div>
+            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>{NUTRITION_DB.length} voci · valori per 100 g</div>
           </div>
         </div>
         <div style={{ padding:"0 18px 8px" }}>
-          <button onClick={() => setBrowseDb(true)} style={{
-            width:"100%", background:"transparent", border:`1.5px dashed ${th.appBorder}`,
-            borderRadius:11, padding:"9px 8px",
-            color:th.appFaded, fontFamily:F.ui, fontSize:11.5, fontWeight:600, cursor:"pointer",
-          }}>📖 Sfoglia tutto il database ({NUTRITION_DB.length} alimenti)</button>
+          <input
+            value={dbSearch}
+            onChange={e => setDbSearch(e.target.value)}
+            placeholder="🔍 Cerca un alimento…"
+            style={{ width:"100%", padding:"10px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:11, background:th.appCard, fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none", boxSizing:"border-box" }}
+          />
         </div>
-
-        <div style={{ flex:1, overflowY:"auto", padding:"4px 18px 40px" }}>
-          {allNames.map(({ name, display }) => {
-            const mapping = nutritionMap[name];
-            const linkedFood = mapping?.foodId ? dbById.get(mapping.foodId) : null;
-            const autoFood = !mapping ? allFoodsM.find(f => normName(f.name) === normName(display)) : null;
-            const search = nutriSearch[name];
-            const searching = search !== undefined;
-            const results = searching && search.trim()
-              ? allFoodsM.filter(f => f.name.toLowerCase().includes(search.trim().toLowerCase())).slice(0, 6)
-              : [];
-
-            return (
-              <div key={name} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:12, padding:"10px 12px", marginBottom:8 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontFamily:F.body, fontSize:14, color:th.appInk, fontWeight:700 }}>{display.charAt(0).toUpperCase() + display.slice(1)}</div>
-                    <div style={{ fontFamily:F.ui, fontSize:10.5, color: linkedFood || autoFood || mapping?.custom ? "#6B8C6E" : "#C4593A", marginTop:2 }}>
-                      {mapping?.custom ? "✓ valori manuali"
-                        : linkedFood ? `✓ ${linkedFood.name}`
-                        : autoFood ? `✓ ${autoFood.name} (match automatico)`
-                        : "○ non collegato — escluso dal calcolo"}
-                    </div>
-                    {(linkedFood || autoFood || mapping?.custom) && (
+        <div style={{ flex:1, overflowY:"auto", padding:"0 18px 40px" }}>
+          {/* Personalizzati */}
+          {(filteredCustom.length > 0 || !q) && (
+            <div>
+              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.2, color:th.appAccent, textTransform:"uppercase", fontWeight:700, margin:"14px 0 6px" }}>Personalizzati · fonte utente</div>
+              {filteredCustom.map(f => (
+                <div key={f.id} style={{ background:th.appCard, border:`1.5px dashed ${th.appBorder}`, borderRadius:10, padding:"9px 12px", marginBottom:5 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontFamily:F.body, fontSize:13, color:th.appInk }}>{f.name}</div>
                       <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:2 }}>
-                        {macroLine(mapping?.custom || linkedFood || autoFood)} <span style={{ opacity:0.7 }}>/100g</span>
+                        {macroLine(f)} · sale {String(f.salt).replace(".",",")} g
                       </div>
-                    )}
+                      <div style={{ fontFamily:F.ui, fontSize:9, color:th.appAccent, marginTop:2 }}>fonte: {f.source || "personalizzata"}</div>
+                    </div>
+                    <button onClick={() => setFoodForm({ ...f, kcal:String(f.kcal), carb:String(f.carb), sug:String(f.sug), prot:String(f.prot), fat:String(f.fat), sat:String(f.sat), fib:String(f.fib), salt:String(f.salt) })} style={{ background:"none", border:"none", fontSize:13, cursor:"pointer", color:th.appFaded, flexShrink:0, padding:"2px 4px" }}>✏️</button>
+                    <button onClick={() => onDeleteCustomFood(f.id)} style={{ background:"none", border:"none", fontSize:14, cursor:"pointer", color:"#C4593A", flexShrink:0, padding:"2px 4px" }}>×</button>
                   </div>
-                  {(linkedFood || mapping?.custom) && (
-                    <button onClick={() => onSaveNutritionMapping(name, null)} title="Scollega" style={{ background:"none", border:"none", color:"#C4593A", fontSize:14, cursor:"pointer", flexShrink:0, padding:"2px 4px" }}>×</button>
-                  )}
-                  <button onClick={() => setNutriSearch(p => searching ? (({ [name]:_, ...rest }) => rest)(p) : { ...p, [name]:"" })} style={{
-                    background: searching ? th.appInk : th.appAccent, border:"none", borderRadius:9,
-                    padding:"7px 11px", color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0,
-                  }}>{searching ? "Chiudi" : linkedFood || mapping?.custom || autoFood ? "Cambia" : "Collega"}</button>
                 </div>
-
-                {searching && (
-                  <div style={{ marginTop:8 }}>
-                    <input
-                      value={search}
-                      autoFocus
-                      onChange={e => setNutriSearch(p => ({ ...p, [name]: e.target.value }))}
-                      placeholder="Cerca nel database (es. farina, pollo…)"
-                      style={{ width:"100%", padding:"9px 11px", border:`1.5px solid ${th.appBorder}`, borderRadius:9, background:th.appBg, fontFamily:F.body, fontSize:12.5, color:th.appInk, outline:"none", boxSizing:"border-box" }}
-                    />
-                    {results.map(f => (
-                      <button key={f.id} onClick={() => {
-                        onSaveNutritionMapping(name, { foodId: f.id });
-                        setNutriSearch(p => (({ [name]:_, ...rest }) => rest)(p));
-                      }} style={{
-                        display:"flex", justifyContent:"space-between", alignItems:"center", gap:8,
-                        width:"100%", textAlign:"left", padding:"9px 11px", marginTop:4,
-                        background:th.appBg, border:`1px solid ${th.appBorder}`, borderRadius:9,
-                        cursor:"pointer", fontFamily:F.body, fontSize:12.5, color:th.appInk,
-                      }}>
-                        <span style={{ minWidth:0, display:"block" }}>
-                          <span style={{ display:"block", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{f.name}</span>
-                          <span style={{ display:"block", fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:1 }}>{macroLine(f)}</span>
-                        </span>
-                      </button>
-                    ))}
-                    {search.trim() && results.length === 0 && (
-                      <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, padding:"8px 2px" }}>
-                        Nessuna voce trovata nel database.
-                      </div>
-                    )}
+              ))}
+              <button onClick={() => setFoodForm({ name:"", source:"" })} style={{
+                width:"100%", padding:"11px", borderRadius:11, border:`1.5px dashed ${th.appBorder}`,
+                background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:11.5, fontWeight:600, cursor:"pointer", marginTop:2,
+              }}>＋ Aggiungi alimento personalizzato</button>
+            </div>
+          )}
+          {groups.map(g => (
+            <div key={g.cat}>
+              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.2, color:th.appAccent, textTransform:"uppercase", fontWeight:700, margin:"14px 0 6px" }}>{g.cat}</div>
+              {g.foods.map(f => (
+                <div key={f.id} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"9px 12px", marginBottom:5 }}>
+                  <div style={{ fontFamily:F.body, fontSize:13, color:th.appInk }}>{f.name}</div>
+                  <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:2 }}>
+                    {macroLine(f)} · sale {String(f.salt).replace(".",",")} g
                   </div>
-                )}
-              </div>
-            );
-          })}
+                </div>
+              ))}
+            </div>
+          ))}
+          {filtered.length === 0 && filteredCustom.length === 0 && q && (
+            <div style={{ textAlign:"center", padding:"30px 0", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>Nessun alimento trovato</div>
+          )}
           <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, textAlign:"center", marginTop:14, lineHeight:1.5 }}>
             Valori indicativi per 100 g, elaborati dalle Tabelle di Composizione degli Alimenti<br/>CREA — alimentinutrizione.it
           </div>
@@ -769,10 +670,6 @@ export default function OrganizeIngredientsScreen({
   const recipesFor = (ids) => recipes.filter(r =>
     flattenIngredients(r.ingredients).some(i => ids.includes(resolveIngId(dictIdx, i.name))));
 
-  const q = search.trim().toLowerCase();
-  const visibleAggs = aggregates.filter(a => !q || a.name.toLowerCase().includes(q) || (a.members||[]).some(m => dictName(m).toLowerCase().includes(q)));
-  const visibleIngs = allIngs.filter(i => !q || i.display.toLowerCase().includes(q));
-
   const toggleExpand = (key, kind) => setExpanded(p => ({ ...p, [key]: p[key] === kind ? null : kind }));
 
   const nutriStatusOf = (ingId) => {
@@ -786,6 +683,35 @@ export default function OrganizeIngredientsScreen({
     if (!eq || !eq.factors || Object.keys(eq.factors).length === 0) return null;
     return Object.entries(eq.factors).map(([u,f]) => `1 ${unitLabel(u)} = ${String(f).replace(".",",")} ${unitLabel(eq.base)}`).join(" · ");
   };
+  // Stesse regole di segnalazione usate dalla ItemCard (categoria/nutrizione/equivalenze mancanti)
+  const hasIssuesFor = (itemId, isAgg, agg) => {
+    const dataKey = isAgg ? agg.id : itemId;
+    const cats = isAgg ? (agg.categories || []) : effectiveCategories(itemId, aggregates, ingredientCategories, sourceByIngredient).categories;
+    const nutriKey = !isAgg ? effectiveNutritionKey(itemId, aggregates, nutritionMap, sourceByIngredient) : dataKey;
+    const nutri = nutriStatusOf(nutriKey);
+    const eqS = eqSummary(dataKey);
+    const relevantUnits = isAgg
+      ? new Set((agg.members || []).flatMap(m => Array.from(unitsByIng.get(m) || [])))
+      : (unitsByIng.get(itemId) || new Set());
+    const multiUnits = relevantUnits.size >= 2;
+    return cats.length === 0 || !nutri.ok || (multiUnits && !eqS);
+  };
+
+  const q = search.trim().toLowerCase();
+  const filterRecipe = filterRecipeId ? recipes.find(r => String(r.id) === filterRecipeId) : null;
+  const recipeIngIds = filterRecipe
+    ? new Set(flattenIngredients(filterRecipe.ingredients).map(ing => resolveIngId(dictIdx, ing.name)))
+    : null;
+  const visibleAggs = aggregates.filter(a =>
+    (!q || a.name.toLowerCase().includes(q) || (a.members||[]).some(m => dictName(m).toLowerCase().includes(q))) &&
+    (!recipeIngIds || (a.members||[]).some(m => recipeIngIds.has(m))) &&
+    (!onlyIssues || hasIssuesFor(a.id, true, a))
+  );
+  const visibleIngs = allIngs.filter(i =>
+    (!q || i.display.toLowerCase().includes(q)) &&
+    (!recipeIngIds || recipeIngIds.has(i.name)) &&
+    (!onlyIssues || hasIssuesFor(i.name, false, null))
+  );
 
   // ── Editor inline: categorie ──
   const CatEditor = ({ current, onToggle }) => (
@@ -807,8 +733,33 @@ export default function OrganizeIngredientsScreen({
 
   // ── Editor inline: collegamento nutrizionale ──
   const NutriEditor = ({ name }) => {
+    const mapping = nutritionMap[name];
+    const status = nutriStatusOf(name); // {ok, label, values, auto}
+    const searching = nutriSearch[name] !== undefined;
     const s = nutriSearch[name] ?? "";
-    const results = s.trim() ? allFoods.filter(f => f.name.toLowerCase().includes(s.trim().toLowerCase())).slice(0, 5) : [];
+    const results = searching && s.trim() ? allFoods.filter(f => f.name.toLowerCase().includes(s.trim().toLowerCase())).slice(0, 5) : [];
+    const startSearch = () => setNutriSearch(p => ({ ...p, [name]: "" }));
+    const stopSearch = () => setNutriSearch(p => (({ [name]:_, ...rest }) => rest)(p));
+
+    // ── Già collegato: mostra a cosa, con possibilità di scollegare o cambiare ──
+    if (!searching && status.ok) {
+      return (
+        <div style={{ marginTop:8, background:th.appBg, border:`1px solid ${th.appBorder}`, borderRadius:9, padding:"9px 11px" }}>
+          <div style={{ fontFamily:F.body, fontSize:12.5, color:th.appInk, fontWeight:600 }}>
+            {status.label}{status.auto ? <span style={{ fontFamily:F.ui, fontSize:9.5, color:th.appAccent, fontWeight:400 }}> · match automatico</span> : null}
+          </div>
+          <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:2 }}>{macroLine(status.values, {fib:false})}</div>
+          <div style={{ display:"flex", gap:14, marginTop:8 }}>
+            {mapping && (
+              <button onClick={() => onSaveNutritionMapping(name, null)} style={{ background:"none", border:"none", color:"#C4593A", fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, textDecoration:"underline" }}>× Scollega</button>
+            )}
+            <button onClick={startSearch} style={{ background:"none", border:"none", color:th.appAccent, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, textDecoration:"underline" }}>Cambia collegamento</button>
+          </div>
+        </div>
+      );
+    }
+
+    // ── Non collegato (o si sta cambiando collegamento): barra di ricerca ──
     return (
       <div style={{ marginTop:8 }}>
         <input
@@ -821,8 +772,7 @@ export default function OrganizeIngredientsScreen({
         {results.map(f => (
           <button key={f.id} onClick={() => {
             onSaveNutritionMapping(name, { foodId: f.id });
-            setNutriSearch(p => (({ [name]:_, ...rest }) => rest)(p));
-            setExpanded(p => ({ ...p, [name]: null }));
+            stopSearch();
           }} style={{
             display:"block", width:"100%", textAlign:"left", padding:"8px 11px", marginTop:4,
             background:th.appBg, border:`1px solid ${th.appBorder}`, borderRadius:9,
@@ -832,8 +782,8 @@ export default function OrganizeIngredientsScreen({
             <span style={{ display:"block", fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:1 }}>{macroLine(f, {fib:false})}</span>
           </button>
         ))}
-        {nutritionMap[name] && (
-          <button onClick={() => { onSaveNutritionMapping(name, null); setExpanded(p => ({ ...p, [name]: null })); }} style={{ marginTop:6, background:"none", border:"none", color:"#C4593A", fontFamily:F.ui, fontSize:10.5, cursor:"pointer", textDecoration:"underline", padding:0 }}>× Scollega dal database</button>
+        {status.ok && (
+          <button onClick={stopSearch} style={{ marginTop:6, background:"none", border:"none", color:th.appFaded, fontFamily:F.ui, fontSize:10.5, cursor:"pointer", textDecoration:"underline", padding:0 }}>Annulla</button>
         )}
       </div>
     );
@@ -1055,9 +1005,9 @@ export default function OrganizeIngredientsScreen({
           {attrBtn("⚖️ Equivalenze", "eq")}
         </div>
 
-        {exp === "cat" && <CatEditor current={cats} onToggle={toggleCat}/>}
-        {exp === "nutri" && <NutriEditor name={dataKey}/>}
-        {exp === "eq" && <EqEditor name={dataKey} isAgg={isAgg} members={agg?.members}/>}
+        {exp === "cat" && CatEditor({ current:cats, onToggle:toggleCat })}
+        {exp === "nutri" && NutriEditor({ name:dataKey })}
+        {exp === "eq" && EqEditor({ name:dataKey, isAgg, members:agg?.members })}
         {exp === "rename" && !isAgg && (
           <div style={{ marginTop:8 }}>
             <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:0.5, color:th.appFaded, textTransform:"uppercase", marginBottom:5 }}>Nuovo nome — aggiornato in tutte le ricette</div>
@@ -1191,19 +1141,57 @@ export default function OrganizeIngredientsScreen({
         </div>
       </div>
 
+      {/* Filtro per ricetta */}
+      <div style={{ padding:"8px 18px 0" }}>
+        <div style={{ display:"flex", gap:8, alignItems:"center", background:th.appCard, border:`1.5px solid ${filterRecipeId ? th.appAccent : th.appBorder}`, borderRadius:12, padding:"9px 14px" }}>
+          <span style={{ fontSize:15 }}>📖</span>
+          <select
+            value={filterRecipeId}
+            onChange={e => setFilterRecipeId(e.target.value)}
+            style={{ flex:1, border:"none", background:"transparent", outline:"none", fontFamily:F.body, fontSize:13.5, color: filterRecipeId ? th.appInk : th.appFaded, minWidth:0 }}
+          >
+            <option value="">Filtra per ricetta…</option>
+            {[...recipes].sort((a, b) => a.title.localeCompare(b.title, "it")).map(r => (
+              <option key={r.id} value={r.id}>{r.title}</option>
+            ))}
+          </select>
+          {filterRecipeId && <button onClick={() => setFilterRecipeId("")} style={{ background:"none", border:"none", color:th.appFaded, cursor:"pointer", fontSize:14, padding:0 }}>×</button>}
+        </div>
+      </div>
+
+      {/* Filtro: tutti / solo da gestire */}
+      <div style={{ padding:"8px 18px 0", display:"flex", gap:6 }}>
+        {[[false, "Tutti"], [true, "⚠️ Da gestire"]].map(([val, label]) => {
+          const on = onlyIssues === val;
+          return (
+            <button key={label} onClick={() => setOnlyIssues(val)} style={{
+              flex:1, padding:"8px 10px", borderRadius:20,
+              border:`1.5px solid ${on ? (val ? "#C4593A" : th.appAccent) : th.appBorder}`,
+              background: on ? (val ? "#C4593A18" : th.appAccent + "18") : "transparent",
+              color: on ? (val ? "#C4593A" : th.appAccent) : th.appFaded,
+              fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
+            }}>{label}</button>
+          );
+        })}
+      </div>
+
       {/* Lista ingredienti/aggregati */}
       <div style={{ flex:1, overflowY:"auto", padding:"10px 18px 40px" }}>
         {visibleAggs.length > 0 && (
           <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.2, color:th.appAccent, textTransform:"uppercase", fontWeight:700, margin:"2px 0 7px" }}>Aggregati</div>
         )}
         {visibleAggs.map(agg => (
-          <ItemCard key={"agg_"+agg.id} name={normName(agg.name)} display={agg.name} isAgg agg={agg}/>
+          <React.Fragment key={"agg_"+agg.id}>
+            {ItemCard({ name:normName(agg.name), display:agg.name, isAgg:true, agg })}
+          </React.Fragment>
         ))}
         {visibleIngs.length > 0 && (
           <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.2, color:th.appFaded, textTransform:"uppercase", fontWeight:700, margin:"10px 0 7px" }}>Ingredienti</div>
         )}
         {visibleIngs.map(({ name, display }) => (
-          <ItemCard key={name} name={name} display={display} isAgg={false}/>
+          <React.Fragment key={name}>
+            {ItemCard({ name, display, isAgg:false })}
+          </React.Fragment>
         ))}
         {visibleAggs.length === 0 && visibleIngs.length === 0 && (
           <div style={{ textAlign:"center", padding:"30px 0", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>Nessun risultato</div>

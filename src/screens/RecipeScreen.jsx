@@ -19,7 +19,7 @@ import ServingsDialog from "../components/ServingsDialog.jsx";
 import ShoppingMode from "../components/ShoppingMode.jsx";
 import CookingMode from "./CookingMode.jsx";
 
-export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemory, onAddMemory, onAddToShoppingList, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null, aggregates = [], sourceByIngredient = {}, allRecipes = [], sectionList = MACRO_SECTIONS, onExportPDF, onExportCode }) {
+export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemory, onAddMemory, onManageIngredients, onAddToShoppingList, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null, aggregates = [], sourceByIngredient = {}, allRecipes = [], sectionList = MACRO_SECTIONS, onExportPDF, onExportCode }) {
   const th = useTheme();
   const [tab, setTab] = useState("ingredienti");
   const [toast, setToast] = useState({ msg:"", visible:false });
@@ -441,6 +441,16 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
                 }
                 return <NutritionCard recipe={recipe} nutritionMap={nutritionMap} equivalences={equivalences} customFoods={customFoods} ingredientDict={ingredientDict} aggregates={aggregates} sourceByIngredient={sourceByIngredient} standalone/>;
               })()
+            )}
+
+            {tab === "nutrizione" && onManageIngredients && (
+              <button onClick={() => onManageIngredients(recipe.id)} style={{
+                width:"100%", marginTop:12, padding:"12px",
+                border:`1.5px solid ${th.appAccent}`, borderRadius:12,
+                background:`${th.appAccent}12`, color:th.appAccent,
+                fontFamily:F.ui, fontSize:12.5, fontWeight:700, cursor:"pointer",
+                display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+              }}>🍎⚙️ Gestisci ingredienti di questa ricetta</button>
             )}
 
             {recipe.note && (
