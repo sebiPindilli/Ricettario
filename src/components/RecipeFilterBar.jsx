@@ -16,7 +16,6 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
 
   const goSection = (id) => {
     setActiveSection(id === activeSection ? null : id);
-    setActiveTags([]);
     setOpenTagGroup(null);
     setShowFavorites(false);
   };

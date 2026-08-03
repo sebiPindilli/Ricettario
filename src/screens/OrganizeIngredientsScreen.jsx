@@ -1065,7 +1065,10 @@ export default function OrganizeIngredientsScreen({
                     flex:1, minWidth:0, overflowWrap:"break-word", wordBreak:"break-word",
                     fontFamily:F.body, fontSize:13.5, fontWeight: i === 0 ? 700 : 500,
                     color: i === 0 ? th.appAccent : th.appInk,
-                  }}>{sourceLabel(src).charAt(0).toUpperCase() + sourceLabel(src).slice(1)}</span>
+                  }}>
+                    {src !== "ingredient" && <span style={{ color: i === 0 ? th.appAccent : th.appFaded }}>⊕ </span>}
+                    {sourceLabel(src).charAt(0).toUpperCase() + sourceLabel(src).slice(1)}
+                  </span>
                   <button
                     onClick={() => moveSource(i, -1)}
                     disabled={i === 0}

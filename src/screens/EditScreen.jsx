@@ -7,6 +7,7 @@ import EditField from "../components/EditField.jsx";
 import EditLabel from "../components/EditLabel.jsx";
 import EditNumberInput from "../components/EditNumberInput.jsx";
 import TagPicker from "../components/TagPicker.jsx";
+import EmojiColorPicker from "../components/EmojiColorPicker.jsx";
 import SectionPicker from "../components/SectionPicker.jsx";
 import EditSectionedList from "../components/EditSectionedList.jsx";
 import EditSectionedSteps from "../components/EditSectionedSteps.jsx";
@@ -76,6 +77,41 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
 
       <div style={{ padding:"12px 20px 4px" }}>
         <div style={{ fontFamily:F.display, fontSize:20, color:"#2C2416" }}>Modifica Ricetta</div>
+      </div>
+
+      {/* Preview hero — updates live */}
+      <div style={{
+        margin:"12px 20px 0",
+        background: draft.color,
+        borderRadius:16,
+        padding:"18px 20px",
+        display:"flex", alignItems:"center", gap:14,
+      }}>
+        <div style={{
+          width:52, height:52, borderRadius:12,
+          background:"rgba(255,255,255,0.2)",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          fontSize:26,
+        }}>{draft.emoji}</div>
+        <div>
+          <div style={{
+            fontFamily:F.display, fontSize:20, color:"#fff",
+            opacity: draft.title ? 1 : 0.4,
+          }}>{draft.title || "Nome ricetta…"}</div>
+          <div style={{ fontFamily:F.ui, fontSize:11, color:"rgba(255,255,255,0.65)", marginTop:3 }}>
+            {draft.prepTime+draft.cookTime > 0 ? `${draft.prepTime+draft.cookTime} min · ` : ""}{draft.servings} porzioni
+          </div>
+        </div>
+      </div>
+
+      {/* Emoji + color picker */}
+      <div style={{ padding:"10px 20px 0" }}>
+        <EmojiColorPicker
+          emoji={draft.emoji}
+          color={draft.color}
+          onEmoji={e => set("emoji", e)}
+          onColor={c => set("color", c)}
+        />
       </div>
 
       {/* Section tabs */}

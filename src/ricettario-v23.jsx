@@ -156,8 +156,8 @@ const exportRecipePDF = (recipe) => {
   .divider { text-align: center; color: #B8973A; margin: 20px 0; font-size: 16px; }
   .dish-photo { width: 200px; height: 150px; margin: 0 auto 18px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: #fafaf8; }
   .dish-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .step-photos { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
-  .step-photo { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; }
+  .step-photos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .step-photo { width: 100%; height: 160px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd; }
   @media print { body { padding: 20px; } }
 </style>
 </head>
@@ -299,8 +299,8 @@ const exportBookPDF = (recipes, sections = MACRO_SECTIONS) => {
   .step-n { width: 22px; height: 22px; border-radius: 50%; background: #8B4520; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: bold; flex-shrink: 0; margin-top: 2px; font-family: sans-serif; }
   .step-content { flex: 1; }
   .step-t { font-size: 12.5px; line-height: 1.6; }
-  .step-photos { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
-  .step-photo { width: 50px; height: 50px; object-fit: cover; border-radius: 5px; border: 1px solid #ddd; }
+  .step-photos { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 7px; }
+  .step-photo { width: 100%; height: 140px; object-fit: cover; border-radius: 7px; border: 1px solid #ddd; }
   .divider { text-align: center; color: #B8973A; margin: 16px 0; font-size: 15px; }
   @media print { .page, .recipe { padding: 24px; } }
 </style>
@@ -444,6 +444,12 @@ function AppInner() {
   const [selected, setSelected] = useState(null);
   const [memoryPrefillRecipeId, setMemoryPrefillRecipeId] = useState(null);
   const [organizeFilter, setOrganizeFilter] = useState({ recipeId:null, onlyIssues:false });
+  // Fase/selezione di Svuota Frigo sollevate qui: se si apre una ricetta dai
+  // risultati e si torna indietro, si ritrova la stessa schermata (invece di
+  // ripartire dalla selezione ingredienti, dato che EmptyFridgeScreen viene
+  // smontata e rimontata ad ogni cambio di `screen`).
+  const [fridgePhase, setFridgePhase] = useState("select");
+  const [fridgeOwnedMembers, setFridgeOwnedMembers] = useState([]);
   const [scanDraft, setScanDraft] = useState(null); // draft precompilato da una scansione
   const [pendingShopUpdate, setPendingShopUpdate] = useState(null); // {updated} ricetta modificata già in lista spesa
   const [prevScreen, setPrevScreen] = useState("landing");
@@ -997,6 +1003,10 @@ function AppInner() {
           <EmptyFridgeScreen
             recipes={recipes}
             sectionList={sectionList}
+            phase={fridgePhase}
+            setPhase={setFridgePhase}
+            ownedMembers={fridgeOwnedMembers}
+            setOwnedMembers={setFridgeOwnedMembers}
             onLanding={() => setScreen("landing")}
             onRecipes={() => setScreen("recipes")}
             onBook={() => setScreen("book")}

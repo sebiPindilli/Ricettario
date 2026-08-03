@@ -21,11 +21,14 @@ export default function EmptyFridgeScreen({
   categoryList = INGREDIENT_CATEGORIES,
   ingredientDict = null,
   sectionList = MACRO_SECTIONS,
+  // Fase ("select"|"results") e ingredienti posseduti sollevati al genitore:
+  // così se si apre una ricetta dai risultati e si torna indietro, si
+  // ritrova la stessa schermata invece di ripartire dalla selezione.
+  phase, setPhase,
+  ownedMembers, setOwnedMembers,
 }) {
   const th = useTheme();
   const navActions = useNavActions();
-  const [phase, setPhase] = useState("select"); // "select" | "results"
-  const [ownedMembers, setOwnedMembers] = useState([]); // nomi puliti reali posseduti
   const [search, setSearch] = useState("");
   const [servingsDialog, setServingsDialog] = useState(null);
   const [activeMode, setActiveMode] = useState(null);

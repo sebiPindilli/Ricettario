@@ -116,7 +116,7 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
         />
       )}
       <div style={{ padding:"8px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"center", gap:8 }}>
-        <BackBtn onBack={onBack} label="Ricettario" dark={viewMode==="book"}/>
+        <BackBtn onBack={onBack} dark={viewMode==="book"}/>
         <div style={{ display:"flex", gap:6, alignItems:"center" }}>
           {/* View toggle */}
           <div style={{ display:"flex", gap:0 }}>

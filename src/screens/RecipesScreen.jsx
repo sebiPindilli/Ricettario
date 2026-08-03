@@ -15,7 +15,6 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
 
   const goSection = (id) => {
     setActiveSection(id === activeSection ? null : id);
-    setActiveTags([]);
     setOpenTagGroup(null);
     setShowFavorites(false);
   };
