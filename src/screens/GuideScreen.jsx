@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
+import diagVista from "../assets/architettura/vista-insieme.svg";
+import diagNutrizione from "../assets/architettura/nutrizione-aggregati.svg";
+import diagCreazione from "../assets/architettura/creazione-ricetta.svg";
 
 // ══════════════════════════════════════════════════════════════
 // GUIDA IN-APP — stessa struttura del manuale utente
@@ -75,6 +78,38 @@ export default function GuideScreen({ onBack }) {
           <p style={{margin:"6px 0"}}>Quando è ora di cucinare, la stessa ricetta si apre in <b>Modalità Cucina</b>: lì il lavoro delle altre sezioni diventa un piatto in tavola.</p>
           <Key>🔑 <b>Esempio:</b> in Organizza dici una volta che «1 cucchiaio di farina = 10 g». Da allora la Spesa somma bene anche se una ricetta usa cucchiai e un'altra grammi, e la Nutrizione sa quanti grammi contare.</Key>
           <Tip>💡 Se salti Organizza l'app funziona lo stesso, ma "alla cieca": non unisce cipolla bianca e rossa nella spesa, non calcola le calorie di ciò che non è collegato.</Tip>
+
+          <div style={{ marginTop:16, paddingTop:12, borderTop:`1px dashed ${th.appBorder}` }}>
+            <div style={{ fontFamily:F.ui, fontSize:11, fontWeight:700, color:th.appFaded, marginBottom:6 }}>
+              🔬 Per chi è curioso: gli schemi tecnici "sotto il cofano"
+            </div>
+            <p style={{margin:"6px 0"}}>Tre diagrammi per chi vuole vedere in dettaglio come si muovono i dati nel codice: la vista d'insieme, il calcolo di nutrizione ed ereditarietà degli aggregati, e il flusso di creazione di una ricetta. Scorri i riquadri per vederli per intero.</p>
+
+            <div style={{ margin:"10px 0" }}>
+              <div style={{ fontWeight:700, fontSize:11.5, color:th.appInk, marginBottom:4 }}>1 · Vista d'insieme</div>
+              <div style={{ overflow:"auto", maxHeight:360, border:`1px solid ${th.appBorder}`, borderRadius:10, background:"#fff", padding:8 }}>
+                <img src={diagVista} alt="Diagramma: vista d'insieme del flusso dati" style={{ minWidth:640, display:"block" }}/>
+              </div>
+            </div>
+
+            <div style={{ margin:"10px 0" }}>
+              <div style={{ fontWeight:700, fontSize:11.5, color:th.appInk, marginBottom:4 }}>2 · Nutrizione + aggregati</div>
+              <div style={{ overflow:"auto", maxHeight:360, border:`1px solid ${th.appBorder}`, borderRadius:10, background:"#fff", padding:8 }}>
+                <img src={diagNutrizione} alt="Diagramma: calcolo nutrizionale ed ereditarietà degli aggregati" style={{ minWidth:640, display:"block" }}/>
+              </div>
+            </div>
+
+            <div style={{ margin:"10px 0" }}>
+              <div style={{ fontWeight:700, fontSize:11.5, color:th.appInk, marginBottom:4 }}>3 · Creazione/importazione ricetta</div>
+              <div style={{ overflow:"auto", maxHeight:360, border:`1px solid ${th.appBorder}`, borderRadius:10, background:"#fff", padding:8 }}>
+                <img src={diagCreazione} alt="Diagramma: flusso di creazione e importazione di una ricetta" style={{ minWidth:640, display:"block" }}/>
+              </div>
+            </div>
+
+            <div style={{ fontSize:10, color:th.appFaded, fontStyle:"italic" }}>
+              Versione testuale/modificabile in <code>docs/architettura.md</code> (formato Mermaid).
+            </div>
+          </div>
         </Chapter>
 
         <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.1, color:th.appAccent, fontWeight:700, textTransform:"uppercase", margin:"16px 0 7px" }}>Cosa ci metti dentro</div>

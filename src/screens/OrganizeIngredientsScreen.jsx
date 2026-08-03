@@ -970,7 +970,7 @@ export default function OrganizeIngredientsScreen({
       <div style={{ background:th.appCard, border:`1.5px solid ${hasIssues ? RED + "66" : th.appBorder}`, borderRadius:13, padding:"12px 13px", marginBottom:9 }}>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
           <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontFamily:F.body, fontSize:14.5, fontWeight:700, color:th.appInk }}>
+            <div style={{ fontFamily:F.body, fontSize:14.5, fontWeight:700, color:th.appInk, textAlign:"center" }}>
               {isAgg && <span style={{ color:th.appAccent }}>⊕ </span>}
               {display.charAt(0).toUpperCase() + display.slice(1)}
               {hasIssues && <span style={{ fontSize:11, marginLeft:5 }}>⚠️</span>}
@@ -1152,17 +1152,22 @@ export default function OrganizeIngredientsScreen({
       </div>
       <div style={{ padding:"0 18px 4px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
         {[
-          ["⊕", "Database aggregati", () => setManageAggs(true)],
-          ["🏷", "Database categorie", () => setManageCats(true)],
-          ["⚖️", "Database equivalenze", () => setManageEq(true)],
-          ["🍎", "Database valori nutrizionali", () => setManageNutri(true)],
-        ].map(([icon, title, go]) => (
+          ["🍇", "Database aggregati", "#5A8C3A", () => setManageAggs(true)],
+          ["🏷️", "Database categorie", "#5A3A9A", () => setManageCats(true)],
+          ["⚖️", "Database equivalenze", "#2D8C6B", () => setManageEq(true)],
+          ["🍎", "Database valori nutrizionali", "#C4593A", () => setManageNutri(true)],
+        ].map(([icon, title, color, go]) => (
           <button key={title} onClick={go} style={{
             background:th.appCard, border:`1.5px solid ${th.appBorder}`, borderRadius:14,
             padding:"13px 8px", cursor:"pointer",
-            display:"flex", flexDirection:"column", alignItems:"center", gap:5,
+            display:"flex", flexDirection:"column", alignItems:"center", gap:7,
           }}>
-            <span style={{ fontSize:24 }}>{icon}</span>
+            <span style={{
+              width:40, height:40, borderRadius:"50%",
+              border:`1.5px solid ${color}55`, background:`${color}1C`,
+              display:"flex", alignItems:"center", justifyContent:"center",
+              fontSize:20, lineHeight:1,
+            }}>{icon}</span>
             <span style={{ fontFamily:F.ui, fontSize:10.5, fontWeight:700, color:th.appInk, textAlign:"center", lineHeight:1.3 }}>{title}</span>
           </button>
         ))}

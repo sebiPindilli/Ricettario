@@ -442,6 +442,7 @@ function AppInner() {
   const [screen, setScreen] = useState("cover");
   // screen: cover | landing | recipes | book | memories | recipe | new | edit | scan | theme
   const [selected, setSelected] = useState(null);
+  const [memoryPrefillRecipeId, setMemoryPrefillRecipeId] = useState(null);
   const [scanDraft, setScanDraft] = useState(null); // draft precompilato da una scansione
   const [pendingShopUpdate, setPendingShopUpdate] = useState(null); // {updated} ricetta modificata già in lista spesa
   const [prevScreen, setPrevScreen] = useState("landing");
@@ -740,6 +741,7 @@ function AppInner() {
   };
 
   const goTo = (s) => { setPrevScreen(screen); setScreen(s); };
+  const openAddMemory = (recipeId = null) => { setMemoryPrefillRecipeId(recipeId); goTo("addMemory"); };
 
   const updateRecipe = (updated) => {
     setRecipes(prev => prev.map(r => r.id===updated.id ? updated : r));
@@ -891,9 +893,9 @@ function AppInner() {
             onRecipes={() => setScreen("recipes")}
             onBook={() => setScreen("book")}
             onMemories={() => setScreen("memories")}
-            onAdd={(type) => goTo(type==="memory" ? "addMemory" : "addRecipeHub")}
+            onAdd={(type) => type==="memory" ? openAddMemory() : goTo("addRecipeHub")}
             onScan={() => goTo("scan")}
-            onAddMemory={() => goTo("addMemory")}
+            onAddMemory={() => openAddMemory()}
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
             onTheme={() => goTo("theme")}
@@ -911,7 +913,7 @@ function AppInner() {
                 onRecipes={() => setScreen("recipes")}
                 onBook={() => setScreen("book")}
                 onMemories={() => setScreen("memories")}
-                onAdd={(type) => goTo(type==="memory" ? "addMemory" : "addRecipeHub")}
+                onAdd={(type) => type==="memory" ? openAddMemory() : goTo("addRecipeHub")}
                 onFridge={() => setScreen("fridge")}
                 onShopping={() => setScreen("shoppingList")}
                 onLanding={() => setScreen("landing")}
@@ -963,7 +965,7 @@ function AppInner() {
             onRecipes={() => setScreen("recipes")}
             onBook={() => setScreen("book")}
             onMemories={() => setScreen("memories")}
-            onAdd={(type) => goTo(type==="memory" ? "addMemory" : "addRecipeHub")}
+            onAdd={(type) => type==="memory" ? openAddMemory() : goTo("addRecipeHub")}
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
           />
@@ -982,7 +984,7 @@ function AppInner() {
             onRecipes={() => setScreen("recipes")}
             onBook={() => setScreen("book")}
             onMemories={() => setScreen("memories")}
-            onAdd={(type) => goTo(type==="memory" ? "addMemory" : "addRecipeHub")}
+            onAdd={(type) => type==="memory" ? openAddMemory() : goTo("addRecipeHub")}
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
           />
@@ -995,7 +997,7 @@ function AppInner() {
             onRecipes={() => setScreen("recipes")}
             onBook={() => setScreen("book")}
             onMemories={() => setScreen("memories")}
-            onAdd={(type) => goTo(type==="memory" ? "addMemory" : "addRecipeHub")}
+            onAdd={(type) => type==="memory" ? openAddMemory() : goTo("addRecipeHub")}
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
             onStartCooking={(r) => { setSelected(r); setPrevScreen("fridge"); setScreen("recipe"); }}
@@ -1015,7 +1017,7 @@ function AppInner() {
             onLanding={() => setScreen("landing")}
             onBook={() => setScreen("book")}
             onMemories={() => setScreen("memories")}
-            onAdd={(type) => goTo(type==="memory" ? "addMemory" : "addRecipeHub")}
+            onAdd={(type) => type==="memory" ? openAddMemory() : goTo("addRecipeHub")}
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
             extraTagGroups={extraTagGroups}
@@ -1030,7 +1032,7 @@ function AppInner() {
             onRecipe={openRecipe}
             onRecipes={() => setScreen("recipes")}
             onMemories={() => setScreen("memories")}
-            onAdd={(type) => goTo(type==="memory" ? "addMemory" : "addRecipeHub")}
+            onAdd={(type) => type==="memory" ? openAddMemory() : goTo("addRecipeHub")}
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
           />
@@ -1042,7 +1044,7 @@ function AppInner() {
             onRecipe={openRecipe}
             onRecipes={() => setScreen("recipes")}
             onBook={() => setScreen("book")}
-            onAdd={(type) => goTo(type==="memory" ? "addMemory" : "addRecipeHub")}
+            onAdd={(type) => type==="memory" ? openAddMemory() : goTo("addRecipeHub")}
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
           />
@@ -1063,7 +1065,7 @@ function AppInner() {
             onRecipes={() => setScreen("recipes")}
             onBook={() => setScreen("book")}
             onMemories={() => setScreen("memories")}
-            onAdd={(type) => setScreen(type==="memory" ? "addMemory" : "addRecipeHub")}
+            onAdd={(type) => type==="memory" ? openAddMemory() : setScreen("addRecipeHub")}
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
           />
@@ -1077,7 +1079,7 @@ function AppInner() {
             onRecipes={() => setScreen("recipes")}
             onBook={() => setScreen("book")}
             onMemories={() => setScreen("memories")}
-            onAdd={(type) => setScreen(type==="memory" ? "addMemory" : "addRecipeHub")}
+            onAdd={(type) => type==="memory" ? openAddMemory() : setScreen("addRecipeHub")}
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
             extraTagGroups={extraTagGroups}
@@ -1093,13 +1095,14 @@ function AppInner() {
         {screen==="addMemory" && (
           <AddMemoryScreen
             recipes={recipes}
+            initialRecipeId={memoryPrefillRecipeId}
             onBack={() => setScreen(prevScreen)}
             onSave={(mem) => { addMemory(mem); setScreen(prevScreen); }}
             onLanding={() => setScreen("landing")}
             onRecipes={() => setScreen("recipes")}
             onBook={() => setScreen("book")}
             onMemories={() => setScreen("memories")}
-            onAdd={(type) => setScreen(type==="memory" ? "addMemory" : "addRecipeHub")}
+            onAdd={(type) => type==="memory" ? openAddMemory() : setScreen("addRecipeHub")}
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
           />
@@ -1118,6 +1121,7 @@ function AppInner() {
             onEdit={() => goTo("edit")}
             onDelete={deleteRecipe}
             onDeleteMemory={deleteMemory}
+            onAddMemory={(recipeId) => openAddMemory(recipeId)}
             onAddToShoppingList={addToShoppingList}
             allRecipes={recipes}
             sectionList={sectionList}
@@ -1152,7 +1156,7 @@ function AppInner() {
             onRecipes={() => setScreen("recipes")}
             onBook={() => setScreen("book")}
             onMemories={() => setScreen("memories")}
-            onAdd={(type) => setScreen(type==="memory" ? "addMemory" : "addRecipeHub")}
+            onAdd={(type) => type==="memory" ? openAddMemory() : setScreen("addRecipeHub")}
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
           />

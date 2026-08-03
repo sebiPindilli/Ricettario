@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTheme, useNavActions } from "../context.js";
 import { F } from "../data/constants.js";
 import OrganizeIcon from "./OrganizeIcon.jsx";
@@ -19,6 +20,7 @@ export default function GlobalNav({
 }) {
   const th = useTheme();
   const navActions = useNavActions();
+  const [infoOpen, setInfoOpen] = useState(false);
 
   // "recipes" e la vista libro condividono la stessa tab attiva (Ricette) e lo stesso banner.
   const inRecipes = activeScreen === "recipes" || bookView;
@@ -82,10 +84,24 @@ export default function GlobalNav({
         {/* Spaziatore sinistro: 🏠(≈34) + questo ≈ larghezza interruttore(≈62), così il titolo è centrato */}
         {showViewToggle && <div style={{ width:28, flexShrink:0 }}/>}
 
-        <div style={{
-          flex:1, fontFamily:F.display, fontSize:13, fontStyle:"italic",
-          color:"rgba(255,255,255,0.8)", textAlign:"center",
-        }}>{activeLabel || "Il mio Ricettario"}</div>
+        <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6, minWidth:0 }}>
+          <span style={{
+            fontFamily:F.display, fontSize:13, fontStyle:"italic",
+            color:"rgba(255,255,255,0.8)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+          }}>{activeLabel || "Il mio Ricettario"}</span>
+          <button
+            onClick={() => setInfoOpen(o => !o)}
+            title="Istruzioni sezione"
+            style={{
+              width:16, height:16, borderRadius:"50%", flexShrink:0, padding:0,
+              border:`1px solid ${infoOpen ? th.appAccent2 : "rgba(255,255,255,0.4)"}`,
+              background: infoOpen ? th.appAccent2 : "rgba(255,255,255,0.1)",
+              color: infoOpen ? "#fff" : "rgba(255,255,255,0.75)",
+              fontFamily:F.ui, fontSize:10, fontWeight:700, fontStyle:"italic",
+              display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer",
+            }}
+          >i</button>
+        </div>
 
         {/* Interruttore schede/libro — posizione fissa all'estrema destra */}
         {showViewToggle ? (
@@ -105,6 +121,18 @@ export default function GlobalNav({
           <div style={{ width:34, flexShrink:0 }}/> // bilancia 🏠 sugli altri schermi
         )}
       </div>
+
+      {/* Tendina istruzioni sezione */}
+      {infoOpen && (
+        <div style={{
+          background:`${th.appInk}`, borderTop:"1px solid rgba(255,255,255,0.1)",
+          padding:"12px 16px 16px",
+        }}>
+          <div style={{ fontFamily:F.ui, fontSize:11.5, color:"rgba(255,255,255,0.75)", lineHeight:1.6 }}>
+            📝 Istruzioni per «{activeLabel || "questa sezione"}» in arrivo.
+          </div>
+        </div>
+      )}
     </div>
   );
 }

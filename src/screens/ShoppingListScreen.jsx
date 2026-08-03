@@ -150,7 +150,43 @@ export default function ShoppingListScreen({
         </div>
       ) : (
         <div style={{ flex:1, overflowY:"auto", padding:"8px 18px 110px" }}>
+          {/* Ricette attive nella lista — rimozione in un clic di tutti gli ingredienti */}
+          <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appFaded, textTransform:"uppercase", margin:"4px 0 8px", fontWeight:700 }}>
+            Ricette attive
+          </div>
+          {(() => {
+            // Raggruppa le entry per ricetta (più aggiunte della stessa ricetta = una riga)
+            const byRecipe = [];
+            const idx = {};
+            entries.forEach(entry => {
+              if (idx[entry.recipeId] == null) { idx[entry.recipeId] = byRecipe.length; byRecipe.push({ recipeId: entry.recipeId, title: entry.recipeTitle, count: 0, labels: [] }); }
+              const g = byRecipe[idx[entry.recipeId]];
+              g.count += entry.items.length;
+              if (!g.labels.includes(entry.scaleLabel)) g.labels.push(entry.scaleLabel);
+            });
+            return byRecipe.map(g => (
+              <div key={g.recipeId} style={{
+                background:`${th.appBorder}44`, border:`1px solid ${th.appBorder}`,
+                borderRadius:12, padding:"10px 12px", marginBottom:6,
+                display:"flex", alignItems:"center", gap:10,
+              }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontFamily:F.body, fontSize:13, color:th.appInk, fontWeight:600 }}>{g.title}</div>
+                  <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded }}>{g.count} ingredienti · {g.labels.join(" + ")}</div>
+                </div>
+                <button onClick={() => onRemoveRecipe(g.recipeId)} title={`Rimuovi tutti gli ingredienti di ${g.title}`} style={{
+                  background:"none", border:`1px solid #C4593A`, color:"#C4593A",
+                  fontFamily:F.ui, fontSize:10.5, fontWeight:700, cursor:"pointer",
+                  flexShrink:0, padding:"6px 10px", borderRadius:9, display:"flex", alignItems:"center", gap:5,
+                }}>🗑 Rimuovi</button>
+              </div>
+            ));
+          })()}
+
           {/* Ingredienti aggregati */}
+          <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appFaded, textTransform:"uppercase", margin:"16px 0 8px", fontWeight:700 }}>
+            Ingredienti
+          </div>
           {aggregated.map((g, i) => (
             <div key={i} style={{
               background:th.appCard, border:`1px solid ${th.appBorder}`,
@@ -189,39 +225,6 @@ export default function ShoppingListScreen({
               )}
             </div>
           ))}
-
-          {/* Ricette attive nella lista — rimozione in un clic di tutti gli ingredienti */}
-          <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appFaded, textTransform:"uppercase", margin:"16px 0 8px", fontWeight:700 }}>
-            Ricette attive
-          </div>
-          {(() => {
-            // Raggruppa le entry per ricetta (più aggiunte della stessa ricetta = una riga)
-            const byRecipe = [];
-            const idx = {};
-            entries.forEach(entry => {
-              if (idx[entry.recipeId] == null) { idx[entry.recipeId] = byRecipe.length; byRecipe.push({ recipeId: entry.recipeId, title: entry.recipeTitle, count: 0, labels: [] }); }
-              const g = byRecipe[idx[entry.recipeId]];
-              g.count += entry.items.length;
-              if (!g.labels.includes(entry.scaleLabel)) g.labels.push(entry.scaleLabel);
-            });
-            return byRecipe.map(g => (
-              <div key={g.recipeId} style={{
-                background:`${th.appBorder}44`, border:`1px solid ${th.appBorder}`,
-                borderRadius:12, padding:"10px 12px", marginBottom:6,
-                display:"flex", alignItems:"center", gap:10,
-              }}>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontFamily:F.body, fontSize:13, color:th.appInk, fontWeight:600 }}>{g.title}</div>
-                  <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded }}>{g.count} ingredienti · {g.labels.join(" + ")}</div>
-                </div>
-                <button onClick={() => onRemoveRecipe(g.recipeId)} title={`Rimuovi tutti gli ingredienti di ${g.title}`} style={{
-                  background:"none", border:`1px solid #C4593A`, color:"#C4593A",
-                  fontFamily:F.ui, fontSize:10.5, fontWeight:700, cursor:"pointer",
-                  flexShrink:0, padding:"6px 10px", borderRadius:9, display:"flex", alignItems:"center", gap:5,
-                }}>🗑 Rimuovi</button>
-              </div>
-            ));
-          })()}
         </div>
       )}
 

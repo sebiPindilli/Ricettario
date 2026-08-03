@@ -12,7 +12,7 @@ export default function BookPageView({ recipe }) {
       {[60,120,180].map(top => (
         <div key={top} style={{ position:"absolute", left:-8, top, width:12, height:12, borderRadius:"50%", background:th.appBorder, border:`1px solid ${th.bookBorder}` }}/>
       ))}
-      <div style={{ fontSize:17, fontWeight:"bold", color:th.bookInk, marginBottom:14 }}>{recipe.title}</div>
+      <div style={{ fontSize:17, fontWeight:"bold", color:th.bookInk, marginBottom:14, textAlign:"center" }}>{recipe.title}</div>
       <div style={{ width:180, height:130, margin:"0 auto 14px", background:th.appBorder, border:`1px solid ${th.bookBorder}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:40, overflow:"hidden" }}>
         {dishPhotoOf(recipe)
           ? <img src={dishPhotoOf(recipe)} alt={recipe.title} style={{ width:"100%", height:"100%", objectFit:"cover" }}/>

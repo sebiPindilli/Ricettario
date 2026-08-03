@@ -49,7 +49,9 @@ export default function MemoriesSection({ memories, color, onAdd, onDelete }) {
             Aggiungi una foto la prossima volta che cucinate questa ricetta
           </div>
         </div>
-      ) : (
+      ) : null}
+
+      {!isEmpty && (
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16 }}>
           {memories.map(mem => (
             <div key={mem.id} style={{
@@ -130,7 +132,14 @@ export default function MemoriesSection({ memories, color, onAdd, onDelete }) {
         </div>
       )}
 
-      {/* Add memory button handled by home screen */}
+      {/* Add memory button */}
+      <button onClick={onAdd} style={{
+        width:"100%", padding:"12px", borderRadius:14,
+        border:`1.5px dashed ${th.appAccent}`,
+        background:"transparent", color:th.appAccent,
+        fontFamily:F.ui, fontSize:13, fontWeight:600, cursor:"pointer",
+        display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+      }}>➕ Aggiungi ricordo</button>
     </div>
   );
 }

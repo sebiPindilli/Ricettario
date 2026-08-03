@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
-import { flattenIngredients, scaleIngredient, ingredientToText, normName } from "../utils/helpers.js";
+import { flattenIngredients, scaleIngredient, normName, fmtQty } from "../utils/helpers.js";
 
 // ══════════════════════════════════════════════════════════════
 // MODALITÀ SPESA — checklist ingredienti scalati, copia selezione
@@ -11,10 +11,14 @@ export default function ShoppingMode({ recipe, scale, onClose, onAddToList, pres
   const factor = scale?.factor ?? 1;
   const items = flattenIngredients(recipe.ingredients).map((ing, i) => {
     const scaled = scaleIngredient(ing, factor);
+    const qtyParts = [];
+    if (scaled.qty != null) qtyParts.push(fmtQty(scaled.qty));
+    if (scaled.unit) qtyParts.push(scaled.unit);
     return {
-      id: i, ing: scaled, text: ingredientToText(scaled), section: ing.section,
-      original: ingredientToText(ing),
+      id: i, ing: scaled, section: ing.section,
       clean: normName(ing.name),
+      nameText: scaled.note ? `${scaled.name} (${scaled.note})` : scaled.name,
+      qtyText: qtyParts.join(" "),
     };
   });
   // Se preselectClean è fornito (nomi puliti degli ingredienti mancanti),
@@ -77,7 +81,12 @@ export default function ShoppingMode({ recipe, scale, onClose, onAddToList, pres
                 borderRadius:12, cursor:"pointer", textAlign:"left",
               }}>
                 <div style={{ width:22, height:22, borderRadius:6, flexShrink:0, border:`2px solid ${sel ? th.appAccent : th.appBorder}`, background: sel ? th.appAccent : "transparent", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:13 }}>{sel ? "✓" : ""}</div>
-                <span style={{ fontFamily:F.body, fontSize:14, color: sel ? th.appInk : th.appFaded, textDecoration: sel ? "none" : "line-through", lineHeight:1.4 }}>{it.text}</span>
+                <div style={{ flex:1, display:"flex", alignItems:"baseline", gap:8, minWidth:0 }}>
+                  <span style={{ flex:1, fontFamily:F.body, fontSize:14, color: sel ? th.appInk : th.appFaded, textDecoration: sel ? "none" : "line-through", lineHeight:1.4 }}>{it.nameText}</span>
+                  {it.qtyText && (
+                    <span style={{ flexShrink:0, fontFamily:F.ui, fontSize:12.5, fontWeight:700, color: sel ? th.appAccent : th.appFaded, textDecoration: sel ? "none" : "line-through" }}>{it.qtyText}</span>
+                  )}
+                </div>
               </button>
             </React.Fragment>
           );

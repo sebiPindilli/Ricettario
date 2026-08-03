@@ -5,7 +5,7 @@ import GlobalNav from "../components/GlobalNav.jsx";
 import BackBtn from "../components/BackBtn.jsx";
 import EditLabel from "../components/EditLabel.jsx";
 
-export default function AddMemoryScreen({ recipes, onBack, onSave, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping }) {
+export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBack, onSave, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping }) {
   const th = useTheme();
   const todayISO = new Date().toISOString().slice(0,10);
   const dateLabel = (iso) => new Date(iso).toLocaleDateString("it-IT", { day:"numeric", month:"short", year:"numeric" });
@@ -13,7 +13,7 @@ export default function AddMemoryScreen({ recipes, onBack, onSave, onLanding, on
   const [story, setStory] = useState("");
   const [chosenPhoto, setChosenPhoto] = useState(null); // emoji o dataURL immagine
   const [photoIsImage, setPhotoIsImage] = useState(false);
-  const [selectedRecipeIds, setSelectedRecipeIds] = useState([]);
+  const [selectedRecipeIds, setSelectedRecipeIds] = useState(initialRecipeId ? [initialRecipeId] : []);
   const [selectedDate, setSelectedDate] = useState(todayISO);
   const fileInputRef = React.useRef(null);
 
