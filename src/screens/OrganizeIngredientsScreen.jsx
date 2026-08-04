@@ -26,6 +26,7 @@ export default function OrganizeIngredientsScreen({
   ingredientDict = null, onRenameIngredient,
   shoppingList = [],
   initialFilterRecipeId = null, initialAlertTypes = null, initialManageAggs = false, initialManageCats = false,
+  initialAggScope = "all",
 }) {
   const th = useTheme();
   const [editing, setEditing] = useState(null); // null | {kind:"ingredient"|"aggregate", ...}
@@ -35,6 +36,10 @@ export default function OrganizeIngredientsScreen({
   const [nutriSearch, setNutriSearch] = useState({});    // nome ingrediente → testo ricerca aperta
   const [dbSearch, setDbSearch] = useState("");          // ricerca nel database alimenti
   const [manageAggs, setManageAggs] = useState(!!initialManageAggs); // database aggregati (lista)
+  const [aggSuggestionScope, setAggSuggestionScope] = useState(initialAggScope); // "all" | "shopping" — filtro suggerimenti aggregati
+  const [openAggSections, setOpenAggSections] = useState(() => // tendine Database aggregati
+    initialManageAggs ? { existing:false, suggested:true } : { existing:false, suggested:false }
+  );
   const [editingFrom, setEditingFrom] = useState(null);   // null | "manageAggs" — dove tornare dopo l'editor aggregato
   const [foodForm, setFoodForm] = useState(null);        // form alimento personalizzato {id?, name, ...}
   const [foodFormLinkTo, setFoodFormLinkTo] = useState(null); // dataKey dell'ingrediente da collegare al nuovo alimento, se aperto da lì
@@ -89,6 +94,20 @@ export default function OrganizeIngredientsScreen({
     const isPairIgnored = (a, b) => ignoredSimilarities.some(([x, y]) => (x === a && y === b) || (x === b && y === a));
     return allSuggestedGroups.filter(g => !activeKeys.has(g.key) && g.pairs.every(([a, b]) => isPairIgnored(a, b)));
   }, [allSuggestedGroups, suggestedAggregates, ignoredSimilarities]);
+  // ID ingrediente presenti nella lista spesa corrente — per marcare/filtrare
+  // i suggerimenti rilevanti per la spesa (🛒 e switch "Solo lista spesa").
+  const shoppingIngIds = React.useMemo(() => {
+    const ids = new Set();
+    shoppingList.forEach(entry => entry.items.forEach(it => ids.add(resolveIngId(dictIdx, normName(it.name)))));
+    return ids;
+  }, [shoppingList, dictIdx]);
+  const isShoppingRelevant = (g) => g.members.filter(id => shoppingIngIds.has(id)).length >= 2;
+  const visibleSuggestedAggregates = aggSuggestionScope === "shopping"
+    ? suggestedAggregates.filter(isShoppingRelevant)
+    : suggestedAggregates;
+  const visibleIgnoredSuggestedGroups = aggSuggestionScope === "shopping"
+    ? ignoredSuggestedGroups.filter(isShoppingRelevant)
+    : ignoredSuggestedGroups;
   // Voci del dizionario ordinate per nome (name = ID, display = nome)
   const allDictEntries = React.useMemo(
     () => Object.entries(dictM)
@@ -118,14 +137,77 @@ export default function OrganizeIngredientsScreen({
             background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:12.5, fontWeight:600, cursor:"pointer", marginBottom:18,
           }}>＋ Nuovo aggregato</button>
 
-          {suggestedAggregates.length > 0 && (
+          {/* ── Aggregati esistenti (tendina) ── */}
+          <button onClick={() => setOpenAggSections(p => ({ ...p, existing: !p.existing }))} style={{
+            width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
+            background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:12,
+            padding:"10px 12px", marginBottom:8, cursor:"pointer",
+          }}>
+            <span style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.2, color:th.appAccent, textTransform:"uppercase", fontWeight:700 }}>
+              📋 Aggregati esistenti ({aggregates.length})
+            </span>
+            <span style={{ color:th.appFaded, fontSize:12 }}>{openAggSections.existing ? "▾" : "▸"}</span>
+          </button>
+          {openAggSections.existing && (
+            <div style={{ marginBottom:8 }}>
+              {aggregates.map(agg => (
+                <div key={agg.id} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:12, padding:"11px 13px", marginBottom:8 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontFamily:F.body, fontSize:14.5, fontWeight:700, color:th.appInk }}>⊕ {agg.name}</div>
+                      <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:2 }}>{(agg.members||[]).map(dictName).join(" · ")}</div>
+                    </div>
+                    <button onClick={() => { setManageAggs(false); setEditingFrom("manageAggs"); setEditing({ kind:"aggregate", id:agg.id, name:agg.name, members:[...(agg.members||[])], categories:[...(agg.categories||[])] }); }} style={{ background:th.appInk, border:"none", borderRadius:9, padding:"7px 11px", color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0 }}>✏️ Modifica</button>
+                  </div>
+                </div>
+              ))}
+              {aggregates.length === 0 && (
+                <div style={{ textAlign:"center", padding:"26px 0", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>Nessun aggregato ancora creato</div>
+              )}
+            </div>
+          )}
+
+          {/* ── Aggregati suggeriti (tendina unica: Da decidere + Ignorati) ── */}
+          <button onClick={() => setOpenAggSections(p => ({ ...p, suggested: !p.suggested }))} style={{
+            width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
+            background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:12,
+            padding:"10px 12px", marginBottom:8, cursor:"pointer",
+          }}>
+            <span style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.2, color:th.appAccent, textTransform:"uppercase", fontWeight:700 }}>
+              🔎 Aggregati suggeriti{(visibleSuggestedAggregates.length + visibleIgnoredSuggestedGroups.length) > 0 ? ` (${visibleSuggestedAggregates.length + visibleIgnoredSuggestedGroups.length})` : ""}
+            </span>
+            <span style={{ color:th.appFaded, fontSize:12 }}>{openAggSections.suggested ? "▾" : "▸"}</span>
+          </button>
+          {openAggSections.suggested && (
             <div style={{ marginBottom:18 }}>
-              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appAccent, textTransform:"uppercase", margin:"4px 0 8px", fontWeight:700 }}>
-                🔎 Aggregati suggeriti
+              {(suggestedAggregates.length > 0 || ignoredSuggestedGroups.length > 0) && (
+                <div style={{ display:"flex", gap:6, marginBottom:14 }}>
+                  {[["all","Tutti"],["shopping","🛒 Solo lista spesa"]].map(([val, label]) => {
+                    const on = aggSuggestionScope === val;
+                    return (
+                      <button key={val} onClick={() => setAggSuggestionScope(val)} style={{
+                        flex:1, padding:"7px 10px", borderRadius:20,
+                        border:`1.5px solid ${on ? th.appAccent : th.appBorder}`,
+                        background: on ? th.appAccent + "18" : "transparent",
+                        color: on ? th.appAccent : th.appFaded,
+                        fontFamily:F.ui, fontSize:11.5, fontWeight:600, cursor:"pointer",
+                      }}>{label}</button>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appFaded, textTransform:"uppercase", margin:"4px 0 8px", fontWeight:700 }}>
+                Da decidere
               </div>
-              {suggestedAggregates.map(g => (
+              {visibleSuggestedAggregates.length === 0 ? (
+                <div style={{ textAlign:"center", padding:"16px 0", color:th.appFaded, fontFamily:F.ui, fontSize:11.5, fontStyle:"italic" }}>
+                  Nessun suggerimento{aggSuggestionScope === "shopping" ? " nella lista spesa" : ""}.
+                </div>
+              ) : visibleSuggestedAggregates.map(g => (
                 <div key={g.key} style={{ background:th.appCard, border:`1.5px solid ${th.appAccent}55`, borderRadius:12, padding:"11px 13px", marginBottom:8 }}>
                   <div style={{ fontFamily:F.body, fontSize:14, fontWeight:700, color:th.appInk }}>
+                    {isShoppingRelevant(g) && <span title="Rilevante per la lista spesa">🛒 </span>}
                     {g.type === "join"
                       ? (g.newMembers.length === 1
                           ? <>Aggiungi «{dictName(g.newMembers[0])}» a un aggregato esistente</>
@@ -147,47 +229,30 @@ export default function OrganizeIngredientsScreen({
                   </div>
                 </div>
               ))}
-            </div>
-          )}
 
-          {ignoredSuggestedGroups.length > 0 && (
-            <div style={{ marginBottom:18 }}>
-              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appFaded, textTransform:"uppercase", margin:"4px 0 8px", fontWeight:700 }}>
-                🔎 Aggregati ignorati
+              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appFaded, textTransform:"uppercase", margin:"14px 0 8px", fontWeight:700 }}>
+                Ignorati
               </div>
-              {ignoredSuggestedGroups.map(g => (
+              {visibleIgnoredSuggestedGroups.length === 0 ? (
+                <div style={{ textAlign:"center", padding:"16px 0", color:th.appFaded, fontFamily:F.ui, fontSize:11.5, fontStyle:"italic" }}>Nessun aggregato ignorato.</div>
+              ) : visibleIgnoredSuggestedGroups.map(g => (
                 <div key={g.key} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:12, padding:"11px 13px", marginBottom:8 }}>
                   <div style={{ opacity:0.55 }}>
                     <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                      <div style={{ fontFamily:F.body, fontSize:14, fontWeight:700, color:th.appInk, flex:1 }}>{g.label}</div>
+                      <div style={{ fontFamily:F.body, fontSize:14, fontWeight:700, color:th.appInk, flex:1 }}>
+                        {isShoppingRelevant(g) && <span title="Rilevante per la lista spesa">🛒 </span>}
+                        {g.label}
+                      </div>
                       <span style={{ fontFamily:F.ui, fontSize:9, color:th.appFaded, textTransform:"uppercase", letterSpacing:0.5 }}>ignorato</span>
                     </div>
                     <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:2, marginBottom:9 }}>
                       {Array.from(new Set(g.members.map(memberOrAggName))).join(" · ")}
                     </div>
                   </div>
-                  <button onClick={() => g.pairs.forEach(([a, b]) => onRestoreSimilarity && onRestoreSimilarity(a, b))} style={{ background:"transparent", border:`1.5px solid ${th.appBorder}`, borderRadius:9, padding:"7px 11px", color:th.appFaded, fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer" }}>↺ Ripristina</button>
+                  <button onClick={() => g.pairs.forEach(([a, b]) => onRestoreSimilarity && onRestoreSimilarity(a, b))} style={{ background:"transparent", border:`1.5px solid ${th.appBorder}`, borderRadius:9, padding:"7px 11px", color:th.appFaded, fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer" }}>🔄 Ripristina</button>
                 </div>
               ))}
             </div>
-          )}
-
-          <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appAccent, textTransform:"uppercase", margin:"4px 0 8px", fontWeight:700 }}>
-            📋 Aggregati esistenti
-          </div>
-          {aggregates.map(agg => (
-            <div key={agg.id} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:12, padding:"11px 13px", marginBottom:8 }}>
-              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontFamily:F.body, fontSize:14.5, fontWeight:700, color:th.appInk }}>⊕ {agg.name}</div>
-                  <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:2 }}>{(agg.members||[]).map(dictName).join(" · ")}</div>
-                </div>
-                <button onClick={() => { setManageAggs(false); setEditingFrom("manageAggs"); setEditing({ kind:"aggregate", id:agg.id, name:agg.name, members:[...(agg.members||[])], categories:[...(agg.categories||[])] }); }} style={{ background:th.appInk, border:"none", borderRadius:9, padding:"7px 11px", color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0 }}>✏️ Modifica</button>
-              </div>
-            </div>
-          ))}
-          {aggregates.length === 0 && (
-            <div style={{ textAlign:"center", padding:"26px 0", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>Nessun aggregato ancora creato</div>
           )}
         </div>
       </div>
@@ -405,32 +470,42 @@ export default function OrganizeIngredientsScreen({
         <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 40px" }}>
           {orderedCats.map(cat => {
             const isFixed = cat.id === "base"; // unica categoria fissa
+            // Ingredienti che hanno effettivamente questa categoria (propria
+            // o ereditata da un aggregato) — stessa logica di Svuota Frigo.
+            const catIngredients = allDictEntries
+              .filter(({ name }) => effectiveCategories(name, aggregates, ingredientCategories, sourceByIngredient).categories.includes(cat.id))
+              .map(({ display }) => display)
+              .sort((a, b) => a.localeCompare(b, "it"));
             return (
               <div key={cat.id} style={{
                 background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:12,
                 padding:"10px 12px", marginBottom:8,
-                display:"flex", alignItems:"center", gap:8,
                 opacity: isFixed ? 0.75 : 1,
               }}>
-                <button
-                  onClick={() => !isFixed && setEmojiPickerFor(cat.id)}
-                  disabled={isFixed}
-                  style={{ width:44, padding:"8px 4px", textAlign:"center", border:`1.5px solid ${emojiPickerFor===cat.id ? th.appAccent : th.appBorder}`, borderRadius:10, background:th.appBg, fontSize:16, cursor: isFixed ? "default" : "pointer", flexShrink:0 }}
-                >{cat.emoji}</button>
-                <input
-                  value={cat.label}
-                  onChange={e => !isFixed && onSaveCategory({ ...cat, label: e.target.value })}
-                  disabled={isFixed}
-                  style={{ flex:1, padding:"9px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appBg, fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none", minWidth:0 }}
-                />
-                {isFixed ? (
-                  <span style={{ fontFamily:F.ui, fontSize:9, color:th.appFaded, flexShrink:0 }}>fissa</span>
-                ) : (
-                  <button onClick={() => onDeleteCategory(cat.id)} style={{
-                    background:"none", border:"none", color:"#C4593A",
-                    fontSize:17, cursor:"pointer", flexShrink:0, padding:"4px 6px",
-                  }}>🗑️</button>
-                )}
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <button
+                    onClick={() => !isFixed && setEmojiPickerFor(cat.id)}
+                    disabled={isFixed}
+                    style={{ width:44, padding:"8px 4px", textAlign:"center", border:`1.5px solid ${emojiPickerFor===cat.id ? th.appAccent : th.appBorder}`, borderRadius:10, background:th.appBg, fontSize:16, cursor: isFixed ? "default" : "pointer", flexShrink:0 }}
+                  >{cat.emoji}</button>
+                  <input
+                    value={cat.label}
+                    onChange={e => !isFixed && onSaveCategory({ ...cat, label: e.target.value })}
+                    disabled={isFixed}
+                    style={{ flex:1, padding:"9px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appBg, fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none", minWidth:0 }}
+                  />
+                  {isFixed ? (
+                    <span style={{ fontFamily:F.ui, fontSize:9, color:th.appFaded, flexShrink:0 }}>fissa</span>
+                  ) : (
+                    <button onClick={() => onDeleteCategory(cat.id)} style={{
+                      background:"none", border:"none", color:"#C4593A",
+                      fontSize:17, cursor:"pointer", flexShrink:0, padding:"4px 6px",
+                    }}>🗑️</button>
+                  )}
+                </div>
+                <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:8, lineHeight:1.6 }}>
+                  {catIngredients.length > 0 ? catIngredients.join(", ") : <span style={{ fontStyle:"italic" }}>nessun ingrediente</span>}
+                </div>
               </div>
             );
           }).flatMap((row, i) => {
@@ -1162,7 +1237,7 @@ export default function OrganizeIngredientsScreen({
       </div>
       <div style={{ padding:"0 18px 4px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
         {[
-          ["🍇", "Database aggregati", "#5A8C3A", () => setManageAggs(true)],
+          ["🍇", "Database aggregati", "#5A8C3A", () => { setManageAggs(true); setOpenAggSections({ existing:true, suggested:false }); }],
           ["🏷️", "Database categorie", "#5A3A9A", () => setManageCats(true)],
           ["⚖️", "Conversioni di sistema", "#2D8C6B", () => setManageEq(true)],
           ["🍎", "Database valori nutrizionali", "#C4593A", () => setManageNutri(true)],

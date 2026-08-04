@@ -443,7 +443,7 @@ function AppInner() {
   // screen: cover | landing | recipes | book | memories | recipe | new | edit | scan | theme
   const [selected, setSelected] = useState(null);
   const [memoryPrefillRecipeId, setMemoryPrefillRecipeId] = useState(null);
-  const [organizeFilter, setOrganizeFilter] = useState({ recipeId:null, alertTypes:null, manageAggs:false, manageCats:false });
+  const [organizeFilter, setOrganizeFilter] = useState({ recipeId:null, alertTypes:null, manageAggs:false, manageCats:false, aggScope:"all" });
   // Schermata da cui si è entrati in Organizza Ingredienti (qualunque punto
   // d'ingresso: icona di navigazione globale, banner di una schermata, link
   // diretto a una sotto-schermata) — usata dai tasti "Indietro" per tornare
@@ -775,9 +775,9 @@ function AppInner() {
 
   const goTo = (s) => { setPrevScreen(screen); setScreen(s); };
   const openAddMemory = (recipeId = null) => { setMemoryPrefillRecipeId(recipeId); goTo("addMemory"); };
-  const openOrganize = (recipeId = null, alertTypes = null, manageAggs = false, manageCats = false) => {
+  const openOrganize = (recipeId = null, alertTypes = null, manageAggs = false, manageCats = false, aggScope = "all") => {
     if (screen !== "organize") setOrganizeOrigin(screen); // non sovrascrivere se già dentro Organizza (es. da un alert interno)
-    setOrganizeFilter({ recipeId, alertTypes, manageAggs, manageCats });
+    setOrganizeFilter({ recipeId, alertTypes, manageAggs, manageCats, aggScope });
     goTo("organize");
   };
 
@@ -949,6 +949,7 @@ function AppInner() {
             initialAlertTypes={organizeFilter.alertTypes}
             initialManageAggs={organizeFilter.manageAggs}
             initialManageCats={organizeFilter.manageCats}
+            initialAggScope={organizeFilter.aggScope}
             onBack={() => setScreen(organizeOrigin)}
             nav={
               <GlobalNav
@@ -1025,6 +1026,7 @@ function AppInner() {
             sourceByIngredient={sourceByIngredient}
             equivalences={equivalences}
             ingredientDict={ingredientDict}
+            suggestedAggregates={suggestedAggregates}
             onRemoveEntry={removeShoppingEntry}
             onRemoveRecipe={removeShoppingRecipe}
             onRemoveItem={removeShoppingItem}
@@ -1036,7 +1038,7 @@ function AppInner() {
             onAdd={(type) => type==="memory" ? openAddMemory() : goTo("addRecipeHub")}
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
-            onManageAggregates={() => openOrganize(null, null, true)}
+            onManageAggregates={() => openOrganize(null, null, true, false, "shopping")}
             onManageEquivalences={() => openOrganize(SHOPPING_SOURCE, ["eq"])}
           />
         )}

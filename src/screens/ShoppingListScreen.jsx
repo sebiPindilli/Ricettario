@@ -24,6 +24,7 @@ export default function ShoppingListScreen({
   entries, onRemoveEntry, onRemoveRecipe, onRemoveItem, onClearAll, aggregates = [],
   ingredientCategories = {}, sourceByIngredient = {},
   equivalences = {}, ingredientDict = null,
+  suggestedAggregates = [],
   onLanding, onRecipes, onBook, onMemories, onAdd, onFridge,
   onShopping = () => {},
   onManageAggregates, onManageEquivalences,
@@ -58,10 +59,11 @@ export default function ShoppingListScreen({
         const qty = it.qty;
         let unit = normUnit(it.unit);
         if (unit === "q.b.") unit = "";
-        // Testo originale per il dettaglio
+        // Testo originale per il dettaglio — senza quantità è sempre "q.b."
+        // (anche i pochi casi limite in cui manca senza essere stata scritta esplicitamente).
         const rawAmount = qty != null
           ? `${fmtQty(qty)}${it.unit && it.unit !== "q.b." ? " " + it.unit : ""}`.trim()
-          : (it.unit === "q.b." ? "q.b." : "—");
+          : "q.b.";
         const agg = findAggregate(ingId);
         const groupName = agg ? agg.name : displayName;
         const key = agg ? "agg_" + agg.id : "ing_" + clean;
@@ -82,8 +84,29 @@ export default function ShoppingListScreen({
         if (qty != null) g.byUnit.set(unit, (g.byUnit.get(unit) || 0) + qty);
       });
     });
-    return Array.from(map.values()).sort((a,b) => a.display.localeCompare(b.display, "it"));
+    // Con quantità prima, senza quantità in fondo; a parità, ordine alfabetico.
+    return Array.from(map.values()).sort((a, b) => {
+      const aHas = a.byUnit.size > 0, bHas = b.byUnit.size > 0;
+      if (aHas !== bHas) return aHas ? -1 : 1;
+      return a.display.localeCompare(b.display, "it");
+    });
   }, [entries, aggregates, ingredientDict]);
+
+  // ID ingrediente presenti nella lista spesa corrente — per filtrare i
+  // suggerimenti di aggregati (globali, su tutto il ricettario) su quelli
+  // effettivamente rilevanti qui.
+  const shoppingIngIds = React.useMemo(() => {
+    const dictIdx = ingredientDict ? ingDictIndex(ingredientDict) : null;
+    const ids = new Set();
+    entries.forEach(entry => entry.items.forEach(it => ids.add(resolveIngId(dictIdx, normName(it.name)))));
+    return ids;
+  }, [entries, ingredientDict]);
+  // Un gruppo suggerito è rilevante per la lista spesa solo se almeno due
+  // dei suoi membri compaiono davvero qui (altrimenti è "vero" ma altrove).
+  const shoppingSuggestedAggregates = React.useMemo(
+    () => suggestedAggregates.filter(g => g.members.filter(id => shoppingIngIds.has(id)).length >= 2),
+    [suggestedAggregates, shoppingIngIds]
+  );
 
   // Un ingrediente "base" (🧂 sale, olio, farina…) si presume già in dispensa:
   // finché non lo sposti manualmente, va nella sezione "controlla in dispensa"
@@ -129,7 +152,7 @@ export default function ShoppingListScreen({
           .join(" + ");
       }
     }
-    return { units, multiUnit, allConvertible, targets, choice, totalText, hasNumbers: units.length > 0 };
+    return { units, multiUnit, allConvertible, targets, choice, totalText };
   };
 
   const pillStyle = (active) => ({
@@ -156,12 +179,6 @@ export default function ShoppingListScreen({
               {info.totalText}
             </span>
           )}
-          {!base && g.parts.length === 1 && (
-            <button onClick={() => onRemoveItem && onRemoveItem(g.parts[0].entryId, g.parts[0].ingName)} title="Rimuovi dalla lista" style={{
-              background:"none", border:"none", color:th.appFaded, cursor:"pointer",
-              fontSize:17, lineHeight:1, padding:"0 2px", flexShrink:0,
-            }}>×</button>
-          )}
         </div>
 
         {base ? (
@@ -170,7 +187,7 @@ export default function ShoppingListScreen({
               padding:"6px 10px", borderRadius:9, border:`1.5px solid ${th.appBorder}`,
               background:"transparent", color:th.appFaded,
               fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer",
-            }}>☑ Ce l'ho</button>
+            }}>✅ Ce l'ho</button>
             <button onClick={() => setMovedToBuy(p => new Set(p).add(g.id))} style={{
               padding:"6px 10px", borderRadius:9, border:`1.5px solid ${th.appAccent}`,
               background:"transparent", color:th.appAccent,
@@ -200,25 +217,19 @@ export default function ShoppingListScreen({
           </>
         )}
 
-        {g.parts.length > 1 ? (
-          <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:4, lineHeight:1.7 }}>
-            {g.parts.map((p, j) => (
-              <div key={j} style={{ display:"flex", alignItems:"center", gap:6 }}>
-                <span style={{ flex:1 }}>{p.amount}{p.member ? <> di <b>{p.member}</b></> : null} per <i>{p.recipe}</i></span>
-                {!base && (
-                  <button onClick={() => onRemoveItem && onRemoveItem(p.entryId, p.ingName)} title="Rimuovi questo" style={{
-                    background:"none", border:"none", color:th.appFaded, cursor:"pointer",
-                    fontSize:14, lineHeight:1, padding:"0 2px", flexShrink:0,
-                  }}>×</button>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:3 }}>
-            {g.parts[0].member ? <><b>{g.parts[0].member}</b> · </> : (!info.hasNumbers && g.parts[0].amount !== "q.b." ? g.parts[0].amount + " · " : null)}per <i>{g.parts[0].recipe}</i>
-          </div>
-        )}
+        <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:4, lineHeight:1.7 }}>
+          {g.parts.map((p, j) => (
+            <div key={j} style={{ display:"flex", alignItems:"center", gap:6 }}>
+              <span style={{ flex:1 }}>{p.amount}{p.member ? <> di <b>{p.member}</b></> : null} per <i>{p.recipe}</i></span>
+              {!base && (
+                <button onClick={() => onRemoveItem && onRemoveItem(p.entryId, p.ingName)} title="Rimuovi questo" style={{
+                  background:"none", border:"none", color:th.appFaded, cursor:"pointer",
+                  fontSize:14, lineHeight:1, padding:"0 2px", flexShrink:0,
+                }}>×</button>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     );
   };
@@ -238,9 +249,13 @@ export default function ShoppingListScreen({
           ? `${info.totalText} ${nameLower}`
           : `${info.totalText} di ${nameLower}`;
       }
+      // Il nome del membro si mostra solo se aggiunge un'informazione reale
+      // (cioè differisce dal nome del gruppo/aggregato) — altrimenti è
+      // ridondante con la testa della riga, che lo riporta già.
+      const memberDiffers = (p) => !!(p?.member && normName(p.member) !== normName(g.display));
       const detail = g.parts.length > 1
-        ? ` (${g.parts.map(p => `${p.amount}${p.member ? " di " + p.member : ""} per ${p.recipe}`).join(", ")})`
-        : g.parts[0]?.member ? ` (${g.parts[0].member} per ${g.parts[0].recipe})` : "";
+        ? ` (${g.parts.map(p => `${p.amount}${memberDiffers(p) ? " di " + p.member : ""} per ${p.recipe}`).join(", ")})`
+        : memberDiffers(g.parts[0]) ? ` (${g.parts[0].member})` : "";
       return `• ${head}${detail}`;
     });
     const full = `🛒 Lista della spesa\n\n${lines.join("\n")}`;
@@ -248,25 +263,6 @@ export default function ShoppingListScreen({
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  // Suggerimenti mostrati nella tendina istruzioni del banner (tasto "i")
-  const shoppingInfoContent = (
-    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-      <div style={{ fontFamily:F.ui, fontSize:11.5, color:"rgba(255,255,255,0.75)", lineHeight:1.6 }}>
-        💡 Per un funzionamento ottimale:
-      </div>
-      <button onClick={() => onManageAggregates && onManageAggregates()} style={{ display:"block", width:"100%", textAlign:"left", padding:"9px 12px", background:"rgba(255,255,255,0.06)", border:"1px dashed rgba(255,255,255,0.2)", borderRadius:10, cursor:"pointer" }}>
-        <span style={{ fontFamily:F.ui, fontSize:11, color:"rgba(255,255,255,0.75)", lineHeight:1.5 }}>
-          🍇 Raggruppa gli ingredienti simili (es. pomodoro e pomodori) → <span style={{ color:th.appAccent2, fontWeight:700 }}>crea aggregati</span>
-        </span>
-      </button>
-      <button onClick={() => onManageEquivalences && onManageEquivalences()} style={{ display:"block", width:"100%", textAlign:"left", padding:"9px 12px", background:"rgba(255,255,255,0.06)", border:"1px dashed rgba(255,255,255,0.2)", borderRadius:10, cursor:"pointer" }}>
-        <span style={{ fontFamily:F.ui, fontSize:11, color:"rgba(255,255,255,0.75)", lineHeight:1.5 }}>
-          ⚖️ Definisci equivalenze per ingredienti con unità diverse (es. 1 cucchiaino d'olio = 5 g) → <span style={{ color:th.appAccent2, fontWeight:700 }}>definisci equivalenze</span>
-        </span>
-      </button>
-    </div>
-  );
 
   const nav = (
     <GlobalNav
@@ -283,7 +279,6 @@ export default function ShoppingListScreen({
       showSearch={false}
       showFavorites={false}
       activeLabel="Lista Spesa"
-      infoContent={shoppingInfoContent}
     />
   );
 
@@ -318,6 +313,14 @@ export default function ShoppingListScreen({
         </div>
       ) : (
         <div style={{ flex:1, overflowY:"auto", padding:"8px 18px 110px" }}>
+          {shoppingSuggestedAggregates.length > 0 && onManageAggregates && (
+            <div onClick={() => onManageAggregates()} style={{ marginBottom:14, padding:"9px 12px", background:`${th.appAccent}10`, border:`1px dashed ${th.appAccent}55`, borderRadius:10, cursor:"pointer" }}>
+              <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
+                💡 Sono stati rilevati ingredienti con nomi simili nella tua lista spesa. Per un funzionamento ottimale{" "}
+                <span style={{ color:th.appAccent, fontWeight:700, textDecoration:"underline" }}>raggruppali in aggregati o ignora le similitudini</span>.
+              </span>
+            </div>
+          )}
           {/* Ricette attive nella lista — rimozione in un clic di tutti gli ingredienti */}
           <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appFaded, textTransform:"uppercase", margin:"4px 0 8px", fontWeight:700 }}>
             Ricette attive

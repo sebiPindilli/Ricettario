@@ -102,25 +102,6 @@ export default function EmptyFridgeScreen({
 
   const analyzedById = React.useMemo(() => new Map(analyzed.map(a => [a.recipe.id, a])), [analyzed]);
 
-  // Suggerimenti mostrati nella tendina istruzioni del banner (tasto "i")
-  const fridgeInfoContent = (
-    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-      <div style={{ fontFamily:F.ui, fontSize:11.5, color:"rgba(255,255,255,0.75)", lineHeight:1.6 }}>
-        💡 Per un funzionamento ottimale:
-      </div>
-      <button onClick={() => onManageAggregates && onManageAggregates()} style={{ display:"block", width:"100%", textAlign:"left", padding:"9px 12px", background:"rgba(255,255,255,0.06)", border:"1px dashed rgba(255,255,255,0.2)", borderRadius:10, cursor:"pointer" }}>
-        <span style={{ fontFamily:F.ui, fontSize:11, color:"rgba(255,255,255,0.75)", lineHeight:1.5 }}>
-          🍇 Raggruppa gli ingredienti simili (es. zucchero bianco + di canna) → <span style={{ color:th.appAccent2, fontWeight:700 }}>crea aggregati</span>
-        </span>
-      </button>
-      <button onClick={() => onManageCategories && onManageCategories()} style={{ display:"block", width:"100%", textAlign:"left", padding:"9px 12px", background:"rgba(255,255,255,0.06)", border:"1px dashed rgba(255,255,255,0.2)", borderRadius:10, cursor:"pointer" }}>
-        <span style={{ fontFamily:F.ui, fontSize:11, color:"rgba(255,255,255,0.75)", lineHeight:1.5 }}>
-          🏷️ Assegna delle categorie agli ingredienti → <span style={{ color:th.appAccent2, fontWeight:700 }}>vedi cosa manca</span>
-        </span>
-      </button>
-    </div>
-  );
-
   const nav = (
     <GlobalNav
       activeScreen="fridge"
@@ -136,7 +117,6 @@ export default function EmptyFridgeScreen({
       showSearch={false}
       showFavorites={false}
       activeLabel="Svuota Frigo"
-      infoContent={fridgeInfoContent}
     />
   );
 
@@ -291,14 +271,14 @@ export default function EmptyFridgeScreen({
                   {(onManageCategories || onManageCategoriesDb) && (
                     <div style={{ marginTop:10, padding:"9px 12px", background:`${th.appAccent}10`, border:`1px dashed ${th.appAccent}55`, borderRadius:10 }}>
                       <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
-                        💡 Per un funzionamento ottimale{" "}
+                        💡 Sono stati rilevati degli ingredienti senza categoria. Per un funzionamento ottimale{" "}
                         {onManageCategories && (
-                          <span onClick={() => onManageCategories()} style={{ color:th.appAccent, fontWeight:700, cursor:"pointer", textDecoration:"underline" }}>assegna delle categorie agli ingredienti</span>
+                          <span onClick={() => onManageCategories()} style={{ color:th.appAccent, fontWeight:700, cursor:"pointer", textDecoration:"underline" }}>assegnali a delle categorie esistenti</span>
                         )}
                         {onManageCategories && onManageCategoriesDb && " "}
                         {onManageCategoriesDb && (
                           <>oppure{" "}
-                            <span onClick={() => onManageCategoriesDb()} style={{ color:th.appAccent, fontWeight:700, cursor:"pointer", textDecoration:"underline" }}>crea delle nuove categorie</span>
+                            <span onClick={() => onManageCategoriesDb()} style={{ color:th.appAccent, fontWeight:700, cursor:"pointer", textDecoration:"underline" }}>creane di nuove</span>
                           </>
                         )}
                         .
