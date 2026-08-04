@@ -532,6 +532,12 @@ function AppInner() {
   // equivalences: { "<nome>": { factors:{ cucchiaio:10 } } } — i grammi sono
   // sempre l'unità di riferimento (1 cucchiaio = 10 g), niente base scelta.
   const [equivalences, setEquivalences] = useState(INITIAL_EQUIVALENCES);
+  // customUnits: { "<unità>": { base, value, grams } } — conversioni di
+  // sistema personalizzate (es. "bicchiere" = 200 ml = 200 g), definite in
+  // una delle unità fisse. Fanno da default globale per ogni ingrediente che
+  // usa quell'unità: un'equivalenza specifica sulla singola voce vince sempre
+  // (vedi ingredientToGrams/gramsPerUnitFor). Le unità fisse restano intoccate.
+  const [customUnits, setCustomUnits] = useState({});
   // nutritionMap: { "<nome>": { foodId } | { custom:{kcal,carb,...} } } — mappa ingrediente → voce database
   const [nutritionMap, setNutritionMap] = useState(INITIAL_NUTRITION_MAP);
   // customFoods: alimenti aggiunti dall'utente (fonte: personalizzata)
@@ -574,6 +580,12 @@ function AppInner() {
   };
   const saveEquivalence = (name, eq) => {
     setEquivalences(prev => ({ ...prev, [name]: eq }));
+  };
+  const saveCustomUnit = (unitKey, def) => {
+    setCustomUnits(prev => ({ ...prev, [unitKey]: def }));
+  };
+  const deleteCustomUnit = (unitKey) => {
+    setCustomUnits(prev => { const next = { ...prev }; delete next[unitKey]; return next; });
   };
 
   const saveAggregate = (agg) => {
@@ -652,7 +664,7 @@ function AppInner() {
   const emptyBookData = () => ({
     recipes: [], extraTagGroups: [],
     sectionList: MACRO_SECTIONS, categoryList: INGREDIENT_CATEGORIES,
-    ingredientCategories: {}, aggregates: [], shoppingList: [], equivalences: {}, nutritionMap: {}, customFoods: [], ingredientDict: {}, sourceByIngredient: {}, ignoredSimilarities: [],
+    ingredientCategories: {}, aggregates: [], shoppingList: [], equivalences: {}, customUnits: {}, nutritionMap: {}, customFoods: [], ingredientDict: {}, sourceByIngredient: {}, ignoredSimilarities: [],
   });
   // data:null per il libro attivo = i dati vivono negli stati correnti
   const [books, setBooks] = useState([
@@ -666,13 +678,14 @@ function AppInner() {
 
   const snapshotData = () => ({
     recipes, extraTagGroups, sectionList, categoryList,
-    ingredientCategories, aggregates, shoppingList, equivalences, nutritionMap, customFoods, ingredientDict, sourceByIngredient, ignoredSimilarities,
+    ingredientCategories, aggregates, shoppingList, equivalences, customUnits, nutritionMap, customFoods, ingredientDict, sourceByIngredient, ignoredSimilarities,
   });
   const loadData = (d) => {
     setRecipes(d.recipes); setExtraTagGroups(d.extraTagGroups);
     setSectionList(d.sectionList); setCategoryList(d.categoryList);
     setIngredientCategories(d.ingredientCategories); setAggregates(d.aggregates);
     setShoppingList(d.shoppingList); setEquivalences(d.equivalences || {});
+    setCustomUnits(d.customUnits || {});
     setNutritionMap(d.nutritionMap || {});
     setCustomFoods(d.customFoods || []);
     setIngredientDict(d.ingredientDict || {});
@@ -986,6 +999,9 @@ function AppInner() {
             onDeleteCategory={deleteCategory}
             equivalences={equivalences}
             onSaveEquivalence={saveEquivalence}
+            customUnits={customUnits}
+            onSaveCustomUnit={saveCustomUnit}
+            onDeleteCustomUnit={deleteCustomUnit}
             nutritionMap={nutritionMap}
             onSaveNutritionMapping={saveNutritionMapping}
             customFoods={customFoods}
@@ -1025,6 +1041,7 @@ function AppInner() {
             ingredientCategories={ingredientCategories}
             sourceByIngredient={sourceByIngredient}
             equivalences={equivalences}
+            customUnits={customUnits}
             ingredientDict={ingredientDict}
             suggestedAggregates={suggestedAggregates}
             onRemoveEntry={removeShoppingEntry}
@@ -1173,6 +1190,7 @@ function AppInner() {
             recipe={currentRecipe}
             nutritionMap={nutritionMap}
             equivalences={equivalences}
+            customUnits={customUnits}
             customFoods={customFoods}
             ingredientDict={ingredientDict}
             aggregates={aggregates}

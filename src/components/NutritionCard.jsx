@@ -8,7 +8,7 @@ import { effectiveNutritionKey } from "../utils/aggregates.js";
 // ── Calcolo nutrizionale di una ricetta ──
 // nutritionMap: { "<nome normalizzato>": { foodId } | { custom:{kcal,...} } }
 // Ritorna { total, perServing, covered, excluded:[{name, reason}] }
-const computeRecipeNutrition = (recipe, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null, aggregates = [], sourceByIngredient) => {
+const computeRecipeNutrition = (recipe, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null, aggregates = [], sourceByIngredient, customUnits = {}) => {
   const dictIdx = ingredientDict ? ingDictIndex(ingredientDict) : null;
   const allFoods = [...NUTRITION_DB, ...customFoods];
   const dbById = new Map(allFoods.map(f => [f.id, f]));
@@ -42,7 +42,7 @@ const computeRecipeNutrition = (recipe, nutritionMap = {}, equivalences = {}, cu
       details.push({ name: ing.name, status: "unlinked" });
       return;
     }
-    const grams = ingredientToGrams(ing, equivalences, dictIdx, aggregates, sourceByIngredient);
+    const grams = ingredientToGrams(ing, equivalences, dictIdx, aggregates, sourceByIngredient, customUnits);
     if (grams == null) {
       excluded.push({ name: ing.name, reason: `unità "${ing.unit || "?"}" non convertibile in grammi` });
       details.push({ name: ing.name, status: "nounit", unit: ing.unit, foodName });
@@ -72,14 +72,14 @@ const computeRecipeNutrition = (recipe, nutritionMap = {}, equivalences = {}, cu
 // ══════════════════════════════════════════════════════════════
 // NUTRITION CARD — tabella valori nella scheda ricetta
 // ══════════════════════════════════════════════════════════════
-export default function NutritionCard({ recipe, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null, aggregates = [], sourceByIngredient = {}, standalone = false, onManageEquivalences = null, onManageIngredients = null }) {
+export default function NutritionCard({ recipe, nutritionMap = {}, equivalences = {}, customUnits = {}, customFoods = [], ingredientDict = null, aggregates = [], sourceByIngredient = {}, standalone = false, onManageEquivalences = null, onManageIngredients = null }) {
   const th = useTheme();
   const [open, setOpen] = useState(standalone);
   const [view, setView] = useState("serving"); // "serving" | "per100" | "total"
 
   const nutri = React.useMemo(
-    () => computeRecipeNutrition(recipe, nutritionMap, equivalences, customFoods, ingredientDict, aggregates, sourceByIngredient),
-    [recipe, nutritionMap, equivalences, customFoods, ingredientDict, aggregates, sourceByIngredient]
+    () => computeRecipeNutrition(recipe, nutritionMap, equivalences, customFoods, ingredientDict, aggregates, sourceByIngredient, customUnits),
+    [recipe, nutritionMap, equivalences, customFoods, ingredientDict, aggregates, sourceByIngredient, customUnits]
   );
   // Conta gli ingredienti mappati (anche se non convertibili in grammi)
   const mappedCount = React.useMemo(() => {

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 import {
-  normName, fmtQty, resolveIngId, ingDictIndex, normUnit, WEIGHT_UNITS, unitLabel,
+  normName, fmtQty, resolveIngId, ingDictIndex, normUnit, unitLabel, gramsPerUnitFor,
 } from "../utils/helpers.js";
 import { effectiveCategories } from "../utils/aggregates.js";
 import GlobalNav from "../components/GlobalNav.jsx";
@@ -11,8 +11,6 @@ const fmtNum = (n) => String(Math.round(n * 100) / 100).replace(".", ",");
 // L'unità "vuota" (conteggio senza unità, es. le uova) non mostra mai
 // un'etichetta: coerente in ogni vista, "separate" o convertita.
 const fmtUnitTxt = (u) => u ? (["g","kg","ml","l","cl","dl"].includes(u) ? u : " " + unitLabel(u)) : "";
-// Grammi per 1 unità: unità di sistema (fisse) o fattore specifico dell'ingrediente/aggregato.
-const gramsPerUnit = (u, factors) => (u in WEIGHT_UNITS) ? WEIGHT_UNITS[u] : (factors?.[u] > 0 ? factors[u] : null);
 // Ordina le unità di una riga multi-unità mettendo per prima quella "vuota"
 // (il conteggio semplice, es. "3 uova"), le altre a seguire.
 const orderUnitsForDisplay = (units) => [...units].sort((a, b) => (a === "" ? -1 : 0) - (b === "" ? -1 : 0));
@@ -23,7 +21,7 @@ const orderUnitsForDisplay = (units) => [...units].sort((a, b) => (a === "" ? -1
 export default function ShoppingListScreen({
   entries, onRemoveEntry, onRemoveRecipe, onRemoveItem, onClearAll, aggregates = [],
   ingredientCategories = {}, sourceByIngredient = {},
-  equivalences = {}, ingredientDict = null,
+  equivalences = {}, customUnits = {}, ingredientDict = null,
   suggestedAggregates = [],
   onLanding, onRecipes, onBook, onMemories, onAdd, onFridge,
   onShopping = () => {},
@@ -126,9 +124,9 @@ export default function ShoppingListScreen({
     const units = Array.from(g.byUnit.keys());
     const factors = equivalences[g.eqKey]?.factors || {};
     const multiUnit = units.length >= 2;
-    const allConvertible = multiUnit && units.every(u => gramsPerUnit(u, factors) != null);
+    const allConvertible = multiUnit && units.every(u => gramsPerUnitFor(u, factors, customUnits) != null);
     const targets = allConvertible
-      ? Array.from(new Set(["g", ...units])).filter(u => gramsPerUnit(u, factors) != null)
+      ? Array.from(new Set(["g", ...units])).filter(u => gramsPerUnitFor(u, factors, customUnits) != null)
       : [];
     // unitChoice[g.id] può legittimamente essere "" (l'unità "vuota" scelta
     // come conversione): con "||" una stringa vuota è falsy e ricadrebbe
@@ -141,8 +139,8 @@ export default function ShoppingListScreen({
       totalText = `${fmtNum(g.byUnit.get(units[0]))}${fmtUnitTxt(units[0])}`;
     } else if (multiUnit) {
       if (allConvertible && choice !== "separate") {
-        const totalGrams = units.reduce((s, u) => s + g.byUnit.get(u) * gramsPerUnit(u, factors), 0);
-        const converted = totalGrams / gramsPerUnit(choice, factors);
+        const totalGrams = units.reduce((s, u) => s + g.byUnit.get(u) * gramsPerUnitFor(u, factors, customUnits), 0);
+        const converted = totalGrams / gramsPerUnitFor(choice, factors, customUnits);
         totalText = `${fmtNum(converted)}${fmtUnitTxt(choice)}`;
       } else {
         // Separate (o non tutte le unità sono convertibili tra loro): elenca

@@ -277,17 +277,31 @@ export const macroLine = (v, opts = {}) => {
 // unico). ml→g approssimato 1:1 (ragionevole per liquidi acquosi).
 // null = non convertibile (serve definire l'equivalenza).
 export const WEIGHT_UNITS = { g:1, kg:1000, ml:1, l:1000, cl:10, dl:100 };
-export const ingredientToGrams = (ing, equivalences = {}, dictIdx = null, aggregates = [], sourceByIngredient) => {
+
+// Grammi per 1 unità di una voce specifica (ingrediente/aggregato), secondo
+// la priorità: unità fisse (sempre certe) > equivalenza specifica della voce
+// (factors, vince sempre se presente) > conversione di sistema personalizzata
+// (customUnits: default globale valido finché nessuno lo sovrascrive qui).
+// null = non convertibile. Unica definizione condivisa da ingredientToGrams,
+// ShoppingListScreen e OrganizeIngredientsScreen: evita che le tre viste
+// possano disallinearsi sull'ordine di priorità.
+export const gramsPerUnitFor = (unit, factors = {}, customUnits = {}) => {
+  if (unit in WEIGHT_UNITS) return WEIGHT_UNITS[unit];
+  if (factors[unit] > 0) return factors[unit];
+  const cu = customUnits[unit];
+  return cu?.grams > 0 ? cu.grams : null;
+};
+
+export const ingredientToGrams = (ing, equivalences = {}, dictIdx = null, aggregates = [], sourceByIngredient, customUnits = {}) => {
   if (ing.qty == null) return null;
   const unit = normUnit(ing.unit);
-  if (unit in WEIGHT_UNITS) return ing.qty * WEIGHT_UNITS[unit];
   // Se l'ingrediente appartiene a un aggregato con equivalenze proprie,
   // quelle vincono (stessa priorità già applicata per la nutrizione).
   const ingKey = resolveIngId(dictIdx, ing.name);
   const effKey = effectiveEquivalenceKey(ingKey, aggregates, equivalences, sourceByIngredient);
-  const eq = equivalences[effKey];
-  const f = eq?.factors?.[unit];
-  return f > 0 ? ing.qty * f : null;
+  const factors = equivalences[effKey]?.factors || {};
+  const g = gramsPerUnitFor(unit, factors, customUnits);
+  return g != null ? ing.qty * g : null;
 };
 
 export const parseIngredientAmount = (text) => {
