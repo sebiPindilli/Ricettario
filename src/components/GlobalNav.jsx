@@ -17,6 +17,7 @@ export default function GlobalNav({
   onLanding, onSearch, onFavorites,
   showSearch, showFavorites,
   activeLabel, extraAction, bookView = false, viewToggle = null,
+  infoContent = null,
 }) {
   const th = useTheme();
   const navActions = useNavActions();
@@ -128,9 +129,11 @@ export default function GlobalNav({
           background:`${th.appInk}`, borderTop:"1px solid rgba(255,255,255,0.1)",
           padding:"12px 16px 16px",
         }}>
-          <div style={{ fontFamily:F.ui, fontSize:11.5, color:"rgba(255,255,255,0.75)", lineHeight:1.6 }}>
-            📝 Istruzioni per «{activeLabel || "questa sezione"}» in arrivo.
-          </div>
+          {infoContent || (
+            <div style={{ fontFamily:F.ui, fontSize:11.5, color:"rgba(255,255,255,0.75)", lineHeight:1.6 }}>
+              📝 Istruzioni per «{activeLabel || "questa sezione"}» in arrivo.
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { useTheme, useNavActions } from "../context.js";
+import { useTheme } from "../context.js";
 import { F, INGREDIENT_CATEGORIES, MACRO_SECTIONS } from "../data/constants.js";
 import {
   buildFridgeItems, ingDictIndex, flattenIngredients, ingredientToText,
-  resolveIngId, sortCategoriesAltroLast,
+  resolveIngId, sortCategoriesBaseFirst,
 } from "../utils/helpers.js";
 import GlobalNav from "../components/GlobalNav.jsx";
 import RecipeFilterBar from "../components/RecipeFilterBar.jsx";
@@ -26,9 +26,10 @@ export default function EmptyFridgeScreen({
   // ritrova la stessa schermata invece di ripartire dalla selezione.
   phase, setPhase,
   ownedMembers, setOwnedMembers,
+  suggestedAggregates = [],
+  onManageAggregates, onManageCategories, onManageCategoriesDb,
 }) {
   const th = useTheme();
-  const navActions = useNavActions();
   const [search, setSearch] = useState("");
   const [servingsDialog, setServingsDialog] = useState(null);
   const [activeMode, setActiveMode] = useState(null);
@@ -101,6 +102,25 @@ export default function EmptyFridgeScreen({
 
   const analyzedById = React.useMemo(() => new Map(analyzed.map(a => [a.recipe.id, a])), [analyzed]);
 
+  // Suggerimenti mostrati nella tendina istruzioni del banner (tasto "i")
+  const fridgeInfoContent = (
+    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+      <div style={{ fontFamily:F.ui, fontSize:11.5, color:"rgba(255,255,255,0.75)", lineHeight:1.6 }}>
+        💡 Per un funzionamento ottimale:
+      </div>
+      <button onClick={() => onManageAggregates && onManageAggregates()} style={{ display:"block", width:"100%", textAlign:"left", padding:"9px 12px", background:"rgba(255,255,255,0.06)", border:"1px dashed rgba(255,255,255,0.2)", borderRadius:10, cursor:"pointer" }}>
+        <span style={{ fontFamily:F.ui, fontSize:11, color:"rgba(255,255,255,0.75)", lineHeight:1.5 }}>
+          🍇 Raggruppa gli ingredienti simili (es. zucchero bianco + di canna) → <span style={{ color:th.appAccent2, fontWeight:700 }}>crea aggregati</span>
+        </span>
+      </button>
+      <button onClick={() => onManageCategories && onManageCategories()} style={{ display:"block", width:"100%", textAlign:"left", padding:"9px 12px", background:"rgba(255,255,255,0.06)", border:"1px dashed rgba(255,255,255,0.2)", borderRadius:10, cursor:"pointer" }}>
+        <span style={{ fontFamily:F.ui, fontSize:11, color:"rgba(255,255,255,0.75)", lineHeight:1.5 }}>
+          🏷️ Assegna delle categorie agli ingredienti → <span style={{ color:th.appAccent2, fontWeight:700 }}>vedi cosa manca</span>
+        </span>
+      </button>
+    </div>
+  );
+
   const nav = (
     <GlobalNav
       activeScreen="fridge"
@@ -116,6 +136,7 @@ export default function EmptyFridgeScreen({
       showSearch={false}
       showFavorites={false}
       activeLabel="Svuota Frigo"
+      infoContent={fridgeInfoContent}
     />
   );
 
@@ -123,13 +144,19 @@ export default function EmptyFridgeScreen({
   // FASE: SELEZIONE INGREDIENTI
   // ══════════════════════════════════════════════════════════
   if (phase === "select") {
-    // Raggruppa le voci per categoria (una voce può comparire in più categorie)
-    const byCategory = sortCategoriesAltroLast(categoryList).map(cat => ({
+    // Raggruppa le voci per categoria (una voce può comparire in più categorie).
+    // "Altro" è una categoria come le altre: ci finisce solo chi l'ha scelta
+    // volutamente. Chi non ha nessuna categoria assegnata non compare qui.
+    const byCategory = sortCategoriesBaseFirst(categoryList).map(cat => ({
       ...cat,
       items: filterItems(fridgeItems)
         .filter(it => it.categories.includes(cat.id))
         .sort((a, b) => a.display.localeCompare(b.display, "it")),
     })).filter(c => c.items.length > 0);
+    // Sezione a parte, sempre in fondo, per chi non ha nessuna categoria.
+    const uncategorizedItems = filterItems(fridgeItems)
+      .filter(it => it.uncategorized)
+      .sort((a, b) => a.display.localeCompare(b.display, "it"));
 
     const renderItemBtn = (item) => {
       const sel = isItemOwned(item);
@@ -204,13 +231,6 @@ export default function EmptyFridgeScreen({
           </div>
         </div>
 
-        {/* Suggerimento tappabile: apre Organizza */}
-        <button onClick={() => navActions.onOrganize && navActions.onOrganize()} style={{ display:"block", width:"calc(100% - 36px)", textAlign:"left", margin:"6px 18px 0", padding:"8px 12px", background:th.appCard, border:`1px dashed ${th.appBorder}`, borderRadius:10, cursor:"pointer" }}>
-          <span style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, lineHeight:1.5 }}>
-            💡 Per un funzionamento ottimale (categorie, aggregati, equivalenze) compila la sezione <b>🍎 Organizza</b> → <span style={{ color:th.appAccent, fontWeight:700 }}>tocca qui per aprirla</span>.
-          </span>
-        </button>
-
         {/* Search */}
         <div style={{ padding:"8px 18px 4px" }}>
           <div style={{ display:"flex", gap:8, alignItems:"center", background:th.appCard, border:`1.5px solid ${search ? th.appAccent : th.appBorder}`, borderRadius:12, padding:"9px 14px" }}>
@@ -234,20 +254,61 @@ export default function EmptyFridgeScreen({
 
         {/* Lista per categoria */}
         <div onScroll={() => tooltipKey && setTooltipKey(null)} style={{ flex:1, overflowY:"auto", padding:"8px 18px 100px" }}>
-          {byCategory.length === 0 ? (
+          {suggestedAggregates.length > 0 && onManageAggregates && (
+            <div onClick={() => onManageAggregates()} style={{ marginBottom:14, padding:"9px 12px", background:`${th.appAccent}10`, border:`1px dashed ${th.appAccent}55`, borderRadius:10, cursor:"pointer" }}>
+              <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
+                💡 Sono stati rilevati ingredienti con nomi simili. Per un funzionamento ottimale{" "}
+                <span style={{ color:th.appAccent, fontWeight:700, textDecoration:"underline" }}>raggruppali in aggregati o ignora le similitudini</span>.
+              </span>
+            </div>
+          )}
+          {byCategory.length === 0 && uncategorizedItems.length === 0 ? (
             <div style={{ textAlign:"center", padding:"30px 0", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>
               Nessun ingrediente trovato
             </div>
-          ) : byCategory.map(cat => (
-            <div key={cat.id} style={{ marginBottom:16 }}>
-              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appAccent, textTransform:"uppercase", margin:"4px 0 8px", fontWeight:700 }}>
-                {cat.emoji} {cat.label}
-              </div>
-              <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-                {cat.items.map(renderItemBtn)}
-              </div>
-            </div>
-          ))}
+          ) : (
+            <>
+              {byCategory.map(cat => (
+                <div key={cat.id} style={{ marginBottom:16 }}>
+                  <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appAccent, textTransform:"uppercase", margin:"4px 0 8px", fontWeight:700 }}>
+                    {cat.emoji} {cat.label}
+                  </div>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                    {cat.items.map(renderItemBtn)}
+                  </div>
+                </div>
+              ))}
+
+              {/* Senza categoria: sempre in fondo, sezione a sé rispetto alle categorie vere e proprie */}
+              {uncategorizedItems.length > 0 && (
+                <div style={{ marginBottom:16 }}>
+                  <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appAccent, textTransform:"uppercase", margin:"4px 0 8px", fontWeight:700 }}>
+                    ❓ Senza categoria
+                  </div>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                    {uncategorizedItems.map(renderItemBtn)}
+                  </div>
+                  {(onManageCategories || onManageCategoriesDb) && (
+                    <div style={{ marginTop:10, padding:"9px 12px", background:`${th.appAccent}10`, border:`1px dashed ${th.appAccent}55`, borderRadius:10 }}>
+                      <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
+                        💡 Per un funzionamento ottimale{" "}
+                        {onManageCategories && (
+                          <span onClick={() => onManageCategories()} style={{ color:th.appAccent, fontWeight:700, cursor:"pointer", textDecoration:"underline" }}>assegna delle categorie agli ingredienti</span>
+                        )}
+                        {onManageCategories && onManageCategoriesDb && " "}
+                        {onManageCategoriesDb && (
+                          <>oppure{" "}
+                            <span onClick={() => onManageCategoriesDb()} style={{ color:th.appAccent, fontWeight:700, cursor:"pointer", textDecoration:"underline" }}>crea delle nuove categorie</span>
+                          </>
+                        )}
+                        .
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         {/* CTA */}

@@ -19,7 +19,7 @@ import ServingsDialog from "../components/ServingsDialog.jsx";
 import ShoppingMode from "../components/ShoppingMode.jsx";
 import CookingMode from "./CookingMode.jsx";
 
-export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemory, onAddMemory, onManageIngredients, onAddToShoppingList, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null, aggregates = [], sourceByIngredient = {}, allRecipes = [], sectionList = MACRO_SECTIONS, onExportPDF, onExportCode }) {
+export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemory, onAddMemory, onManageIngredients, onManageEquivalences, onAddToShoppingList, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null, aggregates = [], sourceByIngredient = {}, allRecipes = [], sectionList = MACRO_SECTIONS, onExportPDF, onExportCode }) {
   const th = useTheme();
   const [tab, setTab] = useState("ingredienti");
   const [toast, setToast] = useState({ msg:"", visible:false });
@@ -37,6 +37,17 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editingText, setEditingText] = useState("");
   const dishPhotoInputRef = useRef(null);
+
+  // Copertura valori nutrizionali degli ingredienti (per scegliere se mostrare la tabella o il placeholder)
+  const nutritionStatus = React.useMemo(() => {
+    const dbByName = new Map([...NUTRITION_DB, ...customFoods].map(f => [normName(f.name), f]));
+    const idx = ingredientDict ? ingDictIndex(ingredientDict) : null;
+    const anyMapped = flattenIngredients(recipe.ingredients).some(ing => {
+      const key = effectiveNutritionKey(resolveIngId(idx, ing.name), aggregates, nutritionMap, sourceByIngredient);
+      return nutritionMap[key] || dbByName.has(normName(ing.name));
+    });
+    return { anyMapped };
+  }, [recipe.ingredients, nutritionMap, customFoods, ingredientDict, aggregates, sourceByIngredient]);
 
   const addComment = () => {
     const text = commentInput.trim();
@@ -421,36 +432,17 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
               <StepsView steps={recipe.steps} recipeColor={recipe.color}/>
             )}
             {tab === "nutrizione" && (
-              (() => {
-                const dbByName = new Map([...NUTRITION_DB, ...customFoods].map(f => [normName(f.name), f]));
-                const idx = ingredientDict ? ingDictIndex(ingredientDict) : null;
-                const anyMapped = flattenIngredients(recipe.ingredients).some(ing => {
-                  const key = effectiveNutritionKey(resolveIngId(idx, ing.name), aggregates, nutritionMap, sourceByIngredient);
-                  return nutritionMap[key] || dbByName.has(normName(ing.name));
-                });
-                if (!anyMapped) {
-                  return (
-                    <div style={{ textAlign:"center", padding:"30px 20px", color:th.appFaded }}>
-                      <div style={{ fontSize:34, marginBottom:10 }}>🍎</div>
-                      <div style={{ fontFamily:F.ui, fontSize:13, color:th.appInk, fontWeight:700, marginBottom:6 }}>Nessun valore nutrizionale</div>
-                      <div style={{ fontFamily:F.ui, fontSize:11, lineHeight:1.5 }}>
-                        Collega gli ingredienti al database in <b>🍎⚙️ Organizza › 🍎 Valori nutrizionali</b> per vedere calorie e macro di questa ricetta.
-                      </div>
-                    </div>
-                  );
-                }
-                return <NutritionCard recipe={recipe} nutritionMap={nutritionMap} equivalences={equivalences} customFoods={customFoods} ingredientDict={ingredientDict} aggregates={aggregates} sourceByIngredient={sourceByIngredient} standalone/>;
-              })()
-            )}
-
-            {tab === "nutrizione" && onManageIngredients && (
-              <button onClick={() => onManageIngredients(recipe.id)} style={{
-                width:"100%", marginTop:12, padding:"12px",
-                border:`1.5px solid ${th.appAccent}`, borderRadius:12,
-                background:`${th.appAccent}12`, color:th.appAccent,
-                fontFamily:F.ui, fontSize:12.5, fontWeight:700, cursor:"pointer",
-                display:"flex", alignItems:"center", justifyContent:"center", gap:6,
-              }}>🍎⚙️ Gestisci ingredienti di questa ricetta</button>
+              !nutritionStatus.anyMapped ? (
+                <div style={{ textAlign:"center", padding:"30px 20px", color:th.appFaded }}>
+                  <div style={{ fontSize:34, marginBottom:10 }}>🍎</div>
+                  <div style={{ fontFamily:F.ui, fontSize:13, color:th.appInk, fontWeight:700, marginBottom:6 }}>Nessun valore nutrizionale</div>
+                  <div style={{ fontFamily:F.ui, fontSize:11, lineHeight:1.5 }}>
+                    Collega gli ingredienti al database in <b>🍎⚙️ Organizza › 🍎 Valori nutrizionali</b> per vedere calorie e macro di questa ricetta.
+                  </div>
+                </div>
+              ) : (
+                <NutritionCard recipe={recipe} nutritionMap={nutritionMap} equivalences={equivalences} customFoods={customFoods} ingredientDict={ingredientDict} aggregates={aggregates} sourceByIngredient={sourceByIngredient} onManageEquivalences={onManageEquivalences} onManageIngredients={onManageIngredients} standalone/>
+              )
             )}
 
             {recipe.note && (

@@ -52,24 +52,24 @@ export const INITIAL_NUTRITION_MAP = {
   "brodo di carne": { foodId:"brodo_carne" },
 };
 export const INITIAL_EQUIVALENCES = {
-  "uova":             { base:"g", factors:{ "": 60 },        display:"separate" },   // 1 uovo ≈ 60 g
-  "olio extravergine":{ base:"g", factors:{ cucchiaio: 10 }, display:"separate" },
-  "olio evo":         { base:"g", factors:{ cucchiaio: 10 }, display:"separate" },
-  "sale":             { base:"g", factors:{ cucchiaino: 6 }, display:"separate" },
-  "pan grattato":     { base:"g", factors:{ cucchiaio: 8 },  display:"separate" },
-  "farina":           { base:"g", factors:{ cucchiaio: 10 }, display:"separate" },
-  "aglio":            { base:"g", factors:{ spicchio: 5 },   display:"separate" },
-  "sedano":           { base:"g", factors:{ coste: 40 },     display:"separate" },
-  "melanzane":        { base:"g", factors:{ "": 300 },       display:"separate" },  // 1 melanzana media
-  "cipolla dorata":   { base:"g", factors:{ "": 100 },       display:"separate" },
-  "cipolla":          { base:"g", factors:{ "": 100 },       display:"separate" },
-  "carote":           { base:"g", factors:{ "": 80 },        display:"separate" },
-  "mele golden":      { base:"g", factors:{ "": 180 },       display:"separate" },
-  "lievito":          { base:"g", factors:{ bustina: 16 },   display:"separate" },
-  "zafferano":        { base:"g", factors:{ bustina: 0.15 }, display:"separate" },
-  "pollo intero":     { base:"g", factors:{ "": 1500 },      display:"separate" },
-  "patate":           { base:"g", factors:{ "": 90 },        display:"separate" },
-  "prezzemolo":       { base:"g", factors:{ "": 20 },        display:"separate" },  // 1 mazzetto
+  "uova":             { factors:{ "": 60 } },   // 1 uovo ≈ 60 g
+  "olio extravergine":{ factors:{ cucchiaio: 10 } },
+  "olio evo":         { factors:{ cucchiaio: 10 } },
+  "sale":             { factors:{ cucchiaino: 6 } },
+  "pan grattato":     { factors:{ cucchiaio: 8 } },
+  "farina":           { factors:{ cucchiaio: 10 } },
+  "aglio":            { factors:{ spicchio: 5 } },
+  "sedano":           { factors:{ coste: 40 } },
+  "melanzane":        { factors:{ "": 300 } },  // 1 melanzana media
+  "cipolla dorata":   { factors:{ "": 100 } },
+  "cipolla":          { factors:{ "": 100 } },
+  "carote":           { factors:{ "": 80 } },
+  "mele golden":      { factors:{ "": 180 } },
+  "lievito":          { factors:{ bustina: 16 } },
+  "zafferano":        { factors:{ bustina: 0.15 } },
+  "pollo intero":     { factors:{ "": 1500 } },
+  "patate":           { factors:{ "": 90 } },
+  "prezzemolo":       { factors:{ "": 20 } },  // 1 mazzetto
 };
 
 export const RECIPES = [

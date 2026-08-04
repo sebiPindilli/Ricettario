@@ -72,7 +72,7 @@ const computeRecipeNutrition = (recipe, nutritionMap = {}, equivalences = {}, cu
 // ══════════════════════════════════════════════════════════════
 // NUTRITION CARD — tabella valori nella scheda ricetta
 // ══════════════════════════════════════════════════════════════
-export default function NutritionCard({ recipe, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null, aggregates = [], sourceByIngredient = {}, standalone = false }) {
+export default function NutritionCard({ recipe, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null, aggregates = [], sourceByIngredient = {}, standalone = false, onManageEquivalences = null, onManageIngredients = null }) {
   const th = useTheme();
   const [open, setOpen] = useState(standalone);
   const [view, setView] = useState("serving"); // "serving" | "per100" | "total"
@@ -93,22 +93,47 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
 
   if (nutri.covered === 0 && mappedCount === 0) return null; // nessuna mappatura: nulla da mostrare
 
+  const hasNonConvertible = nutri.details.some(d => d.status === "nounit");
+  const hasUnlinked = nutri.details.some(d => d.status === "unlinked");
+  const linkStyle = { color:th.appAccent, fontWeight:700, cursor:"pointer", textDecoration:"underline", textUnderlineOffset:2 };
+  const hintsBox = (
+    ((hasNonConvertible && onManageEquivalences) || (hasUnlinked && onManageIngredients)) && (
+      <div style={{
+        marginBottom:8, padding:"9px 12px", display:"flex", flexDirection:"column", gap:6,
+        background:`${th.appAccent}10`, border:`1px dashed ${th.appAccent}55`, borderRadius:10,
+      }}>
+        {hasNonConvertible && onManageEquivalences && (
+          <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
+            ⚖️* Alcuni ingredienti usano un'unità senza un'equivalenza in grammi definita (es. 1 cucchiaio = ? g): per un funzionamento ottimale{" "}
+            <span onClick={() => onManageEquivalences(recipe.id)} style={linkStyle}>gestisci le equivalenze mancanti di questa ricetta</span>.
+          </div>
+        )}
+        {hasUnlinked && onManageIngredients && (
+          <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
+            🍎* Alcuni ingredienti non sono ancora collegati a un valore nutrizionale: per un funzionamento ottimale{" "}
+            <span onClick={() => onManageIngredients(recipe.id)} style={linkStyle}>gestisci i valori nutrizionali mancanti di questa ricetta</span>.
+          </div>
+        )}
+      </div>
+    )
+  );
+
   // Mappature presenti ma nessuna quantità convertibile in grammi → guida invece della tabella
   if (nutri.covered === 0) {
     return (
       <div style={{ marginTop:14, background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:14, padding:"12px 14px" }}>
         <div style={{ fontFamily:F.ui, fontSize:12, fontWeight:700, color:th.appInk, marginBottom:6 }}>🍎 Valori nutrizionali</div>
-        <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.55, marginBottom:8 }}>
-          {mappedCount} ingredient{mappedCount===1?"e è collegato":"i sono collegati"} al database, ma nessuna quantità è convertibile in grammi.
-          Definisci i fattori (es. 1 cucchiaio = 10 g) in ⚙️ Organizza › ⚖️ Organizza equivalenze.
-        </div>
+        {hintsBox}
         {nutri.details.map((d, i) => (
           <div key={i} style={{ display:"flex", justifyContent:"space-between", gap:8, fontFamily:F.ui, fontSize:10.5, lineHeight:1.7, color:th.appFaded }}>
             <span style={{ minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
               {d.status === "noqty" || d.status === "optout" ? "·" : "○"} {d.name}
             </span>
             <span style={{ flexShrink:0, fontStyle:"italic" }}>
-              {d.status === "noqty" ? "q.b." : d.status === "optout" ? "escluso (0%)" : d.status === "nounit" ? `"${d.unit || "?"}" non convertibile` : "non collegato"}
+              {d.status === "noqty" ? "q.b."
+                : d.status === "optout" ? "escluso (0%)"
+                : d.status === "nounit" ? `"${d.unit || "?"}" non convertibile${onManageEquivalences ? " ⚖️*" : ""}`
+                : `non collegato${onManageIngredients ? " 🍎*" : ""}`}
             </span>
           </div>
         ))}
@@ -202,16 +227,14 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
                     })()
                     : d.status === "noqty" ? "q.b. — non conteggiato"
                     : d.status === "optout" ? "escluso dal calcolo (0%)"
-                    : d.status === "nounit" ? `"${d.unit || "?"}" non convertibile`
-                    : "non collegato"}
+                    : d.status === "nounit" ? `"${d.unit || "?"}" non convertibile${onManageEquivalences ? " ⚖️*" : ""}`
+                    : `non collegato${onManageIngredients ? " 🍎*" : ""}`}
                 </span>
               </div>
             ))}
           </div>
-          {nutri.excluded.length > 0 && (
-            <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, marginTop:8, lineHeight:1.5 }}>
-              ⚠️ Per includere gli esclusi: ⚙️ Organizza › 🍎 Valori nutrizionali (collegamenti) o ⚖️ Equivalenze (unità).
-            </div>
+          {hintsBox && (
+            <div style={{ marginTop:8 }}>{hintsBox}</div>
           )}
           <div style={{ fontFamily:F.ui, fontSize:9, color:th.appFaded, marginTop:8, textAlign:"center" }}>
             Valori indicativi — elaborazione da Tabelle CREA (alimentinutrizione.it)

@@ -10,11 +10,11 @@ export const sortSectionsAltroLast = (list) => [
   ...list.filter(s => s.id === "altro"),
 ];
 
-// "Ingredienti base" resta sempre in cima, "Altro" sempre in fondo
-export const sortCategoriesAltroLast = (list) => [
+// "Ingredienti base" resta sempre in cima; per il resto (Altro compreso,
+// è una categoria come le altre) l'ordine della lista non viene alterato.
+export const sortCategoriesBaseFirst = (list) => [
   ...list.filter(c => c.id === "base"),
-  ...list.filter(c => c.id !== "base" && c.id !== "altro"),
-  ...list.filter(c => c.id === "altro"),
+  ...list.filter(c => c.id !== "base"),
 ];
 
 // ── Subsection data helpers ────────────────────────────────────
@@ -272,27 +272,22 @@ export const macroLine = (v, opts = {}) => {
 };
 
 // ── Conversione quantità → grammi ──
-// Usa unità dirette (g/kg/ml…) o i fattori delle equivalenze (verso base peso).
-// ml→g approssimato 1:1 (ragionevole per liquidi acquosi). null = non convertibile.
+// Unità dirette (g/kg/ml…, fisse) oppure il fattore dell'equivalenza
+// specifica dell'ingrediente (sempre "1 unità = X g", i grammi sono l'hub
+// unico). ml→g approssimato 1:1 (ragionevole per liquidi acquosi).
+// null = non convertibile (serve definire l'equivalenza).
 export const WEIGHT_UNITS = { g:1, kg:1000, ml:1, l:1000, cl:10, dl:100 };
 export const ingredientToGrams = (ing, equivalences = {}, dictIdx = null, aggregates = [], sourceByIngredient) => {
   if (ing.qty == null) return null;
   const unit = normUnit(ing.unit);
   if (unit in WEIGHT_UNITS) return ing.qty * WEIGHT_UNITS[unit];
-  // prova con le equivalenze: unità → base, se la base è un'unità di peso.
   // Se l'ingrediente appartiene a un aggregato con equivalenze proprie,
   // quelle vincono (stessa priorità già applicata per la nutrizione).
   const ingKey = resolveIngId(dictIdx, ing.name);
   const effKey = effectiveEquivalenceKey(ingKey, aggregates, equivalences, sourceByIngredient);
   const eq = equivalences[effKey];
-  if (eq && eq.base) {
-    const base = normUnit(eq.base);
-    if (base in WEIGHT_UNITS) {
-      const f = unit === base ? 1 : (eq.factors && eq.factors[unit] > 0 ? eq.factors[unit] : null);
-      if (f) return ing.qty * f * WEIGHT_UNITS[base];
-    }
-  }
-  return null;
+  const f = eq?.factors?.[unit];
+  return f > 0 ? ing.qty * f : null;
 };
 
 export const parseIngredientAmount = (text) => {
@@ -363,7 +358,11 @@ export const buildFridgeItems = (recipes, aggregates, ingredientCategories, ingr
       display: agg.name,
       isAggregate: true,
       members: agg.members || [], // id
-      categories: catSet.size ? Array.from(catSet) : ["altro"],
+      categories: Array.from(catSet), // può essere vuoto: nessuna categoria assegnata
+      // true se non ha nessuna categoria propria: raggruppato a parte in
+      // "Senza categoria", distinto da un ingrediente a cui "Altro" è stato
+      // assegnato volutamente (che è una categoria come le altre).
+      uncategorized: catSet.size === 0,
     });
   });
 
@@ -378,7 +377,8 @@ export const buildFridgeItems = (recipes, aggregates, ingredientCategories, ingr
       display: shown.charAt(0).toUpperCase() + shown.slice(1),
       isAggregate: false,
       members: [ingId],
-      categories: (cats && cats.length) ? cats : ["altro"],
+      categories: cats && cats.length ? cats : [],
+      uncategorized: !(cats && cats.length),
     });
   });
 

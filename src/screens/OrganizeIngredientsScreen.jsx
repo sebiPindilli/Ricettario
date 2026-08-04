@@ -3,35 +3,49 @@ import { useTheme } from "../context.js";
 import { F, INGREDIENT_CATEGORIES } from "../data/constants.js";
 import { NUTRITION_DB } from "../data/nutrition.js";
 import {
-  buildIngredientDict, ingDictIndex, sortCategoriesAltroLast,
+  buildIngredientDict, ingDictIndex, sortCategoriesBaseFirst,
   normName, uid, macroLine, resolveIngId, flattenIngredients,
-  UNIT_ALIASES, WEIGHT_UNITS, unitLabel, normUnit,
+  WEIGHT_UNITS, unitLabel, normUnit,
 } from "../utils/helpers.js";
-import { effectiveCategories, effectiveNutritionKey, sourcePriorityFor } from "../utils/aggregates.js";
+import { effectiveCategories, effectiveNutritionKey, sourcePriorityFor, findSimilarIngredients } from "../utils/aggregates.js";
 
 // ══════════════════════════════════════════════════════════════
 // SCREEN: ORGANIZZA INGREDIENTI (sotto Svuota Frigo)
 // ══════════════════════════════════════════════════════════════
+// Sentinel per il filtro "fonte": lista spesa invece di una ricetta specifica.
+export const SHOPPING_SOURCE = "shopping";
+
 export default function OrganizeIngredientsScreen({
   nav, recipes, aggregates, ingredientCategories, sourceByIngredient = {}, onSetSourcePriority,
   onSetIngredientCats, onSaveAggregate, onDeleteAggregate, onBack,
+  suggestedAggregates = [], ignoredSimilarities = [], onIgnoreSimilarity, onRestoreSimilarity,
   categoryList = INGREDIENT_CATEGORIES, onSaveCategory, onDeleteCategory,
   equivalences = {}, onSaveEquivalence,
   nutritionMap = {}, onSaveNutritionMapping,
   customFoods = [], onSaveCustomFood, onDeleteCustomFood,
   ingredientDict = null, onRenameIngredient,
-  initialFilterRecipeId = null, initialOnlyIssues = false,
+  shoppingList = [],
+  initialFilterRecipeId = null, initialAlertTypes = null, initialManageAggs = false, initialManageCats = false,
 }) {
   const th = useTheme();
   const [editing, setEditing] = useState(null); // null | {kind:"ingredient"|"aggregate", ...}
-  const [manageCats, setManageCats] = useState(false); // gestione categorie (nome/icona)
+  const [manageCats, setManageCats] = useState(!!initialManageCats); // gestione categorie (nome/icona)
   const [manageEq, setManageEq] = useState(false);     // gestione equivalenze unità
   const [manageNutri, setManageNutri] = useState(false); // sfoglia database alimenti (ufficiale + personalizzati)
   const [nutriSearch, setNutriSearch] = useState({});    // nome ingrediente → testo ricerca aperta
   const [dbSearch, setDbSearch] = useState("");          // ricerca nel database alimenti
-  const [manageAggs, setManageAggs] = useState(false);   // database aggregati (lista)
+  const [manageAggs, setManageAggs] = useState(!!initialManageAggs); // database aggregati (lista)
+  const [editingFrom, setEditingFrom] = useState(null);   // null | "manageAggs" — dove tornare dopo l'editor aggregato
   const [foodForm, setFoodForm] = useState(null);        // form alimento personalizzato {id?, name, ...}
+  const [foodFormLinkTo, setFoodFormLinkTo] = useState(null); // dataKey dell'ingrediente da collegare al nuovo alimento, se aperto da lì
   const [expanded, setExpanded] = useState({});          // nome → "cat"|"nutri"|"eq"|null (editor inline aperto)
+  // Bozze locali per gli editor inline categorie/nutrizione/equivalenze: le
+  // modifiche restano qui finché non premi "Salva" (così una card con issue
+  // non sparisce dalla lista filtrata mentre stai ancora scrivendo/scegliendo).
+  // Scaricate ad ogni apertura/chiusura di sezione: senza Salva si perdono.
+  const [catDraft, setCatDraft] = useState({});     // key → string[] (categorie scelte)
+  const [nutriDraft, setNutriDraft] = useState({}); // key → {foodId}|{custom}|null (bozza collegamento) — assente = usa il valore salvato
+  const [eqDraft, setEqDraft] = useState({});       // key → { unità: grammi }
   const [newCat, setNewCat] = useState({ emoji:"", label:"" });
   const [renameDraft, setRenameDraft] = useState({});   // ingId → testo in modifica (stato nel parent: ItemCard viene rimontata)
   const [renameErr, setRenameErr] = useState(null);     // ingId con nome rifiutato
@@ -46,7 +60,8 @@ export default function OrganizeIngredientsScreen({
   ];
   const [search, setSearch] = useState("");
   const [filterRecipeId, setFilterRecipeId] = useState(initialFilterRecipeId != null ? String(initialFilterRecipeId) : "");
-  const [onlyIssues, setOnlyIssues] = useState(!!initialOnlyIssues);
+  const [issueMode, setIssueMode] = useState(!!(initialAlertTypes && initialAlertTypes.length)); // "Tutti" | "Da gestire"
+  const [alertFilter, setAlertFilter] = useState(initialAlertTypes && initialAlertTypes.length ? initialAlertTypes : ["cat","nutri","eq"]); // sottoinsieme di "cat"|"nutri"|"eq", attivo solo in issueMode
 
   // R2 — fonte unica: il dizionario ingredienti (id → nome visualizzato)
   const dictM = React.useMemo(
@@ -55,6 +70,25 @@ export default function OrganizeIngredientsScreen({
   );
   const dictIdx = React.useMemo(() => ingDictIndex(dictM), [dictM]);
   const dictName = (id) => dictM[id] || id;
+  // Se un ingrediente è già finito in un aggregato vero, mostra il nome
+  // dell'aggregato invece del suo — usato nelle card "ignorate": se A e B
+  // sono stati aggregati e C no, "A · B · C" diventa "Aggregato AB · C".
+  const aggregateNameFor = (id) => aggregates.find(a => (a.members || []).includes(id))?.name;
+  const memberOrAggName = (id) => aggregateNameFor(id) || dictName(id);
+  // Suggerimenti aggregati: quelli attivi arrivano già pronti come prop
+  // (suggestedAggregates); qui calcoliamo anche l'insieme completo, senza
+  // filtro sugli ignorati, per poter mostrare le card "ignorate" attenuate
+  // — un gruppo è ignorato se non è tra gli attivi e tutte le sue coppie
+  // sono in ignoredSimilarities.
+  const allSuggestedGroups = React.useMemo(
+    () => findSimilarIngredients(dictM, aggregates, []),
+    [dictM, aggregates]
+  );
+  const ignoredSuggestedGroups = React.useMemo(() => {
+    const activeKeys = new Set(suggestedAggregates.map(g => g.key));
+    const isPairIgnored = (a, b) => ignoredSimilarities.some(([x, y]) => (x === a && y === b) || (x === b && y === a));
+    return allSuggestedGroups.filter(g => !activeKeys.has(g.key) && g.pairs.every(([a, b]) => isPairIgnored(a, b)));
+  }, [allSuggestedGroups, suggestedAggregates, ignoredSimilarities]);
   // Voci del dizionario ordinate per nome (name = ID, display = nome)
   const allDictEntries = React.useMemo(
     () => Object.entries(dictM)
@@ -64,7 +98,7 @@ export default function OrganizeIngredientsScreen({
   );
 
   const catLabel = (id) => categoryList.find(c => c.id === id);
-  const orderedCats = sortCategoriesAltroLast(categoryList);
+  const orderedCats = sortCategoriesBaseFirst(categoryList);
 
   // ── Database aggregati: lista + crea/modifica ──
   if (manageAggs) {
@@ -72,13 +106,75 @@ export default function OrganizeIngredientsScreen({
       <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
         {nav}
         <div style={{ padding:"12px 20px 8px", display:"flex", alignItems:"center", gap:10 }}>
-          <button onClick={() => setManageAggs(false)} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
+          <button onClick={() => initialManageAggs ? (onBack && onBack()) : setManageAggs(false)} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
           <div style={{ flex:1 }}>
             <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>⊕ Database aggregati</div>
             <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>gruppi di ingredienti equivalenti</div>
           </div>
         </div>
         <div style={{ flex:1, overflowY:"auto", padding:"4px 18px 40px" }}>
+          <button onClick={() => { setManageAggs(false); setEditingFrom("manageAggs"); setEditing({ kind:"aggregate", name:"", members:[], categories:[] }); }} style={{
+            width:"100%", padding:"12px", borderRadius:12, border:`1.5px dashed ${th.appBorder}`,
+            background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:12.5, fontWeight:600, cursor:"pointer", marginBottom:18,
+          }}>＋ Nuovo aggregato</button>
+
+          {suggestedAggregates.length > 0 && (
+            <div style={{ marginBottom:18 }}>
+              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appAccent, textTransform:"uppercase", margin:"4px 0 8px", fontWeight:700 }}>
+                🔎 Aggregati suggeriti
+              </div>
+              {suggestedAggregates.map(g => (
+                <div key={g.key} style={{ background:th.appCard, border:`1.5px solid ${th.appAccent}55`, borderRadius:12, padding:"11px 13px", marginBottom:8 }}>
+                  <div style={{ fontFamily:F.body, fontSize:14, fontWeight:700, color:th.appInk }}>
+                    {g.type === "join"
+                      ? (g.newMembers.length === 1
+                          ? <>Aggiungi «{dictName(g.newMembers[0])}» a un aggregato esistente</>
+                          : `Aggiungi ${g.newMembers.length} ingredienti a un aggregato esistente`)
+                      : g.label}
+                  </div>
+                  <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:2, marginBottom:9 }}>
+                    {g.type === "join"
+                      ? <>{g.aggregate.name} ({(g.aggregate.members || []).map(dictName).join(", ")})</>
+                      : g.members.map(dictName).join(" · ")}
+                  </div>
+                  <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                    {g.type === "join" ? (
+                      <button onClick={() => onSaveAggregate && onSaveAggregate({ ...g.aggregate, members:[...(g.aggregate.members || []), ...g.newMembers] })} style={{ background:th.appAccent, border:"none", borderRadius:9, padding:"7px 11px", color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer" }}>⊕ Aggiungi a «{g.label}»</button>
+                    ) : (
+                      <button onClick={() => { setManageAggs(false); setEditingFrom("manageAggs"); setEditing({ kind:"aggregate", name:g.label, members:[...g.members], categories:[] }); }} style={{ background:th.appAccent, border:"none", borderRadius:9, padding:"7px 11px", color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer" }}>⊕ Crea aggregato</button>
+                    )}
+                    <button onClick={() => g.pairs.forEach(([a, b]) => onIgnoreSimilarity && onIgnoreSimilarity(a, b))} style={{ background:"transparent", border:`1.5px solid ${th.appBorder}`, borderRadius:9, padding:"7px 11px", color:th.appFaded, fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer" }}>Ignora</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {ignoredSuggestedGroups.length > 0 && (
+            <div style={{ marginBottom:18 }}>
+              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appFaded, textTransform:"uppercase", margin:"4px 0 8px", fontWeight:700 }}>
+                🔎 Aggregati ignorati
+              </div>
+              {ignoredSuggestedGroups.map(g => (
+                <div key={g.key} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:12, padding:"11px 13px", marginBottom:8 }}>
+                  <div style={{ opacity:0.55 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <div style={{ fontFamily:F.body, fontSize:14, fontWeight:700, color:th.appInk, flex:1 }}>{g.label}</div>
+                      <span style={{ fontFamily:F.ui, fontSize:9, color:th.appFaded, textTransform:"uppercase", letterSpacing:0.5 }}>ignorato</span>
+                    </div>
+                    <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:2, marginBottom:9 }}>
+                      {Array.from(new Set(g.members.map(memberOrAggName))).join(" · ")}
+                    </div>
+                  </div>
+                  <button onClick={() => g.pairs.forEach(([a, b]) => onRestoreSimilarity && onRestoreSimilarity(a, b))} style={{ background:"transparent", border:`1.5px solid ${th.appBorder}`, borderRadius:9, padding:"7px 11px", color:th.appFaded, fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer" }}>↺ Ripristina</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appAccent, textTransform:"uppercase", margin:"4px 0 8px", fontWeight:700 }}>
+            📋 Aggregati esistenti
+          </div>
           {aggregates.map(agg => (
             <div key={agg.id} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:12, padding:"11px 13px", marginBottom:8 }}>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
@@ -86,17 +182,13 @@ export default function OrganizeIngredientsScreen({
                   <div style={{ fontFamily:F.body, fontSize:14.5, fontWeight:700, color:th.appInk }}>⊕ {agg.name}</div>
                   <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:2 }}>{(agg.members||[]).map(dictName).join(" · ")}</div>
                 </div>
-                <button onClick={() => { setManageAggs(false); setEditing({ kind:"aggregate", id:agg.id, name:agg.name, members:[...(agg.members||[])], categories:[...(agg.categories||[])] }); }} style={{ background:th.appInk, border:"none", borderRadius:9, padding:"7px 11px", color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0 }}>✏️ Modifica</button>
+                <button onClick={() => { setManageAggs(false); setEditingFrom("manageAggs"); setEditing({ kind:"aggregate", id:agg.id, name:agg.name, members:[...(agg.members||[])], categories:[...(agg.categories||[])] }); }} style={{ background:th.appInk, border:"none", borderRadius:9, padding:"7px 11px", color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0 }}>✏️ Modifica</button>
               </div>
             </div>
           ))}
           {aggregates.length === 0 && (
             <div style={{ textAlign:"center", padding:"26px 0", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>Nessun aggregato ancora creato</div>
           )}
-          <button onClick={() => { setManageAggs(false); setEditing({ kind:"aggregate", name:"", members:[], categories:[] }); }} style={{
-            width:"100%", padding:"12px", borderRadius:12, border:`1.5px dashed ${th.appBorder}`,
-            background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:12.5, fontWeight:600, cursor:"pointer", marginTop:4,
-          }}>＋ Nuovo aggregato</button>
         </div>
       </div>
     );
@@ -120,10 +212,18 @@ export default function OrganizeIngredientsScreen({
       ];
       const setF = (k, v) => setFoodForm(p => ({ ...p, [k]: v }));
       const canSaveFood = (foodForm.name || "").trim() && foodForm.kcal !== "";
+      // Se il form è stato aperto dall'editor nutrizionale di un ingrediente
+      // (foodFormLinkTo), annullare o salvare riporta a Organizza Ingredienti
+      // invece che al Database valori nutrizionali, che l'utente non ha scelto di visitare.
+      const closeFoodForm = () => {
+        setFoodForm(null);
+        if (foodFormLinkTo) { setManageNutri(false); setFoodFormLinkTo(null); }
+      };
       const saveFood = () => {
         const num = (v) => { const n = parseFloat(String(v).replace(",", ".")); return isNaN(n) ? 0 : n; };
+        const foodId = foodForm.id || uid("cf");
         onSaveCustomFood({
-          id: foodForm.id || uid("cf"),
+          id: foodId,
           cat: "Personalizzati",
           custom: true,
           name: foodForm.name.trim(),
@@ -132,13 +232,16 @@ export default function OrganizeIngredientsScreen({
           prot: num(foodForm.prot), fat: num(foodForm.fat), sat: num(foodForm.sat),
           fib: num(foodForm.fib), salt: num(foodForm.salt),
         });
-        setFoodForm(null);
+        // Collega automaticamente il nuovo alimento all'ingrediente di partenza,
+        // come se l'utente l'avesse cercato e selezionato dal database.
+        if (foodFormLinkTo) onSaveNutritionMapping(foodFormLinkTo, { foodId });
+        closeFoodForm();
       };
       return (
         <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
           {nav}
           <div style={{ padding:"12px 20px 8px", display:"flex", alignItems:"center", gap:10 }}>
-            <button onClick={() => setFoodForm(null)} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Annulla</button>
+            <button onClick={closeFoodForm} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Annulla</button>
             <div style={{ flex:1 }}>
               <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>{foodForm.id ? "✏️ Modifica alimento" : "＋ Nuovo alimento"}</div>
               <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>valori per 100 g · fonte personalizzata</div>
@@ -245,132 +348,34 @@ export default function OrganizeIngredientsScreen({
     );
   }
 
-  // ── Gestione equivalenze: ingredienti con unità diverse tra ricette ──
+  // ── Conversioni di sistema: unità di peso/volume fisse, sola lettura ──
+  // Sono la base su cui si appoggiano tutte le equivalenze specifiche degli
+  // ingredienti (che convertono verso i grammi partendo da qui). Fisse per
+  // definizione (1 kg è sempre 1000 g): non ha senso renderle modificabili.
   if (manageEq) {
-    // Rileva automaticamente: nome pulito → insieme delle unità trovate
-    const unitScan = new Map();
-    recipes.forEach(r => {
-      flattenIngredients(r.ingredients).forEach(ing => {
-        if (ing.qty == null) return; // senza quantità: non serve equivalenza
-        const clean = resolveIngId(ingDictIndex(dictM), ing.name); // ID dizionario
-        const unit = UNIT_ALIASES[(ing.unit || "").toLowerCase()] || (ing.unit || "").toLowerCase();
-        if (!unitScan.has(clean)) unitScan.set(clean, new Set());
-        unitScan.get(clean).add(unit);
-      });
-    });
-    // Mostra: (a) ingredienti con 2+ unità diverse, (b) ingredienti con
-    // qualsiasi unità non di peso (serve il fattore per lista spesa e nutrizione)
-    const isWeight = (u) => u in WEIGHT_UNITS;
-    const multiUnit = Array.from(unitScan.entries())
-      .filter(([, units]) => units.size >= 2 || Array.from(units).some(u => !isWeight(u)))
-      .map(([name, units]) => {
-        const arr = Array.from(units).sort();
-        // se serve la conversione a peso ma nessuna unità di peso è presente,
-        // aggiungi "g" alle opzioni di base disponibili
-        if (!arr.some(isWeight)) arr.unshift("g");
-        return { name, units: arr };
-      })
-      .sort((a, b) => a.name.localeCompare(b.name, "it"));
-
+    const rows = Object.entries(WEIGHT_UNITS).sort(([,a], [,b]) => a - b);
     return (
       <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
         {nav}
         <div style={{ padding:"12px 20px 8px", display:"flex", alignItems:"center", gap:10 }}>
           <button onClick={() => setManageEq(false)} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
           <div style={{ flex:1 }}>
-            <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>⚖️ Equivalenze</div>
-            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>ingredienti con unità diverse o da convertire in grammi</div>
+            <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>⚖️ Conversioni di sistema</div>
+            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>unità di peso e volume, applicate sempre di default</div>
           </div>
         </div>
 
         <div style={{ flex:1, overflowY:"auto", padding:"8px 18px 40px" }}>
-          {multiUnit.length === 0 ? (
-            <div style={{ textAlign:"center", padding:"36px 20px", color:th.appFaded, fontFamily:F.display, fontStyle:"italic", lineHeight:1.6 }}>
-              Nessun ingrediente con unità diverse.<br/>
-              <span style={{ fontFamily:F.ui, fontSize:11, fontStyle:"normal" }}>Quando la stessa cosa apparirà come "100g" in una ricetta e "2 cucchiai" in un'altra, la troverai qui.</span>
+          <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5, marginBottom:14 }}>
+            Queste conversioni sono fisse e valgono per qualsiasi ingrediente — non servono equivalenze per g, kg, ml, l, cl, dl. Per le altre unità (cucchiai, pizzichi, unità intere…) definisci l'equivalenza specifica sulla singola voce, dalla scheda dell'ingrediente.
+          </div>
+          {rows.map(([unit, grams]) => (
+            <div key={unit} style={{ display:"flex", alignItems:"center", gap:8, background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:12, padding:"11px 14px", marginBottom:8 }}>
+              <span style={{ fontFamily:F.body, fontSize:14, color:th.appInk, flex:1 }}>1 {unitLabel(unit)}</span>
+              <span style={{ fontFamily:F.ui, fontSize:12, color:th.appFaded }}>=</span>
+              <span style={{ fontFamily:F.display, fontSize:15, color:th.appAccent, fontWeight:700 }}>{grams} g</span>
             </div>
-          ) : multiUnit.map(({ name, units }) => {
-            const eq = equivalences[name] || {};
-            const base = eq.base && units.includes(eq.base) ? eq.base : (units.includes("g") ? "g" : units.includes("ml") ? "ml" : units[0]);
-            const factors = eq.factors || {};
-            const display = eq.display || "separate";
-            const others = units.filter(u => u !== base);
-            const save = (patch) => onSaveEquivalence(name, { base, factors, display, ...patch });
-
-            return (
-              <div key={name} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:14, padding:"12px 14px", marginBottom:10 }}>
-                <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:8, flexWrap:"wrap" }}>
-                  <span style={{ fontFamily:F.body, fontSize:15, color:th.appInk, fontWeight:700 }}>{dictName(name).charAt(0).toUpperCase() + dictName(name).slice(1)}</span>
-                  <span style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded }}>unità trovate: {units.map(unitLabel).join(" · ")}</span>
-                </div>
-
-                {/* Unità base */}
-                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
-                  <span style={{ fontFamily:F.ui, fontSize:10, letterSpacing:0.5, color:th.appFaded, textTransform:"uppercase", flexShrink:0 }}>Unità base</span>
-                  <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
-                    {units.map(u => (
-                      <button key={u} onClick={() => save({ base:u, factors:{}, display:"separate" })} style={{
-                        padding:"4px 10px", borderRadius:14,
-                        border:`1.5px solid ${base===u ? th.appAccent : th.appBorder}`,
-                        background: base===u ? th.appAccent : "transparent",
-                        color: base===u ? "#fff" : th.appFaded,
-                        fontFamily:F.ui, fontSize:10.5, cursor:"pointer",
-                      }}>{unitLabel(u)}</button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Fattori di conversione */}
-                {others.map(u => (
-                  <div key={u} style={{ display:"flex", alignItems:"center", gap:6, marginBottom:6, fontFamily:F.ui, fontSize:12, color:th.appInk }}>
-                    <span style={{ flexShrink:0 }}>1 {unitLabel(u)} =</span>
-                    <input
-                      type="number"
-                      value={factors[u] ?? ""}
-                      onChange={e => {
-                        const v = parseFloat(e.target.value);
-                        const next = { ...factors };
-                        if (isNaN(v) || v <= 0) delete next[u]; else next[u] = v;
-                        save({ factors: next });
-                      }}
-                      placeholder="?"
-                      style={{ width:70, padding:"7px 9px", border:`1.5px solid ${factors[u] ? th.appAccent : th.appBorder}`, borderRadius:9, background:th.appBg, fontFamily:F.body, fontSize:12, color:th.appInk, outline:"none", textAlign:"center" }}
-                    />
-                    <span style={{ flexShrink:0 }}>{unitLabel(base)}</span>
-                  </div>
-                ))}
-
-                {/* Visualizzazione in lista spesa */}
-                <div style={{ marginTop:8, paddingTop:8, borderTop:`1px dashed ${th.appBorder}` }}>
-                  <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:0.5, color:th.appFaded, textTransform:"uppercase", marginBottom:5 }}>Mostra in Lista Spesa come</div>
-                  <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
-                    {units.map(u => {
-                      const enabled = u === base || factors[u] > 0;
-                      const on = display === u;
-                      return (
-                        <button key={u} disabled={!enabled} onClick={() => save({ display:u })} title={!enabled ? "inserisci prima il fattore di conversione" : ""} style={{
-                          padding:"5px 11px", borderRadius:14,
-                          border:`1.5px solid ${on ? th.appAccent : th.appBorder}`,
-                          background: on ? th.appAccent : "transparent",
-                          color: on ? "#fff" : enabled ? th.appInk : th.appFaded,
-                          fontFamily:F.ui, fontSize:10.5, fontWeight:600,
-                          cursor: enabled ? "pointer" : "default",
-                          opacity: enabled ? 1 : 0.5,
-                        }}>{unitLabel(u)}</button>
-                      );
-                    })}
-                    <button onClick={() => save({ display:"separate" })} style={{
-                      padding:"5px 11px", borderRadius:14,
-                      border:`1.5px solid ${display==="separate" ? th.appAccent : th.appBorder}`,
-                      background: display==="separate" ? th.appAccent : "transparent",
-                      color: display==="separate" ? "#fff" : th.appInk,
-                      fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer",
-                    }}>entrambe (senza conversione)</button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          ))}
         </div>
       </div>
     );
@@ -390,35 +395,35 @@ export default function OrganizeIngredientsScreen({
       <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
         {nav}
         <div style={{ padding:"12px 20px 8px", display:"flex", alignItems:"center", gap:10 }}>
-          <button onClick={() => setManageCats(false)} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
+          <button onClick={() => initialManageCats ? (onBack && onBack()) : setManageCats(false)} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
           <div style={{ flex:1 }}>
             <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>Gestisci categorie</div>
-            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>nome e icona · "Ingredienti base" fissa in cima, "Altro" in fondo</div>
+            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>nome e icona · "Ingredienti base" è l'unica categoria fissa</div>
           </div>
         </div>
 
         <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 40px" }}>
           {orderedCats.map(cat => {
-            const isAltro = cat.id === "altro" || cat.id === "base"; // categorie fisse
+            const isFixed = cat.id === "base"; // unica categoria fissa
             return (
               <div key={cat.id} style={{
                 background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:12,
                 padding:"10px 12px", marginBottom:8,
                 display:"flex", alignItems:"center", gap:8,
-                opacity: isAltro ? 0.75 : 1,
+                opacity: isFixed ? 0.75 : 1,
               }}>
                 <button
-                  onClick={() => !isAltro && setEmojiPickerFor(cat.id)}
-                  disabled={isAltro}
-                  style={{ width:44, padding:"8px 4px", textAlign:"center", border:`1.5px solid ${emojiPickerFor===cat.id ? th.appAccent : th.appBorder}`, borderRadius:10, background:th.appBg, fontSize:16, cursor: isAltro ? "default" : "pointer", flexShrink:0 }}
+                  onClick={() => !isFixed && setEmojiPickerFor(cat.id)}
+                  disabled={isFixed}
+                  style={{ width:44, padding:"8px 4px", textAlign:"center", border:`1.5px solid ${emojiPickerFor===cat.id ? th.appAccent : th.appBorder}`, borderRadius:10, background:th.appBg, fontSize:16, cursor: isFixed ? "default" : "pointer", flexShrink:0 }}
                 >{cat.emoji}</button>
                 <input
                   value={cat.label}
-                  onChange={e => !isAltro && onSaveCategory({ ...cat, label: e.target.value })}
-                  disabled={isAltro}
+                  onChange={e => !isFixed && onSaveCategory({ ...cat, label: e.target.value })}
+                  disabled={isFixed}
                   style={{ flex:1, padding:"9px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appBg, fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none", minWidth:0 }}
                 />
-                {isAltro ? (
+                {isFixed ? (
                   <span style={{ fontFamily:F.ui, fontSize:9, color:th.appFaded, flexShrink:0 }}>fissa</span>
                 ) : (
                   <button onClick={() => onDeleteCategory(cat.id)} style={{
@@ -428,20 +433,13 @@ export default function OrganizeIngredientsScreen({
                 )}
               </div>
             );
-          }).flatMap((row, i, arr) => {
-            // Note informative sotto le categorie fisse
+          }).flatMap((row, i) => {
+            // Nota informativa sotto la categoria fissa
             const cat = orderedCats[i];
             if (cat && cat.id === "base") {
               return [row, (
                 <div key="base-note" style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, lineHeight:1.5, margin:"-2px 2px 10px 2px", fontStyle:"italic" }}>
                   ℹ️ Gli ingredienti di questa categoria vengono considerati di default come <b>presenti in dispensa</b>: in Svuota Frigo risultano già selezionati.
-                </div>
-              )];
-            }
-            if (cat && cat.id === "altro") {
-              return [row, (
-                <div key="altro-note" style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, lineHeight:1.5, margin:"-2px 2px 10px 2px", fontStyle:"italic" }}>
-                  ℹ️ Gli ingredienti <b>senza categoria</b> vengono raggruppati qui in automatico.
                 </div>
               )];
             }
@@ -536,6 +534,14 @@ export default function OrganizeIngredientsScreen({
     // Per un aggregato il salvataggio richiede nome e almeno un ingrediente incluso.
     const canSaveAgg = !isAgg || ((editing.name || "").trim() && (editing.members || []).length > 0);
 
+    // Chiude l'editor tornando a "Database aggregati" se è da lì che si è
+    // aperto (nuovo/modifica/da suggerimento), altrimenti alla vista principale.
+    const closeEditor = () => {
+      setEditing(null);
+      if (editingFrom === "manageAggs") setManageAggs(true);
+      setEditingFrom(null);
+    };
+
     const save = () => {
       if (isAgg) {
         // salva aggregato
@@ -551,14 +557,14 @@ export default function OrganizeIngredientsScreen({
         // salva categorie del singolo ingrediente
         onSetIngredientCats(editing.name, editing.categories || []);
       }
-      setEditing(null);
+      closeEditor();
     };
 
     return (
       <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
         {nav}
         <div style={{ padding:"12px 20px 8px", display:"flex", alignItems:"center", gap:10 }}>
-          <button onClick={() => setEditing(null)} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
+          <button onClick={closeEditor} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
           <div style={{ flex:1, fontFamily:F.display, fontSize:18, color:th.appInk }}>
             {isAgg ? (editing.id ? "Modifica aggregato" : "Nuovo aggregato") : "Categorie ingrediente"}
           </div>
@@ -633,7 +639,7 @@ export default function OrganizeIngredientsScreen({
         {/* Save */}
         <div style={{ padding:"12px 18px 22px", display:"flex", gap:8, borderTop:`1px solid ${th.appBorder}` }}>
           {isAgg && editing.id && (
-            <button onClick={() => { onDeleteAggregate(editing.id); setEditing(null); }} style={{
+            <button onClick={() => { onDeleteAggregate(editing.id); closeEditor(); }} style={{
               padding:"14px 16px", borderRadius:12, border:`1.5px solid #C4593A`,
               background:"transparent", color:"#C4593A",
               fontFamily:F.ui, fontSize:13, fontWeight:600, cursor:"pointer",
@@ -655,7 +661,7 @@ export default function OrganizeIngredientsScreen({
   const allFoods = [...NUTRITION_DB, ...customFoods];
   const dbById = new Map(allFoods.map(f => [f.id, f]));
   const dbByName = new Map(allFoods.map(f => [normName(f.name), f]));
-  const catsSorted = sortCategoriesAltroLast(categoryList);
+  const catsSorted = sortCategoriesBaseFirst(categoryList);
   const catOf = (id) => catsSorted.find(c => c.id === id);
 
   const allIngs = allDictEntries; // [{name: ID, display: nome}] ordinati
@@ -670,7 +676,16 @@ export default function OrganizeIngredientsScreen({
   const recipesFor = (ids) => recipes.filter(r =>
     flattenIngredients(r.ingredients).some(i => ids.includes(resolveIngId(dictIdx, i.name))));
 
-  const toggleExpand = (key, kind) => setExpanded(p => ({ ...p, [key]: p[key] === kind ? null : kind }));
+  // Apre/chiude una sezione (categorie/nutrizione/equivalenze/rinomina) e
+  // scarica sempre le bozze non salvate di quella card: sia chiudendo la
+  // sezione aperta, sia passando a un'altra sezione della stessa card.
+  const toggleExpand = (key, kind) => {
+    setExpanded(p => ({ ...p, [key]: p[key] === kind ? null : kind }));
+    setCatDraft(p => { if (!(key in p)) return p; const n = { ...p }; delete n[key]; return n; });
+    setNutriDraft(p => { if (!(key in p)) return p; const n = { ...p }; delete n[key]; return n; });
+    setEqDraft(p => { if (!(key in p)) return p; const n = { ...p }; delete n[key]; return n; });
+    setNutriSearch(p => { if (!(key in p)) return p; const n = { ...p }; delete n[key]; return n; });
+  };
 
   const nutriStatusOf = (ingId) => {
     const mapping = nutritionMap[ingId];
@@ -678,170 +693,211 @@ export default function OrganizeIngredientsScreen({
     const food = mapping?.foodId ? dbById.get(mapping.foodId) : dbByName.get(normName(dictName(ingId)));
     return food ? { ok:true, label:food.name, values:food, auto: !mapping } : { ok:false };
   };
-  const eqSummary = (name) => {
-    const eq = equivalences[name];
-    if (!eq || !eq.factors || Object.keys(eq.factors).length === 0) return null;
-    return Object.entries(eq.factors).map(([u,f]) => `1 ${unitLabel(u)} = ${String(f).replace(".",",")} ${unitLabel(eq.base)}`).join(" · ");
+  const q = search.trim().toLowerCase();
+  const filterIsShopping = filterRecipeId === SHOPPING_SOURCE;
+  const filterRecipe = (filterRecipeId && !filterIsShopping) ? recipes.find(r => String(r.id) === filterRecipeId) : null;
+  const recipeIngIds = filterRecipe
+    ? new Set(flattenIngredients(filterRecipe.ingredients).map(ing => resolveIngId(dictIdx, ing.name)))
+    : filterIsShopping
+      ? new Set(shoppingList.flatMap(entry => entry.items.map(it => resolveIngId(dictIdx, normName(it.name)))))
+      : null;
+  // Unità rilevanti (book-wide) per un ingrediente/aggregato che non sono già
+  // convertibili di default (unità di sistema): quelle per cui potrebbe servire
+  // un'equivalenza specifica. Condivisa da EqEditor, dal riepilogo in ItemCard
+  // e da eqIssueFor, così le tre viste restano sempre coerenti tra loro.
+  const nonWeightUnitsFor = (memberIds) => {
+    const set = new Set(memberIds.flatMap(m => Array.from(unitsByIng.get(m) || [])));
+    return Array.from(set).filter(u => !(u in WEIGHT_UNITS)).sort();
   };
+  // Unica definizione di "serve un'equivalenza": una delle unità sopra non ha
+  // un fattore verso i grammi definito per questa voce. Vale ovunque,
+  // indipendentemente dal filtro attivo (ricetta / lista spesa / nessuno) —
+  // il filtro decide solo quali ingredienti mostrare, mai il criterio dell'alert.
+  const eqIssueFor = (dataKey, memberIds) => {
+    const factors = equivalences[dataKey]?.factors || {};
+    return nonWeightUnitsFor(memberIds).some(u => !(factors[u] > 0));
+  };
+
   // Stesse regole di segnalazione usate dalla ItemCard (categoria/nutrizione/equivalenze mancanti)
-  const hasIssuesFor = (itemId, isAgg, agg) => {
+  const issuesFor = (itemId, isAgg, agg) => {
     const dataKey = isAgg ? agg.id : itemId;
     const cats = isAgg ? (agg.categories || []) : effectiveCategories(itemId, aggregates, ingredientCategories, sourceByIngredient).categories;
     const nutriKey = !isAgg ? effectiveNutritionKey(itemId, aggregates, nutritionMap, sourceByIngredient) : dataKey;
     const nutri = nutriStatusOf(nutriKey);
-    const eqS = eqSummary(dataKey);
-    const relevantUnits = isAgg
-      ? new Set((agg.members || []).flatMap(m => Array.from(unitsByIng.get(m) || [])))
-      : (unitsByIng.get(itemId) || new Set());
-    const multiUnits = relevantUnits.size >= 2;
-    return cats.length === 0 || !nutri.ok || (multiUnits && !eqS);
+    const memberIds = isAgg ? (agg.members || []) : [itemId];
+    return { cat: cats.length === 0, nutri: !nutri.ok, eq: eqIssueFor(dataKey, memberIds) };
+  };
+  const matchesAlertFilter = (itemId, isAgg, agg) => {
+    if (!issueMode) return true;
+    const issues = issuesFor(itemId, isAgg, agg);
+    return alertFilter.some(type => issues[type]);
   };
 
-  const q = search.trim().toLowerCase();
-  const filterRecipe = filterRecipeId ? recipes.find(r => String(r.id) === filterRecipeId) : null;
-  const recipeIngIds = filterRecipe
-    ? new Set(flattenIngredients(filterRecipe.ingredients).map(ing => resolveIngId(dictIdx, ing.name)))
-    : null;
   const visibleAggs = aggregates.filter(a =>
     (!q || a.name.toLowerCase().includes(q) || (a.members||[]).some(m => dictName(m).toLowerCase().includes(q))) &&
     (!recipeIngIds || (a.members||[]).some(m => recipeIngIds.has(m))) &&
-    (!onlyIssues || hasIssuesFor(a.id, true, a))
+    matchesAlertFilter(a.id, true, a)
   );
   const visibleIngs = allIngs.filter(i =>
     (!q || i.display.toLowerCase().includes(q)) &&
     (!recipeIngIds || recipeIngIds.has(i.name)) &&
-    (!onlyIssues || hasIssuesFor(i.name, false, null))
+    matchesAlertFilter(i.name, false, null)
   );
 
   // ── Editor inline: categorie ──
-  const CatEditor = ({ current, onToggle }) => (
-    <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginTop:8 }}>
-      {catsSorted.map(c => {
-        const on = current.includes(c.id);
-        return (
-          <button key={c.id} onClick={() => onToggle(c.id)} style={{
-            padding:"5px 10px", borderRadius:14,
-            border:`1.5px solid ${on ? th.appAccent : th.appBorder}`,
-            background: on ? th.appAccent : "transparent",
-            color: on ? "#fff" : th.appFaded,
-            fontFamily:F.ui, fontSize:10.5, cursor:"pointer",
-          }}>{c.emoji} {c.label}</button>
-        );
-      })}
-    </div>
-  );
-
-  // ── Editor inline: collegamento nutrizionale ──
-  const NutriEditor = ({ name }) => {
-    const mapping = nutritionMap[name];
-    const status = nutriStatusOf(name); // {ok, label, values, auto}
-    const searching = nutriSearch[name] !== undefined;
-    const s = nutriSearch[name] ?? "";
-    const results = searching && s.trim() ? allFoods.filter(f => f.name.toLowerCase().includes(s.trim().toLowerCase())).slice(0, 5) : [];
-    const startSearch = () => setNutriSearch(p => ({ ...p, [name]: "" }));
-    const stopSearch = () => setNutriSearch(p => (({ [name]:_, ...rest }) => rest)(p));
-
-    // ── Già collegato: mostra a cosa, con possibilità di scollegare o cambiare ──
-    if (!searching && status.ok) {
-      return (
-        <div style={{ marginTop:8, background:th.appBg, border:`1px solid ${th.appBorder}`, borderRadius:9, padding:"9px 11px" }}>
-          <div style={{ fontFamily:F.body, fontSize:12.5, color:th.appInk, fontWeight:600 }}>
-            {status.label}{status.auto ? <span style={{ fontFamily:F.ui, fontSize:9.5, color:th.appAccent, fontWeight:400 }}> · match automatico</span> : null}
-          </div>
-          <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:2 }}>{macroLine(status.values, {fib:false})}</div>
-          <div style={{ display:"flex", gap:14, marginTop:8 }}>
-            {mapping && (
-              <button onClick={() => onSaveNutritionMapping(name, null)} style={{ background:"none", border:"none", color:"#C4593A", fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, textDecoration:"underline" }}>× Scollega</button>
-            )}
-            <button onClick={startSearch} style={{ background:"none", border:"none", color:th.appAccent, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, textDecoration:"underline" }}>Cambia collegamento</button>
-          </div>
-        </div>
-      );
-    }
-
-    // ── Non collegato (o si sta cambiando collegamento): barra di ricerca ──
+  // Bozza locale (catDraft) finché non premi Salva: evita che la card sparisca
+  // dalla lista filtrata al primo toggle, prima di aver finito di scegliere.
+  const CatEditor = ({ draftKey, dataKey, current, isAgg, agg }) => {
+    const draft = catDraft[draftKey] ?? current;
+    const toggle = (catId) => {
+      const next = draft.includes(catId) ? draft.filter(c => c !== catId) : [...draft, catId];
+      setCatDraft(p => ({ ...p, [draftKey]: next }));
+    };
+    const save = () => {
+      if (isAgg) onSaveAggregate({ ...agg, categories: draft });
+      else onSetIngredientCats(dataKey, draft);
+      toggleExpand(draftKey, "cat");
+    };
     return (
       <div style={{ marginTop:8 }}>
-        <input
-          value={s}
-          autoFocus
-          onChange={e => setNutriSearch(p => ({ ...p, [name]: e.target.value }))}
-          placeholder="Cerca nel database (es. farina, pollo…)"
-          style={{ width:"100%", padding:"9px 11px", border:`1.5px solid ${th.appBorder}`, borderRadius:9, background:th.appBg, fontFamily:F.body, fontSize:12.5, color:th.appInk, outline:"none", boxSizing:"border-box" }}
-        />
-        {results.map(f => (
-          <button key={f.id} onClick={() => {
-            onSaveNutritionMapping(name, { foodId: f.id });
-            stopSearch();
-          }} style={{
-            display:"block", width:"100%", textAlign:"left", padding:"8px 11px", marginTop:4,
-            background:th.appBg, border:`1px solid ${th.appBorder}`, borderRadius:9,
-            cursor:"pointer", fontFamily:F.body, fontSize:12, color:th.appInk,
-          }}>
-            {f.name}{f.custom && <span style={{ fontFamily:F.ui, fontSize:9, color:th.appAccent }}> · personalizzato</span>}
-            <span style={{ display:"block", fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:1 }}>{macroLine(f, {fib:false})}</span>
-          </button>
-        ))}
-        {status.ok && (
-          <button onClick={stopSearch} style={{ marginTop:6, background:"none", border:"none", color:th.appFaded, fontFamily:F.ui, fontSize:10.5, cursor:"pointer", textDecoration:"underline", padding:0 }}>Annulla</button>
+        <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
+          {catsSorted.map(c => {
+            const on = draft.includes(c.id);
+            return (
+              <button key={c.id} onClick={() => toggle(c.id)} style={{
+                padding:"5px 10px", borderRadius:14,
+                border:`1.5px solid ${on ? th.appAccent : th.appBorder}`,
+                background: on ? th.appAccent : "transparent",
+                color: on ? "#fff" : th.appFaded,
+                fontFamily:F.ui, fontSize:10.5, cursor:"pointer",
+              }}>{c.emoji} {c.label}</button>
+            );
+          })}
+        </div>
+        <button onClick={save} style={{ marginTop:9, padding:"7px 14px", borderRadius:9, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer" }}>💾 Salva</button>
+      </div>
+    );
+  };
+
+  // ── Editor inline: collegamento nutrizionale ──
+  // Bozza locale (nutriDraft) finché non premi Salva: scegliere un risultato
+  // di ricerca o "Scollega" aggiorna solo la bozza, non il collegamento vero.
+  const NutriEditor = ({ draftKey, dataKey, displayName }) => {
+    const mapping = nutritionMap[dataKey]; // valore salvato
+    const draftMapping = nutriDraft[draftKey]; // undefined = nessuna bozza, usa mapping
+    const effMapping = draftMapping !== undefined ? draftMapping : mapping;
+    const statusFor = (m) => {
+      if (m?.custom) return { ok:true, label:"valori manuali", values:m.custom };
+      const food = m?.foodId ? dbById.get(m.foodId) : dbByName.get(normName(dictName(dataKey)));
+      return food ? { ok:true, label:food.name, values:food, auto: !m } : { ok:false };
+    };
+    const status = statusFor(effMapping);
+    const searching = nutriSearch[draftKey] !== undefined;
+    const s = nutriSearch[draftKey] ?? "";
+    const results = searching && s.trim() ? allFoods.filter(f => f.name.toLowerCase().includes(s.trim().toLowerCase())).slice(0, 5) : [];
+    const startSearch = () => setNutriSearch(p => ({ ...p, [draftKey]: "" }));
+    const stopSearch = () => setNutriSearch(p => (({ [draftKey]:_, ...rest }) => rest)(p));
+    const save = () => {
+      onSaveNutritionMapping(dataKey, effMapping);
+      toggleExpand(draftKey, "nutri");
+    };
+
+    return (
+      <div style={{ marginTop:8 }}>
+        {/* ── Già collegato (o selezionato in bozza): mostra a cosa, con possibilità di scollegare o cambiare ── */}
+        {!searching && status.ok ? (
+          <div style={{ background:th.appBg, border:`1px solid ${th.appBorder}`, borderRadius:9, padding:"9px 11px" }}>
+            <div style={{ fontFamily:F.body, fontSize:12.5, color:th.appInk, fontWeight:600 }}>
+              {status.label}{status.auto ? <span style={{ fontFamily:F.ui, fontSize:9.5, color:th.appAccent, fontWeight:400 }}> · match automatico</span> : null}
+            </div>
+            <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:2 }}>{macroLine(status.values, {fib:false})}</div>
+            <div style={{ display:"flex", gap:14, marginTop:8 }}>
+              {effMapping && (
+                <button onClick={() => setNutriDraft(p => ({ ...p, [draftKey]: null }))} style={{ background:"none", border:"none", color:"#C4593A", fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, textDecoration:"underline" }}>× Scollega</button>
+              )}
+              <button onClick={startSearch} style={{ background:"none", border:"none", color:th.appAccent, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, textDecoration:"underline" }}>Cambia collegamento</button>
+            </div>
+          </div>
+        ) : (
+          /* ── Non collegato (o si sta cambiando collegamento): barra di ricerca ── */
+          <div>
+            <input
+              value={s}
+              autoFocus
+              onChange={e => setNutriSearch(p => ({ ...p, [draftKey]: e.target.value }))}
+              placeholder="Cerca nel database (es. farina, pollo…)"
+              style={{ width:"100%", padding:"9px 11px", border:`1.5px solid ${th.appBorder}`, borderRadius:9, background:th.appBg, fontFamily:F.body, fontSize:12.5, color:th.appInk, outline:"none", boxSizing:"border-box" }}
+            />
+            <button onClick={() => { setFoodFormLinkTo(dataKey); setFoodForm({ name: displayName }); setManageNutri(true); }} style={{ marginTop:6, background:"none", border:"none", color:th.appAccent, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", textDecoration:"underline", padding:0 }}>Oppure aggiungi valori nutrizionali personalizzati</button>
+            {results.map(f => (
+              <button key={f.id} onClick={() => {
+                setNutriDraft(p => ({ ...p, [draftKey]: { foodId: f.id } }));
+                stopSearch();
+              }} style={{
+                display:"block", width:"100%", textAlign:"left", padding:"8px 11px", marginTop:4,
+                background:th.appBg, border:`1px solid ${th.appBorder}`, borderRadius:9,
+                cursor:"pointer", fontFamily:F.body, fontSize:12, color:th.appInk,
+              }}>
+                {f.name}{f.custom && <span style={{ fontFamily:F.ui, fontSize:9, color:th.appAccent }}> · personalizzato</span>}
+                <span style={{ display:"block", fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:1 }}>{macroLine(f, {fib:false})}</span>
+              </button>
+            ))}
+            {status.ok && (
+              <button onClick={stopSearch} style={{ marginTop:6, background:"none", border:"none", color:th.appFaded, fontFamily:F.ui, fontSize:10.5, cursor:"pointer", textDecoration:"underline", padding:0 }}>Annulla</button>
+            )}
+          </div>
         )}
+        <button onClick={save} style={{ marginTop:9, padding:"7px 14px", borderRadius:9, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer" }}>💾 Salva</button>
       </div>
     );
   };
 
   // ── Editor inline: equivalenze ──
-  // Mostra solo le unità realmente usate nel ricettario: per un
-  // ingrediente singolo quelle rilevate in unitsByIng; per un aggregato
-  // l'unione delle unità rilevate per ciascuno dei suoi membri (un
-  // aggregato non compare mai direttamente in una ricetta, quindi non
-  // ha unità proprie da rilevare).
-  const EqEditor = ({ name, isAgg, members }) => {
-    const units = isAgg
-      ? Array.from(new Set((members || []).flatMap(m => Array.from(unitsByIng.get(m) || []))))
-      : Array.from(unitsByIng.get(name) || []);
-    const eq = equivalences[name] || {};
-    const base = eq.base && units.includes(eq.base) ? eq.base : (units.includes("g") ? "g" : units[0]);
-    const factors = eq.factors || {};
-    const display = eq.display || "separate";
-    const others = units.filter(u => u !== base);
-    const save = (patch) => onSaveEquivalence(name, { base, factors, display, ...patch });
+  // I grammi sono l'hub unico: ogni unità non di peso/volume rilevata nel
+  // ricettario per questa voce (ingrediente singolo, o unione dei membri
+  // per un aggregato) ha la propria riga "1 unità = X g". Le unità di
+  // sistema (g/kg/ml/l/cl/dl) non compaiono: sono già convertibili senza
+  // bisogno di un'equivalenza (vedi ⚖️ Conversioni di sistema).
+  // Bozza locale (eqDraft) finché non premi Salva: digitare un fattore non
+  // scrive subito in equivalences, altrimenti la card sparirebbe dalla lista
+  // filtrata "Da gestire" al primo carattere, prima di finire di scrivere.
+  const EqEditor = ({ draftKey, dataKey, isAgg, members }) => {
+    const units = nonWeightUnitsFor(isAgg ? (members || []) : [dataKey]);
+    const committedFactors = equivalences[dataKey]?.factors || {};
+    const factors = eqDraft[draftKey] ?? committedFactors;
+    const setFactor = (u, raw) => {
+      const v = parseFloat(raw);
+      const next = { ...factors };
+      if (isNaN(v) || v <= 0) delete next[u]; else next[u] = v;
+      setEqDraft(p => ({ ...p, [draftKey]: next }));
+    };
+    const save = () => {
+      onSaveEquivalence(dataKey, { factors });
+      toggleExpand(draftKey, "eq");
+    };
+    if (units.length === 0) {
+      return (
+        <div style={{ marginTop:8 }}>
+          <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded }}>Nessuna unità da convertire: questa voce usa solo unità di peso/volume già convertibili di default.</div>
+        </div>
+      );
+    }
     return (
       <div style={{ marginTop:8 }}>
-        {units.length > 0 && (
-          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, flexWrap:"wrap" }}>
-            <span style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, textTransform:"uppercase" }}>Unità base</span>
-            {units.map(u => (
-              <button key={u} onClick={() => save({ base:u, factors:{}, display:"separate" })} style={{
-                padding:"4px 10px", borderRadius:14,
-                border:`1.5px solid ${base===u ? th.appAccent : th.appBorder}`,
-                background: base===u ? th.appAccent : "transparent",
-                color: base===u ? "#fff" : th.appFaded,
-                fontFamily:F.ui, fontSize:10.5, cursor:"pointer",
-              }}>{unitLabel(u)}</button>
-            ))}
-          </div>
-        )}
-        {others.map(u => (
+        {units.map(u => (
           <div key={u} style={{ display:"flex", alignItems:"center", gap:6, marginBottom:6, fontFamily:F.ui, fontSize:12, color:th.appInk }}>
             <span style={{ flexShrink:0 }}>1 {unitLabel(u)} =</span>
             <input
               type="number"
               value={factors[u] ?? ""}
-              onChange={e => {
-                const v = parseFloat(e.target.value);
-                const next = { ...factors };
-                if (isNaN(v) || v <= 0) delete next[u]; else next[u] = v;
-                save({ factors: next });
-              }}
+              onChange={e => setFactor(u, e.target.value)}
               placeholder="?"
               style={{ width:70, padding:"7px 9px", border:`1.5px solid ${factors[u] ? th.appAccent : th.appBorder}`, borderRadius:9, background:th.appBg, fontFamily:F.body, fontSize:12, color:th.appInk, outline:"none", textAlign:"center" }}
             />
-            <span style={{ flexShrink:0 }}>{unitLabel(base)}</span>
+            <span style={{ flexShrink:0 }}>g</span>
           </div>
         ))}
-        {others.length === 0 && (
-          <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded }}>Nessuna unità alternativa usata nel ricettario per questa voce.</div>
-        )}
+        <button onClick={save} style={{ marginTop:3, padding:"7px 14px", borderRadius:9, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer" }}>💾 Salva</button>
       </div>
     );
   };
@@ -866,7 +922,6 @@ export default function OrganizeIngredientsScreen({
     const nutriKey = !isAgg ? effectiveNutritionKey(name, aggregates, nutritionMap, sourceByIngredient) : dataKey;
     const nutriInheritedFrom = (!isAgg && nutriKey !== name) ? (aggregates || []).find(a => a.id === nutriKey) : null;
     const nutri = nutriStatusOf(nutriKey);
-    const eqS = eqSummary(dataKey);
     // Ordine di priorità delle fonti (ingrediente + suoi aggregati): solo
     // per un ingrediente che appartiene ad almeno un aggregato (priority
     // ha più di un elemento).
@@ -885,25 +940,16 @@ export default function OrganizeIngredientsScreen({
     const RED = "#C4593A";
     const issueNoCat = cats.length === 0;
     const issueNoNutri = !nutri.ok;
-    // L'alert equivalenze scatta solo se servirebbe davvero una
-    // conversione (2+ unità diverse in uso) e manca. Per un ingrediente
-    // singolo si guardano le sue unità; per un aggregato l'unione delle
-    // unità usate dai suoi membri (stessa logica di EqEditor).
-    const relevantUnits = isAgg
-      ? new Set((agg.members || []).flatMap(m => Array.from(unitsByIng.get(m) || [])))
-      : (unitsByIng.get(name) || new Set());
-    const multiUnits = relevantUnits.size >= 2;
-    const issueNoEq = multiUnits && !eqS;
+    // Vedi eqIssueFor: un'unità con cui l'ingrediente compare da qualche
+    // parte nel ricettario non è un'unità di sistema e non ha un fattore
+    // verso i grammi definito qui.
+    const memberIds = isAgg ? (agg.members || []) : [name];
+    const issueNoEq = eqIssueFor(dataKey, memberIds);
     const hasIssues = issueNoCat || issueNoNutri || issueNoEq;
-    const toggleCat = (catId) => {
-      if (isAgg) {
-        const next = cats.includes(catId) ? cats.filter(c => c !== catId) : [...cats, catId];
-        onSaveAggregate({ ...agg, categories: next });
-      } else {
-        const next = cats.includes(catId) ? cats.filter(c => c !== catId) : [...cats, catId];
-        onSetIngredientCats(name, next);
-      }
-    };
+    // Unità rilevanti per il riepilogo ⚖️ compatto: tutte, non solo quelle già definite,
+    // così un'unità mancante si vede subito senza dover aprire l'editor.
+    const eqUnits = nonWeightUnitsFor(memberIds);
+    const eqFactors = equivalences[dataKey]?.factors || {};
 
     const attrBtn = (label, kind, active) => (
       <button onClick={() => toggleExpand(key, kind)} style={{
@@ -988,13 +1034,18 @@ export default function OrganizeIngredientsScreen({
               )
             ) : "non collegato al database valori nutrizionali"}
           </div>
-          <div style={{ fontFamily:F.ui, fontSize:10.5, color: issueNoEq ? RED : th.appFaded, fontWeight: issueNoEq ? 600 : 400 }}>
-            ⚖️ {eqS || (issueNoEq ? (isAgg ? "nessuna equivalenza definita — definiscila" : "più unità in uso senza equivalenze — definiscile") : "nessuna equivalenza da definire")}
+          <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded }}>
+            ⚖️ {eqUnits.length === 0 ? "nessuna equivalenza da definire" : eqUnits.map((u, i) => {
+              const f = eqFactors[u];
+              return (
+                <span key={u} style={{ color: f > 0 ? th.appFaded : RED, fontWeight: f > 0 ? 400 : 700 }}>
+                  {i > 0 && " · "}1 {unitLabel(u)} = {f > 0 ? `${String(f).replace(".", ",")} g` : "?"}
+                </span>
+              );
+            })}
           </div>
           <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded }}>
-            📖 {linked.length > 0
-              ? linked.slice(0, 3).map(r => r.title).join(", ") + (linked.length > 3 ? ` +${linked.length - 3}` : "")
-              : "in nessuna ricetta"}
+            📖 {linked.length > 0 ? linked.map(r => r.title).join(", ") : "in nessuna ricetta"}
           </div>
         </div>
 
@@ -1005,9 +1056,9 @@ export default function OrganizeIngredientsScreen({
           {attrBtn("⚖️ Equivalenze", "eq")}
         </div>
 
-        {exp === "cat" && CatEditor({ current:cats, onToggle:toggleCat })}
-        {exp === "nutri" && NutriEditor({ name:dataKey })}
-        {exp === "eq" && EqEditor({ name:dataKey, isAgg, members:agg?.members })}
+        {exp === "cat" && CatEditor({ draftKey:key, dataKey, current:cats, isAgg, agg })}
+        {exp === "nutri" && NutriEditor({ draftKey:key, dataKey, displayName:display })}
+        {exp === "eq" && EqEditor({ draftKey:key, dataKey, isAgg, members:agg?.members })}
         {exp === "rename" && !isAgg && (
           <div style={{ marginTop:8 }}>
             <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:0.5, color:th.appFaded, textTransform:"uppercase", marginBottom:5 }}>Nuovo nome — aggiornato in tutte le ricette</div>
@@ -1099,6 +1150,12 @@ export default function OrganizeIngredientsScreen({
     <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
       {nav}
 
+      {onBack && (
+        <div style={{ padding:"12px 20px 0" }}>
+          <button onClick={onBack} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
+        </div>
+      )}
+
       {/* ── GESTISCI DATABASE ── */}
       <div style={{ padding:"14px 20px 0" }}>
         <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.2, color:th.appAccent, textTransform:"uppercase", fontWeight:700, marginBottom:8 }}>Gestisci database</div>
@@ -1107,7 +1164,7 @@ export default function OrganizeIngredientsScreen({
         {[
           ["🍇", "Database aggregati", "#5A8C3A", () => setManageAggs(true)],
           ["🏷️", "Database categorie", "#5A3A9A", () => setManageCats(true)],
-          ["⚖️", "Database equivalenze", "#2D8C6B", () => setManageEq(true)],
+          ["⚖️", "Conversioni di sistema", "#2D8C6B", () => setManageEq(true)],
           ["🍎", "Database valori nutrizionali", "#C4593A", () => setManageNutri(true)],
         ].map(([icon, title, color, go]) => (
           <button key={title} onClick={go} style={{
@@ -1144,16 +1201,17 @@ export default function OrganizeIngredientsScreen({
         </div>
       </div>
 
-      {/* Filtro per ricetta */}
+      {/* Filtro per fonte: una ricetta specifica, o la lista spesa corrente */}
       <div style={{ padding:"8px 18px 0" }}>
         <div style={{ display:"flex", gap:8, alignItems:"center", background:th.appCard, border:`1.5px solid ${filterRecipeId ? th.appAccent : th.appBorder}`, borderRadius:12, padding:"9px 14px" }}>
-          <span style={{ fontSize:15 }}>📖</span>
+          <span style={{ fontSize:15 }}>{filterIsShopping ? "🛒" : "📖"}</span>
           <select
             value={filterRecipeId}
             onChange={e => setFilterRecipeId(e.target.value)}
             style={{ flex:1, border:"none", background:"transparent", outline:"none", fontFamily:F.body, fontSize:13.5, color: filterRecipeId ? th.appInk : th.appFaded, minWidth:0 }}
           >
-            <option value="">Filtra per ricetta…</option>
+            <option value="">Filtra per fonte…</option>
+            <option value={SHOPPING_SOURCE}>🛒 Lista spesa</option>
             {[...recipes].sort((a, b) => a.title.localeCompare(b.title, "it")).map(r => (
               <option key={r.id} value={r.id}>{r.title}</option>
             ))}
@@ -1165,18 +1223,47 @@ export default function OrganizeIngredientsScreen({
       {/* Filtro: tutti / solo da gestire */}
       <div style={{ padding:"8px 18px 0", display:"flex", gap:6 }}>
         {[[false, "Tutti"], [true, "⚠️ Da gestire"]].map(([val, label]) => {
-          const on = onlyIssues === val;
+          const on = issueMode === val;
           return (
-            <button key={label} onClick={() => setOnlyIssues(val)} style={{
-              flex:1, padding:"8px 10px", borderRadius:20,
-              border:`1.5px solid ${on ? (val ? "#C4593A" : th.appAccent) : th.appBorder}`,
-              background: on ? (val ? "#C4593A18" : th.appAccent + "18") : "transparent",
-              color: on ? (val ? "#C4593A" : th.appAccent) : th.appFaded,
-              fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
-            }}>{label}</button>
+            <button
+              key={label}
+              onClick={() => {
+                setIssueMode(val);
+                if (val) setAlertFilter(["cat","nutri","eq"]);
+              }}
+              style={{
+                flex:1, padding:"8px 10px", borderRadius:20,
+                border:`1.5px solid ${on ? (val ? "#C4593A" : th.appAccent) : th.appBorder}`,
+                background: on ? (val ? "#C4593A18" : th.appAccent + "18") : "transparent",
+                color: on ? (val ? "#C4593A" : th.appAccent) : th.appFaded,
+                fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
+              }}
+            >{label}</button>
           );
         })}
       </div>
+
+      {/* Filtro per tipo di alert — visibile solo in "Da gestire" */}
+      {issueMode && (
+        <div style={{ padding:"8px 18px 0", display:"flex", gap:6, flexWrap:"wrap", alignItems:"center", justifyContent:"center" }}>
+          {[["cat","🏷️ Categoria"],["nutri","🍎 Nutrizione"],["eq","⚖️ Equivalenze"]].map(([type, label]) => {
+            const on = alertFilter.includes(type);
+            return (
+              <button
+                key={type}
+                onClick={() => setAlertFilter(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type])}
+                style={{
+                  flexShrink:0, padding:"7px 11px", borderRadius:20,
+                  border:`1.5px solid ${on ? "#C4593A" : th.appBorder}`,
+                  background: on ? "#C4593A18" : "transparent",
+                  color: on ? "#C4593A" : th.appFaded,
+                  fontFamily:F.ui, fontSize:11.5, fontWeight:600, cursor:"pointer",
+                }}
+              >{label}</button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Lista ingredienti/aggregati */}
       <div style={{ flex:1, overflowY:"auto", padding:"10px 18px 40px" }}>

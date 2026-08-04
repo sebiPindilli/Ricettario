@@ -85,3 +85,137 @@ export const effectiveCategories = (ingKey, aggregates, ingredientCategories, so
   }
   return { categories: [], inheritedFrom: null };
 };
+
+// ══════════════════════════════════════════════════════════════
+// Rilevamento automatico di ingredienti dal nome simile — suggerisce
+// possibili aggregati da creare (es. "pomodoro" / "pomodori pelati").
+// ══════════════════════════════════════════════════════════════
+
+const SIMILARITY_STOPWORDS = new Set([
+  "di", "al", "con", "in", "il", "la", "lo", "le", "gli",
+  "del", "della", "allo", "alla",
+]);
+
+// Parole "significative" di un nome: minuscole, lunghe almeno 4 lettere,
+// escluse le funzionali sopra (articoli/preposizioni non discriminano).
+const significantWords = (name) =>
+  (name || "").toLowerCase().split(/\s+/).filter(w => w.length >= 4 && !SIMILARITY_STOPWORDS.has(w));
+
+// Distanza di Levenshtein standard (programmazione dinamica).
+const levenshteinDistance = (a, b) => {
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+};
+
+// Soglia di Levenshtein adattiva sulla lunghezza del nome più corto.
+const levenshteinThreshold = (len) => (len <= 5 ? 1 : len <= 10 ? 2 : 3);
+
+// Due nomi sono "simili" se condividono la prima parola significativa,
+// oppure 2+ parole significative, oppure sono a distanza di Levenshtein
+// entro soglia sul nome intero (case-insensitive).
+const namesAreSimilar = (nameA, nameB) => {
+  const wordsA = significantWords(nameA), wordsB = significantWords(nameB);
+  if (wordsA.length && wordsB.length && wordsA[0] === wordsB[0]) return true;
+  const common = wordsA.filter(w => wordsB.includes(w));
+  if (common.length >= 2) return true;
+  const a = (nameA || "").toLowerCase(), b = (nameB || "").toLowerCase();
+  const threshold = levenshteinThreshold(Math.min(a.length, b.length));
+  return levenshteinDistance(a, b) <= threshold;
+};
+
+// findSimilarIngredients: individua coppie di ingredienti dal nome simile,
+// le raggruppa in cluster transitivi (A~B, B~C → {A,B,C}) e restituisce una
+// lista di gruppi suggeriti: [{ key, type, label, members, pairs, ... }].
+// - key: identità stabile del gruppo (membri ordinati, uniti)
+// - members: ID ingrediente (dizionario), TUTTI i membri del cluster
+// - pairs: le coppie [ingIdA, ingIdB] che hanno generato il gruppo — servono
+//   per poter ignorare/ripristinare esattamente le relazioni rilevate, non
+//   tutte le combinazioni possibili tra i membri del cluster.
+// Un cluster può toccare un aggregato già esistente (es. hai creato "Olio"
+// da due dei tre oli simili rilevati): l'unione via un membro non ancora
+// aggregato ("olio di semi") continua a legare insieme anche i membri già
+// dentro l'aggregato, quindi il tipo del gruppo cambia di conseguenza:
+// - type "create": nessun membro è già in un aggregato → suggerisce di
+//   crearne uno nuovo. label = parola significativa più comune (fallback:
+//   nome più corto).
+// - type "join": i membri già aggregati appartengono TUTTI a un unico
+//   aggregato esistente, e c'è almeno un membro ancora libero → suggerisce
+//   di aggiungere i membri liberi (newMembers) a quell'aggregato (aggregate).
+//   label = nome dell'aggregato.
+// - gruppo omesso del tutto se: i membri già aggregati appartengono a due
+//   o più aggregati diversi (ambiguo, non proponiamo un merge), oppure se
+//   sono già tutti dentro lo stesso aggregato (niente da suggerire).
+// ignoredPairs: array di [ingIdA, ingIdB] (ordine qualsiasi) da escludere.
+export const findSimilarIngredients = (ingredientDict, aggregates = [], ignoredPairs = []) => {
+  const ids = Object.keys(ingredientDict || {});
+  const isIgnored = (a, b) => (ignoredPairs || []).some(([x, y]) => (x === a && y === b) || (x === b && y === a));
+  const sameAggregate = (a, b) => (aggregates || []).some(agg => (agg.members || []).includes(a) && (agg.members || []).includes(b));
+
+  const edges = [];
+  for (let i = 0; i < ids.length; i++) {
+    for (let j = i + 1; j < ids.length; j++) {
+      const a = ids[i], b = ids[j];
+      if (isIgnored(a, b) || sameAggregate(a, b)) continue;
+      if (namesAreSimilar(ingredientDict[a], ingredientDict[b])) edges.push([a, b]);
+    }
+  }
+  if (edges.length === 0) return [];
+
+  // Union-find per raggruppare le coppie simili in cluster transitivi.
+  const parent = new Map();
+  const find = (x) => {
+    if (!parent.has(x)) parent.set(x, x);
+    let r = x;
+    while (parent.get(r) !== r) r = parent.get(r);
+    parent.set(x, r);
+    return r;
+  };
+  const union = (x, y) => { const rx = find(x), ry = find(y); if (rx !== ry) parent.set(rx, ry); };
+  edges.forEach(([a, b]) => union(a, b));
+
+  const clusters = new Map(); // radice → { members:Set, pairs:[] }
+  edges.forEach(([a, b]) => {
+    const root = find(a);
+    if (!clusters.has(root)) clusters.set(root, { members: new Set(), pairs: [] });
+    const c = clusters.get(root);
+    c.members.add(a); c.members.add(b);
+    c.pairs.push([a, b]);
+  });
+
+  const aggregateOf = (id) => (aggregates || []).find(agg => (agg.members || []).includes(id));
+
+  return Array.from(clusters.values()).map(({ members, pairs }) => {
+    const memberIds = Array.from(members);
+    const key = memberIds.slice().sort().join("+");
+    const touchedAggs = new Map(); // aggId → agg, tra quelli toccati dai membri del cluster
+    memberIds.forEach(id => { const agg = aggregateOf(id); if (agg) touchedAggs.set(agg.id, agg); });
+
+    if (touchedAggs.size >= 2) return null; // due aggregati diversi coinvolti: ambiguo, non proponiamo nulla
+    if (touchedAggs.size === 1) {
+      const agg = Array.from(touchedAggs.values())[0];
+      const newMembers = memberIds.filter(id => !(agg.members || []).includes(id));
+      if (newMembers.length === 0) return null; // già tutti dentro: niente da suggerire
+      return { key, type: "join", label: agg.name, members: memberIds, newMembers, aggregate: agg, pairs };
+    }
+
+    // Nessun membro già aggregato: suggerisce un aggregato nuovo.
+    const wordCounts = new Map();
+    memberIds.forEach(id => significantWords(ingredientDict[id]).forEach(w => wordCounts.set(w, (wordCounts.get(w) || 0) + 1)));
+    let label = memberIds.map(id => ingredientDict[id]).sort((a, b) => a.length - b.length)[0] || "";
+    let bestCount = 0;
+    wordCounts.forEach((count, w) => { if (count > bestCount) { bestCount = count; label = w; } });
+    return { key, type: "create", label: label.charAt(0).toUpperCase() + label.slice(1), members: memberIds, pairs };
+  }).filter(Boolean).sort((a, b) => b.members.length - a.members.length);
+};

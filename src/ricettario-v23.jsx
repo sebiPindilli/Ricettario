@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
-  sortSectionsAltroLast, sortCategoriesAltroLast,
+  sortSectionsAltroLast, sortCategoriesBaseFirst,
   isSectioned, toSectioned, fromSectioned, stripPhotolessStep, stepPhotosOf,
   stepNumbers, stepNumberLabel, dishPhotoOf, readImageFile,
   normName, uid, fmtQty, ingredientToText, scaleIngredient,
@@ -11,7 +11,7 @@ import {
   parseIngredientAmount, decomposeIngredient, composeIngredient,
   memoryPeriodLabel, memorySortKey, buildFridgeItems,
 } from "./utils/helpers.js";
-import { effectiveNutritionKey } from "./utils/aggregates.js";
+import { effectiveNutritionKey, findSimilarIngredients } from "./utils/aggregates.js";
 import {
   T, F, MACRO_SECTIONS, PICKER_EMOJIS, INGREDIENT_CATEGORIES,
   TAG_GROUPS, ALL_PRESET_TAGS, BOOK_THEMES,
@@ -43,7 +43,7 @@ import GlobalNav from "./components/GlobalNav.jsx";
 import GuideScreen from "./screens/GuideScreen.jsx";
 import MemoriesBookScreen from "./screens/MemoriesBookScreen.jsx";
 import CookingMode from "./screens/CookingMode.jsx";
-import OrganizeIngredientsScreen from "./screens/OrganizeIngredientsScreen.jsx";
+import OrganizeIngredientsScreen, { SHOPPING_SOURCE } from "./screens/OrganizeIngredientsScreen.jsx";
 import ShoppingListScreen from "./screens/ShoppingListScreen.jsx";
 import EmptyFridgeScreen from "./screens/EmptyFridgeScreen.jsx";
 import ServingsDialog from "./components/ServingsDialog.jsx";
@@ -443,7 +443,12 @@ function AppInner() {
   // screen: cover | landing | recipes | book | memories | recipe | new | edit | scan | theme
   const [selected, setSelected] = useState(null);
   const [memoryPrefillRecipeId, setMemoryPrefillRecipeId] = useState(null);
-  const [organizeFilter, setOrganizeFilter] = useState({ recipeId:null, onlyIssues:false });
+  const [organizeFilter, setOrganizeFilter] = useState({ recipeId:null, alertTypes:null, manageAggs:false, manageCats:false });
+  // Schermata da cui si è entrati in Organizza Ingredienti (qualunque punto
+  // d'ingresso: icona di navigazione globale, banner di una schermata, link
+  // diretto a una sotto-schermata) — usata dai tasti "Indietro" per tornare
+  // davvero da dove si è partiti, invece che sempre alla vista principale.
+  const [organizeOrigin, setOrganizeOrigin] = useState("landing");
   // Fase/selezione di Svuota Frigo sollevate qui: se si apre una ricetta dai
   // risultati e si torna indietro, si ritrova la stessa schermata (invece di
   // ripartire dalla selezione ingredienti, dato che EmptyFridgeScreen viene
@@ -490,12 +495,12 @@ function AppInner() {
     setCategoryList(prev => {
       const exists = prev.find(c => c.id === cat.id);
       const next = exists ? prev.map(c => c.id === cat.id ? cat : c) : [...prev, cat];
-      return sortCategoriesAltroLast(next);
+      return sortCategoriesBaseFirst(next);
     });
   };
 
   const deleteCategory = (id) => {
-    if (id === "altro" || id === "base") return; // categorie fisse: non eliminabili
+    if (id === "base") return; // "Ingredienti base" è l'unica categoria fissa: non eliminabile
     setCategoryList(prev => prev.filter(c => c.id !== id));
     // Pulisci i riferimenti alla categoria eliminata
     setIngredientCategories(prev => {
@@ -524,7 +529,8 @@ function AppInner() {
     setSourceByIngredient(prev => ({ ...prev, [ingId]: priority }));
   };
 
-  // equivalences: { "<nome>": { base:"g", factors:{ cucchiaio:10 }, display:"g"|"separate"|<unità> } }
+  // equivalences: { "<nome>": { factors:{ cucchiaio:10 } } } — i grammi sono
+  // sempre l'unità di riferimento (1 cucchiaio = 10 g), niente base scelta.
   const [equivalences, setEquivalences] = useState(INITIAL_EQUIVALENCES);
   // nutritionMap: { "<nome>": { foodId } | { custom:{kcal,carb,...} } } — mappa ingrediente → voce database
   const [nutritionMap, setNutritionMap] = useState(INITIAL_NUTRITION_MAP);
@@ -582,6 +588,25 @@ function AppInner() {
     setAggregates(prev => prev.filter(a => a.id !== id));
   };
 
+  // ── Suggerimenti aggregati (ingredienti dal nome simile) ──
+  // ignoredSimilarities: [[ingIdA, ingIdB], ...] coppie che l'utente ha
+  // scelto di non raggruppare — persistite come tutto il resto per-libro.
+  const [ignoredSimilarities, setIgnoredSimilarities] = useState([]);
+  const ignoreSimilarity = (a, b) => {
+    const pair = [a, b].sort();
+    setIgnoredSimilarities(prev => prev.some(([x, y]) => x === pair[0] && y === pair[1]) ? prev : [...prev, pair]);
+  };
+  const restoreSimilarity = (a, b) => {
+    const pair = [a, b].sort();
+    setIgnoredSimilarities(prev => prev.filter(([x, y]) => !(x === pair[0] && y === pair[1])));
+  };
+  // Gruppi ancora attivi (non ignorati): guida sia l'alert in Svuota Frigo
+  // sia le card mostrate come "attive" in Organizza Ingredienti.
+  const suggestedAggregates = React.useMemo(
+    () => findSimilarIngredients(ingredientDict, aggregates, ignoredSimilarities),
+    [ingredientDict, aggregates, ignoredSimilarities]
+  );
+
   // ── Lista Spesa globale ──
   // entries: [{ id, recipeId, recipeTitle, scaleLabel, items:[{text, original}] }]
   const [shoppingList, setShoppingList] = useState([]);
@@ -627,7 +652,7 @@ function AppInner() {
   const emptyBookData = () => ({
     recipes: [], extraTagGroups: [],
     sectionList: MACRO_SECTIONS, categoryList: INGREDIENT_CATEGORIES,
-    ingredientCategories: {}, aggregates: [], shoppingList: [], equivalences: {}, nutritionMap: {}, customFoods: [], ingredientDict: {}, sourceByIngredient: {},
+    ingredientCategories: {}, aggregates: [], shoppingList: [], equivalences: {}, nutritionMap: {}, customFoods: [], ingredientDict: {}, sourceByIngredient: {}, ignoredSimilarities: [],
   });
   // data:null per il libro attivo = i dati vivono negli stati correnti
   const [books, setBooks] = useState([
@@ -641,7 +666,7 @@ function AppInner() {
 
   const snapshotData = () => ({
     recipes, extraTagGroups, sectionList, categoryList,
-    ingredientCategories, aggregates, shoppingList, equivalences, nutritionMap, customFoods, ingredientDict, sourceByIngredient,
+    ingredientCategories, aggregates, shoppingList, equivalences, nutritionMap, customFoods, ingredientDict, sourceByIngredient, ignoredSimilarities,
   });
   const loadData = (d) => {
     setRecipes(d.recipes); setExtraTagGroups(d.extraTagGroups);
@@ -652,6 +677,7 @@ function AppInner() {
     setCustomFoods(d.customFoods || []);
     setIngredientDict(d.ingredientDict || {});
     setSourceByIngredient(d.sourceByIngredient || {});
+    setIgnoredSimilarities(d.ignoredSimilarities || []);
   };
 
   const switchBook = (id) => {
@@ -749,7 +775,11 @@ function AppInner() {
 
   const goTo = (s) => { setPrevScreen(screen); setScreen(s); };
   const openAddMemory = (recipeId = null) => { setMemoryPrefillRecipeId(recipeId); goTo("addMemory"); };
-  const openOrganize = (recipeId = null, onlyIssues = false) => { setOrganizeFilter({ recipeId, onlyIssues }); goTo("organize"); };
+  const openOrganize = (recipeId = null, alertTypes = null, manageAggs = false, manageCats = false) => {
+    if (screen !== "organize") setOrganizeOrigin(screen); // non sovrascrivere se già dentro Organizza (es. da un alert interno)
+    setOrganizeFilter({ recipeId, alertTypes, manageAggs, manageCats });
+    goTo("organize");
+  };
 
   const updateRecipe = (updated) => {
     setRecipes(prev => prev.map(r => r.id===updated.id ? updated : r));
@@ -916,7 +946,10 @@ function AppInner() {
             ingredientDict={ingredientDict}
             onRenameIngredient={renameIngredient}
             initialFilterRecipeId={organizeFilter.recipeId}
-            initialOnlyIssues={organizeFilter.onlyIssues}
+            initialAlertTypes={organizeFilter.alertTypes}
+            initialManageAggs={organizeFilter.manageAggs}
+            initialManageCats={organizeFilter.manageCats}
+            onBack={() => setScreen(organizeOrigin)}
             nav={
               <GlobalNav
                 activeScreen="organize"
@@ -935,6 +968,7 @@ function AppInner() {
               />
             }
             recipes={recipes}
+            shoppingList={shoppingList}
             aggregates={aggregates}
             sourceByIngredient={sourceByIngredient}
             onSetSourcePriority={setIngredientSourcePriority}
@@ -942,6 +976,10 @@ function AppInner() {
             onSetIngredientCats={setIngredientCats}
             onSaveAggregate={saveAggregate}
             onDeleteAggregate={deleteAggregate}
+            suggestedAggregates={suggestedAggregates}
+            ignoredSimilarities={ignoredSimilarities}
+            onIgnoreSimilarity={ignoreSimilarity}
+            onRestoreSimilarity={restoreSimilarity}
             categoryList={categoryList}
             onSaveCategory={saveCategory}
             onDeleteCategory={deleteCategory}
@@ -952,7 +990,6 @@ function AppInner() {
             customFoods={customFoods}
             onSaveCustomFood={saveCustomFood}
             onDeleteCustomFood={deleteCustomFood}
-            onBack={() => setScreen("landing")}
           />
         )}
         {screen==="books" && (
@@ -984,6 +1021,8 @@ function AppInner() {
           <ShoppingListScreen
             entries={shoppingList}
             aggregates={aggregates}
+            ingredientCategories={ingredientCategories}
+            sourceByIngredient={sourceByIngredient}
             equivalences={equivalences}
             ingredientDict={ingredientDict}
             onRemoveEntry={removeShoppingEntry}
@@ -997,6 +1036,8 @@ function AppInner() {
             onAdd={(type) => type==="memory" ? openAddMemory() : goTo("addRecipeHub")}
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
+            onManageAggregates={() => openOrganize(null, null, true)}
+            onManageEquivalences={() => openOrganize(SHOPPING_SOURCE, ["eq"])}
           />
         )}
         {screen==="fridge" && (
@@ -1007,6 +1048,7 @@ function AppInner() {
             setPhase={setFridgePhase}
             ownedMembers={fridgeOwnedMembers}
             setOwnedMembers={setFridgeOwnedMembers}
+            suggestedAggregates={suggestedAggregates}
             onLanding={() => setScreen("landing")}
             onRecipes={() => setScreen("recipes")}
             onBook={() => setScreen("book")}
@@ -1016,6 +1058,9 @@ function AppInner() {
             onShopping={() => setScreen("shoppingList")}
             onStartCooking={(r) => { setSelected(r); setPrevScreen("fridge"); setScreen("recipe"); }}
             onAddToShoppingList={addToShoppingList}
+            onManageAggregates={() => openOrganize(null, null, true)}
+            onManageCategories={() => openOrganize(null, ["cat"])}
+            onManageCategoriesDb={() => openOrganize(null, null, false, true)}
             extraTagGroups={extraTagGroups}
             aggregates={aggregates}
             ingredientCategories={ingredientCategories}
@@ -1136,7 +1181,8 @@ function AppInner() {
             onDelete={deleteRecipe}
             onDeleteMemory={deleteMemory}
             onAddMemory={(recipeId) => openAddMemory(recipeId)}
-            onManageIngredients={(recipeId) => openOrganize(recipeId, true)}
+            onManageIngredients={(recipeId) => openOrganize(recipeId, ["nutri"])}
+            onManageEquivalences={(recipeId) => openOrganize(recipeId, ["eq"])}
             onAddToShoppingList={addToShoppingList}
             allRecipes={recipes}
             sectionList={sectionList}
