@@ -1,115 +1,14 @@
 import React, { useState } from "react";
 import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
+import { auth } from "../firebase.js";
 import BackBtn from "../components/BackBtn.jsx";
-// Helper per estrarre in modo ultra-robusto l'oggetto JSON del ricettario
-// isolando i blocchi a parentesi bilanciate (utile se Gemma 4 include pensieri o testo extra)
-function extractRecipeJson(text) {
-  const blocks = [];
-  let openBraces = 0;
-  let startIdx = -1;
-
-  for (let i = 0; i < text.length; i++) {
-    if (text[i] === "{") {
-      if (openBraces === 0) {
-        startIdx = i;
-      }
-      openBraces++;
-    } else if (text[i] === "}") {
-      if (openBraces > 0) {
-        openBraces--;
-        if (openBraces === 0 && startIdx !== -1) {
-          blocks.push(text.substring(startIdx, i + 1));
-        }
-      }
-    }
-  }
-
-  // Proviamo a parsare i blocchi in ordine inverso (la ricetta è tipicamente l'ultimo blocco)
-  for (let i = blocks.length - 1; i >= 0; i--) {
-    try {
-      const parsed = JSON.parse(blocks[i]);
-      if (parsed && (parsed.title || parsed.titolo || parsed.ingredients || parsed.ingredienti || parsed.steps || parsed.passaggi)) {
-        return parsed;
-      }
-    } catch (e) {}
-  }
-
-  // Fallback: cerca la prima e l'ultima parentesi graffa nel testo
-  const firstBrace = text.indexOf("{");
-  const lastBrace = text.lastIndexOf("}");
-  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-    try {
-      return JSON.parse(text.substring(firstBrace, lastBrace + 1));
-    } catch (e) {}
-  }
-
-  throw new Error("Nessun oggetto ricetta JSON valido trovato nella risposta.");
-}
-
-// Normalizza le chiavi (inglese/italiano) e i formati estratti dall'AI
-function normalizeRecipeJson(parsed) {
-  const norm = {};
-  
-  // 1. Titolo
-  norm.title = parsed.title || parsed.titolo || parsed.name || parsed.nome || "";
-  
-  // 2. Tempi
-  norm.prepTime = parsed.prepTime || parsed.tempoPreparazione || parsed.tempo_preparazione || (parsed.tempi?.preparazione ? parseInt(parsed.tempi.preparazione) : 0) || 0;
-  norm.cookTime = parsed.cookTime || parsed.tempoCottura || parsed.tempo_cottura || (parsed.tempi?.cottura ? parseInt(parsed.tempi.cottura) : 0) || 0;
-  
-  if (typeof norm.prepTime === "string") {
-    norm.prepTime = parseInt(norm.prepTime.replace(/[^0-9]/g, "")) || 0;
-  }
-  if (typeof norm.cookTime === "string") {
-    norm.cookTime = parseInt(norm.cookTime.replace(/[^0-9]/g, "")) || 0;
-  }
-
-  // 3. Porzioni
-  norm.servings = parsed.servings || parsed.porzioni || 4;
-  if (typeof norm.servings === "string") {
-    norm.servings = parseInt(norm.servings.replace(/[^0-9]/g, "")) || 4;
-  }
-
-  // 4. Note
-  norm.note = parsed.note || parsed.consigli || parsed.descrizione || "";
-
-  // 5. Ingredienti
-  const rawIngs = parsed.ingredients || parsed.ingredienti || [];
-  norm.ingredients = rawIngs.map(ing => {
-    let name = ing.name || ing.ingrediente || ing.nome || "";
-    let qty = ing.qty || ing.dose || ing.quantita || ing.quantity || "";
-    let unit = ing.unit || ing.unita || ing.unita_misura || "";
-
-    if (typeof qty === "string") {
-      const parsedQty = parseFloat(qty.replace(/,/g, "."));
-      if (!isNaN(parsedQty)) {
-        qty = parsedQty;
-      }
-    }
-    return { name, qty, unit };
-  });
-
-  // 6. Passaggi
-  norm.steps = parsed.steps || parsed.passaggi || parsed.istruzioni || parsed.preparazione || [];
-  if (typeof norm.steps === "string") {
-    norm.steps = norm.steps.split("\n").map(s => s.trim()).filter(Boolean);
-  }
-
-  // 7. Estetica
-  norm.emoji = parsed.emoji || "🍝";
-  norm.color = parsed.color || "#C4593A";
-
-  return norm;
-}
 
 export default function ScanScreen({ onBack, onSave }) {
   const th = useTheme();
   const [images, setImages] = useState([]); // array di { id, base64, mimeType, previewUrl }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files || []);
@@ -144,90 +43,28 @@ export default function ScanScreen({ onBack, onSave }) {
 
   const handleAnalyze = async () => {
     if (images.length === 0) return;
-    if (!apiKey) {
-      setError("Chiave API di Gemini non trovata. Aggiungi VITE_GEMINI_API_KEY nel tuo file .env.local.");
-      return;
-    }
 
     setLoading(true);
     setError(null);
 
-    // Prompt specifico per estrarre la ricetta in formato JSON strutturato da una o più immagini
-    const promptText = `Sei un esperto assistente culinario. Analizza le immagini di questa ricetta (che potrebbero essere più pagine, note scritte a mano o parti diverse) ed estrai tutte le informazioni combinandole in un'unica ricetta.
-Restituisci esclusivamente un oggetto JSON ben formato che rispetta esattamente questo schema, senza alcun commento o blocco di codice markdown (NON inserire \`\`\`json all'inizio e \`\`\` alla fine):
-{
-  "title": "Titolo identificativo della ricetta",
-  "prepTime": tempo_preparazione_in_minuti_numero,
-  "cookTime": tempo_cottura_in_minuti_numero,
-  "servings": porzioni_numero,
-  "note": "Eventuali note, consigli, varianti o storie scritte sulla ricetta",
-  "ingredients": [
-    { "name": "nome dell'ingrediente", "qty": quantita_numero_o_null, "unit": "unita_misura_o_vuoto" }
-  ],
-  "steps": [
-    "Descrizione del primo passaggio",
-    "Descrizione del secondo passaggio"
-  ],
-  "emoji": "una_singola_emoji_rappresentativa_del_piatto",
-  "color": "un_codice_colore_esadecimale_adatto_es_#C4593A"
-}
-
-Note importanti per l'estrazione:
-- Nel campo "ingredients", estrai separatamente il nome dell'ingrediente, la quantità (deve essere un numero o null se non specificata, es. per "q.b.") e l'unità di misura (es. "g", "ml", "cucchiai", "pizzico", o stringa vuota se sono pezzi interi).
-- Cerca di ripulire i testi da eventuali errori di lettura OCR mantenendo la ricetta fedele, completa e naturale, unendo le informazioni di tutte le foto inserite.
-- Se mancano dettagli come tempi o porzioni, stima un valore ragionevole o inserisci 0.`;
-
-    const modelName = import.meta.env.VITE_GEMINI_MODEL || "gemma-4-31b-it";
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-    
-    const imageParts = images.map(img => ({
-      inlineData: {
-        mimeType: img.mimeType,
-        data: img.base64,
-      },
-    }));
-
-    const payload = {
-      contents: [
-        {
-          parts: [
-            { text: promptText },
-            ...imageParts
-          ],
-        },
-      ],
-      generationConfig: {
-        responseMimeType: "application/json",
-      },
-    };
-
     try {
-      const response = await fetch(url, {
+      const idToken = await auth.currentUser.getIdToken();
+      const response = await fetch("/api/parse-recipe-photo", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idToken,
+          images: images.map(img => ({ base64: img.base64, mimeType: img.mimeType })),
+        }),
       });
 
+      const data = await response.json();
       if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`Errore API Gemini (${response.status}): ${errText}`);
+        throw new Error(data.error || `Errore (${response.status})`);
       }
 
-      const resData = await response.json();
-      const parts = resData.candidates?.[0]?.content?.parts || [];
-      const textResponse = parts
-        .filter(part => part.text)
-        .map(part => part.text)
-        .join("\n");
-      
-      if (!textResponse) {
-        throw new Error("Gemini ha restituito una risposta vuota o non valida.");
-      }
+      const ocrData = data.recipe;
 
-      const ocrData = normalizeRecipeJson(extractRecipeJson(textResponse));
-      
       // Apri nell'editor precompilato
       onSave(
         ocrData.title || "",
@@ -238,8 +75,8 @@ Note importanti per l'estrazione:
         "altro"
       );
     } catch (err) {
-      console.error("Gemini Scan Error:", err);
-      setError("Si è verificato un errore durante l'analisi. Riprova con un'immagine più nitida o controlla la tua chiave API.");
+      console.error("Errore analisi foto ricetta:", err);
+      setError("Si è verificato un errore durante l'analisi. Riprova con un'immagine più nitida.");
     } finally {
       setLoading(false);
     }
@@ -291,24 +128,6 @@ Note importanti per l'estrazione:
             </div>
           </div>
         </div>
-
-        {/* Warning if API key is missing */}
-        {!apiKey && (
-          <div style={{
-            background: "#FDF2F2",
-            border: "1.5px solid #F8D7DA",
-            borderRadius: 14,
-            padding: "12px 16px",
-            display: "flex",
-            gap: 10,
-            alignItems: "center"
-          }}>
-            <span style={{ fontSize: 18 }}>⚠️</span>
-            <div style={{ fontFamily: F.ui, fontSize: 12, color: "#721C24", lineHeight: 1.4 }}>
-              <b>Chiave API Gemini mancante!</b> Per utilizzare questa funzione, aggiungi la variabile <code>VITE_GEMINI_API_KEY</code> nel file <code>.env.local</code>.
-            </div>
-          </div>
-        )}
 
         {/* Upload Container */}
         {images.length === 0 && (
@@ -447,19 +266,18 @@ Note importanti per l'estrazione:
 
               <button
                 onClick={handleAnalyze}
-                disabled={!apiKey}
                 style={{
                   flex: 2,
                   padding: "12px 16px",
                   borderRadius: 12,
                   border: "none",
-                  background: apiKey ? th.appAccent : th.appBorder,
+                  background: th.appAccent,
                   color: "#fff",
                   fontFamily: F.ui,
                   fontSize: 13,
                   fontWeight: 700,
-                  cursor: apiKey ? "pointer" : "default",
-                  boxShadow: apiKey ? `0 4px 12px rgba(196,89,58,0.25)` : "none"
+                  cursor: "pointer",
+                  boxShadow: `0 4px 12px rgba(196,89,58,0.25)`
                 }}
               >
                 Analizza Foto ({images.length}) 🍳
