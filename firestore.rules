@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isWhitelisted() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/allowlist/$(request.auth.token.email));
+    }
+    function myRole() {
+      return get(/databases/$(database)/documents/allowlist/$(request.auth.token.email)).data.role;
+    }
+    // Non ancora referenziata da nessuna regola — debito tecnico noto:
+    // quando servirà differenziare i permessi admin/base, usarla al
+    // posto di isWhitelisted() nella regola giusta, senza altro refactor.
+    function isAdmin() {
+      return isWhitelisted() && myRole() == "admin";
+    }
+
+    // Whitelist: un utente può leggere solo la PROPRIA voce (serve al
+    // controllo di accesso all'avvio, vedi services/authStore.js).
+    // Scritture: mai dal client — si gestisce a mano da Firebase
+    // Console, che usa permessi IAM e bypassa queste regole.
+    match /allowlist/{email} {
+      allow read: if isSignedIn() && request.auth.token.email == email;
+      allow write: if false;
+    }
+
+    // Libri: oggi chiunque sia whitelisted accede a QUALUNQUE libro.
+    // TODO permessi per-libro (debito tecnico noto, vedi handover): quando
+    // "books" sarà una vera lista caricata da Firestore per utente,
+    // restringere qui aggiungendo:
+    //   && request.auth.token.email in resource.data.meta.members
+    // (usare request.resource.data.meta.members per le creazioni/write
+    // su documenti che non esistono ancora).
+    match /books/{bookId} {
+      allow read, write: if isWhitelisted();
+
+      match /{document=**} {
+        allow read, write: if isWhitelisted();
+      }
+    }
+  }
+}

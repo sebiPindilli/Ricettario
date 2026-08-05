@@ -1,0 +1,28 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isWhitelisted() {
+      return isSignedIn() &&
+        firestore.exists(/databases/(default)/documents/allowlist/$(request.auth.token.email));
+    }
+    // Stesso debito tecnico noto delle regole Firestore (vedi
+    // firestore.rules): non ancora usata, pronta per quando servirà.
+    function isAdmin() {
+      return isWhitelisted() &&
+        firestore.get(/databases/(default)/documents/allowlist/$(request.auth.token.email)).data.role == "admin";
+    }
+
+    // Foto delle ricette: books/{bookId}/recipes/{recipeId}/... (dish,
+    // steps/*, memories/*) — vedi services/photoStore.js per i path esatti.
+    // Stesso TODO permessi per-libro delle regole Firestore: qui non è
+    // possibile leggere resource.data.meta.members senza un'ulteriore
+    // chiamata firestore.get() sul documento del libro corrispondente.
+    match /books/{bookId}/{allPaths=**} {
+      allow read, write: if isWhitelisted();
+    }
+  }
+}

@@ -13,6 +13,7 @@ import {
 } from "./utils/helpers.js";
 import { effectiveNutritionKey, findSimilarIngredients } from "./utils/aggregates.js";
 import { loadFullBook, saveFullBook, createBookInFirestore, saveRecipe } from "./services/bookStore.js";
+import AuthGate from "./components/AuthGate.jsx";
 import {
   T, F, MACRO_SECTIONS, PICKER_EMOJIS, INGREDIENT_CATEGORIES,
   TAG_GROUPS, ALL_PRESET_TAGS, BOOK_THEMES,
@@ -438,7 +439,7 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-function AppInner() {
+function AppInner({ me, role }) {
   const [screen, setScreen] = useState("cover");
   // screen: cover | landing | recipes | book | memories | recipe | new | edit | scan | theme
   const [selected, setSelected] = useState(null);
@@ -663,9 +664,9 @@ function AppInner() {
 
   // ══ Multi-ricettario — meta locale (nome/tipo/owner/members); i dati
   // di ogni libro vivono su Firestore (vedi loadFullBook/saveFullBook) ══
-  const ME = "tu@esempio.it"; // utente simulato — nella PWA arriverà dal login Google
+  // me = email reale dell'utente loggato (da AuthGate, vedi export default App)
   const [books, setBooks] = useState([
-    { id:"b1", name:"Il mio Ricettario", type:"personale", owner:ME, members:[ME] },
+    { id:"b1", name:"Il mio Ricettario", type:"personale", owner:me, members:[me] },
   ]);
   // Ricettario predefinito: quello caricato all'avvio dell'app
   // (nella PWA sarà salvato nel profilo utente su Firestore)
@@ -752,9 +753,9 @@ function AppInner() {
 
   const createBook = async (name, memberEmails) => {
     const trimmedName = name.trim() || "Nuovo ricettario";
-    const members = [ME, ...memberEmails.filter(e => e && e !== ME)];
-    const id = await createBookInFirestore({ name: trimmedName, type:"condiviso", owner:ME, members, bookTheme:"classic" });
-    setBooks(prev => [...prev, { id, name: trimmedName, type:"condiviso", owner:ME, members }]);
+    const members = [me, ...memberEmails.filter(e => e && e !== me)];
+    const id = await createBookInFirestore({ name: trimmedName, type:"condiviso", owner:me, members, bookTheme:"classic" });
+    setBooks(prev => [...prev, { id, name: trimmedName, type:"condiviso", owner:me, members }]);
   };
 
   const renameBook = (id, name) => {
@@ -1055,7 +1056,7 @@ function AppInner() {
           <BooksScreen
             books={books}
             activeBookId={activeBookId}
-            me={ME}
+            me={me}
             activeRecipes={recipes}
             onSwitch={async (id) => { await switchBook(id); setScreen("landing"); }}
             onCreate={createBook}
@@ -1335,7 +1336,9 @@ function AppInner() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <AppInner/>
+      <AuthGate>
+        {(user, role) => <AppInner me={user.email} role={role}/>}
+      </AuthGate>
     </ErrorBoundary>
   );
 }
