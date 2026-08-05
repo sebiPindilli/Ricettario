@@ -105,31 +105,45 @@ function normalizeRecipeJson(parsed) {
 
 export default function ScanScreen({ onBack, onSave }) {
   const th = useTheme();
-  const [image, setImage] = useState(null); // { base64, mimeType, previewUrl }
+  const [images, setImages] = useState([]); // array di { id, base64, mimeType, previewUrl }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const handleFileChange = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64Data = reader.result.split(",")[1];
-      setImage({
-        base64: base64Data,
-        mimeType: file.type,
-        previewUrl: URL.createObjectURL(file),
+    const promises = files.map(file => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64Data = reader.result.split(",")[1];
+          resolve({
+            id: Date.now() + Math.random().toString(36).substring(2, 9),
+            base64: base64Data,
+            mimeType: file.type,
+            previewUrl: URL.createObjectURL(file)
+          });
+        };
+        reader.readAsDataURL(file);
       });
+    });
+
+    try {
+      const newImages = await Promise.all(promises);
+      setImages(prev => [...prev, ...newImages]);
       setError(null);
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error("Error reading files:", err);
+      setError("Si è verificato un errore nel caricamento di alcune foto.");
+    }
+    e.target.value = "";
   };
 
   const handleAnalyze = async () => {
-    if (!image) return;
+    if (images.length === 0) return;
     if (!apiKey) {
       setError("Chiave API di Gemini non trovata. Aggiungi VITE_GEMINI_API_KEY nel tuo file .env.local.");
       return;
@@ -138,8 +152,8 @@ export default function ScanScreen({ onBack, onSave }) {
     setLoading(true);
     setError(null);
 
-    // Prompt specifico per estrarre la ricetta in formato JSON strutturato
-    const promptText = `Sei un esperto assistente culinario. Analizza l'immagine di questa ricetta (che potrebbe essere scritta a mano) ed estrai tutte le informazioni.
+    // Prompt specifico per estrarre la ricetta in formato JSON strutturato da una o più immagini
+    const promptText = `Sei un esperto assistente culinario. Analizza le immagini di questa ricetta (che potrebbero essere più pagine, note scritte a mano o parti diverse) ed estrai tutte le informazioni combinandole in un'unica ricetta.
 Restituisci esclusivamente un oggetto JSON ben formato che rispetta esattamente questo schema, senza alcun commento o blocco di codice markdown (NON inserire \`\`\`json all'inizio e \`\`\` alla fine):
 {
   "title": "Titolo identificativo della ricetta",
@@ -160,22 +174,25 @@ Restituisci esclusivamente un oggetto JSON ben formato che rispetta esattamente 
 
 Note importanti per l'estrazione:
 - Nel campo "ingredients", estrai separatamente il nome dell'ingrediente, la quantità (deve essere un numero o null se non specificata, es. per "q.b.") e l'unità di misura (es. "g", "ml", "cucchiai", "pizzico", o stringa vuota se sono pezzi interi).
-- Cerca di ripulire i testi da eventuali errori di lettura OCR mantenendo la ricetta fedele e naturale.
+- Cerca di ripulire i testi da eventuali errori di lettura OCR mantenendo la ricetta fedele, completa e naturale, unendo le informazioni di tutte le foto inserite.
 - Se mancano dettagli come tempi o porzioni, stima un valore ragionevole o inserisci 0.`;
 
     const modelName = import.meta.env.VITE_GEMINI_MODEL || "gemma-4-31b-it";
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+    
+    const imageParts = images.map(img => ({
+      inlineData: {
+        mimeType: img.mimeType,
+        data: img.base64,
+      },
+    }));
+
     const payload = {
       contents: [
         {
           parts: [
             { text: promptText },
-            {
-              inlineData: {
-                mimeType: image.mimeType,
-                data: image.base64,
-              },
-            },
+            ...imageParts
           ],
         },
       ],
@@ -294,7 +311,7 @@ Note importanti per l'estrazione:
         )}
 
         {/* Upload Container */}
-        {!image && (
+        {images.length === 0 && (
           <label style={{
             flex: 1,
             minHeight: 200,
@@ -314,6 +331,7 @@ Note importanti per l'estrazione:
             <input
               type="file"
               accept="image/*"
+              multiple
               capture="environment"
               onChange={handleFileChange}
               style={{ display: "none" }}
@@ -324,57 +342,93 @@ Note importanti per l'estrazione:
                 Fai una foto o scegli un'immagine
               </div>
               <div style={{ fontFamily: F.ui, fontSize: 11, color: th.appFaded, marginTop: 4 }}>
-                Supporta JPG, PNG, WEBP (scrittura a mano inclusa)
+                Supporta JPG, PNG, WEBP (più foto accettate)
               </div>
             </div>
           </label>
         )}
 
-        {/* Image Preview & Action Buttons */}
-        {image && !loading && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {/* Image Grid Preview & Action Buttons */}
+        {images.length > 0 && !loading && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Grid list */}
             <div style={{
-              position: "relative",
-              borderRadius: 16,
-              overflow: "hidden",
-              border: `1.5px solid ${th.appBorder}`,
-              background: "#1a1a1a",
-              height: 280,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(90px, 1fr))",
+              gap: 12
             }}>
-              <img
-                src={image.previewUrl}
-                alt="Anteprima foto"
-                style={{ width: "100%", height: "100%", objectFit: "contain" }}
-              />
-              <button
-                onClick={() => setImage(null)}
-                style={{
-                  position: "absolute",
-                  top: 10,
-                  right: 10,
-                  background: "rgba(0, 0, 0, 0.6)",
-                  border: "none",
-                  borderRadius: "50%",
-                  width: 32,
-                  height: 32,
-                  color: "#fff",
-                  fontSize: 16,
-                  cursor: "pointer",
+              {images.map((img) => (
+                <div key={img.id} style={{
+                  position: "relative",
+                  borderRadius: 12,
+                  overflow: "hidden",
+                  border: `1.5px solid ${th.appBorder}`,
+                  background: "#1a1a1a",
+                  aspectRatio: "1/1",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center"
-                }}
-              >
-                ✕
-              </button>
+                }}>
+                  <img
+                    src={img.previewUrl}
+                    alt="Anteprima"
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                  <button
+                    onClick={() => setImages(prev => prev.filter(x => x.id !== img.id))}
+                    style={{
+                      position: "absolute",
+                      top: 4,
+                      right: 4,
+                      background: "rgba(0, 0, 0, 0.6)",
+                      border: "none",
+                      borderRadius: "50%",
+                      width: 24,
+                      height: 24,
+                      color: "#fff",
+                      fontSize: 12,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center"
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+
+              {/* Add More Tile */}
+              <label style={{
+                borderRadius: 12,
+                border: `2px dashed ${th.appBorder}`,
+                background: th.appCard,
+                aspectRatio: "1/1",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 4,
+                cursor: "pointer",
+                padding: 8,
+                textAlign: "center"
+              }}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  capture="environment"
+                  onChange={handleFileChange}
+                  style={{ display: "none" }}
+                />
+                <span style={{ fontSize: 24 }}>➕</span>
+                <span style={{ fontFamily: F.ui, fontSize: 10, fontWeight: 700, color: th.appInk }}>Aggiungi</span>
+              </label>
             </div>
 
             <div style={{ display: "flex", gap: 10 }}>
               <button
-                onClick={() => setImage(null)}
+                onClick={() => setImages([])}
                 style={{
                   flex: 1,
                   padding: "12px 16px",
@@ -388,7 +442,7 @@ Note importanti per l'estrazione:
                   cursor: "pointer"
                 }}
               >
-                Cambia foto
+                Svuota
               </button>
 
               <button
@@ -408,7 +462,7 @@ Note importanti per l'estrazione:
                   boxShadow: apiKey ? `0 4px 12px rgba(196,89,58,0.25)` : "none"
                 }}
               >
-                Analizza Foto 🍳
+                Analizza Foto ({images.length}) 🍳
               </button>
             </div>
           </div>
