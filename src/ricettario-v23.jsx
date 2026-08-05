@@ -12,13 +12,13 @@ import {
   memoryPeriodLabel, memorySortKey, buildFridgeItems,
 } from "./utils/helpers.js";
 import { effectiveNutritionKey, findSimilarIngredients } from "./utils/aggregates.js";
+import { loadFullBook, saveFullBook, createBookInFirestore, saveRecipe } from "./services/bookStore.js";
 import {
   T, F, MACRO_SECTIONS, PICKER_EMOJIS, INGREDIENT_CATEGORIES,
   TAG_GROUPS, ALL_PRESET_TAGS, BOOK_THEMES,
   EMOJI_CATEGORIES, EMOJI_OPTIONS, COLOR_OPTIONS, DEFAULT_UNIT_SUGGESTIONS,
 } from "./data/constants.js";
 import { NUTRITION_DB, NUTRIENT_LABELS } from "./data/nutrition.js";
-import { RECIPES, INITIAL_NUTRITION_MAP, INITIAL_EQUIVALENCES } from "./data/recipes.js";
 import { ThemeCtx, useTheme, NavCtx, useNavActions } from "./context.js";
 import OrganizeIcon from "./components/OrganizeIcon.jsx";
 import BackBtn from "./components/BackBtn.jsx";
@@ -458,7 +458,9 @@ function AppInner() {
   const [scanDraft, setScanDraft] = useState(null); // draft precompilato da una scansione
   const [pendingShopUpdate, setPendingShopUpdate] = useState(null); // {updated} ricetta modificata già in lista spesa
   const [prevScreen, setPrevScreen] = useState("landing");
-  const [recipes, setRecipes] = useState(RECIPES);
+  // Vuoto finché il caricamento iniziale da Firestore non li sostituisce
+  // (vedi useEffect più sotto) — non più dati demo hardcoded.
+  const [recipes, setRecipes] = useState([]);
   const [bookTheme, setBookTheme] = useState(BOOK_THEMES[0]);
   // Custom tag groups added by user — shared across whole app
   const [extraTagGroups, setExtraTagGroups] = useState([]);
@@ -531,7 +533,7 @@ function AppInner() {
 
   // equivalences: { "<nome>": { factors:{ cucchiaio:10 } } } — i grammi sono
   // sempre l'unità di riferimento (1 cucchiaio = 10 g), niente base scelta.
-  const [equivalences, setEquivalences] = useState(INITIAL_EQUIVALENCES);
+  const [equivalences, setEquivalences] = useState({});
   // customUnits: { "<unità>": { base, value, grams } } — conversioni di
   // sistema personalizzate (es. "bicchiere" = 200 ml = 200 g), definite in
   // una delle unità fisse. Fanno da default globale per ogni ingrediente che
@@ -539,11 +541,11 @@ function AppInner() {
   // (vedi ingredientToGrams/gramsPerUnitFor). Le unità fisse restano intoccate.
   const [customUnits, setCustomUnits] = useState({});
   // nutritionMap: { "<nome>": { foodId } | { custom:{kcal,carb,...} } } — mappa ingrediente → voce database
-  const [nutritionMap, setNutritionMap] = useState(INITIAL_NUTRITION_MAP);
+  const [nutritionMap, setNutritionMap] = useState({});
   // customFoods: alimenti aggiunti dall'utente (fonte: personalizzata)
   const [customFoods, setCustomFoods] = useState([]);
   // R2 — dizionario ingredienti del libro attivo (id → nome visualizzato)
-  const [ingredientDict, setIngredientDict] = useState(() => buildIngredientDict(RECIPES));
+  const [ingredientDict, setIngredientDict] = useState({});
   useEffect(() => {
     setIngredientDict(d => buildIngredientDict(recipes, d));
   }, [recipes]);
@@ -659,22 +661,22 @@ function AppInner() {
   const removeShoppingRecipe = (recipeId) => setShoppingList(prev => prev.filter(e => e.recipeId !== recipeId));
   const clearShoppingList = () => setShoppingList([]);
 
-  // ══ Multi-ricettario (simulato: nella PWA sarà su Firestore) ══
+  // ══ Multi-ricettario — meta locale (nome/tipo/owner/members); i dati
+  // di ogni libro vivono su Firestore (vedi loadFullBook/saveFullBook) ══
   const ME = "tu@esempio.it"; // utente simulato — nella PWA arriverà dal login Google
-  const emptyBookData = () => ({
-    recipes: [], extraTagGroups: [],
-    sectionList: MACRO_SECTIONS, categoryList: INGREDIENT_CATEGORIES,
-    ingredientCategories: {}, aggregates: [], shoppingList: [], equivalences: {}, customUnits: {}, nutritionMap: {}, customFoods: [], ingredientDict: {}, sourceByIngredient: {}, ignoredSimilarities: [],
-  });
-  // data:null per il libro attivo = i dati vivono negli stati correnti
   const [books, setBooks] = useState([
-    { id:"b1", name:"Il mio Ricettario", type:"personale", owner:ME, members:[ME], data:null },
+    { id:"b1", name:"Il mio Ricettario", type:"personale", owner:ME, members:[ME] },
   ]);
   // Ricettario predefinito: quello caricato all'avvio dell'app
   // (nella PWA sarà salvato nel profilo utente su Firestore)
   const [defaultBookId, setDefaultBookId] = useState("b1");
   const [activeBookId, setActiveBookId] = useState("b1"); // all'avvio = predefinito
   const activeBook = books.find(b => b.id === activeBookId);
+  // Diventa true solo dopo il primo caricamento riuscito da Firestore —
+  // finché è false, il salvataggio automatico resta fermo (altrimenti,
+  // su una rete lenta, potrebbe salvare i dati demo iniziali sopra a
+  // quelli veri appena caricati, perdendoli).
+  const [bookLoaded, setBookLoaded] = useState(false);
 
   const snapshotData = () => ({
     recipes, extraTagGroups, sectionList, categoryList,
@@ -691,26 +693,68 @@ function AppInner() {
     setIngredientDict(d.ingredientDict || {});
     setSourceByIngredient(d.sourceByIngredient || {});
     setIgnoredSimilarities(d.ignoredSimilarities || []);
+    if (d.meta?.bookTheme) {
+      setBookTheme(BOOK_THEMES.find(t => t.id === d.meta.bookTheme) || BOOK_THEMES[0]);
+    }
   };
 
-  const switchBook = (id) => {
+  // Caricamento iniziale da Firestore — sostituisce i dati demo hardcoded
+  // con quelli reali del libro attivo, non appena disponibili.
+  useEffect(() => {
+    loadFullBook(activeBookId).then(data => {
+      if (data.meta) loadData(data);
+      setBookLoaded(true);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Salvataggio automatico — ogni cambiamento ai dati del libro viene
+  // scritto su Firestore dopo una breve pausa (debounce), per non fare
+  // una scrittura ad ogni singolo carattere digitato. Salva tutto insieme
+  // (stessa forma di saveFullBook/loadFullBook) invece che per singola
+  // azione: più semplice da verificare in questo primo cutover.
+  useEffect(() => {
+    if (!bookLoaded || !activeBook) return;
+    const timer = setTimeout(() => {
+      saveFullBook(activeBookId, {
+        meta: { name: activeBook.name, type: activeBook.type, owner: activeBook.owner, members: activeBook.members, bookTheme: bookTheme.id },
+        ...snapshotData(),
+      });
+    }, 1500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    bookLoaded, activeBookId, bookTheme,
+    recipes, extraTagGroups, sectionList, categoryList,
+    ingredientCategories, aggregates, shoppingList, equivalences, customUnits,
+    nutritionMap, customFoods, ingredientDict, sourceByIngredient, ignoredSimilarities,
+  ]);
+
+  const switchBook = async (id) => {
     if (id === activeBookId) return;
     const target = books.find(b => b.id === id);
     if (!target) return;
-    // salva lo stato corrente nel libro che lascio, carica quello nuovo
-    setBooks(prev => prev.map(b =>
-      b.id === activeBookId ? { ...b, data: snapshotData() } :
-      b.id === id ? { ...b, data: null } : b
-    ));
-    loadData(target.data || emptyBookData());
+    // metti in pausa il salvataggio automatico, forza subito su Firestore
+    // il libro che si lascia (non aspetta il debounce), poi carica il nuovo
+    setBookLoaded(false);
+    if (activeBook) {
+      await saveFullBook(activeBookId, {
+        meta: { name: activeBook.name, type: activeBook.type, owner: activeBook.owner, members: activeBook.members, bookTheme: bookTheme.id },
+        ...snapshotData(),
+      });
+    }
+    const data = await loadFullBook(id);
+    loadData(data);
     setActiveBookId(id);
     setSelected(null);
+    setBookLoaded(true);
   };
 
-  const createBook = (name, memberEmails) => {
-    const id = uid("b");
+  const createBook = async (name, memberEmails) => {
+    const trimmedName = name.trim() || "Nuovo ricettario";
     const members = [ME, ...memberEmails.filter(e => e && e !== ME)];
-    setBooks(prev => [...prev, { id, name: name.trim() || "Nuovo ricettario", type:"condiviso", owner:ME, members, data: emptyBookData() }]);
+    const id = await createBookInFirestore({ name: trimmedName, type:"condiviso", owner:ME, members, bookTheme:"classic" });
+    setBooks(prev => [...prev, { id, name: trimmedName, type:"condiviso", owner:ME, members }]);
   };
 
   const renameBook = (id, name) => {
@@ -731,16 +775,14 @@ function AppInner() {
     ));
   };
 
-  // Copia ricette (per id) dal libro ATTIVO verso un altro libro — copie indipendenti
-  const copyRecipesToBook = (targetId, recipeIds) => {
+  // Copia ricette (per id) dal libro ATTIVO verso un altro libro — copie
+  // indipendenti, scritte direttamente nella sotto-collezione recipes del
+  // libro di destinazione (non serve toccare meta/system di quel libro).
+  const copyRecipesToBook = async (targetId, recipeIds) => {
     const sel = recipes.filter(r => recipeIds.includes(r.id));
     if (sel.length === 0 || targetId === activeBookId) return;
     const copies = sel.map((r) => ({ ...r, id: uid("r"), memories:[], comments:[], favorite:false }));
-    setBooks(prev => prev.map(b => {
-      if (b.id !== targetId) return b;
-      const d = b.data || emptyBookData();
-      return { ...b, data: { ...d, recipes:[...d.recipes, ...copies] } };
-    }));
+    await Promise.all(copies.map((c) => saveRecipe(targetId, c)));
   };
 
   // ── Condivisione esterna: codice testuale copiabile (import/export reale) ──
@@ -1015,7 +1057,7 @@ function AppInner() {
             activeBookId={activeBookId}
             me={ME}
             activeRecipes={recipes}
-            onSwitch={(id) => { switchBook(id); setScreen("landing"); }}
+            onSwitch={async (id) => { await switchBook(id); setScreen("landing"); }}
             onCreate={createBook}
             onRename={renameBook}
             onAddMember={addMember}
