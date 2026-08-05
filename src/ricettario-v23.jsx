@@ -1286,7 +1286,21 @@ function AppInner({ me, role }) {
           />
         )}
         {screen==="addFromLink" && (
-          <AddFromLinkScreen onBack={() => setScreen("addRecipeHub")}/>
+          <AddFromLinkScreen
+            onBack={() => setScreen("addRecipeHub")}
+            onSave={saveScanned}
+            sectionList={sectionList}
+            onAddSection={addSection}
+            onUpdateSection={updateSection}
+            onDeleteSection={deleteSection}
+            onLanding={() => setScreen("landing")}
+            onRecipes={() => setScreen("recipes")}
+            onBook={() => setScreen("book")}
+            onMemories={() => setScreen("memories")}
+            onAdd={(type) => type==="memory" ? openAddMemory() : setScreen("addRecipeHub")}
+            onFridge={() => setScreen("fridge")}
+            onShopping={() => setScreen("shoppingList")}
+          />
         )}
 
         {/* R6 — Dialogo: ricetta modificata già in lista spesa */}
