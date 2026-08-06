@@ -9,11 +9,13 @@ service firebase.storage {
       return isSignedIn() &&
         firestore.exists(/databases/(default)/documents/allowlist/$(request.auth.token.email));
     }
-    // Stesso debito tecnico noto delle regole Firestore (vedi
-    // firestore.rules): non ancora usata, pronta per quando servirà.
     function isAdmin() {
       return isWhitelisted() &&
         firestore.get(/databases/(default)/documents/allowlist/$(request.auth.token.email)).data.role == "admin";
+    }
+    function isTester() {
+      return isWhitelisted() &&
+        firestore.get(/databases/(default)/documents/allowlist/$(request.auth.token.email)).data.role == "tester";
     }
 
     // Foto delle ricette: books/{bookId}/recipes/{recipeId}/... (dish,
@@ -23,6 +25,12 @@ service firebase.storage {
     // chiamata firestore.get() sul documento del libro corrispondente.
     match /books/{bookId}/{allPaths=**} {
       allow read, write: if isWhitelisted();
+    }
+
+    // Screenshot allegati alle segnalazioni beta: reports/{reportId}/screenshot.jpg
+    // — stessi permessi della collezione Firestore reports (vedi firestore.rules).
+    match /reports/{reportId}/{allPaths=**} {
+      allow read, write: if isAdmin() || isTester();
     }
   }
 }

@@ -20,43 +20,26 @@ export default function CookingMode({ recipe, scale, onClose }) {
 
   // idx: -1 = intro ingredienti, 0..steps.length-1 = step, steps.length = fine
   const [idx, setIdx] = useState(-1);
-  const [completed, setCompleted] = useState([]); // indici step completati
   const [lightbox, setLightbox] = useState(null);
   const isIntro = idx === -1;
   const isDone = idx >= steps.length;
   const step = steps[idx];
 
-  const markCompleteAndNext = () => {
-    if (!isIntro && !isDone && !completed.includes(idx)) {
-      setCompleted(prev => [...prev, idx]);
-    }
-    setIdx(i => Math.min(steps.length, i + 1));
-  };
   const goTo = (target) => setIdx(target);
   const prev = () => setIdx(i => Math.max(-1, i - 1));
-  // Avanza senza segnare come completato (tap singolo a destra)
   const next = () => setIdx(i => Math.min(steps.length, i + 1));
 
-  // ── Zone tap: sinistra = indietro, destra = avanti, doppio tap = completa + avanti ──
-  const tapTimer = React.useRef(null);
+  // ── Zone tap: sinistra = indietro, destra = avanti — niente doppio tap né
+  // stato "completato": tap ripetuti per tornare indietro di più passi non
+  // devono rischiare di essere letti come "avanti", e segnare un passo come
+  // fatto non aggiunge informazione reale in questa modalità.
   const handleTap = (e) => {
     if (isDone) { onClose(); return; }
     const rect = e.currentTarget.getBoundingClientRect();
     const x = (e.clientX != null ? e.clientX : 0) - rect.left;
     const isRight = x >= rect.width / 2;
-    if (tapTimer.current) {
-      // secondo tap ravvicinato → doppio tap
-      clearTimeout(tapTimer.current);
-      tapTimer.current = null;
-      markCompleteAndNext();
-      return;
-    }
-    tapTimer.current = setTimeout(() => {
-      tapTimer.current = null;
-      if (isRight) next(); else prev();
-    }, 250);
+    if (isRight) next(); else prev();
   };
-  React.useEffect(() => () => { if (tapTimer.current) clearTimeout(tapTimer.current); }, []);
 
   // Raggruppa gli step per sezione per la barra di progressione
   const stepGroups = [];
@@ -94,7 +77,6 @@ export default function CookingMode({ recipe, scale, onClose }) {
             )}
             {group.items.map(it => {
               const active = idx === it.globalIdx;
-              const done = completed.includes(it.globalIdx);
               const label = stepNumberLabel(it.sectionIndex, it.indexInSection);
               return (
                 <button
@@ -103,13 +85,13 @@ export default function CookingMode({ recipe, scale, onClose }) {
                   title={`Passo ${label}`}
                   style={{
                     minWidth:30, height:30, padding:"0 6px", borderRadius:15, flexShrink:0, cursor:"pointer",
-                    border: active ? `2px solid ${th.appAccent2}` : done ? "2px solid #6B8C6E" : "2px solid rgba(255,255,255,0.2)",
-                    background: active ? th.appAccent : done ? "#6B8C6E" : "rgba(255,255,255,0.08)",
+                    border: active ? `2px solid ${th.appAccent2}` : "2px solid rgba(255,255,255,0.2)",
+                    background: active ? th.appAccent : "rgba(255,255,255,0.08)",
                     color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700,
                     display:"flex", alignItems:"center", justifyContent:"center",
                     transition:"all 0.2s",
                   }}
-                >{done ? "✓" : label}</button>
+                >{label}</button>
               );
             })}
           </React.Fragment>
@@ -150,7 +132,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
       {/* Progress bar interattiva */}
       <ProgressBar/>
 
-      {/* Content — tap sinistra: indietro · tap destra: avanti · doppio tap: completa e avanti */}
+      {/* Content — tap sinistra: indietro · tap destra: avanti */}
       <div onClick={handleTap} style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"center", padding:"24px 28px", cursor:"pointer", overflowY:"auto", position:"relative" }}>
         {isIntro ? (
           <div>
@@ -184,8 +166,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
             ))}
             <div style={{ fontFamily:F.ui, fontSize:12, color:"rgba(255,255,255,0.4)", marginTop:20, textAlign:"center" }}>tocca a destra per iniziare →</div>
             <div style={{ fontFamily:F.ui, fontSize:10.5, color:"rgba(255,255,255,0.3)", marginTop:6, textAlign:"center", lineHeight:1.6 }}>
-              ‹ tocca a sinistra per tornare indietro · tocca a destra per avanzare ›<br/>
-              doppio tocco = segna il passo come fatto e avanza
+              ‹ tocca a sinistra per tornare indietro · tocca a destra per avanzare ›
             </div>
           </div>
         ) : isDone ? (
@@ -217,7 +198,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
             </div>
             <div style={{ fontFamily:F.body, fontSize:22, lineHeight:1.6, color:"rgba(255,255,255,0.95)" }}>{step.text}</div>
             <div style={{ fontFamily:F.ui, fontSize:11, color:"rgba(255,255,255,0.3)", marginTop:28, textAlign:"center", lineHeight:1.6 }}>
-              ‹ sinistra: indietro · destra: avanti ›<br/>doppio tocco: fatto ✓ e avanti
+              ‹ sinistra: indietro · destra: avanti ›
             </div>
           </div>
         )}
@@ -227,7 +208,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
       {!isDone && (
         <div style={{ display:"flex", flexShrink:0, borderTop:"1px solid rgba(255,255,255,0.1)" }}>
           <button onClick={(e) => { e.stopPropagation(); prev(); }} disabled={isIntro} style={{ flex:1, padding:"16px", background:"none", border:"none", color: isIntro ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.75)", fontFamily:F.ui, fontSize:14, cursor: isIntro ? "default" : "pointer", borderRight:"1px solid rgba(255,255,255,0.1)" }}>‹ Indietro</button>
-          <button onClick={(e) => { e.stopPropagation(); markCompleteAndNext(); }} style={{ flex:1, padding:"16px", background:"none", border:"none", color:th.appAccent2, fontFamily:F.ui, fontSize:14, fontWeight:700, cursor:"pointer" }}>{isIntro ? "Inizia →" : idx === steps.length-1 ? "Fine ✓" : "Avanti ›"}</button>
+          <button onClick={(e) => { e.stopPropagation(); next(); }} style={{ flex:1, padding:"16px", background:"none", border:"none", color:th.appAccent2, fontFamily:F.ui, fontSize:14, fontWeight:700, cursor:"pointer" }}>{isIntro ? "Inizia →" : idx === steps.length-1 ? "Fine ✓" : "Avanti ›"}</button>
         </div>
       )}
 

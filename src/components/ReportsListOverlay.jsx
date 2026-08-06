@@ -17,6 +17,7 @@ const formatDate = (ts) => {
 // Formato testo leggibile, incollabile in chat — non JSON grezzo.
 const buildCopyText = (reports) => reports.map((r) =>
   `${TYPE_LABEL[r.type]} ${r.title}\n${r.description}\n— segnalato da ${r.createdBy} il ${formatDate(r.createdAt)}`
+  + (r.screenshotUrl ? `\n— screenshot: ${r.screenshotUrl}` : "")
 ).join("\n\n");
 
 export default function ReportsListOverlay({ role, me, onClose }) {
@@ -115,6 +116,11 @@ export default function ReportsListOverlay({ role, me, onClose }) {
                   }}>{resolved ? "RISOLTA" : "APERTA"}</span>
                 </div>
                 <div style={{ fontFamily: F.body, fontSize: 12, color: th.appFaded, marginBottom: 4, whiteSpace: "pre-wrap" }}>{r.description}</div>
+                {r.screenshotUrl && (
+                  <a href={r.screenshotUrl} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginBottom: 6 }}>
+                    <img src={r.screenshotUrl} alt="Schermata allegata" style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 8, border: `1px solid ${th.appBorder}` }} />
+                  </a>
+                )}
                 <div style={{ fontFamily: F.ui, fontSize: 10, color: th.appFaded, opacity: 0.8 }}>
                   segnalato da {r.createdBy} il {formatDate(r.createdAt)}
                 </div>

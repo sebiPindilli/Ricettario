@@ -9,11 +9,12 @@ const TYPE_META = {
   improvement: { icon: "💡", title: "Proponi un miglioramento", placeholder: "Cosa vorresti che l'app facesse, o facesse meglio?" },
 };
 
-export default function ReportFormOverlay({ type, me, onClose }) {
+export default function ReportFormOverlay({ type, me, onClose, initialScreenshot = null }) {
   const th = useTheme();
   const meta = TYPE_META[type];
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [screenshot, setScreenshot] = useState(initialScreenshot);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState({ msg: "", visible: false });
   const [error, setError] = useState(false);
@@ -25,7 +26,7 @@ export default function ReportFormOverlay({ type, me, onClose }) {
     setSubmitting(true);
     setError(false);
     try {
-      await createReport({ type, title: title.trim(), description: description.trim(), createdBy: me });
+      await createReport({ type, title: title.trim(), description: description.trim(), createdBy: me, screenshotDataUrl: screenshot });
       setToast({ msg: "✅ Segnalazione inviata, grazie!", visible: true });
       setTimeout(onClose, 1200);
     } catch {
@@ -61,6 +62,20 @@ export default function ReportFormOverlay({ type, me, onClose }) {
           rows={6}
           style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${th.appBorder}`, borderRadius: 10, background: th.appCard, fontFamily: F.body, fontSize: 13, color: th.appInk, outline: "none", boxSizing: "border-box", resize: "vertical", marginBottom: 18 }}
         />
+
+        {screenshot && (
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ fontFamily: F.ui, fontSize: 10, letterSpacing: 1, color: th.appFaded, textTransform: "uppercase", marginBottom: 5 }}>Schermata allegata</div>
+            <div style={{ position: "relative", borderRadius: 10, overflow: "hidden", border: `1.5px solid ${th.appBorder}` }}>
+              <img src={screenshot} alt="Anteprima schermata" style={{ width: "100%", display: "block" }} />
+              <button onClick={() => setScreenshot(null)} style={{
+                position: "absolute", top: 6, right: 6, width: 24, height: 24, borderRadius: "50%",
+                border: "none", background: "rgba(0,0,0,0.6)", color: "#fff", fontSize: 13, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", padding: 0,
+              }}>✕</button>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div style={{ fontFamily: F.ui, fontSize: 12, color: "crimson", marginBottom: 12, textAlign: "center" }}>

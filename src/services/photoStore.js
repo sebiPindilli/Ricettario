@@ -23,3 +23,5 @@ export const stepPhotoPath = (bookId, recipeId, stepKey, photoIndex) =>
   `books/${bookId}/recipes/${recipeId}/steps/${stepKey}_${photoIndex}.jpg`;
 export const memoryPhotoPath = (bookId, recipeId, memoryId) =>
   `books/${bookId}/recipes/${recipeId}/memories/${memoryId}.jpg`;
+export const reportScreenshotPath = (reportId) =>
+  `reports/${reportId}/screenshot.jpg`;

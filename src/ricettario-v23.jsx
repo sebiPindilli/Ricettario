@@ -98,6 +98,8 @@ const IPHONE_RESPONSIVE_CSS = `
     .iphone-shell { width:100vw !important; min-height:100dvh !important; border-radius:0 !important; box-shadow:none !important; }
     .iphone-page-wrap { padding:0 !important; gap:0 !important; }
     .iphone-desktop-hint { display:none !important; }
+    .iphone-notch { display:none !important; }
+    .iphone-content-scroll { padding-top:0 !important; }
   }
 `;
 
@@ -117,12 +119,12 @@ const IPhone = ({ children }) => {
     transition:"background 0.3s",
   }}>
     <style dangerouslySetInnerHTML={{ __html: IPHONE_RESPONSIVE_CSS }} />
-    <div style={{
+    <div className="iphone-notch" style={{
       position:"absolute", top:0, left:"50%", transform:"translateX(-50%)",
       width:130, height:36, background:"#1a1a1a",
       borderRadius:"0 0 20px 20px", zIndex:100,
     }}/>
-    <div style={{ flex:1, overflowY:"auto", paddingTop:44 }}>
+    <div className="iphone-content-scroll" style={{ flex:1, overflowY:"auto", paddingTop:44 }}>
       {children}
     </div>
     <BetaButton/>

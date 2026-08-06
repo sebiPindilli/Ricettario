@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useLayoutEffect } from "react";
 import { useTheme, useNavActions } from "../context.js";
 import { F } from "../data/constants.js";
 import OrganizeIcon from "./OrganizeIcon.jsx";
@@ -11,6 +11,22 @@ const NAV_ITEMS = [
   { id:"organize",  icon:<OrganizeIcon/>, label:"Organizza" },
 ];
 
+// Su mobile reale (vedi IPHONE_RESPONSIVE_CSS in ricettario-v23.jsx, stesso
+// breakpoint) il banner passa da "sticky" a "fixed" — su alcuni browser
+// mobile, sticky annidato dentro lo scroll interno dell'IPhone shell può
+// scorrere via invece di restare fermo. Da fixed, il banner esce dal
+// flusso: il div .globalnav-spacer subito sotto (altezza misurata dal
+// banner stesso via ResizeObserver, così resta corretta anche quando si
+// apre la tendina "Istruzioni") gli lascia il posto nel contenuto sotto.
+const GLOBALNAV_RESPONSIVE_CSS = `
+  @media (max-width: 480px) {
+    .globalnav-bar { position:fixed !important; top:0 !important; left:0 !important; right:0 !important; }
+  }
+  @media (min-width: 481px) {
+    .globalnav-spacer { display:none !important; }
+  }
+`;
+
 export default function GlobalNav({
   activeScreen,
   onRecipes, onBook, onMemories, onAdd, onFridge, onShopping,
@@ -22,6 +38,18 @@ export default function GlobalNav({
   const th = useTheme();
   const navActions = useNavActions();
   const [infoOpen, setInfoOpen] = useState(false);
+  const barRef = useRef(null);
+  const [spacerHeight, setSpacerHeight] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = barRef.current;
+    if (!el) return;
+    const update = () => setSpacerHeight(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // "recipes" e la vista libro condividono la stessa tab attiva (Ricette) e lo stesso banner.
   const inRecipes = activeScreen === "recipes" || bookView;
@@ -38,7 +66,9 @@ export default function GlobalNav({
   };
 
   return (
-    <div style={{ position:"sticky", top:0, zIndex:100, boxShadow:"0 2px 16px rgba(0,0,0,0.2)" }}>
+    <>
+    <style dangerouslySetInnerHTML={{ __html: GLOBALNAV_RESPONSIVE_CSS }} />
+    <div ref={barRef} className="globalnav-bar" style={{ position:"sticky", top:0, zIndex:100, boxShadow:"0 2px 16px rgba(0,0,0,0.2)" }}>
       {/* Row 1 — 4 tabs */}
       <div style={{ display:"flex", background:th.appInk, borderBottom:"1px solid rgba(255,255,255,0.08)" }}>
         {NAV_ITEMS.map(item => {
@@ -137,5 +167,7 @@ export default function GlobalNav({
         </div>
       )}
     </div>
+    <div className="globalnav-spacer" style={{ height: spacerHeight }} />
+    </>
   );
 }

@@ -102,7 +102,7 @@ service cloud.firestore {
       allow read: if isAdmin() || isTester();
 
       allow create: if (isAdmin() || isTester()) &&
-        request.resource.data.keys().hasOnly(['type','title','description','createdBy','createdAt','status']) &&
+        request.resource.data.keys().hasOnly(['type','title','description','createdBy','createdAt','status','screenshotUrl']) &&
         request.resource.data.type in ['bug','improvement'] &&
         request.resource.data.status == 'open' &&
         request.resource.data.createdBy == request.auth.token.email &&

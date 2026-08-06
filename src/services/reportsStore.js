@@ -1,12 +1,27 @@
 // Segnalazioni beta (bug/miglioramenti) — collezione globale "reports",
 // non legata a un libro. Vedi firestore.rules per i permessi per ruolo.
 import { db } from "../firebase.js";
-import { collection, doc, addDoc, getDocs, updateDoc, serverTimestamp, deleteField } from "firebase/firestore";
+import { collection, doc, setDoc, getDocs, updateDoc, serverTimestamp, deleteField } from "firebase/firestore";
+import { uploadPhoto, reportScreenshotPath } from "./photoStore.js";
 
 const reportsCol = () => collection(db, "reports");
 
-export const createReport = ({ type, title, description, createdBy }) =>
-  addDoc(reportsCol(), { type, title, description, createdBy, createdAt: serverTimestamp(), status: "open" });
+// L'ID viene generato subito (invece di addDoc) per poter caricare
+// l'eventuale screenshot su Storage nel path corretto PRIMA di scrivere il
+// documento — così screenshotUrl entra già nella scrittura di creazione,
+// senza bisogno di un update successivo (i report restano immutabili dopo
+// la creazione, vedi regola "solo status/resolvedBy/resolvedAt" sotto).
+export const createReport = async ({ type, title, description, createdBy, screenshotDataUrl }) => {
+  const ref = doc(reportsCol());
+  const screenshotUrl = screenshotDataUrl
+    ? await uploadPhoto(reportScreenshotPath(ref.id), screenshotDataUrl)
+    : null;
+  await setDoc(ref, {
+    type, title, description, createdBy, createdAt: serverTimestamp(), status: "open",
+    ...(screenshotUrl ? { screenshotUrl } : {}),
+  });
+  return ref.id;
+};
 
 export const loadReports = async () => {
   const snap = await getDocs(reportsCol());
