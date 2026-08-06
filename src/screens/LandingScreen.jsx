@@ -1,10 +1,11 @@
 import React from "react";
-import { useTheme } from "../context.js";
+import { useTheme, useRole } from "../context.js";
 import { F } from "../data/constants.js";
 import OrganizeIcon from "../components/OrganizeIcon.jsx";
 
-export default function LandingScreen({ recipes = [], bookName = "Il mio Ricettario", onBooks, onRecipes, onBook, onMemories, onAdd, onAddMemory, onFridge, onShopping, onOrganize, onTheme, onCover, onGuide }) {
+export default function LandingScreen({ recipes = [], bookName = "Il mio Ricettario", onBooks, onRecipes, onBook, onMemories, onAdd, onAddMemory, onFridge, onShopping, onOrganize, onTheme, onCover, onGuide, onAdminUsers }) {
   const th = useTheme();
+  const role = useRole();
 
   const mainItems = [
     { emoji:"🍽️", label:"Libro Ricette",         desc:"Sfoglia, cerca e aggiungi",   fn:onRecipes, color:th.appAccent },
@@ -12,6 +13,9 @@ export default function LandingScreen({ recipes = [], bookName = "Il mio Ricetta
     { emoji:"🧊", label:"Svuota Frigo",          desc:"Cosa cucino con ciò che ho",  fn:onFridge,  color:"#5B7FA6" },
     { emoji:"🛒", label:"Lista Spesa",           desc:"Gli ingredienti da comprare", fn:onShopping,color:"#8C6E4A" },
     { emoji:<OrganizeIcon/>, label:"Organizza Ingredienti", desc:"Aggregati, categorie, nutrizione", fn:onOrganize, color:"#7A5EA6" },
+    ...(role === "admin" ? [
+      { emoji:"🔑", label:"Gestione utenti", desc:"Whitelist e ruoli", fn:onAdminUsers, color:"#555F6B" },
+    ] : []),
   ];
 
   return (

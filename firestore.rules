@@ -19,13 +19,25 @@ service cloud.firestore {
       return isWhitelisted() && myRole() == "tester";
     }
 
-    // Whitelist: un utente può leggere solo la PROPRIA voce (serve al
-    // controllo di accesso all'avvio, vedi services/authStore.js).
-    // Scritture: mai dal client — si gestisce a mano da Firebase
-    // Console, che usa permessi IAM e bypassa queste regole.
+    // Whitelist: un utente legge solo la PROPRIA voce (serve al controllo
+    // di accesso all'avvio, vedi services/authStore.js); un admin legge
+    // anche l'intera collezione (serve alla schermata di gestione utenti).
+    // Scritture: solo admin, e solo su voci base/tester — il ruolo admin
+    // resta intoccabile dall'app in ogni verso: si gestisce a mano da
+    // Firebase Console, che usa permessi IAM e bypassa queste regole.
     match /allowlist/{email} {
-      allow read: if isSignedIn() && request.auth.token.email == email;
-      allow write: if false;
+      allow read: if isSignedIn() && (request.auth.token.email == email || isAdmin());
+
+      allow create: if isAdmin() &&
+        request.resource.data.keys().hasOnly(['role']) &&
+        request.resource.data.role in ['base', 'tester'];
+
+      allow update: if isAdmin() &&
+        resource.data.role != 'admin' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role']) &&
+        request.resource.data.role in ['base', 'tester'];
+
+      allow delete: if isAdmin() && resource.data.role != 'admin';
     }
 
     // Libri: oggi chiunque sia whitelisted accede a QUALUNQUE libro.

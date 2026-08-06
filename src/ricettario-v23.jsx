@@ -72,6 +72,7 @@ import RecipesScreen from "./screens/RecipesScreen.jsx";
 import AddMemoryScreen from "./screens/AddMemoryScreen.jsx";
 import BooksScreen from "./screens/BooksScreen.jsx";
 import BookViewScreen from "./screens/BookViewScreen.jsx";
+import AdminUsersScreen from "./screens/AdminUsersScreen.jsx";
 import BetaButton from "./components/BetaButton.jsx";
 
 // ── Subsection data helpers ────────────────────────────────────
@@ -998,6 +999,18 @@ function AppInner({ me, role }) {
             onTheme={() => goTo("theme")}
             onCover={() => setScreen("cover")}
             onGuide={() => goTo("guide")}
+            onAdminUsers={() => setScreen("adminUsers")}
+          />
+        )}
+        {screen==="adminUsers" && (
+          <AdminUsersScreen
+            onLanding={() => setScreen("landing")}
+            onRecipes={() => setScreen("recipes")}
+            onBook={() => setScreen("book")}
+            onMemories={() => setScreen("memories")}
+            onAdd={(type) => type==="memory" ? openAddMemory() : goTo("addRecipeHub")}
+            onFridge={() => setScreen("fridge")}
+            onShopping={() => setScreen("shoppingList")}
           />
         )}
         {screen==="organize" && (
