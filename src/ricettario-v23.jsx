@@ -20,7 +20,7 @@ import {
   EMOJI_CATEGORIES, EMOJI_OPTIONS, COLOR_OPTIONS, DEFAULT_UNIT_SUGGESTIONS,
 } from "./data/constants.js";
 import { NUTRITION_DB, NUTRIENT_LABELS } from "./data/nutrition.js";
-import { ThemeCtx, useTheme, NavCtx, useNavActions } from "./context.js";
+import { ThemeCtx, useTheme, NavCtx, useNavActions, RoleCtx } from "./context.js";
 import OrganizeIcon from "./components/OrganizeIcon.jsx";
 import BackBtn from "./components/BackBtn.jsx";
 import Divider from "./components/Divider.jsx";
@@ -72,6 +72,7 @@ import RecipesScreen from "./screens/RecipesScreen.jsx";
 import AddMemoryScreen from "./screens/AddMemoryScreen.jsx";
 import BooksScreen from "./screens/BooksScreen.jsx";
 import BookViewScreen from "./screens/BookViewScreen.jsx";
+import BetaButton from "./components/BetaButton.jsx";
 
 // ── Subsection data helpers ────────────────────────────────────
 // ingredients and steps can be either:
@@ -104,6 +105,7 @@ const IPhone = ({ children }) => {
     <div style={{ flex:1, overflowY:"auto", paddingTop:44 }}>
       {children}
     </div>
+    <BetaButton/>
   </div>
   );
 };
@@ -956,6 +958,7 @@ function AppInner({ me, role }) {
   const openRecipe = (r) => { setSelected(r); setPrevScreen(screen); setScreen("recipe"); };
 
   return (
+    <RoleCtx.Provider value={role}>
     <ThemeCtx.Provider value={bookTheme}>
     <NavCtx.Provider value={{ onOrganize: () => openOrganize() }}>
     <div style={{
@@ -1344,6 +1347,7 @@ function AppInner({ me, role }) {
     </div>
     </NavCtx.Provider>
     </ThemeCtx.Provider>
+    </RoleCtx.Provider>
   );
 }
 

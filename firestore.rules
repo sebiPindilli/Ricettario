@@ -12,11 +12,11 @@ service cloud.firestore {
     function myRole() {
       return get(/databases/$(database)/documents/allowlist/$(request.auth.token.email)).data.role;
     }
-    // Non ancora referenziata da nessuna regola — debito tecnico noto:
-    // quando servirà differenziare i permessi admin/base, usarla al
-    // posto di isWhitelisted() nella regola giusta, senza altro refactor.
     function isAdmin() {
       return isWhitelisted() && myRole() == "admin";
+    }
+    function isTester() {
+      return isWhitelisted() && myRole() == "tester";
     }
 
     // Whitelist: un utente può leggere solo la PROPRIA voce (serve al
@@ -41,6 +41,25 @@ service cloud.firestore {
       match /{document=**} {
         allow read, write: if isWhitelisted();
       }
+    }
+
+    // Segnalazioni beta (bug/miglioramenti) — collezione globale, non
+    // legata a un libro specifico. Lettura e creazione per admin/tester;
+    // solo admin può cambiare stato (status/resolvedBy/resolvedAt) e non
+    // può toccare il resto del documento in quello stesso update.
+    match /reports/{reportId} {
+      allow read: if isAdmin() || isTester();
+
+      allow create: if (isAdmin() || isTester()) &&
+        request.resource.data.keys().hasOnly(['type','title','description','createdBy','createdAt','status']) &&
+        request.resource.data.type in ['bug','improvement'] &&
+        request.resource.data.status == 'open' &&
+        request.resource.data.createdBy == request.auth.token.email &&
+        request.resource.data.title is string && request.resource.data.title.size() > 0 &&
+        request.resource.data.description is string && request.resource.data.description.size() > 0;
+
+      allow update: if isAdmin() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','resolvedBy','resolvedAt']);
     }
   }
 }
