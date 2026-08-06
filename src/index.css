@@ -50,8 +50,12 @@
   }
 }
 
-body {
+html, body {
   margin: 0;
+  /* Disabilita il "pull to refresh" nativo dei browser mobile: senza,
+     scorrere verso l'alto in cima a una lista lunga ricarica la pagina
+     per errore. Nessun effetto su desktop (il gesto non esiste lì). */
+  overscroll-behavior-y: none;
 }
 
 #root {

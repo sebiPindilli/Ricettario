@@ -1,6 +1,6 @@
 import { useState, useRef, useLayoutEffect } from "react";
 import { useTheme, useNavActions } from "../context.js";
-import { F } from "../data/constants.js";
+import { F, MOBILE_BREAKPOINT_CSS } from "../data/constants.js";
 import OrganizeIcon from "./OrganizeIcon.jsx";
 
 const NAV_ITEMS = [
@@ -19,11 +19,10 @@ const NAV_ITEMS = [
 // banner stesso via ResizeObserver, così resta corretta anche quando si
 // apre la tendina "Istruzioni") gli lascia il posto nel contenuto sotto.
 const GLOBALNAV_RESPONSIVE_CSS = `
-  @media (max-width: 480px) {
+  .globalnav-spacer { display:none; }
+  @media ${MOBILE_BREAKPOINT_CSS} {
     .globalnav-bar { position:fixed !important; top:0 !important; left:0 !important; right:0 !important; }
-  }
-  @media (min-width: 481px) {
-    .globalnav-spacer { display:none !important; }
+    .globalnav-spacer { display:block !important; }
   }
 `;
 

@@ -31,6 +31,12 @@ export const F = {
   book:    "'Arial','Helvetica',sans-serif",
 };
 
+// Condizione @media per "telefono vero" (non il mockup desktop), sia in
+// verticale che ruotato in orizzontale — riusata identica da IPhone
+// (ricettario-v23.jsx), GlobalNav e BetaButton, così un domani basta
+// aggiornarla qui invece che in tre punti separati (com'era prima).
+export const MOBILE_BREAKPOINT_CSS = "(max-width: 480px), (max-height: 480px) and (orientation: landscape)";
+
 // ── Macro sections ────────────────────────────────────────────
 export const MACRO_SECTIONS = [
   { id:"basi",   label:"Preparazioni Base", emoji:"🧱", desc:"Salse, brodi, impasti e tecniche fondamentali" },

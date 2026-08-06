@@ -1,7 +1,7 @@
 import { useState } from "react";
 import html2canvas from "html2canvas";
 import { useTheme, useRole } from "../context.js";
-import { F } from "../data/constants.js";
+import { F, MOBILE_BREAKPOINT_CSS } from "../data/constants.js";
 import { auth } from "../firebase.js";
 import ReportFormOverlay from "./ReportFormOverlay.jsx";
 import ReportsListOverlay from "./ReportsListOverlay.jsx";
@@ -32,7 +32,7 @@ const captureScreenshot = async () => {
 // resta ancorato al viewport vero, immune a qualunque scroll (interno alla
 // pagina o, più raro, esterno dell'intero shell).
 const BETA_FAB_RESPONSIVE_CSS = `
-  @media (max-width: 480px) {
+  @media ${MOBILE_BREAKPOINT_CSS} {
     .beta-fab-button, .beta-fab-menu { position:fixed !important; }
   }
 `;

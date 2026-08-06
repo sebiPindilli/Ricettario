@@ -24,6 +24,7 @@ import {
   T, F, MACRO_SECTIONS, PICKER_EMOJIS, INGREDIENT_CATEGORIES,
   TAG_GROUPS, ALL_PRESET_TAGS, BOOK_THEMES,
   EMOJI_CATEGORIES, EMOJI_OPTIONS, COLOR_OPTIONS, DEFAULT_UNIT_SUGGESTIONS,
+  MOBILE_BREAKPOINT_CSS,
 } from "./data/constants.js";
 import { NUTRITION_DB, NUTRIENT_LABELS } from "./data/nutrition.js";
 import { ThemeCtx, useTheme, NavCtx, useNavActions, RoleCtx } from "./context.js";
@@ -89,12 +90,14 @@ import BetaButton from "./components/BetaButton.jsx";
 // Steps items can be strings or {text, photo}
 
 // ── iPhone shell ───────────────────────────────────────────────
-// Sotto i 480px reali (telefono vero, non il mockup desktop), il "telefono"
-// disegnato sparisce e lo schermo reale diventa la cornice — regola in un
-// <style> iniettato perché gli stili inline non possono esprimere media
-// query (stesso pattern già usato in ScanScreen.jsx per le @keyframes).
+// Su un telefono vero (verticale o ruotato in orizzontale — vedi
+// MOBILE_BREAKPOINT_CSS in data/constants.js), non sul mockup desktop, il
+// "telefono" disegnato sparisce e lo schermo reale diventa la cornice —
+// regola in un <style> iniettato perché gli stili inline non possono
+// esprimere media query (stesso pattern già usato in ScanScreen.jsx per
+// le @keyframes).
 const IPHONE_RESPONSIVE_CSS = `
-  @media (max-width: 480px) {
+  @media ${MOBILE_BREAKPOINT_CSS} {
     .iphone-shell { width:100vw !important; min-height:100dvh !important; border-radius:0 !important; box-shadow:none !important; }
     .iphone-page-wrap { padding:0 !important; gap:0 !important; }
     .iphone-desktop-hint { display:none !important; }
@@ -124,7 +127,7 @@ const IPhone = ({ children }) => {
       width:130, height:36, background:"#1a1a1a",
       borderRadius:"0 0 20px 20px", zIndex:100,
     }}/>
-    <div className="iphone-content-scroll" style={{ flex:1, overflowY:"auto", paddingTop:44 }}>
+    <div className="iphone-content-scroll" style={{ flex:1, overflowY:"auto", paddingTop:44, overscrollBehavior:"contain" }}>
       {children}
     </div>
     <BetaButton/>
