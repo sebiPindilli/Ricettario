@@ -98,7 +98,7 @@ import BetaButton from "./components/BetaButton.jsx";
 // le @keyframes).
 const IPHONE_RESPONSIVE_CSS = `
   @media ${MOBILE_BREAKPOINT_CSS} {
-    .iphone-shell { width:100vw !important; min-height:100dvh !important; border-radius:0 !important; box-shadow:none !important; }
+    .iphone-shell { width:100vw !important; height:100dvh !important; border-radius:0 !important; box-shadow:none !important; }
     .iphone-page-wrap { padding:0 !important; gap:0 !important; }
     .iphone-desktop-hint { display:none !important; }
     .iphone-notch { display:none !important; }
@@ -218,7 +218,7 @@ const IPhone = ({ children }) => {
 
   return (
   <div className="iphone-shell" style={{
-    width:390, minHeight:844,
+    width:390, height:844,
     background: th.appBg,
     borderRadius:50,
     overflow:"hidden",
