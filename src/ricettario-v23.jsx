@@ -109,41 +109,20 @@ const IPHONE_RESPONSIVE_CSS = `
 const IPhone = ({ children }) => {
   const th = useTheme();
   const scrollRef = useRef(null);
-  const debugLiveRef = useRef(null);
-  const debugLogRef = useRef(null);
 
   // Blocca il "pull to refresh" nativo dei browser mobile SOLO nel gesto
   // ambiguo che lo attiva: trascinare verso il basso mentre si è già in
-  // cima allo scroll (scrollTop 0). In quel punto trascinare giù non fa
-  // scorrere nulla di legittimo, quindi bloccarlo è sicuro per
-  // definizione — a differenza di overscroll-behavior (CSS, provato e
-  // rimosso: su alcuni browser mobile reali ha bloccato lo scroll
-  // normale invece del solo pull-to-refresh), qui non si tocca overflow
-  // o layout: il listener non interviene in nessun altro momento.
-  //
-  // DEBUG TEMPORANEO — overlay diagnostico per il bug "scroll verso l'alto
-  // bloccato sempre, su tutta l'app". Non cambia la logica di blocco
-  // esistente, si limita a mostrare a schermo cosa succede ad ogni tocco:
-  // scrollTop/scrollHeight/clientHeight di .iphone-content-scroll, quale
-  // elemento è il vero target scrollabile del tocco (risalendo gli
-  // antenati), e su quale evento (primo touchmove o successivo) è scattato
-  // preventDefault. Da rimuovere una volta capita la causa reale.
+  // cima allo scroll. Il controllo va fatto sull'elemento che sta
+  // DAVVERO scrollando sotto il dito (trovato risalendo dal target del
+  // tocco), non su .iphone-content-scroll a priori: dentro modalità
+  // cucina/spesa (overlay con una propria lista interna scrollabile)
+  // .iphone-content-scroll resta fermo, quindi controllarlo bloccherebbe
+  // ogni scroll verso l'alto lì dentro a prescindere dalla posizione
+  // reale della lista.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
 
-    const appendLog = (line) => {
-      const box = debugLogRef.current;
-      if (!box) return;
-      const rows = box.textContent ? box.textContent.split("\n") : [];
-      rows.push(line);
-      while (rows.length > 14) rows.shift();
-      box.textContent = rows.join("\n");
-    };
-    const writeLive = (line) => { if (debugLiveRef.current) debugLiveRef.current.textContent = line; };
-
-    // Risale dal target del tocco verso l'alto finché non trova un elemento
-    // con overflow realmente scrollabile (scrollHeight > clientHeight).
     const findScrollAncestor = (node) => {
       let n = node;
       while (n && n !== document.body && n !== document.documentElement) {
@@ -152,74 +131,28 @@ const IPhone = ({ children }) => {
       }
       return null;
     };
-    const describeEl = (n) => {
-      if (!n) return "—";
-      const cls = typeof n.className === "string" && n.className ? "." + n.className.trim().split(/\s+/).join(".") : "";
-      return `<${n.tagName.toLowerCase()}${cls}>`;
-    };
 
     let lastY = 0;
     let ancestor = null;
-    let ancestorStartTop = 0;
-    let moveCount = 0;
-    let blocked = false;
-    let blockedOnFirstMove = null;
 
     const onTouchStart = (e) => {
       lastY = e.touches[0]?.clientY ?? 0;
-      moveCount = 0;
-      blocked = false;
-      blockedOnFirstMove = null;
       ancestor = findScrollAncestor(e.target);
-      ancestorStartTop = ancestor ? ancestor.scrollTop : null;
-      appendLog(
-        `▶ touchstart · target ${describeEl(e.target)} · scroll-ancestor ${describeEl(ancestor)} (scrollTop:${ancestorStartTop ?? "n/a"}) · ` +
-        `.iphone-content-scroll scrollTop:${el.scrollTop} scrollH:${el.scrollHeight} clientH:${el.clientHeight}`
-      );
     };
 
     const onTouchMove = (e) => {
-      moveCount++;
       const y = e.touches[0]?.clientY ?? lastY;
       const deltaY = y - lastY;
       lastY = y;
-      // Il controllo va fatto sull'elemento che sta DAVVERO scrollando sotto
-      // il dito (trovato al touchstart), non su .iphone-content-scroll a
-      // priori: dentro modalità cucina/spesa (overlay con una propria lista
-      // interna scrollabile) .iphone-content-scroll resta fermo, quindi
-      // controllarlo blocca ogni scroll verso l'alto lì dentro a prescindere
-      // dalla posizione reale della lista.
       const refTop = ancestor ? ancestor.scrollTop : null;
-      const willBlock = refTop !== null && refTop <= 0 && deltaY > 0;
-      if (willBlock) {
-        e.preventDefault();
-        if (!blocked) {
-          blocked = true;
-          blockedOnFirstMove = moveCount === 1;
-          appendLog(`  ⛔ preventDefault su move #${moveCount} (${blockedOnFirstMove ? "PRIMO move" : "move successivo"}) · ancestor.scrollTop:${refTop}`);
-        }
-      } else if (blocked) {
-        blocked = false;
-        appendLog(`  ✅ sblocco a move #${moveCount} · deltaY:${deltaY.toFixed(1)} · ancestor.scrollTop:${refTop}`);
-      }
-      writeLive(
-        `move #${moveCount} · deltaY:${deltaY.toFixed(1)} (${deltaY>0?"dito giù → vuole scroll SU":deltaY<0?"dito su → vuole scroll GIÙ":"—"}) · ` +
-        `el.scrollTop:${el.scrollTop} scrollH:${el.scrollHeight} clientH:${el.clientHeight} · ` +
-        `ancestor(${describeEl(ancestor)}).scrollTop:${refTop ?? "n/a"} · BLOCCATO:${willBlock ? "SÌ" : "no"}`
-      );
-    };
-
-    const onTouchEnd = () => {
-      appendLog(`■ touchend · moves:${moveCount} · bloccato-durante-gesto:${blocked ? "sì" : "no"} · el.scrollTop finale:${el.scrollTop}`);
+      if (refTop !== null && refTop <= 0 && deltaY > 0) e.preventDefault();
     };
 
     el.addEventListener("touchstart", onTouchStart, { passive: true });
     el.addEventListener("touchmove", onTouchMove, { passive: false });
-    el.addEventListener("touchend", onTouchEnd, { passive: true });
     return () => {
       el.removeEventListener("touchstart", onTouchStart);
       el.removeEventListener("touchmove", onTouchMove);
-      el.removeEventListener("touchend", onTouchEnd);
     };
   }, []);
 
@@ -251,16 +184,6 @@ const IPhone = ({ children }) => {
       {children}
     </div>
     <BetaButton/>
-    {/* DEBUG TEMPORANEO — diagnosi bug scroll, da rimuovere a fix confermato */}
-    <div style={{
-      position:"fixed", top:0, left:0, right:0, zIndex:99999,
-      background:"rgba(0,0,0,0.85)", color:"#5CFF5C",
-      fontFamily:"ui-monospace, Consolas, monospace", fontSize:9, lineHeight:1.4,
-      padding:"4px 6px", pointerEvents:"none", whiteSpace:"pre-wrap", wordBreak:"break-all",
-    }}>
-      <div ref={debugLiveRef} style={{ color:"#FFD54C", borderBottom:"1px solid rgba(255,255,255,0.25)", paddingBottom:2, marginBottom:2 }}>in attesa di un tocco…</div>
-      <div ref={debugLogRef} style={{ maxHeight:120, overflow:"hidden" }} />
-    </div>
   </div>
   );
 };
