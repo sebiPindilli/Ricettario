@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useLayoutEffect } from "react";
 import html2canvas from "html2canvas";
 import { useTheme, useRole } from "../context.js";
 import { F, MOBILE_BREAKPOINT_CSS } from "../data/constants.js";
@@ -37,12 +37,38 @@ const BETA_FAB_RESPONSIVE_CSS = `
   }
 `;
 
+const BTN_SIZE = 52;
+const MENU_WIDTH = 230;
+const MARGIN = 20;
+const DRAG_THRESHOLD = 8; // px sotto cui il gesto resta un tap (apre il menu), non un trascinamento
+
 export default function BetaButton() {
   const role = useRole();
   const th = useTheme();
   const [view, setView] = useState(null); // null | "menu" | "form-bug" | "form-improvement" | "list"
   const [screenshot, setScreenshot] = useState(null);
   const [capturing, setCapturing] = useState(false);
+  // Posizione del FAB dopo un trascinamento — null = posizione di default
+  // (basso a destra). Solo stato in memoria (nessuna persistenza): torna
+  // sempre al default a ogni riavvio dell'app, come richiesto.
+  const [pos, setPos] = useState(null); // {top, left} px, relativi a .iphone-shell
+  const btnRef = useRef(null);
+  const dragRef = useRef({ dragging: false, moved: false, startX: 0, startY: 0, origTop: 0, origLeft: 0, shellRect: null });
+  const [shellSize, setShellSize] = useState({ width: 0, height: 0 });
+
+  // Misura .iphone-shell (il "contenitore" a cui il bottone è ancorato, sia
+  // in position:absolute su desktop sia in position:fixed su mobile reale —
+  // vedi il commento sopra) per calcolare i limiti di trascinamento e la
+  // posizione del menu, tenendola aggiornata su resize/rotazione.
+  useLayoutEffect(() => {
+    const shell = btnRef.current?.closest(".iphone-shell");
+    if (!shell) return;
+    const update = () => setShellSize({ width: shell.clientWidth, height: shell.clientHeight });
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(shell);
+    return () => ro.disconnect();
+  }, []);
 
   if (role !== "admin" && role !== "tester") return null;
 
@@ -56,28 +82,86 @@ export default function BetaButton() {
     setView("form-bug");
   };
 
+  // ── Trascinamento del FAB — mouse e touch unificati via Pointer Events.
+  // Sotto la soglia di movimento resta un tap normale (onClick apre/chiude
+  // il menu); sopra, il click successivo viene soppresso (flag "moved" su
+  // un ref, non su state, per non causare re-render ad ogni pixel di drag).
+  const onPointerDown = (e) => {
+    const btn = btnRef.current;
+    const shell = btn?.closest(".iphone-shell");
+    if (!btn || !shell) return;
+    const shellRect = shell.getBoundingClientRect();
+    const btnRect = btn.getBoundingClientRect();
+    dragRef.current = {
+      dragging: true, moved: false,
+      startX: e.clientX, startY: e.clientY,
+      origTop: btnRect.top - shellRect.top, origLeft: btnRect.left - shellRect.left,
+      shellRect,
+    };
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+  };
+  const onPointerMove = (e) => {
+    const d = dragRef.current;
+    if (!d.dragging) return;
+    const dx = e.clientX - d.startX, dy = e.clientY - d.startY;
+    if (!d.moved && Math.hypot(dx, dy) > DRAG_THRESHOLD) d.moved = true;
+    if (!d.moved) return;
+    const top = Math.max(0, Math.min(d.origTop + dy, d.shellRect.height - BTN_SIZE));
+    const left = Math.max(0, Math.min(d.origLeft + dx, d.shellRect.width - BTN_SIZE));
+    setPos({ top, left });
+  };
+  const onPointerUp = () => {
+    window.removeEventListener("pointermove", onPointerMove);
+    window.removeEventListener("pointerup", onPointerUp);
+    dragRef.current.dragging = false;
+  };
+  const onButtonClick = () => {
+    if (dragRef.current.moved) { dragRef.current.moved = false; return; } // era un trascinamento, non un tap
+    setView((v) => (v === "menu" ? null : "menu"));
+  };
+
+  // Posizione effettiva del bottone (default = basso a destra, stessi 20px
+  // di sempre) usata per calcolare dove agganciare il menu: lo segue
+  // ovunque sia stato trascinato, aprendosi a destra invece che a sinistra
+  // se a sinistra non c'è spazio sufficiente per la sua larghezza.
+  const btnTop = pos ? pos.top : shellSize.height - MARGIN - BTN_SIZE;
+  const btnLeft = pos ? pos.left : shellSize.width - MARGIN - BTN_SIZE;
+  const menuBottom = shellSize.height - btnTop + 8;
+  const openToLeft = btnLeft >= MENU_WIDTH + MARGIN;
+  const menuSide = openToLeft
+    ? { right: shellSize.width - btnLeft - BTN_SIZE }
+    : { left: btnLeft };
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: BETA_FAB_RESPONSIVE_CSS }} />
       <button
+        ref={btnRef}
         className="beta-fab-button"
-        onClick={() => setView((v) => (v === "menu" ? null : "menu"))}
+        onPointerDown={onPointerDown}
+        onClick={onButtonClick}
         aria-label="Modalità beta"
         style={{
-          position: "absolute", bottom: 20, right: 20, zIndex: 150,
-          width: 52, height: 52, borderRadius: "50%",
+          position: "absolute",
+          ...(pos
+            ? { top: pos.top, left: pos.left, bottom: "auto", right: "auto" }
+            : { bottom: MARGIN, right: MARGIN, top: "auto", left: "auto" }),
+          zIndex: 150,
+          width: BTN_SIZE, height: BTN_SIZE, borderRadius: "50%",
           border: "none", background: th.appAccent, color: "#fff",
           fontFamily: F.display, fontSize: 22, fontWeight: 700,
           boxShadow: "0 6px 16px rgba(0,0,0,0.3)", cursor: "pointer",
           display: "flex", alignItems: "center", justifyContent: "center",
+          touchAction: "none",
         }}
       >β</button>
 
       {view === "menu" && (
         <div onClick={close} style={{ position: "absolute", inset: 0, zIndex: 160 }}>
           <div className="beta-fab-menu" onClick={(e) => e.stopPropagation()} style={{
-            position: "absolute", bottom: 80, right: 20,
-            background: th.appBg, borderRadius: 14, minWidth: 230,
+            position: "absolute", bottom: menuBottom, ...menuSide,
+            background: th.appBg, borderRadius: 14, minWidth: MENU_WIDTH,
             border: `1px solid ${th.appBorder}`, overflow: "hidden",
             boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
           }}>

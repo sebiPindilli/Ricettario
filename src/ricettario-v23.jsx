@@ -530,7 +530,7 @@ function AppInner({ me, role, initialDefaultBookId }) {
   // d'ingresso: icona di navigazione globale, banner di una schermata, link
   // diretto a una sotto-schermata) — usata dai tasti "Indietro" per tornare
   // davvero da dove si è partiti, invece che sempre alla vista principale.
-  const [organizeOrigin, setOrganizeOrigin] = useState("landing");
+  const [organizeOrigin, setOrganizeOrigin] = useState(null);
   // Fase/selezione di Svuota Frigo sollevate qui: se si apre una ricetta dai
   // risultati e si torna indietro, si ritrova la stessa schermata (invece di
   // ripartire dalla selezione ingredienti, dato che EmptyFridgeScreen viene
@@ -647,6 +647,25 @@ function AppInner({ me, role, initialDefaultBookId }) {
         normName(ing.name) === oldKey ? { ...ing, name: clean } : ing),
     })));
     return true;
+  };
+  // Elimina definitivamente ingredienti NON usati in nessuna ricetta —
+  // pulisce ogni struttura keyed per ingId, non solo il dizionario (a
+  // differenza di deleteAggregate, che lascia riferimenti pendenti; qui
+  // seguiamo lo stile esplicito di deleteCategory).
+  const deleteIngredients = (ids) => {
+    const idSet = new Set(ids);
+    const stripKeys = (obj) => {
+      const next = { ...obj };
+      idSet.forEach(id => delete next[id]);
+      return next;
+    };
+    setIngredientDict(stripKeys);
+    setIngredientCategories(stripKeys);
+    setSourceByIngredient(stripKeys);
+    setEquivalences(stripKeys);
+    setNutritionMap(stripKeys);
+    setAggregates(prev => prev.map(a => ({ ...a, members: (a.members || []).filter(m => !idSet.has(m)) })));
+    setIgnoredSimilarities(prev => prev.filter(([a, b]) => !idSet.has(a) && !idSet.has(b)));
   };
   const saveCustomFood = (food) => {
     setCustomFoods(prev => {
@@ -962,7 +981,12 @@ function AppInner({ me, role, initialDefaultBookId }) {
   const goTo = (s) => { setPrevScreen(screen); setScreen(s); };
   const openAddMemory = (recipeId = null) => { setMemoryPrefillRecipeId(recipeId); goTo("addMemory"); };
   const openOrganize = (recipeId = null, alertTypes = null, manageAggs = false, manageCats = false, aggScope = "all") => {
-    if (screen !== "organize") setOrganizeOrigin(screen); // non sovrascrivere se già dentro Organizza (es. da un alert interno)
+    // Ingresso "contestuale" (da un alert/link specifico) vs "generico" (icona
+    // di navigazione globale o banner, sempre invocato senza argomenti): solo
+    // il primo caso ha un vero posto a cui tornare — l'altro azzera
+    // organizeOrigin così il tasto "Indietro" resta nascosto (vedi onBack).
+    const isContextual = recipeId != null || (alertTypes && alertTypes.length > 0) || manageAggs || manageCats;
+    if (screen !== "organize") setOrganizeOrigin(isContextual ? screen : null); // non sovrascrivere se già dentro Organizza (es. da un alert interno)
     setOrganizeFilter({ recipeId, alertTypes, manageAggs, manageCats, aggScope });
     goTo("organize");
   };
@@ -1044,7 +1068,8 @@ function AppInner({ me, role, initialDefaultBookId }) {
   const saveScanned = (name, tags, ocrData, emoji, color, macroSection) => {
     setScanDraft({
       title: name || ocrData?.title || "",
-      source: "", prepTime: ocrData?.prepTime || 0, cookTime: ocrData?.cookTime || 0,
+      source: ocrData?.source || "", sourceUrl: ocrData?.sourceUrl || "",
+      prepTime: ocrData?.prepTime || 0, cookTime: ocrData?.cookTime || 0,
       servings: ocrData?.servings || 4,
       note: ocrData?.note || "",
       ingredients: (ocrData?.ingredients && ocrData.ingredients.length) ? ocrData.ingredients : [{ name:"", qty:"", unit:"" }],
@@ -1144,12 +1169,13 @@ function AppInner({ me, role, initialDefaultBookId }) {
           <OrganizeIngredientsScreen
             ingredientDict={ingredientDict}
             onRenameIngredient={renameIngredient}
+            onDeleteIngredients={deleteIngredients}
             initialFilterRecipeId={organizeFilter.recipeId}
             initialAlertTypes={organizeFilter.alertTypes}
             initialManageAggs={organizeFilter.manageAggs}
             initialManageCats={organizeFilter.manageCats}
             initialAggScope={organizeFilter.aggScope}
-            onBack={() => setScreen(organizeOrigin)}
+            onBack={organizeOrigin ? () => setScreen(organizeOrigin) : undefined}
             nav={
               <GlobalNav
                 activeScreen="organize"

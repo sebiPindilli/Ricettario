@@ -23,7 +23,7 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
     tags:[], color:"#C4593A", emoji:"🍝",
     dishPhoto:null, macroSection:"altro",
   });
-  const [activeSection, setActiveSection] = useState(initialDraft ? "ingredienti" : "info");
+  const [activeSection, setActiveSection] = useState("info");
 
   const set = (key, val) => setDraft(d => ({ ...d, [key]: val }));
 

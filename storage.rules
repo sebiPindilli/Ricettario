@@ -17,14 +17,33 @@ service firebase.storage {
       return isWhitelisted() &&
         firestore.get(/databases/(default)/documents/allowlist/$(request.auth.token.email)).data.role == "tester";
     }
+    function bookMeta(bookId) {
+      return firestore.get(/databases/(default)/documents/books/$(bookId)).data.meta;
+    }
+    function isBookOwner(bookId) {
+      return bookMeta(bookId).owner == request.auth.token.email;
+    }
+    function isBookMember(bookId) {
+      return request.auth.token.email in bookMeta(bookId).memberEmails;
+    }
+    function canEditBook(bookId) {
+      return isBookOwner(bookId) || bookMeta(bookId).memberRoles[request.auth.token.email] == "edit";
+    }
+
+    // Ricettario Beta — libro condiviso di test, accesso per RUOLO (non
+    // membership), stesso meccanismo di firestore.rules.
+    match /books/b1/{allPaths=**} {
+      allow read, write: if isAdmin() || isTester();
+    }
 
     // Foto delle ricette: books/{bookId}/recipes/{recipeId}/... (dish,
     // steps/*, memories/*) — vedi services/photoStore.js per i path esatti.
-    // Stesso TODO permessi per-libro delle regole Firestore: qui non è
-    // possibile leggere resource.data.meta.members senza un'ulteriore
-    // chiamata firestore.get() sul documento del libro corrispondente.
+    // Stessi permessi per-libro di firestore.rules (letti dal documento
+    // Firestore corrispondente): lettura per owner/membri, scrittura per
+    // owner o membri con ruolo "edit".
     match /books/{bookId}/{allPaths=**} {
-      allow read, write: if isWhitelisted();
+      allow read: if isWhitelisted() && (isBookOwner(bookId) || isBookMember(bookId));
+      allow write: if isWhitelisted() && canEditBook(bookId);
     }
 
     // Screenshot allegati alle segnalazioni beta: reports/{reportId}/screenshot.jpg

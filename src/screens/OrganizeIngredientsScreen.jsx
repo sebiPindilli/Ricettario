@@ -24,7 +24,7 @@ export default function OrganizeIngredientsScreen({
   customUnits = {}, onSaveCustomUnit, onDeleteCustomUnit,
   nutritionMap = {}, onSaveNutritionMapping,
   customFoods = [], onSaveCustomFood, onDeleteCustomFood,
-  ingredientDict = null, onRenameIngredient,
+  ingredientDict = null, onRenameIngredient, onDeleteIngredients,
   shoppingList = [],
   initialFilterRecipeId = null, initialAlertTypes = null, initialManageAggs = false, initialManageCats = false,
   initialAggScope = "all",
@@ -42,6 +42,9 @@ export default function OrganizeIngredientsScreen({
     initialManageAggs ? { existing:false, suggested:true } : { existing:false, suggested:false }
   );
   const [editingFrom, setEditingFrom] = useState(null);   // null | "manageAggs" — dove tornare dopo l'editor aggregato
+  const [unusedOpen, setUnusedOpen] = useState(false);       // tendina "Ingredienti non utilizzati"
+  const [selectedUnused, setSelectedUnused] = useState(() => new Set()); // ingId selezionati lì dentro
+  const [confirmDeleteUnused, setConfirmDeleteUnused] = useState(false); // conferma eliminazione a 2 passaggi
   const [foodForm, setFoodForm] = useState(null);        // form alimento personalizzato {id?, name, ...}
   const [foodFormLinkTo, setFoodFormLinkTo] = useState(null); // dataKey dell'ingrediente da collegare al nuovo alimento, se aperto da lì
   const [expanded, setExpanded] = useState({});          // nome → "cat"|"nutri"|"eq"|null (editor inline aperto)
@@ -134,6 +137,17 @@ export default function OrganizeIngredientsScreen({
 
   const catLabel = (id) => categoryList.find(c => c.id === id);
   const orderedCats = sortCategoriesBaseFirst(categoryList);
+  // Ingredienti referenziati da almeno una ricetta del libro attivo — il
+  // resto del dizionario (accumulato nel tempo da buildIngredientDict, che
+  // non rimuove mai le voci diventate orfane) finisce nella sezione
+  // "Ingredienti non utilizzati" invece che nella lista principale. Calcolato
+  // qui (prima degli early return delle viste "manageXxx") per rispettare le
+  // regole degli hook — va chiamato sempre, non condizionatamente.
+  const usedIngIds = React.useMemo(() => {
+    const s = new Set();
+    recipes.forEach(r => flattenIngredients(r.ingredients).forEach(ing => s.add(resolveIngId(dictIdx, ing.name))));
+    return s;
+  }, [recipes, dictIdx]);
 
   // ── Database aggregati: lista + crea/modifica ──
   if (manageAggs) {
@@ -852,7 +866,7 @@ export default function OrganizeIngredientsScreen({
   const catsSorted = sortCategoriesBaseFirst(categoryList);
   const catOf = (id) => catsSorted.find(c => c.id === id);
 
-  const allIngs = allDictEntries; // [{name: ID, display: nome}] ordinati
+  const allIngs = allDictEntries.filter(i => usedIngIds.has(i.name)); // [{name: ID, display: nome}] ordinati, solo usati
   const recipesFor = (ids) => recipes.filter(r =>
     flattenIngredients(r.ingredients).some(i => ids.includes(resolveIngId(dictIdx, i.name))));
 
@@ -923,6 +937,7 @@ export default function OrganizeIngredientsScreen({
     (!recipeIngIds || recipeIngIds.has(i.name)) &&
     matchesAlertFilter(i.name, false, null)
   );
+  const unusedIngs = allDictEntries.filter(i => !usedIngIds.has(i.name) && (!q || i.display.toLowerCase().includes(q)));
 
   // ── Editor inline: categorie ──
   // Bozza locale (catDraft) finché non premi Salva: evita che la card sparisca
@@ -1093,7 +1108,7 @@ export default function OrganizeIngredientsScreen({
   };
 
   // ── Scheda unificata (ingrediente o aggregato) ──
-  const ItemCard = ({ name, display, isAgg, agg }) => {
+  const ItemCard = ({ name, display, isAgg, agg, selectable, selected, onToggleSelect }) => {
     const key = isAgg ? "agg_" + agg.id : name;
     // Chiave per nutrizione/equivalenze: agg.id per un aggregato (MAI il
     // nome normalizzato, per non collidere con un ingrediente omonimo),
@@ -1155,6 +1170,14 @@ export default function OrganizeIngredientsScreen({
       <>
       <div style={{ background:th.appCard, border:`1.5px solid ${hasIssues ? RED + "66" : th.appBorder}`, borderRadius:13, padding:"12px 13px", marginBottom:9 }}>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          {selectable && (
+            <input
+              type="checkbox"
+              checked={!!selected}
+              onChange={onToggleSelect}
+              style={{ width:18, height:18, flexShrink:0, cursor:"pointer" }}
+            />
+          )}
           <div style={{ flex:1, minWidth:0 }}>
             <div style={{ fontFamily:F.body, fontSize:14.5, fontWeight:700, color:th.appInk, textAlign:"center" }}>
               {isAgg && <span style={{ color:th.appAccent }}>⊕ </span>}
@@ -1337,6 +1360,18 @@ export default function OrganizeIngredientsScreen({
     );
   };
 
+  // ── Ingredienti non utilizzati: selezione + eliminazione a due passaggi ──
+  const toggleUnusedSelect = (ingId) => setSelectedUnused(prev => {
+    const next = new Set(prev);
+    if (next.has(ingId)) next.delete(ingId); else next.add(ingId);
+    return next;
+  });
+  const confirmDeleteSelectedUnused = () => {
+    onDeleteIngredients && onDeleteIngredients(Array.from(selectedUnused));
+    setSelectedUnused(new Set());
+    setConfirmDeleteUnused(false);
+  };
+
   return (
     <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
       {nav}
@@ -1476,6 +1511,54 @@ export default function OrganizeIngredientsScreen({
         ))}
         {visibleAggs.length === 0 && visibleIngs.length === 0 && (
           <div style={{ textAlign:"center", padding:"30px 0", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>Nessun risultato</div>
+        )}
+
+        {/* Ingredienti non referenziati da nessuna ricetta del libro attivo —
+            dati collegati (categorie/nutrizione/equivalenze/aggregati) intatti,
+            solo spostati qui finché non tornano usati o vengono eliminati. */}
+        {unusedIngs.length > 0 && (
+          <div style={{ marginTop:18 }}>
+            <button onClick={() => setUnusedOpen(o => !o)} style={{
+              width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
+              background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:12,
+              padding:"10px 12px", marginBottom:8, cursor:"pointer",
+            }}>
+              <span style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.2, color:th.appFaded, textTransform:"uppercase", fontWeight:700 }}>
+                🗑️ Ingredienti non utilizzati ({unusedIngs.length})
+              </span>
+              <span style={{ color:th.appFaded, fontSize:12 }}>{unusedOpen ? "▾" : "▸"}</span>
+            </button>
+            {unusedOpen && (
+              <>
+                {unusedIngs.map(({ name, display }) => (
+                  <React.Fragment key={name}>
+                    {ItemCard({
+                      name, display, isAgg:false,
+                      selectable:true, selected:selectedUnused.has(name),
+                      onToggleSelect:() => toggleUnusedSelect(name),
+                    })}
+                  </React.Fragment>
+                ))}
+                {selectedUnused.size > 0 && (
+                  confirmDeleteUnused ? (
+                    <div style={{ background:"#C4593A18", border:"1.5px solid #C4593A66", borderRadius:12, padding:"12px 14px", marginTop:6, textAlign:"center" }}>
+                      <div style={{ fontFamily:F.ui, fontSize:12.5, color:th.appInk, marginBottom:10 }}>
+                        Confermi l'eliminazione di {selectedUnused.size} ingrediente{selectedUnused.size === 1 ? "" : "i"}? L'azione non è reversibile.
+                      </div>
+                      <div style={{ display:"flex", gap:8, justifyContent:"center" }}>
+                        <button onClick={() => setConfirmDeleteUnused(false)} style={{ padding:"9px 16px", borderRadius:10, border:`1.5px solid ${th.appBorder}`, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer" }}>Annulla</button>
+                        <button onClick={confirmDeleteSelectedUnused} style={{ padding:"9px 16px", borderRadius:10, border:"none", background:"#C4593A", color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer" }}>Conferma eliminazione</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => setConfirmDeleteUnused(true)} style={{ width:"100%", marginTop:6, padding:"11px", border:"1.5px solid #C4593A66", borderRadius:12, background:"#C4593A18", color:"#C4593A", fontFamily:F.ui, fontSize:12.5, fontWeight:700, cursor:"pointer" }}>
+                      🗑️ Elimina selezionati ({selectedUnused.size})
+                    </button>
+                  )
+                )}
+              </>
+            )}
+          </div>
         )}
       </div>
     </div>
