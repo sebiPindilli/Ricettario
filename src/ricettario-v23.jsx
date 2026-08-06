@@ -183,22 +183,29 @@ const IPhone = ({ children }) => {
       const y = e.touches[0]?.clientY ?? lastY;
       const deltaY = y - lastY;
       lastY = y;
-      const willBlock = el.scrollTop <= 0 && deltaY > 0;
+      // Il controllo va fatto sull'elemento che sta DAVVERO scrollando sotto
+      // il dito (trovato al touchstart), non su .iphone-content-scroll a
+      // priori: dentro modalità cucina/spesa (overlay con una propria lista
+      // interna scrollabile) .iphone-content-scroll resta fermo, quindi
+      // controllarlo blocca ogni scroll verso l'alto lì dentro a prescindere
+      // dalla posizione reale della lista.
+      const refTop = ancestor ? ancestor.scrollTop : null;
+      const willBlock = refTop !== null && refTop <= 0 && deltaY > 0;
       if (willBlock) {
         e.preventDefault();
         if (!blocked) {
           blocked = true;
           blockedOnFirstMove = moveCount === 1;
-          appendLog(`  ⛔ preventDefault su move #${moveCount} (${blockedOnFirstMove ? "PRIMO move" : "move successivo"}) · el.scrollTop:${el.scrollTop}`);
+          appendLog(`  ⛔ preventDefault su move #${moveCount} (${blockedOnFirstMove ? "PRIMO move" : "move successivo"}) · ancestor.scrollTop:${refTop}`);
         }
       } else if (blocked) {
         blocked = false;
-        appendLog(`  ✅ sblocco a move #${moveCount} · deltaY:${deltaY.toFixed(1)} · el.scrollTop:${el.scrollTop}`);
+        appendLog(`  ✅ sblocco a move #${moveCount} · deltaY:${deltaY.toFixed(1)} · ancestor.scrollTop:${refTop}`);
       }
       writeLive(
         `move #${moveCount} · deltaY:${deltaY.toFixed(1)} (${deltaY>0?"dito giù → vuole scroll SU":deltaY<0?"dito su → vuole scroll GIÙ":"—"}) · ` +
         `el.scrollTop:${el.scrollTop} scrollH:${el.scrollHeight} clientH:${el.clientHeight} · ` +
-        `ancestor(${describeEl(ancestor)}).scrollTop:${ancestor ? ancestor.scrollTop : "n/a"} · BLOCCATO:${willBlock ? "SÌ" : "no"}`
+        `ancestor(${describeEl(ancestor)}).scrollTop:${refTop ?? "n/a"} · BLOCCATO:${willBlock ? "SÌ" : "no"}`
       );
     };
 
