@@ -121,11 +121,18 @@ const IPhone = ({ children }) => {
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    let startY = 0;
-    const onTouchStart = (e) => { startY = e.touches[0]?.clientY ?? 0; };
+    // Confronto con l'ultimo touchmove (non con il punto di partenza fisso):
+    // il blocco deve rilasciarsi nell'istante in cui il dito inverte
+    // direzione, non solo dopo aver ripercorso tutta la distanza dal tocco
+    // iniziale (altrimenti lo scroll resta "incastrato" finché non si
+    // esagera nella direzione opposta prima di correggere).
+    let lastY = 0;
+    const onTouchStart = (e) => { lastY = e.touches[0]?.clientY ?? 0; };
     const onTouchMove = (e) => {
-      const y = e.touches[0]?.clientY ?? startY;
-      if (el.scrollTop <= 0 && y - startY > 0) e.preventDefault();
+      const y = e.touches[0]?.clientY ?? lastY;
+      const deltaY = y - lastY;
+      lastY = y;
+      if (el.scrollTop <= 0 && deltaY > 0) e.preventDefault();
     };
     el.addEventListener("touchstart", onTouchStart, { passive: true });
     el.addEventListener("touchmove", onTouchMove, { passive: false });
@@ -143,6 +150,11 @@ const IPhone = ({ children }) => {
     overflow:"hidden",
     boxShadow:"0 40px 100px rgba(0,0,0,0.35), 0 0 0 12px #1a1a1a, 0 0 0 14px #333",
     position:"relative",
+    // Rende la shell il "contenitore" per i figli position:fixed (es. le
+    // modalità cucina/spesa a schermo intero): senza questo, un figlio
+    // fixed si ancorerebbe alla finestra del browser invece che al mockup
+    // telefono su desktop. Trasformazione identica, nessun effetto visivo.
+    transform:"translateZ(0)",
     fontFamily:F.body,
     display:"flex", flexDirection:"column",
     userSelect:"none",

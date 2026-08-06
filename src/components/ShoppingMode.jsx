@@ -43,7 +43,7 @@ export default function ShoppingMode({ recipe, scale, onClose, onAddToList, pres
   let lastSection = null;
 
   return (
-    <div style={{ position:"absolute", inset:0, zIndex:400, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+    <div style={{ position:"fixed", inset:0, zIndex:400, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
       <div style={{ width:"100%", maxHeight:"90%", background:th.appBg, borderRadius:20, display:"flex", flexDirection:"column", overflow:"hidden" }}>
         {/* Header — fisso in cima alla scheda */}
         <div style={{ background:th.appInk, padding:"14px 18px", display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
