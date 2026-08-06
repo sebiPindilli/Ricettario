@@ -9,10 +9,10 @@ const normalizeEmail = (email) => (email || "").trim().toLowerCase();
 
 export const checkWhitelist = async (email) => {
   const key = normalizeEmail(email);
-  if (!key) return { authorized: false, role: null };
+  if (!key) return { authorized: false, role: null, defaultBookId: null };
   const snap = await getDoc(doc(db, "allowlist", key));
-  if (!snap.exists()) return { authorized: false, role: null };
-  return { authorized: true, role: snap.data().role || "base" };
+  if (!snap.exists()) return { authorized: false, role: null, defaultBookId: null };
+  return { authorized: true, role: snap.data().role || "base", defaultBookId: snap.data().defaultBookId || null };
 };
 
 export const loadAllowlist = async () => {
@@ -30,3 +30,8 @@ export const setAllowlistRole = (email, role) =>
 
 export const removeAllowlistEntry = (email) =>
   deleteDoc(doc(db, "allowlist", email));
+
+// Preferenza personale "libro predefinito all'avvio" — ogni utente scrive
+// solo il proprio campo, indipendente dalla gestione ruoli (vedi regole).
+export const setDefaultBook = (email, bookId) =>
+  updateDoc(doc(db, "allowlist", email), { defaultBookId: bookId });

@@ -12,7 +12,13 @@ import {
   memoryPeriodLabel, memorySortKey, buildFridgeItems,
 } from "./utils/helpers.js";
 import { effectiveNutritionKey, findSimilarIngredients } from "./utils/aggregates.js";
-import { loadFullBook, saveFullBook, createBookInFirestore, saveRecipe } from "./services/bookStore.js";
+import {
+  loadFullBook, saveFullBook, saveRecipe,
+  createBookInFirestore, deleteBookInFirestore, listMyBooks,
+  addBookMember as addBookMemberFs, removeBookMember as removeBookMemberFs, setBookMemberPermission,
+} from "./services/bookStore.js";
+import { setDefaultBook } from "./services/authStore.js";
+import { auth } from "./firebase.js";
 import AuthGate from "./components/AuthGate.jsx";
 import {
   T, F, MACRO_SECTIONS, PICKER_EMOJIS, INGREDIENT_CATEGORIES,
@@ -442,7 +448,7 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-function AppInner({ me, role }) {
+function AppInner({ me, role, initialDefaultBookId }) {
   const [screen, setScreen] = useState("cover");
   // screen: cover | landing | recipes | book | memories | recipe | new | edit | scan | theme
   const [selected, setSelected] = useState(null);
@@ -665,16 +671,14 @@ function AppInner({ me, role }) {
   const removeShoppingRecipe = (recipeId) => setShoppingList(prev => prev.filter(e => e.recipeId !== recipeId));
   const clearShoppingList = () => setShoppingList([]);
 
-  // ══ Multi-ricettario — meta locale (nome/tipo/owner/members); i dati
+  // ══ Multi-ricettario — meta locale (nome/tipo/owner/membri); i dati
   // di ogni libro vivono su Firestore (vedi loadFullBook/saveFullBook) ══
   // me = email reale dell'utente loggato (da AuthGate, vedi export default App)
-  const [books, setBooks] = useState([
-    { id:"b1", name:"Il mio Ricettario", type:"personale", owner:me, members:[me] },
-  ]);
-  // Ricettario predefinito: quello caricato all'avvio dell'app
-  // (nella PWA sarà salvato nel profilo utente su Firestore)
-  const [defaultBookId, setDefaultBookId] = useState("b1");
-  const [activeBookId, setActiveBookId] = useState("b1"); // all'avvio = predefinito
+  const [books, setBooks] = useState([]);
+  // Ricettario predefinito: quello caricato all'avvio dell'app — persistito
+  // su allowlist/{email}.defaultBookId (vedi services/authStore.js).
+  const [defaultBookId, setDefaultBookId] = useState(null);
+  const [activeBookId, setActiveBookId] = useState(null);
   const activeBook = books.find(b => b.id === activeBookId);
   // Diventa true solo dopo il primo caricamento riuscito da Firestore —
   // finché è false, il salvataggio automatico resta fermo (altrimenti,
@@ -702,13 +706,30 @@ function AppInner({ me, role }) {
     }
   };
 
-  // Caricamento iniziale da Firestore — sostituisce i dati demo hardcoded
-  // con quelli reali del libro attivo, non appena disponibili.
+  // Bootstrap iniziale: carica "i miei libri" da Firestore (owner + membro,
+  // più il Ricettario Beta se tester/admin — vedi listMyBooks); se è la
+  // primissima volta (nessun libro trovato), crea il libro personale via
+  // /api/create-book. Sceglie come attivo il predefinito salvato (se ancora
+  // valido) o il libro personale, poi ne carica subito i dati.
   useEffect(() => {
-    loadFullBook(activeBookId).then(data => {
+    (async () => {
+      let list = await listMyBooks(me, role);
+      if (list.length === 0) {
+        const idToken = await auth.currentUser.getIdToken();
+        const id = await createBookInFirestore({ idToken, name: "Il mio Ricettario", type: "personale" });
+        list = [{ id, name: "Il mio Ricettario", type: "personale", bookTheme: "classic", owner: me, memberEmails: [], memberRoles: {} }];
+      }
+      setBooks(list);
+      const personal = list.find(b => b.type === "personale" && b.owner === me);
+      const initial = (initialDefaultBookId && list.some(b => b.id === initialDefaultBookId))
+        ? initialDefaultBookId
+        : (personal ? personal.id : list[0].id);
+      setDefaultBookId(initial);
+      setActiveBookId(initial);
+      const data = await loadFullBook(initial);
       if (data.meta) loadData(data);
       setBookLoaded(true);
-    });
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -721,7 +742,7 @@ function AppInner({ me, role }) {
     if (!bookLoaded || !activeBook) return;
     const timer = setTimeout(() => {
       saveFullBook(activeBookId, {
-        meta: { name: activeBook.name, type: activeBook.type, owner: activeBook.owner, members: activeBook.members, bookTheme: bookTheme.id },
+        meta: { name: activeBook.name, type: activeBook.type, owner: activeBook.owner, memberEmails: activeBook.memberEmails || [], memberRoles: activeBook.memberRoles || {}, bookTheme: bookTheme.id },
         ...snapshotData(),
       });
     }, 1500);
@@ -743,7 +764,7 @@ function AppInner({ me, role }) {
     setBookLoaded(false);
     if (activeBook) {
       await saveFullBook(activeBookId, {
-        meta: { name: activeBook.name, type: activeBook.type, owner: activeBook.owner, members: activeBook.members, bookTheme: bookTheme.id },
+        meta: { name: activeBook.name, type: activeBook.type, owner: activeBook.owner, memberEmails: activeBook.memberEmails || [], memberRoles: activeBook.memberRoles || {}, bookTheme: bookTheme.id },
         ...snapshotData(),
       });
     }
@@ -756,27 +777,61 @@ function AppInner({ me, role }) {
 
   const createBook = async (name, memberEmails) => {
     const trimmedName = name.trim() || "Nuovo ricettario";
-    const members = [me, ...memberEmails.filter(e => e && e !== me)];
-    const id = await createBookInFirestore({ name: trimmedName, type:"condiviso", owner:me, members, bookTheme:"classic" });
-    setBooks(prev => [...prev, { id, name: trimmedName, type:"condiviso", owner:me, members }]);
+    const idToken = await auth.currentUser.getIdToken();
+    const id = await createBookInFirestore({ idToken, name: trimmedName, type: "condiviso" });
+    const emails = memberEmails.filter(e => e && e !== me);
+    await Promise.all(emails.map(e => addBookMemberFs(id, e, "edit")));
+    setBooks(prev => [...prev, {
+      id, name: trimmedName, type: "condiviso", bookTheme: "classic", owner: me,
+      memberEmails: emails, memberRoles: Object.fromEntries(emails.map(e => [e, "edit"])),
+    }]);
   };
 
   const renameBook = (id, name) => {
     setBooks(prev => prev.map(b => b.id === id ? { ...b, name } : b));
   };
 
-  const addMember = (id, email) => {
-    const e = email.trim().toLowerCase();
-    if (!e || !e.includes("@")) return;
-    setBooks(prev => prev.map(b =>
-      b.id === id && !b.members.includes(e) ? { ...b, members:[...b.members, e] } : b
-    ));
+  const deleteBook = async (id) => {
+    // Se è il libro attivo, cambia libro PRIMA di chiedere l'eliminazione al
+    // server: switchBook salva (autosave d'uscita) il libro che si lascia,
+    // e quel salvataggio fallirebbe con "permessi insufficienti" se il
+    // documento fosse già stato cancellato nel frattempo.
+    if (id === activeBookId) {
+      const personal = books.find(b => b.type === "personale" && b.owner === me && b.id !== id);
+      if (personal) await switchBook(personal.id);
+    }
+    const idToken = await auth.currentUser.getIdToken();
+    await deleteBookInFirestore({ idToken, bookId: id });
+    setBooks(prev => prev.filter(b => b.id !== id));
   };
 
-  const removeMember = (id, email) => {
-    setBooks(prev => prev.map(b =>
-      b.id === id && email !== b.owner ? { ...b, members: b.members.filter(m => m !== email) } : b
-    ));
+  // Scrivono subito su Firestore (non solo nello stato locale come prima):
+  // altrimenti la modifica veniva persistita solo se il libro toccato era
+  // quello attivo, per via del salvataggio automatico con debounce.
+  const addMember = async (id, email) => {
+    const e = email.trim().toLowerCase();
+    const book = books.find(b => b.id === id);
+    if (!e || !e.includes("@") || !book || (book.memberEmails || []).includes(e)) return;
+    await addBookMemberFs(id, e, "edit");
+    setBooks(prev => prev.map(b => b.id === id
+      ? { ...b, memberEmails: [...(b.memberEmails || []), e], memberRoles: { ...(b.memberRoles || {}), [e]: "edit" } }
+      : b));
+  };
+
+  const removeMember = async (id, email) => {
+    const book = books.find(b => b.id === id);
+    if (!book || email === book.owner) return;
+    await removeBookMemberFs(id, email);
+    setBooks(prev => prev.map(b => b.id === id
+      ? { ...b, memberEmails: (b.memberEmails || []).filter(m => m !== email), memberRoles: Object.fromEntries(Object.entries(b.memberRoles || {}).filter(([k]) => k !== email)) }
+      : b));
+  };
+
+  const changeMemberPermission = async (id, email, permission) => {
+    await setBookMemberPermission(id, email, permission);
+    setBooks(prev => prev.map(b => b.id === id
+      ? { ...b, memberRoles: { ...(b.memberRoles || {}), [email]: permission } }
+      : b));
   };
 
   // Copia ricette (per id) dal libro ATTIVO verso un altro libro — copie
@@ -1077,13 +1132,15 @@ function AppInner({ me, role }) {
             onSwitch={async (id) => { await switchBook(id); setScreen("landing"); }}
             onCreate={createBook}
             onRename={renameBook}
+            onDelete={deleteBook}
             onAddMember={addMember}
             onRemoveMember={removeMember}
+            onChangeMemberPermission={changeMemberPermission}
             onCopyRecipes={copyRecipesToBook}
             onExportCode={exportShareCode}
             onImportCode={importShareCode}
             defaultBookId={defaultBookId}
-            onSetDefault={setDefaultBookId}
+            onSetDefault={(id) => { setDefaultBookId(id); setDefaultBook(me, id); }}
             onLanding={() => setScreen("landing")}
             onRecipes={() => setScreen("recipes")}
             onBook={() => setScreen("book")}
@@ -1368,7 +1425,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AuthGate>
-        {(user, role) => <AppInner me={user.email} role={role}/>}
+        {(user, role, defaultBookId) => <AppInner me={user.email} role={role} initialDefaultBookId={defaultBookId}/>}
       </AuthGate>
     </ErrorBoundary>
   );

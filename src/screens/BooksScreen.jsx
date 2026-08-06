@@ -3,9 +3,11 @@ import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 import GlobalNav from "../components/GlobalNav.jsx";
 
+const DANGER = "#C4593A";
+
 export default function BooksScreen({
   books, activeBookId, me, activeRecipes,
-  onSwitch, onCreate, onRename, onAddMember, onRemoveMember,
+  onSwitch, onCreate, onRename, onDelete, onAddMember, onRemoveMember, onChangeMemberPermission,
   onCopyRecipes, onExportCode, onImportCode,
   defaultBookId, onSetDefault,
   onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping,
@@ -15,9 +17,12 @@ export default function BooksScreen({
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmails, setNewEmails] = useState("");
+  const [createError, setCreateError] = useState(null);
+  const [createBusy, setCreateBusy] = useState(false);
   const [renaming, setRenaming] = useState(null); // book id
   const [renameVal, setRenameVal] = useState("");
   const [memberInput, setMemberInput] = useState({}); // bookId → email
+  const [pendingDelete, setPendingDelete] = useState(null); // book id
   const [importOpen, setImportOpen] = useState(false);
   const [importVal, setImportVal] = useState("");
   const [importMsg, setImportMsg] = useState(null);
@@ -28,6 +33,8 @@ export default function BooksScreen({
 
   const activeBook = books.find(b => b.id === activeBookId);
   const otherBooks = books.filter(b => b.id !== activeBookId);
+  const ownedCount = books.filter(b => b.owner === me && b.id !== "b1").length;
+  const atBookLimit = ownedCount >= 10;
 
   const nav = (
     <GlobalNav
@@ -172,14 +179,18 @@ export default function BooksScreen({
         {books.map(b => {
           const active = b.id === activeBookId;
           const isRen = renaming === b.id;
+          const isBeta = b.id === "b1";
+          const isOwner = b.owner === me;
+          const confirmingDelete = pendingDelete === b.id;
           return (
             <div key={b.id} style={{
+              position:"relative", overflow:"hidden",
               background:th.appCard,
               border:`1.5px solid ${active ? th.appAccent : th.appBorder}`,
               borderRadius:14, padding:"12px 14px", marginBottom:10,
             }}>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                <span style={{ fontSize:20 }}>{b.type === "personale" ? "🔒" : "👥"}</span>
+                <span style={{ fontSize:20 }}>{isBeta ? "🧪" : b.type === "personale" ? "🔒" : "👥"}</span>
                 {isRen ? (
                   <input
                     value={renameVal}
@@ -192,7 +203,7 @@ export default function BooksScreen({
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontFamily:F.display, fontSize:16, color:th.appInk }}>{b.name}</div>
                     <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded }}>
-                      {b.type === "personale" ? "personale" : `condiviso · ${b.members.length} membri`}
+                      {isBeta ? "Ricettario Beta" : b.type === "personale" ? "personale" : `condiviso · ${(b.memberEmails || []).length} membri`}
                       {active && <span style={{ color:th.appAccent, fontWeight:700 }}> · attivo</span>}
                     </div>
                   </div>
@@ -223,29 +234,72 @@ export default function BooksScreen({
                   : <><span style={{ opacity:0.5 }}>☆</span> <span style={{ textDecoration:"underline", textUnderlineOffset:2 }}>Imposta come predefinito all'avvio</span></>}
               </button>
 
-              {/* Membri (solo condivisi) */}
-              {b.type === "condiviso" && (
+              {/* Ricettario Beta: accesso automatico per ruolo, nessuna gestione membri */}
+              {isBeta && (
+                <div style={{ marginTop:10, paddingTop:10, borderTop:`1px dashed ${th.appBorder}`, fontFamily:F.ui, fontSize:10.5, color:th.appFaded, fontStyle:"italic" }}>
+                  🧪 Ricettario Beta — accesso automatico per tutti i tester/admin, non richiede inviti.
+                </div>
+              )}
+
+              {/* Membri (solo condivisi, non Beta) */}
+              {!isBeta && b.type === "condiviso" && (
                 <div style={{ marginTop:10, paddingTop:10, borderTop:`1px dashed ${th.appBorder}` }}>
-                  <div style={{ fontFamily:F.ui, fontSize:9, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:6 }}>Membri (sincronizzati)</div>
-                  <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginBottom:8 }}>
-                    {b.members.map(m => (
-                      <span key={m} style={{ display:"flex", alignItems:"center", gap:4, fontFamily:F.ui, fontSize:10.5, color:th.appInk, background:th.appBg, border:`1px solid ${th.appBorder}`, borderRadius:14, padding:"4px 9px" }}>
-                        {m}{m === b.owner && " 👑"}
-                        {m !== b.owner && (
-                          <button onClick={() => onRemoveMember(b.id, m)} style={{ background:"none", border:"none", color:"#C4593A", cursor:"pointer", fontSize:12, padding:0 }}>×</button>
+                  <div style={{ fontFamily:F.ui, fontSize:9, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:6 }}>Membri</div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:4, marginBottom:8 }}>
+                    <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appInk }}>{b.owner} <span style={{ color:th.appFaded }}>👑 proprietario</span></div>
+                    {(b.memberEmails || []).map(m => {
+                      const roles = b.memberRoles || {};
+                      return (
+                      <div key={m} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
+                        <span style={{ fontFamily:F.ui, fontSize:10.5, color:th.appInk, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{m}</span>
+                        {isOwner ? (
+                          <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+                            <div style={{ display:"flex", borderRadius:8, overflow:"hidden", border:`1px solid ${th.appBorder}` }}>
+                              {["read", "edit"].map(p => (
+                                <button key={p} disabled={roles[m] === p} onClick={() => onChangeMemberPermission(b.id, m, p)} style={{
+                                  padding:"4px 8px", border:"none", cursor: roles[m] === p ? "default" : "pointer",
+                                  background: roles[m] === p ? th.appAccent : "transparent",
+                                  color: roles[m] === p ? "#fff" : th.appFaded,
+                                  fontFamily:F.ui, fontSize:9.5, fontWeight:600,
+                                }}>{p === "edit" ? "modifica" : "lettura"}</button>
+                              ))}
+                            </div>
+                            <button onClick={() => onRemoveMember(b.id, m)} style={{ background:"none", border:"none", color:DANGER, cursor:"pointer", fontSize:14, padding:0, flexShrink:0 }}>×</button>
+                          </div>
+                        ) : (
+                          <span style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, flexShrink:0 }}>{roles[m] === "edit" ? "modifica" : "lettura"}</span>
                         )}
-                      </span>
-                    ))}
+                      </div>
+                      );
+                    })}
                   </div>
-                  <div style={{ display:"flex", gap:6 }}>
-                    <input
-                      value={memberInput[b.id] || ""}
-                      onChange={e => setMemberInput(p => ({ ...p, [b.id]: e.target.value }))}
-                      onKeyDown={e => { if (e.key === "Enter") { onAddMember(b.id, memberInput[b.id] || ""); setMemberInput(p => ({ ...p, [b.id]: "" })); } }}
-                      placeholder="email@esempio.it"
-                      style={{ flex:1, padding:"8px 11px", border:`1.5px solid ${th.appBorder}`, borderRadius:9, background:th.appBg, fontFamily:F.body, fontSize:12, color:th.appInk, outline:"none", minWidth:0 }}
-                    />
-                    <button onClick={() => { onAddMember(b.id, memberInput[b.id] || ""); setMemberInput(p => ({ ...p, [b.id]: "" })); }} style={{ background:th.appAccent, border:"none", borderRadius:9, padding:"8px 12px", color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer", flexShrink:0 }}>＋ Invita</button>
+                  {isOwner && (
+                    <>
+                      <div style={{ display:"flex", gap:6 }}>
+                        <input
+                          value={memberInput[b.id] || ""}
+                          onChange={e => setMemberInput(p => ({ ...p, [b.id]: e.target.value }))}
+                          onKeyDown={e => { if (e.key === "Enter") { onAddMember(b.id, memberInput[b.id] || ""); setMemberInput(p => ({ ...p, [b.id]: "" })); } }}
+                          placeholder="email@esempio.it"
+                          style={{ flex:1, padding:"8px 11px", border:`1.5px solid ${th.appBorder}`, borderRadius:9, background:th.appBg, fontFamily:F.body, fontSize:12, color:th.appInk, outline:"none", minWidth:0 }}
+                        />
+                        <button onClick={() => { onAddMember(b.id, memberInput[b.id] || ""); setMemberInput(p => ({ ...p, [b.id]: "" })); }} style={{ background:th.appAccent, border:"none", borderRadius:9, padding:"8px 12px", color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer", flexShrink:0 }}>＋ Invita</button>
+                      </div>
+                      <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:6, fontStyle:"italic" }}>
+                        Puoi invitare solo email già abilitate da un admin in "Gestione utenti".
+                      </div>
+                      <button onClick={() => setPendingDelete(b.id)} style={{ marginTop:10, background:"none", border:"none", color:DANGER, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0 }}>🗑️ Elimina ricettario</button>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {confirmingDelete && (
+                <div style={{ position:"absolute", inset:0, background:`${th.appBg}f2`, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10, padding:12 }}>
+                  <div style={{ fontFamily:F.ui, fontSize:12, color:th.appInk, textAlign:"center" }}>Eliminare <b>{b.name}</b>?<br/>Ricette e dati andranno persi per sempre.</div>
+                  <div style={{ display:"flex", gap:8 }}>
+                    <button onClick={() => setPendingDelete(null)} style={{ padding:"8px 14px", borderRadius:9, border:`1.5px solid ${th.appBorder}`, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:12, cursor:"pointer" }}>Annulla</button>
+                    <button onClick={() => { onDelete(b.id); setPendingDelete(null); }} style={{ padding:"8px 14px", borderRadius:9, border:"none", background:DANGER, color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer" }}>Elimina definitivamente</button>
                   </div>
                 </div>
               )}
@@ -270,20 +324,36 @@ export default function BooksScreen({
               placeholder="Email membri, separate da virgola (opzionale)"
               style={{ width:"100%", padding:"9px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appBg, fontFamily:F.body, fontSize:12, color:th.appInk, outline:"none", boxSizing:"border-box", marginBottom:10 }}
             />
+            {createError && <div style={{ fontFamily:F.ui, fontSize:11, color:DANGER, marginBottom:8 }}>{createError}</div>}
             <div style={{ display:"flex", gap:8 }}>
-              <button onClick={() => { setCreating(false); setNewName(""); setNewEmails(""); }} style={{ flex:1, padding:"11px", border:`1.5px solid ${th.appBorder}`, borderRadius:11, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:12, cursor:"pointer" }}>Annulla</button>
-              <button onClick={() => {
-                onCreate(newName, newEmails.split(",").map(s => s.trim().toLowerCase()).filter(Boolean));
-                setCreating(false); setNewName(""); setNewEmails("");
-              }} disabled={!newName.trim()} style={{ flex:2, padding:"11px", border:"none", borderRadius:11, background: newName.trim() ? th.appAccent : th.appBorder, color: newName.trim() ? "#fff" : th.appFaded, fontFamily:F.ui, fontSize:12, fontWeight:700, cursor: newName.trim() ? "pointer" : "default" }}>Crea ricettario</button>
+              <button onClick={() => { setCreating(false); setNewName(""); setNewEmails(""); setCreateError(null); }} style={{ flex:1, padding:"11px", border:`1.5px solid ${th.appBorder}`, borderRadius:11, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:12, cursor:"pointer" }}>Annulla</button>
+              <button onClick={async () => {
+                setCreateBusy(true); setCreateError(null);
+                try {
+                  await onCreate(newName, newEmails.split(",").map(s => s.trim().toLowerCase()).filter(Boolean));
+                  setCreating(false); setNewName(""); setNewEmails("");
+                } catch (err) {
+                  setCreateError(err.message || "Creazione non riuscita.");
+                } finally {
+                  setCreateBusy(false);
+                }
+              }} disabled={!newName.trim() || createBusy} style={{ flex:2, padding:"11px", border:"none", borderRadius:11, background: newName.trim() ? th.appAccent : th.appBorder, color: newName.trim() ? "#fff" : th.appFaded, fontFamily:F.ui, fontSize:12, fontWeight:700, cursor: newName.trim() ? "pointer" : "default" }}>
+                {createBusy ? "Creazione…" : "Crea ricettario"}
+              </button>
             </div>
           </div>
         ) : (
-          <button onClick={() => setCreating(true)} style={{
-            width:"100%", padding:"13px", borderRadius:14,
-            border:`1.5px dashed ${th.appBorder}`, background:"transparent",
-            color:th.appFaded, fontFamily:F.ui, fontSize:13, fontWeight:600, cursor:"pointer", marginBottom:10,
-          }}>＋ Nuovo ricettario condiviso</button>
+          <>
+            <button onClick={() => setCreating(true)} disabled={atBookLimit} style={{
+              width:"100%", padding:"13px", borderRadius:14,
+              border:`1.5px dashed ${th.appBorder}`, background:"transparent",
+              color: atBookLimit ? th.appBorder : th.appFaded, fontFamily:F.ui, fontSize:13, fontWeight:600,
+              cursor: atBookLimit ? "default" : "pointer", marginBottom:4,
+            }}>＋ Nuovo ricettario condiviso</button>
+            <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, textAlign:"center", marginBottom:10 }}>
+              {ownedCount}/10 ricettari di tua proprietà{atBookLimit ? " — limite raggiunto" : ""}
+            </div>
+          </>
         )}
 
         {/* Azioni: trasferisci / importa */}

@@ -1,13 +1,29 @@
 // Fase 1 — funzioni di lettura/scrittura Firestore per un libro.
 // Rispecchiano la struttura concordata:
-//   books/{bookId}                    → campo meta:{name,type,owner,members,bookTheme}
+//   books/{bookId}                    → campo meta:{name,type,owner,bookTheme,memberEmails,memberRoles}
 //   books/{bookId}/system/data        → documento singolo con i campi "piccoli"
 //   books/{bookId}/shoppingList/data  → documento singolo {entries:[...]}
 //   books/{bookId}/recipes/{recipeId} → sotto-collezione (vedi Fase 1.2)
 import { db } from "../firebase.js";
-import { doc, getDoc, getDocs, setDoc, deleteDoc, collection } from "firebase/firestore";
+import {
+  doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection,
+  query, where, arrayUnion, arrayRemove, deleteField,
+} from "firebase/firestore";
 import { MACRO_SECTIONS, INGREDIENT_CATEGORIES } from "../data/constants.js";
 import { uploadPhoto, dishPhotoPath, stepPhotoPath, memoryPhotoPath } from "./photoStore.js";
+
+// Le funzioni /api/* rispondono sempre in JSON quando servite da Vercel
+// (produzione o `vercel dev`) — ma il semplice `npm run dev` (Vite puro,
+// porta 5173) non serve affatto le funzioni serverless: in quel caso
+// res.json() fallisce con un errore criptico ("unexpected end of json
+// input"). Qui lo trasformiamo in un messaggio comprensibile.
+const parseApiResponse = async (res) => {
+  try {
+    return await res.json();
+  } catch {
+    throw new Error("Impossibile contattare il server. In locale serve `vercel dev` (non il solo `npm run dev`).");
+  }
+};
 
 const bookRef = (bookId) => doc(db, "books", bookId);
 const systemRef = (bookId) => doc(db, "books", bookId, "system", "data");
@@ -80,15 +96,71 @@ export const loadShoppingList = async (bookId) => {
   return snap.exists() ? (snap.data().entries || []) : [];
 };
 
-// Crea un libro nuovo con meta + system vuoto + shoppingList vuota.
-// La sotto-collezione recipes non richiede creazione esplicita (parte vuota).
-export const createBookInFirestore = async ({ name, type = "personale", owner, members, bookTheme = "classic" }) => {
-  const newRef = doc(collection(db, "books"));
-  await setDoc(newRef, { meta: { name, type, owner, members, bookTheme } });
-  await saveBookSystem(newRef.id, emptySystemData());
-  await saveShoppingList(newRef.id, []);
-  return newRef.id;
+// Crea un libro nuovo — passa da /api/create-book (Admin SDK) invece di
+// scrivere direttamente su Firestore: è l'unico modo per far rispettare
+// davvero il limite di 10 libri di proprietà per utente (le regole non
+// permettono create diretti sul client, vedi firestore.rules). Dopo la
+// creazione, system/shoppingList vuoti si scrivono come prima dal client
+// (l'utente è già owner secondo le nuove regole).
+export const createBookInFirestore = async ({ idToken, name, type = "personale", bookTheme = "classic" }) => {
+  const res = await fetch("/api/create-book", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idToken, name, type, bookTheme }),
+  });
+  const data = await parseApiResponse(res);
+  if (!res.ok) throw new Error(data.error || "Creazione del ricettario non riuscita.");
+  await saveBookSystem(data.id, emptySystemData());
+  await saveShoppingList(data.id, []);
+  return data.id;
 };
+
+// Elimina un libro — passa da /api/delete-book (Admin SDK): verifica
+// proprietà, blocca libro personale/Beta, elimina ricorsivamente e
+// decrementa il contatore in modo non aggirabile dal client.
+export const deleteBookInFirestore = async ({ idToken, bookId }) => {
+  const res = await fetch("/api/delete-book", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idToken, bookId }),
+  });
+  if (!res.ok) {
+    const data = await parseApiResponse(res);
+    throw new Error(data.error || "Eliminazione non riuscita.");
+  }
+};
+
+// "I miei libri": quelli di cui sono owner + quelli di cui sono membro,
+// più — se tester/admin — il Ricettario Beta (b1, accesso per ruolo,
+// vedi firestore.rules), sempre incluso senza bisogno di essere membro.
+export const listMyBooks = async (email, role) => {
+  const [ownedSnap, memberSnap] = await Promise.all([
+    getDocs(query(collection(db, "books"), where("meta.owner", "==", email))),
+    getDocs(query(collection(db, "books"), where("meta.memberEmails", "array-contains", email))),
+  ]);
+  const byId = new Map();
+  [...ownedSnap.docs, ...memberSnap.docs].forEach((d) => byId.set(d.id, { id: d.id, ...d.data().meta }));
+  if (role === "admin" || role === "tester") {
+    const betaSnap = await getDoc(bookRef("b1"));
+    if (betaSnap.exists()) byId.set("b1", { id: "b1", ...betaSnap.data().meta });
+  }
+  return Array.from(byId.values());
+};
+
+export const addBookMember = (bookId, email, permission) =>
+  updateDoc(bookRef(bookId), {
+    "meta.memberEmails": arrayUnion(email),
+    [`meta.memberRoles.${email}`]: permission,
+  });
+
+export const setBookMemberPermission = (bookId, email, permission) =>
+  updateDoc(bookRef(bookId), { [`meta.memberRoles.${email}`]: permission });
+
+export const removeBookMember = (bookId, email) =>
+  updateDoc(bookRef(bookId), {
+    "meta.memberEmails": arrayRemove(email),
+    [`meta.memberRoles.${email}`]: deleteField(),
+  });
 
 // ── Sotto-collezione recipes: un documento per ricetta ──
 // recipe.id (numero nella demo, stringa uid("r") altrove) diventa l'id

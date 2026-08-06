@@ -38,20 +38,59 @@ service cloud.firestore {
         request.resource.data.role in ['base', 'tester'];
 
       allow delete: if isAdmin() && resource.data.role != 'admin';
+
+      // Preferenza personale "libro predefinito all'avvio": ogni utente
+      // può scrivere solo il PROPRIO campo defaultBookId sulla propria
+      // voce — indipendente dalla gestione ruoli (regola sopra).
+      allow update: if isSignedIn() && request.auth.token.email == email &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['defaultBookId']);
     }
 
-    // Libri: oggi chiunque sia whitelisted accede a QUALUNQUE libro.
-    // TODO permessi per-libro (debito tecnico noto, vedi handover): quando
-    // "books" sarà una vera lista caricata da Firestore per utente,
-    // restringere qui aggiungendo:
-    //   && request.auth.token.email in resource.data.meta.members
-    // (usare request.resource.data.meta.members per le creazioni/write
-    // su documenti che non esistono ancora).
+    // Ricettario Beta — libro condiviso di test, accesso per RUOLO (non
+    // membership): chiunque sia tester o admin, oggi e in futuro, senza
+    // bisogno di inviti — stesso meccanismo già usato per reports/.
+    match /books/b1 {
+      allow read, write: if isAdmin() || isTester();
+      match /{document=**} {
+        allow read, write: if isAdmin() || isTester();
+      }
+    }
+
+    // Libri: ogni libro ha un owner e una mappa di membri con permesso
+    // "edit"/"read" (meta.memberRoles) — memberEmails è un array piatto
+    // degli stessi indirizzi, usato solo per la query "i miei libri"
+    // (array-contains), perché Firestore non supporta query su chiavi
+    // dinamiche di una mappa. Un'email non whitelisted aggiunta per errore
+    // ai membri resta comunque bloccata da isWhitelisted() qui sotto: non
+    // serve validare altrove che gli invitati siano già in whitelist.
     match /books/{bookId} {
-      allow read, write: if isWhitelisted();
+      function isBookOwner() { return isWhitelisted() && resource.data.meta.owner == request.auth.token.email; }
+      function myBookRole()  { return resource.data.meta.memberRoles[request.auth.token.email]; }
+      function isBookMember(){ return request.auth.token.email in resource.data.meta.memberEmails; }
+      function canEditBook() { return isBookOwner() || myBookRole() == "edit"; }
+
+      allow read: if isWhitelisted() && (isBookOwner() || isBookMember());
+
+      // Creazione ed eliminazione: MAI dal client — solo via /api/create-book
+      // e /api/delete-book (Admin SDK, bypassano le regole), che applicano
+      // il limite di 10 libri per utente in modo non aggirabile (un
+      // contatore mantenuto solo qui sarebbe aggirabile da chi salta l'app).
+      allow create: if false;
+      allow delete: if false;
+
+      // Modifica: l'owner può tutto; un membro "edit" può cambiare solo
+      // nome/tema, non gestire membri né cedere la proprietà.
+      allow update: if isWhitelisted() && canEditBook() &&
+        (isBookOwner() ||
+         request.resource.data.meta.diff(resource.data.meta).affectedKeys().hasOnly(['name', 'bookTheme']));
 
       match /{document=**} {
-        allow read, write: if isWhitelisted();
+        allow read: if isWhitelisted() &&
+          (get(/databases/$(database)/documents/books/$(bookId)).data.meta.owner == request.auth.token.email ||
+           request.auth.token.email in get(/databases/$(database)/documents/books/$(bookId)).data.meta.memberEmails);
+        allow write: if isWhitelisted() &&
+          (get(/databases/$(database)/documents/books/$(bookId)).data.meta.owner == request.auth.token.email ||
+           get(/databases/$(database)/documents/books/$(bookId)).data.meta.memberRoles[request.auth.token.email] == "edit");
       }
     }
 

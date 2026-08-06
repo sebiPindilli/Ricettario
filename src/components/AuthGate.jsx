@@ -1,7 +1,7 @@
 // Fase C — gate di autenticazione: nessun dato dell'app viene caricato
 // finché l'utente non è loggato con Google E presente in allowlist.
-// children è una render-prop: children(user, role) viene chiamata solo
-// quando lo stato è "authorized".
+// children è una render-prop: children(user, role, defaultBookId) viene
+// chiamata solo quando lo stato è "authorized".
 import { useState, useEffect } from "react";
 import { auth } from "../firebase.js";
 import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
@@ -20,18 +20,19 @@ export default function AuthGate({ children }) {
   const [status, setStatus] = useState("loading");
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
+  const [defaultBookId, setDefaultBookId] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
       if (!u) {
-        setUser(null); setRole(null); setStatus("loggedOut");
+        setUser(null); setRole(null); setDefaultBookId(null); setStatus("loggedOut");
         return;
       }
-      const { authorized, role: r } = await checkWhitelist(u.email);
+      const { authorized, role: r, defaultBookId: d } = await checkWhitelist(u.email);
       setUser(u);
-      if (authorized) { setRole(r); setStatus("authorized"); }
-      else { setRole(null); setStatus("unauthorized"); }
+      if (authorized) { setRole(r); setDefaultBookId(d); setStatus("authorized"); }
+      else { setRole(null); setDefaultBookId(null); setStatus("unauthorized"); }
     });
   }, []);
 
@@ -74,5 +75,5 @@ export default function AuthGate({ children }) {
     );
   }
 
-  return children(user, role);
+  return children(user, role, defaultBookId);
 }

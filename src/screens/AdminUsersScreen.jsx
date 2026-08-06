@@ -8,6 +8,16 @@ import { loadAllowlist, addAllowlistEntry, setAllowlistRole, removeAllowlistEntr
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
 const ASSIGNABLE_ROLES = ["base", "tester"];
 const DANGER = "#C4593A";
+const PROD_URL = "https://ricettario-ruddy.vercel.app";
+
+const buildInviteMessage = () => `Ciao! Ti ho aggiunto a Il mio Ricettario 🍝 — l'app dove teniamo le nostre ricette.
+
+Apri questo link e accedi con il tuo account Google:
+${PROD_URL}
+
+📱 Per averla a portata di tocco sulla schermata home (facoltativo):
+• iPhone: apri il link in Safari, tocca l'icona Condividi (il quadrato con la freccia in su), poi "Aggiungi alla schermata Home".
+• Android: apri il link in Chrome, tocca i tre puntini in alto a destra, poi "Aggiungi a schermata Home" (o "Installa app" se disponibile).`;
 
 export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping }) {
   const th = useTheme();
@@ -21,6 +31,7 @@ export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemor
   const [addBusy, setAddBusy] = useState(false);
   const [pendingRemove, setPendingRemove] = useState(null);
   const [toast, setToast] = useState({ msg: "", visible: false });
+  const [lastAdded, setLastAdded] = useState(null);
 
   useEffect(() => {
     loadAllowlist()
@@ -43,11 +54,21 @@ export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemor
       await addAllowlistEntry(email, newRole);
       setUsers((list) => [...list, { email, role: newRole }].sort((a, b) => a.email.localeCompare(b.email)));
       setAdding(false); setNewEmail(""); setNewRole("base"); setAddError(null);
+      setLastAdded(email);
       showToast("✅ Utente aggiunto");
     } catch {
       setAddError("Aggiunta non riuscita. Riprova.");
     } finally {
       setAddBusy(false);
+    }
+  };
+
+  const copyInvite = async () => {
+    try {
+      await navigator.clipboard.writeText(buildInviteMessage());
+      showToast("📋 Copiato negli appunti");
+    } catch {
+      showToast("⚠️ Copia non riuscita");
     }
   };
 
@@ -175,12 +196,24 @@ export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemor
               </div>
             </div>
           ) : (
-            <button onClick={() => setAdding(true)} style={{
+            <button onClick={() => { setAdding(true); setLastAdded(null); }} style={{
               width: "100%", padding: "13px", borderRadius: 14,
               border: `1.5px dashed ${th.appBorder}`, background: "transparent",
               color: th.appFaded, fontFamily: F.ui, fontSize: 13, fontWeight: 600, cursor: "pointer", marginBottom: 10,
             }}>＋ Aggiungi utente</button>
           )
+        )}
+
+        {!loading && !loadError && lastAdded && (
+          <div style={{ background: `${th.appAccent}12`, border: `1.5px solid ${th.appAccent}`, borderRadius: 14, padding: "12px 14px", marginBottom: 10 }}>
+            <div style={{ fontFamily: F.ui, fontSize: 12, color: th.appInk, marginBottom: 8 }}>
+              ✅ <b>{lastAdded}</b> aggiunto. Invito pronto da inviare:
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setLastAdded(null)} style={{ flex: 1, padding: "10px", border: `1.5px solid ${th.appBorder}`, borderRadius: 10, background: "transparent", color: th.appFaded, fontFamily: F.ui, fontSize: 12, cursor: "pointer" }}>Chiudi</button>
+              <button onClick={copyInvite} style={{ flex: 2, padding: "10px", border: "none", borderRadius: 10, background: th.appAccent, color: "#fff", fontFamily: F.ui, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>📋 Copia messaggio d'invito</button>
+            </div>
+          </div>
         )}
       </div>
 
