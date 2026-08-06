@@ -108,6 +108,33 @@ const IPHONE_RESPONSIVE_CSS = `
 
 const IPhone = ({ children }) => {
   const th = useTheme();
+  const scrollRef = useRef(null);
+
+  // Blocca il "pull to refresh" nativo dei browser mobile SOLO nel gesto
+  // ambiguo che lo attiva: trascinare verso il basso mentre si è già in
+  // cima allo scroll (scrollTop 0). In quel punto trascinare giù non fa
+  // scorrere nulla di legittimo, quindi bloccarlo è sicuro per
+  // definizione — a differenza di overscroll-behavior (CSS, provato e
+  // rimosso: su alcuni browser mobile reali ha bloccato lo scroll
+  // normale invece del solo pull-to-refresh), qui non si tocca overflow
+  // o layout: il listener non interviene in nessun altro momento.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    let startY = 0;
+    const onTouchStart = (e) => { startY = e.touches[0]?.clientY ?? 0; };
+    const onTouchMove = (e) => {
+      const y = e.touches[0]?.clientY ?? startY;
+      if (el.scrollTop <= 0 && y - startY > 0) e.preventDefault();
+    };
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+    };
+  }, []);
+
   return (
   <div className="iphone-shell" style={{
     width:390, minHeight:844,
@@ -127,7 +154,7 @@ const IPhone = ({ children }) => {
       width:130, height:36, background:"#1a1a1a",
       borderRadius:"0 0 20px 20px", zIndex:100,
     }}/>
-    <div className="iphone-content-scroll" style={{ flex:1, overflowY:"auto", paddingTop:44 }}>
+    <div ref={scrollRef} className="iphone-content-scroll" style={{ flex:1, overflowY:"auto", paddingTop:44 }}>
       {children}
     </div>
     <BetaButton/>
