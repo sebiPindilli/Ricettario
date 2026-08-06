@@ -133,7 +133,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
       <ProgressBar/>
 
       {/* Content — tap sinistra: indietro · tap destra: avanti */}
-      <div onClick={handleTap} style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"flex-start", padding:"24px 28px", cursor:"pointer", overflowY:"auto", position:"relative" }}>
+      <div onClick={handleTap} style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"center", padding:"24px 28px", cursor:"pointer", overflowY:"auto", position:"relative" }}>
         {isIntro ? (
           <div>
             <div style={{ fontFamily:F.ui, fontSize:11, letterSpacing:2, color:th.appAccent2, textTransform:"uppercase", marginBottom:12 }}>Prima di iniziare — ingredienti</div>
