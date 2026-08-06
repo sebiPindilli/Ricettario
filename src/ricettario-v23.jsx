@@ -89,10 +89,22 @@ import BetaButton from "./components/BetaButton.jsx";
 // Steps items can be strings or {text, photo}
 
 // ── iPhone shell ───────────────────────────────────────────────
+// Sotto i 480px reali (telefono vero, non il mockup desktop), il "telefono"
+// disegnato sparisce e lo schermo reale diventa la cornice — regola in un
+// <style> iniettato perché gli stili inline non possono esprimere media
+// query (stesso pattern già usato in ScanScreen.jsx per le @keyframes).
+const IPHONE_RESPONSIVE_CSS = `
+  @media (max-width: 480px) {
+    .iphone-shell { width:100vw !important; min-height:100dvh !important; border-radius:0 !important; box-shadow:none !important; }
+    .iphone-page-wrap { padding:0 !important; gap:0 !important; }
+    .iphone-desktop-hint { display:none !important; }
+  }
+`;
+
 const IPhone = ({ children }) => {
   const th = useTheme();
   return (
-  <div style={{
+  <div className="iphone-shell" style={{
     width:390, minHeight:844,
     background: th.appBg,
     borderRadius:50,
@@ -104,6 +116,7 @@ const IPhone = ({ children }) => {
     userSelect:"none",
     transition:"background 0.3s",
   }}>
+    <style dangerouslySetInnerHTML={{ __html: IPHONE_RESPONSIVE_CSS }} />
     <div style={{
       position:"absolute", top:0, left:"50%", transform:"translateX(-50%)",
       width:130, height:36, background:"#1a1a1a",
@@ -451,6 +464,7 @@ class ErrorBoundary extends React.Component {
 function AppInner({ me, role, initialDefaultBookId }) {
   const [screen, setScreen] = useState("cover");
   // screen: cover | landing | recipes | book | memories | recipe | new | edit | scan | theme
+  const [scanMode, setScanMode] = useState("camera"); // "camera" | "gallery" — vedi AddRecipeHubScreen
   const [selected, setSelected] = useState(null);
   const [memoryPrefillRecipeId, setMemoryPrefillRecipeId] = useState(null);
   const [organizeFilter, setOrganizeFilter] = useState({ recipeId:null, alertTypes:null, manageAggs:false, manageCats:false, aggScope:"all" });
@@ -1017,14 +1031,14 @@ function AppInner({ me, role, initialDefaultBookId }) {
     <RoleCtx.Provider value={role}>
     <ThemeCtx.Provider value={bookTheme}>
     <NavCtx.Provider value={{ onOrganize: () => openOrganize() }}>
-    <div style={{
+    <div className="iphone-page-wrap" style={{
       minHeight:"100vh",
       background:`radial-gradient(ellipse at 60% 20%, ${bookTheme.appCard} 0%, ${bookTheme.appBorder} 100%)`,
       display:"flex", flexDirection:"column", alignItems:"center",
       justifyContent:"center", padding:"40px 20px", gap:20,
       transition:"background 0.4s",
     }}>
-      <div style={{ textAlign:"center", color:bookTheme.appInk }}>
+      <div className="iphone-desktop-hint" style={{ textAlign:"center", color:bookTheme.appInk }}>
         <div style={{ fontFamily:"'Georgia',serif", fontSize:26, marginBottom:4 }}>Il mio Ricettario</div>
         <div style={{ fontFamily:"sans-serif", fontSize:12, opacity:0.6 }}>Prototipo v17 · tocca la copertina per entrare</div>
       </div>
@@ -1253,7 +1267,7 @@ function AppInner({ me, role, initialDefaultBookId }) {
           <AddRecipeHubScreen
             onBack={() => setScreen(prevScreen)}
             onManual={() => setScreen("new")}
-            onScan={() => setScreen("scan")}
+            onScan={(mode) => { setScanMode(mode || "camera"); setScreen("scan"); }}
             onLink={() => setScreen("addFromLink")}
             onLanding={() => setScreen("landing")}
             onRecipes={() => setScreen("recipes")}
@@ -1343,6 +1357,7 @@ function AppInner({ me, role, initialDefaultBookId }) {
         )}
         {screen==="scan" && (
           <ScanScreen
+            mode={scanMode}
             onBack={() => setScreen("addRecipeHub")}
             onSave={saveScanned}
             sectionList={sectionList}
@@ -1409,7 +1424,7 @@ function AppInner({ me, role, initialDefaultBookId }) {
         })()}
       </IPhone>
 
-      <div style={{ display:"flex", gap:16, color:bookTheme.appFaded, fontFamily:"sans-serif", fontSize:12, flexWrap:"wrap", justifyContent:"center" }}>
+      <div className="iphone-desktop-hint" style={{ display:"flex", gap:16, color:bookTheme.appFaded, fontFamily:"sans-serif", fontSize:12, flexWrap:"wrap", justifyContent:"center" }}>
         <span>📕 Tocca la copertina</span>
         <span>🍝 Ricette · 📖 Libro · 📸 Ricordi</span>
         <span>🔍 Cerca · ⭐ Preferiti · 🎨 Temi</span>

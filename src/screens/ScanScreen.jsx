@@ -4,7 +4,8 @@ import { F } from "../data/constants.js";
 import { auth } from "../firebase.js";
 import BackBtn from "../components/BackBtn.jsx";
 
-export default function ScanScreen({ onBack, onSave }) {
+export default function ScanScreen({ onBack, onSave, mode = "camera" }) {
+  const isGallery = mode === "gallery";
   const th = useTheme();
   const [images, setImages] = useState([]); // array di { id, base64, mimeType, previewUrl }
   const [loading, setLoading] = useState(false);
@@ -102,7 +103,7 @@ export default function ScanScreen({ onBack, onSave }) {
       <div style={{ padding: "12px 18px 6px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
         <BackBtn onBack={onBack} label="Annulla" />
         <div style={{ flex: 1 }}>
-          <div style={{ fontFamily: F.display, fontSize: 17, color: th.appInk }}>Scansiona Foto</div>
+          <div style={{ fontFamily: F.display, fontSize: 17, color: th.appInk }}>{isGallery ? "Importa dalla Galleria" : "Scansiona dalla Fotocamera"}</div>
           <div style={{ fontFamily: F.ui, fontSize: 10.5, color: th.appFaded }}>Crea ricetta da foto AI</div>
         </div>
       </div>
@@ -151,14 +152,14 @@ export default function ScanScreen({ onBack, onSave }) {
               type="file"
               accept="image/*"
               multiple
-              capture="environment"
+              {...(isGallery ? {} : { capture: "environment" })}
               onChange={handleFileChange}
               style={{ display: "none" }}
             />
-            <span style={{ fontSize: 44 }}>📷</span>
+            <span style={{ fontSize: 44 }}>{isGallery ? "🗃️" : "📷"}</span>
             <div>
               <div style={{ fontFamily: F.ui, fontSize: 14, fontWeight: 700, color: th.appInk }}>
-                Fai una foto o scegli un'immagine
+                {isGallery ? "Scegli una o più immagini" : "Fai una foto"}
               </div>
               <div style={{ fontFamily: F.ui, fontSize: 11, color: th.appFaded, marginTop: 4 }}>
                 Supporta JPG, PNG, WEBP (più foto accettate)
@@ -236,7 +237,7 @@ export default function ScanScreen({ onBack, onSave }) {
                   type="file"
                   accept="image/*"
                   multiple
-                  capture="environment"
+                  {...(isGallery ? {} : { capture: "environment" })}
                   onChange={handleFileChange}
                   style={{ display: "none" }}
                 />
