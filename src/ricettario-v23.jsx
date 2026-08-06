@@ -127,7 +127,7 @@ const IPhone = ({ children }) => {
       width:130, height:36, background:"#1a1a1a",
       borderRadius:"0 0 20px 20px", zIndex:100,
     }}/>
-    <div className="iphone-content-scroll" style={{ flex:1, overflowY:"auto", paddingTop:44, overscrollBehavior:"contain" }}>
+    <div className="iphone-content-scroll" style={{ flex:1, overflowY:"auto", paddingTop:44 }}>
       {children}
     </div>
     <BetaButton/>
