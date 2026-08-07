@@ -145,8 +145,15 @@ const IPhone = ({ children }) => {
       const y = e.touches[0]?.clientY ?? lastY;
       const deltaY = y - lastY;
       lastY = y;
-      const refTop = ancestor ? ancestor.scrollTop : null;
-      if (refTop !== null && refTop <= 0 && deltaY > 0) e.preventDefault();
+      if (deltaY <= 0) return; // solo i trascinamenti verso il basso attivano il pull-to-refresh nativo
+      if (ancestor) {
+        if (ancestor.scrollTop <= 0) e.preventDefault();
+      } else {
+        // Nessun antenato scrollabile (es. Home: contenuto più corto dello
+        // schermo) — non c'è nulla su cui scrollare davvero, quindi il
+        // gesto è sempre pull-to-refresh, mai uno scroll legittimo.
+        e.preventDefault();
+      }
     };
 
     el.addEventListener("touchstart", onTouchStart, { passive: true });
