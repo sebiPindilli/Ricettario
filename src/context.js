@@ -12,3 +12,7 @@ export const useNavActions = () => React.useContext(NavCtx);
 // ── Role context — ruolo whitelist dell'utente corrente ──
 export const RoleCtx = React.createContext("base");
 export const useRole = () => React.useContext(RoleCtx);
+
+// ── Beta context — interruttore globale del pulsante β (config/beta) ──
+export const BetaEnabledCtx = React.createContext(true);
+export const useBetaEnabled = () => React.useContext(BetaEnabledCtx);

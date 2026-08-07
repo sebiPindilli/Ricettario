@@ -3,7 +3,10 @@ import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 import GlobalNav from "../components/GlobalNav.jsx";
 import Toast from "../components/Toast.jsx";
-import { loadAllowlist, addAllowlistEntry, setAllowlistRole, removeAllowlistEntry } from "../services/authStore.js";
+import {
+  loadAllowlist, addAllowlistEntry, setAllowlistRole, removeAllowlistEntry,
+  loadBetaConfig, setBetaEnabled as setBetaEnabledRemote,
+} from "../services/authStore.js";
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
 const ASSIGNABLE_ROLES = ["base", "tester"];
@@ -32,12 +35,29 @@ export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemor
   const [pendingRemove, setPendingRemove] = useState(null);
   const [toast, setToast] = useState({ msg: "", visible: false });
   const [lastAdded, setLastAdded] = useState(null);
+  const [betaEnabled, setBetaEnabled] = useState(true);
+  const [betaBusy, setBetaBusy] = useState(false);
 
   useEffect(() => {
     loadAllowlist()
       .then((list) => { setUsers(list); setLoading(false); })
       .catch(() => { setLoadError(true); setLoading(false); });
+    loadBetaConfig().then(({ enabled }) => setBetaEnabled(enabled));
   }, []);
+
+  const toggleBeta = async () => {
+    const next = !betaEnabled;
+    setBetaBusy(true);
+    try {
+      await setBetaEnabledRemote(next);
+      setBetaEnabled(next);
+      showToast(next ? "🟢 Beta riattivata" : "⚪ Beta disattivata");
+    } catch {
+      showToast("⚠️ Cambio stato beta non riuscito");
+    } finally {
+      setBetaBusy(false);
+    }
+  };
 
   const showToast = (msg) => {
     setToast({ msg, visible: true });
@@ -112,6 +132,22 @@ export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemor
         <div style={{ fontFamily: F.ui, fontSize: 11, color: th.appFaded, marginTop: 3 }}>
           Whitelist — solo i ruoli base e tester sono gestibili da qui
         </div>
+      </div>
+
+      <div style={{ margin: "8px 20px 0", background: th.appCard, border: `1.5px solid ${th.appBorder}`, borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: F.ui, fontSize: 12.5, fontWeight: 700, color: th.appInk }}>β Pulsante beta</div>
+          <div style={{ fontFamily: F.ui, fontSize: 10, color: th.appFaded, marginTop: 2 }}>
+            {betaEnabled ? "Attivo per admin e tester" : "Disattivato — segnalazioni esistenti restano intatte"}
+          </div>
+        </div>
+        <button onClick={toggleBeta} disabled={betaBusy} style={{
+          padding: "7px 14px", borderRadius: 20, border: "none", flexShrink: 0,
+          background: betaEnabled ? th.appAccent : th.appBorder,
+          color: betaEnabled ? "#fff" : th.appFaded,
+          fontFamily: F.ui, fontSize: 11.5, fontWeight: 700,
+          cursor: betaBusy ? "default" : "pointer", opacity: betaBusy ? 0.7 : 1,
+        }}>{betaEnabled ? "Disattiva" : "Attiva"}</button>
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: "10px 18px 40px" }}>

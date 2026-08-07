@@ -35,3 +35,16 @@ export const removeAllowlistEntry = (email) =>
 // solo il proprio campo, indipendente dalla gestione ruoli (vedi regole).
 export const setDefaultBook = (email, bookId) =>
   updateDoc(doc(db, "allowlist", email), { defaultBookId: bookId });
+
+// Interruttore globale del pulsante β di segnalazione bug (non riguarda il
+// Ricettario Beta books/b1, sempre accessibile per ruolo). Se il documento
+// non esiste ancora (prima installazione, o prima che questo flag esistesse)
+// si tratta come "acceso": stesso comportamento di sempre finché nessun
+// admin lo spegne esplicitamente.
+export const loadBetaConfig = async () => {
+  const snap = await getDoc(doc(db, "config", "beta"));
+  return { enabled: snap.exists() ? snap.data().enabled !== false : true };
+};
+
+export const setBetaEnabled = (enabled) =>
+  setDoc(doc(db, "config", "beta"), { enabled });

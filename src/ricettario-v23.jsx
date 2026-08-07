@@ -27,7 +27,7 @@ import {
   MOBILE_BREAKPOINT_CSS,
 } from "./data/constants.js";
 import { NUTRITION_DB, NUTRIENT_LABELS } from "./data/nutrition.js";
-import { ThemeCtx, useTheme, NavCtx, useNavActions, RoleCtx } from "./context.js";
+import { ThemeCtx, useTheme, NavCtx, useNavActions, RoleCtx, BetaEnabledCtx } from "./context.js";
 import OrganizeIcon from "./components/OrganizeIcon.jsx";
 import BackBtn from "./components/BackBtn.jsx";
 import Divider from "./components/Divider.jsx";
@@ -527,7 +527,7 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-function AppInner({ me, role, initialDefaultBookId }) {
+function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
   const [screen, setScreen] = useState("cover");
   // screen: cover | landing | recipes | book | memories | recipe | new | edit | scan | theme
   const [scanMode, setScanMode] = useState("camera"); // "camera" | "gallery" — vedi AddRecipeHubScreen
@@ -1128,6 +1128,7 @@ function AppInner({ me, role, initialDefaultBookId }) {
 
   return (
     <RoleCtx.Provider value={role}>
+    <BetaEnabledCtx.Provider value={betaEnabled}>
     <ThemeCtx.Provider value={bookTheme}>
     <NavCtx.Provider value={{ onOrganize: () => openOrganize() }}>
     <div className="iphone-page-wrap" style={{
@@ -1533,6 +1534,7 @@ function AppInner({ me, role, initialDefaultBookId }) {
     </div>
     </NavCtx.Provider>
     </ThemeCtx.Provider>
+    </BetaEnabledCtx.Provider>
     </RoleCtx.Provider>
   );
 }
@@ -1541,7 +1543,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AuthGate>
-        {(user, role, defaultBookId) => <AppInner me={user.email} role={role} initialDefaultBookId={defaultBookId}/>}
+        {(user, role, defaultBookId, betaEnabled) => <AppInner me={user.email} role={role} initialDefaultBookId={defaultBookId} betaEnabled={betaEnabled}/>}
       </AuthGate>
     </ErrorBoundary>
   );

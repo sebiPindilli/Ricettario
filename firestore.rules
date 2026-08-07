@@ -46,6 +46,17 @@ service cloud.firestore {
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['defaultBookId']);
     }
 
+    // Interruttore globale per il pulsante β di segnalazione bug (non
+    // riguarda il Ricettario Beta books/b1, che resta accessibile per ruolo
+    // indipendentemente da questo flag). Se il documento non esiste, il
+    // client lo tratta come enabled:true (vedi services/authStore.js) —
+    // nessuna scrittura di migrazione necessaria per chi aggiorna da prima
+    // che questo flag esistesse.
+    match /config/beta {
+      allow read: if isWhitelisted();
+      allow write: if isAdmin();
+    }
+
     // Ricettario Beta — libro condiviso di test, accesso per RUOLO (non
     // membership): chiunque sia tester o admin, oggi e in futuro, senza
     // bisogno di inviti — stesso meccanismo già usato per reports/.

@@ -67,8 +67,8 @@ export const guideLibri = (
   <>
     <p style={pFirst}>Qui gestisci i tuoi ricettari: puoi averne più di uno e passare dall'uno all'altro con <b>Apri</b>.</p>
     <p style={p}>Due modi per condividere: <b>invitare un membro</b> (email) rende il libro <b>sincronizzato</b> — stesso ricettario per entrambi, pensato per famiglia/coppia. <b>Esportare ricette</b> genera invece un <b>codice</b>: chi lo riceve ottiene una copia indipendente, non collegata alle tue modifiche future.</p>
-    <p style={p}>Chi inviti ha un <b>ruolo</b>: il <b>collaboratore</b> ha gli stessi poteri di gestione del proprietario tranne eliminare il libro (può anche invitare e gestire redattori/lettori); il <b>redattore</b> aggiunge e modifica ricette, ricordi e Organizza, ma non può eliminare nulla; il <b>lettore</b> può solo consultare. Puoi cambiare il ruolo di un membro o rimuoverlo in qualsiasi momento dalla sua scheda.</p>
-    <p style={pLast}>🔑 Solo tu e gli eventuali collaboratori potete eliminare ricette e ricordi: è l'unica azione che resta riservata a chi ha il controllo pieno del libro, anche se un redattore può crearli e modificarli liberamente.</p>
+    <p style={p}>Chi crea un ricettario ne è il <b>proprietario</b>, con controllo completo: è un ruolo fisso, non trasferibile né assegnabile a nessun altro.</p>
+    <p style={pLast}>Chi inviti ha invece un <b>ruolo</b>: il <b>co-proprietario</b> ha gli stessi poteri del proprietario sui contenuti (crea, modifica ed elimina ricette e ricordi, gestisce Organizza) e può a sua volta invitare e nominare collaboratori e lettori — ma non un altro co-proprietario, e non può eliminare il ricettario. Il <b>collaboratore</b> aggiunge e modifica ricette, ricordi e Organizza, ma non elimina nulla e non gestisce membri. Il <b>lettore</b> può solo consultare.</p>
   </>
 );
 

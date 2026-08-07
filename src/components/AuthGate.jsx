@@ -5,7 +5,7 @@
 import { useState, useEffect } from "react";
 import { auth } from "../firebase.js";
 import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
-import { checkWhitelist } from "../services/authStore.js";
+import { checkWhitelist, loadBetaConfig } from "../services/authStore.js";
 
 const provider = new GoogleAuthProvider();
 
@@ -21,6 +21,7 @@ export default function AuthGate({ children }) {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
   const [defaultBookId, setDefaultBookId] = useState(null);
+  const [betaEnabled, setBetaEnabled] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -31,7 +32,14 @@ export default function AuthGate({ children }) {
       }
       const { authorized, role: r, defaultBookId: d } = await checkWhitelist(u.email);
       setUser(u);
-      if (authorized) { setRole(r); setDefaultBookId(d); setStatus("authorized"); }
+      if (authorized) {
+        setRole(r); setDefaultBookId(d);
+        // Serve solo ad admin/tester (vedi BetaButton.jsx) — non blocca
+        // l'accesso di chi ha ruolo base, letto comunque per semplicità.
+        const { enabled } = await loadBetaConfig();
+        setBetaEnabled(enabled);
+        setStatus("authorized");
+      }
       else { setRole(null); setDefaultBookId(null); setStatus("unauthorized"); }
     });
   }, []);
@@ -75,5 +83,5 @@ export default function AuthGate({ children }) {
     );
   }
 
-  return children(user, role, defaultBookId);
+  return children(user, role, defaultBookId, betaEnabled);
 }

@@ -162,18 +162,6 @@ export default function CoverScreen({ onEnter }) {
         </div>
       </div>
 
-      {/* Recipe count */}
-      <div style={{
-        position:"absolute", bottom:32, left:0, right:0,
-        textAlign:"center", zIndex:20, pointerEvents:"none",
-      }}>
-        <div style={{
-          fontFamily:F.ui, fontSize:10,
-          color: th.coverText.replace(/[\d.]+\)$/, "0.15)"),
-          letterSpacing:3, textTransform:"uppercase",
-        }}>5 ricette salvate</div>
-      </div>
-
       <style>{`
         @keyframes pulse {
           0%, 100% { opacity:0.4; transform:translateY(0); }

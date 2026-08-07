@@ -9,9 +9,11 @@ import {
 } from "../utils/bookRoles.js";
 
 const DANGER = "#C4593A";
-// Etichette per i 4 ruoli — i nomi interni (bookRoles.js/firestore.rules)
-// restano questi; qui è solo la resa a schermo.
-const ROLE_LABELS = { proprietario: "proprietario", collaboratore: "collaboratore", redattore: "redattore", lettore: "lettore" };
+// Etichette per i 4 ruoli — i nomi interni (bookRoles.js/firestore.rules,
+// invariati per non richiedere migrazioni dati) restano "collaboratore" e
+// "redattore"; a schermo diventano "co-proprietario" e "collaboratore",
+// stesso approccio già usato per gli alias legacy "edit"/"read".
+const ROLE_LABELS = { proprietario: "proprietario", collaboratore: "co-proprietario", redattore: "collaboratore", lettore: "lettore" };
 const roleLabel = (r) => ROLE_LABELS[r] || r;
 // Ruolo del/della utente corrente in un libro condiviso (o "proprietario"
 // se è il suo). Non ha senso per il Beta (accesso per ruolo globale, non
@@ -209,7 +211,7 @@ export default function BooksScreen({
       <div style={{ padding:"14px 20px 6px" }}>
         <div style={{ fontFamily:F.display, fontSize:22, color:th.appInk }}>📚 I miei Ricettari</div>
         <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginTop:3 }}>
-          account: {me} <span style={{ opacity:0.6 }}>(simulato — arriverà dal login Google)</span>
+          account: {me}
         </div>
       </div>
 

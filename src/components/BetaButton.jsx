@@ -1,6 +1,6 @@
 import { useState, useRef, useLayoutEffect } from "react";
 import html2canvas from "html2canvas";
-import { useTheme, useRole } from "../context.js";
+import { useTheme, useRole, useBetaEnabled } from "../context.js";
 import { F, MOBILE_BREAKPOINT_CSS } from "../data/constants.js";
 import { auth } from "../firebase.js";
 import ReportFormOverlay from "./ReportFormOverlay.jsx";
@@ -44,6 +44,7 @@ const DRAG_THRESHOLD = 8; // px sotto cui il gesto resta un tap (apre il menu), 
 
 export default function BetaButton() {
   const role = useRole();
+  const betaEnabled = useBetaEnabled();
   const th = useTheme();
   const [view, setView] = useState(null); // null | "menu" | "form-bug" | "form-improvement" | "list"
   const [screenshot, setScreenshot] = useState(null);
@@ -86,7 +87,7 @@ export default function BetaButton() {
     return () => ro.disconnect();
   }, [view]);
 
-  if (role !== "admin" && role !== "tester") return null;
+  if (!betaEnabled || (role !== "admin" && role !== "tester")) return null;
 
   const me = auth.currentUser?.email || "";
   const close = () => { setView(null); setScreenshot(null); };
