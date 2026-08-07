@@ -56,18 +56,34 @@ service cloud.firestore {
       }
     }
 
-    // Libri: ogni libro ha un owner e una mappa di membri con permesso
-    // "edit"/"read" (meta.memberRoles) — memberEmails è un array piatto
-    // degli stessi indirizzi, usato solo per la query "i miei libri"
-    // (array-contains), perché Firestore non supporta query su chiavi
-    // dinamiche di una mappa. Un'email non whitelisted aggiunta per errore
-    // ai membri resta comunque bloccata da isWhitelisted() qui sotto: non
-    // serve validare altrove che gli invitati siano già in whitelist.
+    // Libri: ogni libro ha un owner e una mappa di membri con RUOLO
+    // (meta.memberRoles) — quattro livelli: proprietario (solo meta.owner,
+    // mai in memberRoles), collaboratore, redattore, lettore. "edit"/"read"
+    // sono alias legacy dallo schema a due livelli precedente: MAI riscritti
+    // nei documenti esistenti, solo interpretati qui — stesso approccio già
+    // usato altrove nel progetto per gli schemi di dati vecchi (mai una
+    // migrazione forzata, solo lettura difensiva). "edit" legacy diventa
+    // equivalente a redattore (vedi src/utils/bookRoles.js, la stessa
+    // mappa, fonte di verità unica insieme a questo file — le regole non
+    // possono importare JS, la duplicazione qui è minima e verificata da
+    // tests/firestore.rules.test.js perché non diverga in silenzio).
+    //
+    // memberEmails è un array piatto degli stessi indirizzi, usato solo per
+    // la query "i miei libri" (array-contains). Un'email non whitelisted
+    // aggiunta per errore ai membri resta comunque bloccata da
+    // isWhitelisted() qui sotto: non serve validare altrove che gli
+    // invitati siano già in whitelist.
     match /books/{bookId} {
+      // A questo livello "resource" è il documento libro stesso — corretto
+      // usare resource.data.meta direttamente (niente get() extra).
       function isBookOwner() { return isWhitelisted() && resource.data.meta.owner == request.auth.token.email; }
       function myBookRole()  { return resource.data.meta.memberRoles[request.auth.token.email]; }
       function isBookMember(){ return request.auth.token.email in resource.data.meta.memberEmails; }
-      function canEditBook() { return isBookOwner() || myBookRole() == "edit"; }
+      // Chi può scrivere contenuti (ricette, Organizza, tag, sezioni) — il
+      // lettore è l'unico realmente limitato. Specchio minimo di
+      // EDITOR_ROLES in bookRoles.js.
+      function isEditorRole(role) { return role in ['collaboratore', 'redattore', 'edit']; }
+      function canEditBook() { return isBookOwner() || isEditorRole(myBookRole()); }
 
       allow read: if isWhitelisted() && (isBookOwner() || isBookMember());
 
@@ -78,19 +94,54 @@ service cloud.firestore {
       allow create: if false;
       allow delete: if false;
 
-      // Modifica: l'owner può tutto; un membro "edit" può cambiare solo
-      // nome/tema, non gestire membri né cedere la proprietà.
+      // Modifica del libro (nome/tema): chi può editare contenuti in
+      // generale. memberEmails/memberRoles NON sono mai in questo elenco,
+      // per NESSUNO (proprietario incluso): la gestione membri passa solo
+      // da /api/manage-book-member (Admin SDK, bypassa le regole) — un solo
+      // punto d'ingresso invece di duplicare la matrice di permessi qui.
       allow update: if isWhitelisted() && canEditBook() &&
-        (isBookOwner() ||
-         request.resource.data.meta.diff(resource.data.meta).affectedKeys().hasOnly(['name', 'bookTheme']));
+        request.resource.data.meta.diff(resource.data.meta).affectedKeys().hasOnly(['name', 'bookTheme']);
 
-      match /{document=**} {
-        allow read: if isWhitelisted() &&
-          (get(/databases/$(database)/documents/books/$(bookId)).data.meta.owner == request.auth.token.email ||
-           request.auth.token.email in get(/databases/$(database)/documents/books/$(bookId)).data.meta.memberEmails);
-        allow write: if isWhitelisted() &&
-          (get(/databases/$(database)/documents/books/$(bookId)).data.meta.owner == request.auth.token.email ||
-           get(/databases/$(database)/documents/books/$(bookId)).data.meta.memberRoles[request.auth.token.email] == "edit");
+      // Sotto-collezioni enumerate esplicitamente (non un match generico
+      // {document=**} unico): le regole Firestore sono permissive per
+      // unione, quindi un catch-all con "allow write" bloccherebbe la
+      // delete-per-ruolo delle ricette solo in apparenza — quel permesso
+      // largo la riaprirebbe comunque. Meglio un match dedicato per ognuna.
+      //
+      // Qui dentro "resource" è il documento della SOTTO-collezione, non il
+      // libro: owner/ruolo vanno letti dal libro con un get() esplicito
+      // (stesso pattern già usato in questo file prima di questa modifica).
+      function parentBook() { return get(/databases/$(database)/documents/books/$(bookId)).data.meta; }
+      function isParentOwner() { return isWhitelisted() && parentBook().owner == request.auth.token.email; }
+      function isParentMember() { return request.auth.token.email in parentBook().memberEmails; }
+      function myParentRole() { return parentBook().memberRoles[request.auth.token.email]; }
+      function canEditParent() { return isParentOwner() || isEditorRole(myParentRole()); }
+      // Chi può eliminare ricette/ricordi — solo proprietario e
+      // collaboratore, mai un "edit" legacy (che oggi equivale a redattore,
+      // non a collaboratore: perde la delete finché non viene promosso).
+      function canDeleteContent() { return isParentOwner() || myParentRole() == "collaboratore"; }
+
+      match /recipes/{recipeId} {
+        function memoriesCount(data) { return "memories" in data ? data.memories.size() : 0; }
+        function isMemoryRemoval() { return memoriesCount(request.resource.data) < memoriesCount(resource.data); }
+
+        allow read: if isWhitelisted() && (isParentOwner() || isParentMember());
+        allow create: if isWhitelisted() && canEditParent();
+        // Un redattore può aggiungere/modificare un ricordo, non rimuoverlo
+        // (l'array si accorcia) — quello richiede canDeleteContent(), come
+        // l'eliminazione della ricetta stessa.
+        allow update: if isWhitelisted() && canEditParent() && (!isMemoryRemoval() || canDeleteContent());
+        allow delete: if isWhitelisted() && canDeleteContent();
+      }
+
+      match /system/{document} {
+        allow read: if isWhitelisted() && (isParentOwner() || isParentMember());
+        allow write: if isWhitelisted() && canEditParent();
+      }
+
+      match /shoppingList/{document} {
+        allow read: if isWhitelisted() && (isParentOwner() || isParentMember());
+        allow write: if isWhitelisted() && canEditParent();
       }
     }
 

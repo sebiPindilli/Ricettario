@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run tests/bookRoles.test.js",
+    "test:rules": "firebase emulators:exec --only firestore \"vitest run tests/firestore.rules.test.js tests/manageBookMember.test.js\""
   },
   "dependencies": {
     "firebase": "^12.17.1",
@@ -18,14 +20,17 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@firebase/rules-unit-testing": "^5.0.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
     "eslint": "^10.6.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
+    "firebase-tools": "^15.26.0",
     "globals": "^17.7.0",
-    "vite": "^8.1.1"
+    "vite": "^8.1.1",
+    "vitest": "^4.1.10"
   },
   "overrides": {
     "jose": "^5.9.6"

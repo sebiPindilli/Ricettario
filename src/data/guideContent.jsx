@@ -66,7 +66,9 @@ export const guideOrganizza = (
 export const guideLibri = (
   <>
     <p style={pFirst}>Qui gestisci i tuoi ricettari: puoi averne più di uno e passare dall'uno all'altro con <b>Apri</b>.</p>
-    <p style={pLast}>Due modi per condividere: <b>invitare un membro</b> (email) rende il libro <b>sincronizzato</b> — stesso ricettario per entrambi, pensato per famiglia/coppia. <b>Esportare ricette</b> genera invece un <b>codice</b>: chi lo riceve ottiene una copia indipendente, non collegata alle tue modifiche future.</p>
+    <p style={p}>Due modi per condividere: <b>invitare un membro</b> (email) rende il libro <b>sincronizzato</b> — stesso ricettario per entrambi, pensato per famiglia/coppia. <b>Esportare ricette</b> genera invece un <b>codice</b>: chi lo riceve ottiene una copia indipendente, non collegata alle tue modifiche future.</p>
+    <p style={p}>Chi inviti ha un <b>ruolo</b>: il <b>collaboratore</b> ha gli stessi poteri di gestione del proprietario tranne eliminare il libro (può anche invitare e gestire redattori/lettori); il <b>redattore</b> aggiunge e modifica ricette, ricordi e Organizza, ma non può eliminare nulla; il <b>lettore</b> può solo consultare. Puoi cambiare il ruolo di un membro o rimuoverlo in qualsiasi momento dalla sua scheda.</p>
+    <p style={pLast}>🔑 Solo tu e gli eventuali collaboratori potete eliminare ricette e ricordi: è l'unica azione che resta riservata a chi ha il controllo pieno del libro, anche se un redattore può crearli e modificarli liberamente.</p>
   </>
 );
 

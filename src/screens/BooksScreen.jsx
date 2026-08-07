@@ -3,8 +3,20 @@ import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 import GlobalNav from "../components/GlobalNav.jsx";
 import { guideLibri } from "../data/guideContent.jsx";
+import {
+  ROLES, normalizeRole, assignableRoles, canAssignRole, canRemoveMember,
+  canAddMember, MAX_MEMBERS,
+} from "../utils/bookRoles.js";
 
 const DANGER = "#C4593A";
+// Etichette per i 4 ruoli — i nomi interni (bookRoles.js/firestore.rules)
+// restano questi; qui è solo la resa a schermo.
+const ROLE_LABELS = { proprietario: "proprietario", collaboratore: "collaboratore", redattore: "redattore", lettore: "lettore" };
+const roleLabel = (r) => ROLE_LABELS[r] || r;
+// Ruolo del/della utente corrente in un libro condiviso (o "proprietario"
+// se è il suo). Non ha senso per il Beta (accesso per ruolo globale, non
+// membership) — non va mai chiamata su b1.
+const myRoleInBook = (b, me) => b.owner === me ? "proprietario" : normalizeRole((b.memberRoles || {})[me]);
 
 export default function BooksScreen({
   books, activeBookId, me, activeRecipes,
@@ -23,6 +35,10 @@ export default function BooksScreen({
   const [renaming, setRenaming] = useState(null); // book id
   const [renameVal, setRenameVal] = useState("");
   const [memberInput, setMemberInput] = useState({}); // bookId → email
+  const [inviteRole, setInviteRole] = useState({}); // bookId → ruolo scelto per il prossimo invito
+  const [memberError, setMemberError] = useState({}); // bookId → messaggio d'errore
+  const [memberBusy, setMemberBusy] = useState({}); // bookId → true mentre una chiamata è in corso
+  const [roleFilter, setRoleFilter] = useState(null); // null = tutti i libri
   const [pendingDelete, setPendingDelete] = useState(null); // book id
   const [importOpen, setImportOpen] = useState(false);
   const [importVal, setImportVal] = useState("");
@@ -36,6 +52,26 @@ export default function BooksScreen({
   const otherBooks = books.filter(b => b.id !== activeBookId);
   const ownedCount = books.filter(b => b.owner === me && b.id !== "b1").length;
   const atBookLimit = ownedCount >= 10;
+
+  // Filtro per ruolo: pillole solo se l'utente ha davvero più di un ruolo
+  // tra i propri libri (altrimenti sarebbe un filtro inutile) — il Beta
+  // non entra nel calcolo (accesso per ruolo globale, non membership) e
+  // resta sempre visibile, filtro o no.
+  const distinctRoles = ROLES.filter(r => books.some(b => b.id !== "b1" && myRoleInBook(b, me) === r));
+  const visibleBooks = books.filter(b => b.id === "b1" || !roleFilter || myRoleInBook(b, me) === roleFilter);
+
+  const setMemberErr = (bookId, msg) => setMemberError(p => ({ ...p, [bookId]: msg }));
+  const withMemberBusy = async (bookId, fn) => {
+    setMemberBusy(p => ({ ...p, [bookId]: true }));
+    setMemberErr(bookId, null);
+    try {
+      await fn();
+    } catch (err) {
+      setMemberErr(bookId, err.message || "Operazione non riuscita.");
+    } finally {
+      setMemberBusy(p => ({ ...p, [bookId]: false }));
+    }
+  };
 
   const nav = (
     <GlobalNav
@@ -177,12 +213,27 @@ export default function BooksScreen({
         </div>
       </div>
 
+      {distinctRoles.length > 1 && (
+        <div style={{ display:"flex", gap:6, flexWrap:"wrap", padding:"0 18px 10px" }}>
+          {[{ id:null, label:"tutti" }, ...distinctRoles.map(r => ({ id:r, label:roleLabel(r) }))].map(opt => (
+            <button key={opt.label} onClick={() => setRoleFilter(opt.id)} style={{
+              padding:"5px 11px", borderRadius:20, border:`1.5px solid ${roleFilter === opt.id ? th.appAccent : th.appBorder}`,
+              background: roleFilter === opt.id ? th.appAccent : "transparent",
+              color: roleFilter === opt.id ? "#fff" : th.appFaded,
+              fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
+            }}>{opt.label}</button>
+          ))}
+        </div>
+      )}
+
       <div style={{ flex:1, overflowY:"auto", padding:"10px 18px 40px" }}>
-        {books.map(b => {
+        {visibleBooks.map(b => {
           const active = b.id === activeBookId;
           const isRen = renaming === b.id;
           const isBeta = b.id === "b1";
           const isOwner = b.owner === me;
+          const myRole = isBeta ? null : myRoleInBook(b, me);
+          const canManageMembers = myRole === "proprietario" || myRole === "collaboratore";
           const confirmingDelete = pendingDelete === b.id;
           return (
             <div key={b.id} style={{
@@ -205,7 +256,8 @@ export default function BooksScreen({
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontFamily:F.display, fontSize:16, color:th.appInk }}>{b.name}</div>
                     <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded }}>
-                      {isBeta ? "Ricettario Beta" : b.type === "personale" ? "personale" : `condiviso · ${(b.memberEmails || []).length} membri`}
+                      {isBeta ? "Ricettario Beta" : b.type === "personale" ? "personale" : `condiviso · ${(b.memberEmails || []).length + 1}/${MAX_MEMBERS} membri`}
+                      {!isBeta && b.type === "condiviso" && !isOwner && <> · tu: {roleLabel(myRole)}</>}
                       {active && <span style={{ color:th.appAccent, fontWeight:700 }}> · attivo</span>}
                     </div>
                   </div>
@@ -244,57 +296,90 @@ export default function BooksScreen({
               )}
 
               {/* Membri (solo condivisi, non Beta) */}
-              {!isBeta && b.type === "condiviso" && (
+              {!isBeta && b.type === "condiviso" && (() => {
+                const roles = b.memberRoles || {};
+                const memberCount = (b.memberEmails || []).length;
+                const atMemberCap = !canAddMember(memberCount);
+                const busy = !!memberBusy[b.id];
+                const myInviteOptions = assignableRoles(myRole);
+                const selectedInviteRole = myInviteOptions.includes(inviteRole[b.id]) ? inviteRole[b.id] : myInviteOptions[myInviteOptions.length - 1];
+                return (
                 <div style={{ marginTop:10, paddingTop:10, borderTop:`1px dashed ${th.appBorder}` }}>
                   <div style={{ fontFamily:F.ui, fontSize:9, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:6 }}>Membri</div>
                   <div style={{ display:"flex", flexDirection:"column", gap:4, marginBottom:8 }}>
                     <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appInk }}>{b.owner} <span style={{ color:th.appFaded }}>👑 proprietario</span></div>
                     {(b.memberEmails || []).map(m => {
-                      const roles = b.memberRoles || {};
+                      const targetRole = normalizeRole(roles[m]);
+                      const emails = { actorEmail: me, targetEmail: m };
+                      const assignablePills = canManageMembers ? myInviteOptions.filter(r => canAssignRole(myRole, targetRole, r, emails)) : [];
+                      const iCanRemove = canManageMembers && canRemoveMember(myRole, targetRole, emails);
                       return (
                       <div key={m} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
                         <span style={{ fontFamily:F.ui, fontSize:10.5, color:th.appInk, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{m}</span>
-                        {isOwner ? (
+                        {assignablePills.length > 0 ? (
                           <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
                             <div style={{ display:"flex", borderRadius:8, overflow:"hidden", border:`1px solid ${th.appBorder}` }}>
-                              {["read", "edit"].map(p => (
-                                <button key={p} disabled={roles[m] === p} onClick={() => onChangeMemberPermission(b.id, m, p)} style={{
-                                  padding:"4px 8px", border:"none", cursor: roles[m] === p ? "default" : "pointer",
-                                  background: roles[m] === p ? th.appAccent : "transparent",
-                                  color: roles[m] === p ? "#fff" : th.appFaded,
+                              {assignablePills.map(p => (
+                                <button key={p} disabled={busy || targetRole === p} onClick={() => withMemberBusy(b.id, () => onChangeMemberPermission(b.id, m, p))} style={{
+                                  padding:"4px 8px", border:"none", cursor: (busy || targetRole === p) ? "default" : "pointer",
+                                  background: targetRole === p ? th.appAccent : "transparent",
+                                  color: targetRole === p ? "#fff" : th.appFaded,
                                   fontFamily:F.ui, fontSize:9.5, fontWeight:600,
-                                }}>{p === "edit" ? "modifica" : "lettura"}</button>
+                                }}>{roleLabel(p)}</button>
                               ))}
                             </div>
-                            <button onClick={() => onRemoveMember(b.id, m)} style={{ background:"none", border:"none", color:DANGER, cursor:"pointer", fontSize:14, padding:0, flexShrink:0 }}>×</button>
+                            {iCanRemove && (
+                              <button disabled={busy} onClick={() => withMemberBusy(b.id, () => onRemoveMember(b.id, m))} style={{ background:"none", border:"none", color:DANGER, cursor: busy ? "default" : "pointer", fontSize:14, padding:0, flexShrink:0 }}>×</button>
+                            )}
                           </div>
                         ) : (
-                          <span style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, flexShrink:0 }}>{roles[m] === "edit" ? "modifica" : "lettura"}</span>
+                          <span style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, flexShrink:0 }}>{roleLabel(targetRole)}</span>
                         )}
                       </div>
                       );
                     })}
                   </div>
-                  {isOwner && (
+                  {memberError[b.id] && (
+                    <div style={{ fontFamily:F.ui, fontSize:10.5, color:DANGER, marginBottom:8 }}>{memberError[b.id]}</div>
+                  )}
+                  {canManageMembers && (
                     <>
+                      <div style={{ display:"flex", gap:6, marginBottom:6 }}>
+                        {myInviteOptions.map(r => (
+                          <button key={r} onClick={() => setInviteRole(p => ({ ...p, [b.id]: r }))} style={{
+                            padding:"4px 9px", borderRadius:20, border:`1.5px solid ${selectedInviteRole === r ? th.appAccent : th.appBorder}`,
+                            background: selectedInviteRole === r ? th.appAccent : "transparent",
+                            color: selectedInviteRole === r ? "#fff" : th.appFaded,
+                            fontFamily:F.ui, fontSize:9.5, fontWeight:600, cursor:"pointer",
+                          }}>{roleLabel(r)}</button>
+                        ))}
+                      </div>
                       <div style={{ display:"flex", gap:6 }}>
                         <input
                           value={memberInput[b.id] || ""}
+                          disabled={atMemberCap || busy}
                           onChange={e => setMemberInput(p => ({ ...p, [b.id]: e.target.value }))}
-                          onKeyDown={e => { if (e.key === "Enter") { onAddMember(b.id, memberInput[b.id] || ""); setMemberInput(p => ({ ...p, [b.id]: "" })); } }}
-                          placeholder="email@esempio.it"
+                          onKeyDown={e => { if (e.key === "Enter" && !atMemberCap) { withMemberBusy(b.id, () => onAddMember(b.id, memberInput[b.id] || "", selectedInviteRole)); setMemberInput(p => ({ ...p, [b.id]: "" })); } }}
+                          placeholder={atMemberCap ? "limite membri raggiunto" : "email@esempio.it"}
                           style={{ flex:1, padding:"8px 11px", border:`1.5px solid ${th.appBorder}`, borderRadius:9, background:th.appBg, fontFamily:F.body, fontSize:12, color:th.appInk, outline:"none", minWidth:0 }}
                         />
-                        <button onClick={() => { onAddMember(b.id, memberInput[b.id] || ""); setMemberInput(p => ({ ...p, [b.id]: "" })); }} style={{ background:th.appAccent, border:"none", borderRadius:9, padding:"8px 12px", color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer", flexShrink:0 }}>＋ Invita</button>
+                        <button disabled={atMemberCap || busy} onClick={() => { withMemberBusy(b.id, () => onAddMember(b.id, memberInput[b.id] || "", selectedInviteRole)); setMemberInput(p => ({ ...p, [b.id]: "" })); }} style={{
+                          background: (atMemberCap || busy) ? th.appBorder : th.appAccent, border:"none", borderRadius:9, padding:"8px 12px",
+                          color: atMemberCap ? th.appFaded : "#fff", fontFamily:F.ui, fontSize:12, fontWeight:700,
+                          cursor: (atMemberCap || busy) ? "default" : "pointer", flexShrink:0,
+                        }}>＋ Invita</button>
                       </div>
                       <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:6, fontStyle:"italic" }}>
-                        Puoi invitare solo email già abilitate da un admin in "Gestione utenti".
+                        {atMemberCap ? `Limite di ${MAX_MEMBERS} membri raggiunto.` : "Puoi invitare solo email già abilitate da un admin in \"Gestione utenti\"."}
                       </div>
-                      <button onClick={() => setPendingDelete(b.id)} style={{ marginTop:10, background:"none", border:"none", color:DANGER, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0 }}>🗑️ Elimina ricettario</button>
                     </>
                   )}
+                  {isOwner && (
+                    <button onClick={() => setPendingDelete(b.id)} style={{ marginTop:10, background:"none", border:"none", color:DANGER, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0 }}>🗑️ Elimina ricettario</button>
+                  )}
                 </div>
-              )}
+                );
+              })()}
 
               {confirmingDelete && (
                 <div style={{ position:"absolute", inset:0, background:`${th.appBg}f2`, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10, padding:12 }}>

@@ -26,8 +26,15 @@ service firebase.storage {
     function isBookMember(bookId) {
       return request.auth.token.email in bookMeta(bookId).memberEmails;
     }
+    // Chi può caricare/sovrascrivere foto — stessa soglia di canEditParent()
+    // in firestore.rules (proprietario/collaboratore/redattore, "edit"
+    // legacy incluso come alias di redattore). Il lettore resta escluso.
+    // Le regole Storage non possono importare JS: specchio minimo di
+    // EDITOR_ROLES in src/utils/bookRoles.js, verificato manualmente contro
+    // firestore.rules perché non diverga in silenzio (nessun test automatico
+    // qui: l'emulator Storage non è nella pipeline di test di questo progetto).
     function canEditBook(bookId) {
-      return isBookOwner(bookId) || bookMeta(bookId).memberRoles[request.auth.token.email] == "edit";
+      return isBookOwner(bookId) || bookMeta(bookId).memberRoles[request.auth.token.email] in ['collaboratore', 'redattore', 'edit'];
     }
 
     // Ricettario Beta — libro condiviso di test, accesso per RUOLO (non

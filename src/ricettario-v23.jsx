@@ -15,7 +15,7 @@ import { effectiveNutritionKey, findSimilarIngredients } from "./utils/aggregate
 import {
   loadFullBook, saveFullBook, saveRecipe,
   createBookInFirestore, deleteBookInFirestore, listMyBooks,
-  addBookMember as addBookMemberFs, removeBookMember as removeBookMemberFs, setBookMemberPermission,
+  addBookMember as addBookMemberFs, removeBookMember as removeBookMemberFs, setBookMemberPermission as setBookMemberPermissionFs,
 } from "./services/bookStore.js";
 import { setDefaultBook } from "./services/authStore.js";
 import { auth } from "./firebase.js";
@@ -879,10 +879,13 @@ function AppInner({ me, role, initialDefaultBookId }) {
     const idToken = await auth.currentUser.getIdToken();
     const id = await createBookInFirestore({ idToken, name: trimmedName, type: "condiviso" });
     const emails = memberEmails.filter(e => e && e !== me);
-    await Promise.all(emails.map(e => addBookMemberFs(id, e, "edit")));
+    // Ruolo di partenza per chi viene invitato in fase di creazione:
+    // redattore (può aggiungere/modificare contenuti, non eliminarli) —
+    // il proprietario può sempre promuoverli dopo dalla lista membri.
+    await Promise.all(emails.map(e => addBookMemberFs({ idToken, bookId: id, targetEmail: e, newRole: "redattore" })));
     setBooks(prev => [...prev, {
       id, name: trimmedName, type: "condiviso", bookTheme: "classic", owner: me,
-      memberEmails: emails, memberRoles: Object.fromEntries(emails.map(e => [e, "edit"])),
+      memberEmails: emails, memberRoles: Object.fromEntries(emails.map(e => [e, "redattore"])),
     }]);
   };
 
@@ -904,32 +907,37 @@ function AppInner({ me, role, initialDefaultBookId }) {
     setBooks(prev => prev.filter(b => b.id !== id));
   };
 
-  // Scrivono subito su Firestore (non solo nello stato locale come prima):
-  // altrimenti la modifica veniva persistita solo se il libro toccato era
-  // quello attivo, per via del salvataggio automatico con debounce.
-  const addMember = async (id, email) => {
+  // Scrivono subito su Firestore via /api/manage-book-member (non solo
+  // nello stato locale come prima): lo stato locale si aggiorna solo DOPO
+  // la conferma del server, mai prima — se la chiamata fallisce (es. ruolo
+  // non permesso, tetto membri raggiunto), l'errore risale al chiamante
+  // (vedi BooksScreen.jsx) senza aver toccato `books`.
+  const addMember = async (id, email, newRole) => {
     const e = email.trim().toLowerCase();
     const book = books.find(b => b.id === id);
     if (!e || !e.includes("@") || !book || (book.memberEmails || []).includes(e)) return;
-    await addBookMemberFs(id, e, "edit");
+    const idToken = await auth.currentUser.getIdToken();
+    await addBookMemberFs({ idToken, bookId: id, targetEmail: e, newRole });
     setBooks(prev => prev.map(b => b.id === id
-      ? { ...b, memberEmails: [...(b.memberEmails || []), e], memberRoles: { ...(b.memberRoles || {}), [e]: "edit" } }
+      ? { ...b, memberEmails: [...(b.memberEmails || []), e], memberRoles: { ...(b.memberRoles || {}), [e]: newRole } }
       : b));
   };
 
   const removeMember = async (id, email) => {
     const book = books.find(b => b.id === id);
     if (!book || email === book.owner) return;
-    await removeBookMemberFs(id, email);
+    const idToken = await auth.currentUser.getIdToken();
+    await removeBookMemberFs({ idToken, bookId: id, targetEmail: email });
     setBooks(prev => prev.map(b => b.id === id
       ? { ...b, memberEmails: (b.memberEmails || []).filter(m => m !== email), memberRoles: Object.fromEntries(Object.entries(b.memberRoles || {}).filter(([k]) => k !== email)) }
       : b));
   };
 
-  const changeMemberPermission = async (id, email, permission) => {
-    await setBookMemberPermission(id, email, permission);
+  const changeMemberPermission = async (id, email, newRole) => {
+    const idToken = await auth.currentUser.getIdToken();
+    await setBookMemberPermissionFs({ idToken, bookId: id, targetEmail: email, newRole });
     setBooks(prev => prev.map(b => b.id === id
-      ? { ...b, memberRoles: { ...(b.memberRoles || {}), [email]: permission } }
+      ? { ...b, memberRoles: { ...(b.memberRoles || {}), [email]: newRole } }
       : b));
   };
 

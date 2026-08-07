@@ -6,8 +6,8 @@
 //   books/{bookId}/recipes/{recipeId} → sotto-collezione (vedi Fase 1.2)
 import { db } from "../firebase.js";
 import {
-  doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection,
-  query, where, arrayUnion, arrayRemove, deleteField,
+  doc, getDoc, getDocs, setDoc, deleteDoc, collection,
+  query, where,
 } from "firebase/firestore";
 import { MACRO_SECTIONS, INGREDIENT_CATEGORIES } from "../data/constants.js";
 import { uploadPhoto, dishPhotoPath, stepPhotoPath, memoryPhotoPath } from "./photoStore.js";
@@ -147,20 +147,29 @@ export const listMyBooks = async (email, role) => {
   return Array.from(byId.values());
 };
 
-export const addBookMember = (bookId, email, permission) =>
-  updateDoc(bookRef(bookId), {
-    "meta.memberEmails": arrayUnion(email),
-    [`meta.memberRoles.${email}`]: permission,
+// Gestione membri — passa da /api/manage-book-member (Admin SDK) invece di
+// updateDoc diretti: è l'unico punto che scrive meta.memberEmails/
+// memberRoles (le regole bloccano quei campi dal client, vedi
+// firestore.rules) e applica la matrice di permessi a 4 ruoli
+// (src/utils/bookRoles.js, la stessa usata server-side e nelle regole).
+const manageBookMember = async ({ idToken, bookId, action, targetEmail, newRole }) => {
+  const res = await fetch("/api/manage-book-member", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idToken, bookId, action, targetEmail, newRole }),
   });
+  const data = await parseApiResponse(res);
+  if (!res.ok) throw new Error(data.error || "Operazione sui membri non riuscita.");
+};
 
-export const setBookMemberPermission = (bookId, email, permission) =>
-  updateDoc(bookRef(bookId), { [`meta.memberRoles.${email}`]: permission });
+export const addBookMember = ({ idToken, bookId, targetEmail, newRole }) =>
+  manageBookMember({ idToken, bookId, action: "invite", targetEmail, newRole });
 
-export const removeBookMember = (bookId, email) =>
-  updateDoc(bookRef(bookId), {
-    "meta.memberEmails": arrayRemove(email),
-    [`meta.memberRoles.${email}`]: deleteField(),
-  });
+export const setBookMemberPermission = ({ idToken, bookId, targetEmail, newRole }) =>
+  manageBookMember({ idToken, bookId, action: "changeRole", targetEmail, newRole });
+
+export const removeBookMember = ({ idToken, bookId, targetEmail }) =>
+  manageBookMember({ idToken, bookId, action: "remove", targetEmail });
 
 // ── Sotto-collezione recipes: un documento per ricetta ──
 // recipe.id (numero nella demo, stringa uid("r") altrove) diventa l'id
