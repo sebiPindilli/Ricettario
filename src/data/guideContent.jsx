@@ -1,11 +1,10 @@
 // ══════════════════════════════════════════════════════════════
 // TESTI GUIDA CONTESTUALE — un blocco per ogni pulsante "i"
 // dell'app. Fonte: docs/guida-contestuale-bozza.md (rivisto).
-// Parte 1 → dentro la tendina di GlobalNav (sempre su sfondo scuro,
-// niente colore esplicito da impostare qui: eredita quello del
-// placeholder di GlobalNav).
-// Parte 2 → dentro InfoButton (colore ereditato dal wrapper, che
-// si adatta da solo a schermo chiaro/scuro).
+// Tutti aprono dentro InfoButton, che ha un solo aspetto fisso
+// (sfondo, font, colore testo) indipendentemente da dove si apre
+// — niente colore esplicito da impostare qui, si eredita dal
+// wrapper del popup.
 // ══════════════════════════════════════════════════════════════
 const p = { margin:"7px 0" };
 const pFirst = { margin:"0 0 7px" };
@@ -14,61 +13,61 @@ const pLast = { margin:"7px 0 0" };
 // ── Parte 1 — schermate con GlobalNav ──────────────────────────
 
 export const guideRicette = (
-  <div style={{ fontFamily:"inherit", fontSize:"inherit", color:"rgba(255,255,255,0.8)", lineHeight:1.6 }}>
+  <>
     <p style={pFirst}>Qui vivono tutte le tue ricette. Tocca <b>＋ Nuova ricetta</b> per aggiungerne una — a mano, fotografando una pagina, o incollando un link.</p>
     <p style={p}>Usa la <b>ricerca</b> 🔍 in alto, le <b>pillole di sezione</b> per restringere a Dolci/Salati/ecc., e <b>🏷️ Filtra per tag</b> per caratteristiche come "Vegetariano" o "Feste".</p>
     <p style={pLast}>L'interruttore <b>▦ / 📖</b> in alto a destra passa dalla vista a elenco alla <b>vista libro</b>, che sfoglia le ricette una alla volta come un vero ricettario.</p>
-  </div>
+  </>
 );
 
 export const guideRicordi = (
-  <div style={{ color:"rgba(255,255,255,0.8)", lineHeight:1.6 }}>
+  <>
     <p style={pFirst}>Il diario fotografico del ricettario: foto vere legate ai piatti che avete cucinato insieme, non solo la ricetta ma il momento. Tocca <b>＋ Nuovo ricordo</b> per aggiungerne uno.</p>
     <p style={p}>I ricordi sono ordinati come un diario, dal più recente, raggruppati per periodo. L'interruttore <b>▦ / 📖</b> passa dalla vista a schede alla <b>vista libro</b>, che apre i ricordi a piena pagina.</p>
     <p style={pLast}>Ogni ricordo può essere collegato a una o più ricette: toccando il nome della ricetta sotto la foto ci vai direttamente.</p>
-  </div>
+  </>
 );
 
 export const guideNuovoRicordo = (
-  <div style={{ color:"rgba(255,255,255,0.8)", lineHeight:1.6 }}>
+  <>
     <p style={pFirst}>Compila data, una foto (o un'emoji se non ne hai una a portata di mano) e — se vuoi — un titolo e un racconto di com'è andata.</p>
     <p style={pLast}>L'unica cosa obbligatoria oltre alla foto è <b>collegare almeno una ricetta</b>: è quello che rende il ricordo ritrovabile dalla scheda della ricetta stessa, non solo dal diario.</p>
-  </div>
+  </>
 );
 
 export const guideFrigo = (
-  <div style={{ color:"rgba(255,255,255,0.8)", lineHeight:1.6 }}>
+  <>
     <p style={pFirst}>Segna cosa hai in casa e l'app ti dice cosa puoi cucinare <b>subito</b> e cosa ti manca di poco. Gli ingredienti "base" (sale, farina, olio…) partono già selezionati — deselezionali se non è il tuo caso.</p>
     <p style={p}>Tieni premuto su una voce con l'icona ⊕ per vedere cosa raggruppa.</p>
     <p style={p}>Tocca <b>"Mostra ricette"</b> per l'elenco ordinato da quella con più ingredienti disponibili. Da lì puoi aprire la ricetta, mandare gli ingredienti mancanti in <b>Lista Spesa</b>, o partire con <b>Modalità Cucina</b>.</p>
     <p style={pLast}>💡 Più aggregati e categorie hai impostato in <b>Organizza</b>, più questo elenco è preciso. Sarà l'applicazione stessa a suggerirti se esistono azioni da intraprendere per migliorare l'elenco.</p>
-  </div>
+  </>
 );
 
 export const guideSpesa = (
-  <div style={{ color:"rgba(255,255,255,0.8)", lineHeight:1.6 }}>
+  <>
     <p style={pFirst}>Qui finiscono gli ingredienti che aggiungi da una ricetta. L'app somma da sola le quantità uguali e unisce gli ingredienti aggregati, secondo le regole di Organizza.</p>
     <p style={p}>Gli ingredienti <b>base</b> finiscono in "Controlla in dispensa": conferma <b>✅ Ce l'ho</b> se li hai già, o <b>🛒 Non ce l'ho</b> per spostarli tra quelli da comprare.</p>
     <p style={p}>Il tasto <b>📋 Copia tutto</b> ti dà il testo pronto da incollare ovunque.</p>
     <p style={p}>💡 Più aggregati e equivalenze hai impostato in <b>Organizza</b>, più questo elenco è preciso. Sarà l'applicazione stessa a suggerirti se esistono azioni da intraprendere per migliorare l'elenco.</p>
     <p style={pLast}>🔑 La lista resta collegata alle ricette: se ne modifichi una già in lista, l'app ti chiede se aggiornare le quantità, lasciarle com'erano, o toglierla dalla spesa.</p>
-  </div>
+  </>
 );
 
 export const guideOrganizza = (
-  <div style={{ color:"rgba(255,255,255,0.8)", lineHeight:1.6 }}>
+  <>
     <p style={pFirst}>Il "cervello" del ricettario: qui imposti le regole che rendono intelligenti Frigo, Spesa e Nutrizione.</p>
     <p style={p}><b>⊕ Aggregati</b> unisce ingredienti simili sotto un nome unico (es. zucchero bianco e zucchero semolato bianco sono la stessa cosa). <b>🏷️ Categorie</b> sono gli scaffali che ordinano Frigo e Spesa. <b>⚖️ Equivalenze</b> sono le conversioni tra unità (es. 1 cucchiaino di sale = 5 g di sale). <b>🍎 Valori nutrizionali</b> collega i tuoi ingredienti al database alimenti per il calcolo delle calorie e dei valori nutrizionali.</p>
     <p style={p}>Usa il filtro <b>"Da gestire"</b> per vedere solo ciò che manca.</p>
     <p style={pLast}>🔑 Non è obbligatorio compilarlo per usare l'app: senza, tutto funziona comunque, solo "alla cieca" (niente somme tra ingredienti simili, niente calorie). Sarà l'applicazione stessa a reindirizzarti qui dalle altre sezioni se esistono delle azioni da intraprendere per migliorare il funzionamento.</p>
-  </div>
+  </>
 );
 
 export const guideLibri = (
-  <div style={{ color:"rgba(255,255,255,0.8)", lineHeight:1.6 }}>
+  <>
     <p style={pFirst}>Qui gestisci i tuoi ricettari: puoi averne più di uno e passare dall'uno all'altro con <b>Apri</b>.</p>
     <p style={pLast}>Due modi per condividere: <b>invitare un membro</b> (email) rende il libro <b>sincronizzato</b> — stesso ricettario per entrambi, pensato per famiglia/coppia. <b>Esportare ricette</b> genera invece un <b>codice</b>: chi lo riceve ottiene una copia indipendente, non collegata alle tue modifiche future.</p>
-  </div>
+  </>
 );
 
 // ── Parte 2 — funzioni senza GlobalNav, dentro InfoButton ──────

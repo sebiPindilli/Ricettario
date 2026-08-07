@@ -2,6 +2,7 @@ import { useState, useRef, useLayoutEffect } from "react";
 import { useTheme, useNavActions } from "../context.js";
 import { F, MOBILE_BREAKPOINT_CSS } from "../data/constants.js";
 import OrganizeIcon from "./OrganizeIcon.jsx";
+import InfoButton from "./InfoButton.jsx";
 
 const NAV_ITEMS = [
   { id:"recipes",   icon:"🍽️", label:"Ricette" },
@@ -16,8 +17,7 @@ const NAV_ITEMS = [
 // mobile, sticky annidato dentro lo scroll interno dell'IPhone shell può
 // scorrere via invece di restare fermo. Da fixed, il banner esce dal
 // flusso: il div .globalnav-spacer subito sotto (altezza misurata dal
-// banner stesso via ResizeObserver, così resta corretta anche quando si
-// apre la tendina "Istruzioni") gli lascia il posto nel contenuto sotto.
+// banner stesso via ResizeObserver) gli lascia il posto nel contenuto sotto.
 const GLOBALNAV_RESPONSIVE_CSS = `
   .globalnav-spacer { display:none; }
   @media ${MOBILE_BREAKPOINT_CSS} {
@@ -36,7 +36,6 @@ export default function GlobalNav({
 }) {
   const th = useTheme();
   const navActions = useNavActions();
-  const [infoOpen, setInfoOpen] = useState(false);
   const barRef = useRef(null);
   const [spacerHeight, setSpacerHeight] = useState(0);
 
@@ -119,18 +118,11 @@ export default function GlobalNav({
             fontFamily:F.display, fontSize:13, fontStyle:"italic",
             color:"rgba(255,255,255,0.8)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
           }}>{activeLabel || "Il mio Ricettario"}</span>
-          <button
-            onClick={() => setInfoOpen(o => !o)}
-            title="Istruzioni sezione"
-            style={{
-              width:16, height:16, borderRadius:"50%", flexShrink:0, padding:0,
-              border:`1px solid ${infoOpen ? th.appAccent2 : "rgba(255,255,255,0.4)"}`,
-              background: infoOpen ? th.appAccent2 : "rgba(255,255,255,0.1)",
-              color: infoOpen ? "#fff" : "rgba(255,255,255,0.75)",
-              fontFamily:F.ui, fontSize:10, fontWeight:700, fontStyle:"italic",
-              display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer",
-            }}
-          >i</button>
+          <InfoButton dark>
+            {infoContent || (
+              <div>📝 Istruzioni per «{activeLabel || "questa sezione"}» in arrivo.</div>
+            )}
+          </InfoButton>
         </div>
 
         {/* Interruttore schede/libro — posizione fissa all'estrema destra */}
@@ -151,20 +143,6 @@ export default function GlobalNav({
           <div style={{ width:34, flexShrink:0 }}/> // bilancia 🏠 sugli altri schermi
         )}
       </div>
-
-      {/* Tendina istruzioni sezione */}
-      {infoOpen && (
-        <div style={{
-          background:`${th.appInk}`, borderTop:"1px solid rgba(255,255,255,0.1)",
-          padding:"12px 16px 16px",
-        }}>
-          {infoContent || (
-            <div style={{ fontFamily:F.ui, fontSize:11.5, color:"rgba(255,255,255,0.75)", lineHeight:1.6 }}>
-              📝 Istruzioni per «{activeLabel || "questa sezione"}» in arrivo.
-            </div>
-          )}
-        </div>
-      )}
     </div>
     <div className="globalnav-spacer" style={{ height: spacerHeight }} />
     </>

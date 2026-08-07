@@ -130,58 +130,61 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
       )}
       <div style={{ padding:"8px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"center", gap:8 }}>
         <BackBtn onBack={onBack} dark={viewMode==="book"}/>
-        <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-          <InfoButton size={38}>{guideDettaglioRicetta}</InfoButton>
-          {/* View toggle */}
-          <div style={{ display:"flex", gap:0 }}>
-            {[["app","App"],["book","📖"]].map(([mode,label]) => (
-              <button key={mode} onClick={() => setViewMode(mode)} style={{
-                height:38, padding:"0 12px", border:"none",
-                background: viewMode===mode ? (mode==="book" ? "#333" : "#2C2416") : "#EDE6D4",
-                color: viewMode===mode ? "#fff" : "#7A6E5F",
-                fontFamily:F.ui, fontSize: mode==="book" ? 17 : 11, fontWeight:600,
-                cursor:"pointer", display:"flex", alignItems:"center",
-                borderRadius: mode==="app" ? "8px 0 0 8px" : "0 8px 8px 0",
-              }}>{label}</button>
-            ))}
-          </div>
-          {/* Export button */}
-          <button onClick={() => setExportOpen(true)} style={{
-            width:38, height:38, padding:0,
-            border:"1.5px solid #3B6FD855",
-            borderRadius:10, background:"#3B6FD81C",
-            display:"flex", alignItems:"center", justifyContent:"center",
-            fontSize:17, cursor:"pointer", lineHeight:1,
-          }} title="Esporta / condividi">📤</button>
-          {/* Favorite button */}
-          <button onClick={() => onUpdate({ ...recipe, favorite: !recipe.favorite })} style={{
-            width:38, height:38, padding:0,
-            border: "1.5px solid #D8A02655",
-            borderRadius:10, background:"#D8A0261C",
-            display:"flex", alignItems:"center", justifyContent:"center",
-            cursor:"pointer", lineHeight:1,
-          }} title={recipe.favorite ? "Rimuovi dai preferiti" : "Aggiungi ai preferiti"}>
-            <svg width="19" height="19" viewBox="0 0 24 24" fill={recipe.favorite ? "#D8A026" : "none"} stroke="#D8A026" strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-            </svg>
-          </button>
-          {/* Edit button */}
-          <button onClick={onEdit} style={{
-            width:38, height:38, padding:0,
-            border:"1.5px solid #2D8C6B55",
-            borderRadius:10, background:"#2D8C6B1C",
-            display:"flex", alignItems:"center", justifyContent:"center",
-            fontSize:17, cursor:"pointer", lineHeight:1,
-          }} title="Modifica ricetta">✏️</button>
-          {/* Delete button */}
-          <button onClick={() => setShowDeleteConfirm(true)} style={{
-            width:38, height:38, padding:0,
-            border:"1.5px solid #D9302555",
-            borderRadius:10, background:"#D930251C",
-            display:"flex", alignItems:"center", justifyContent:"center",
-            fontSize:17, cursor:"pointer", lineHeight:1,
-          }} title="Elimina ricetta">🗑️</button>
+        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+          <span style={{ fontFamily:F.ui, fontSize:12, fontWeight:700, color: viewMode==="book" ? "#555" : "#7A6E5F" }}>Scheda Ricetta</span>
+          <InfoButton>{guideDettaglioRicetta}</InfoButton>
         </div>
+      </div>
+      <div style={{ padding:"8px 20px 0", display:"flex", justifyContent:"flex-end", alignItems:"center", gap:6 }}>
+        {/* View toggle */}
+        <div style={{ display:"flex", gap:0 }}>
+          {[["app","App"],["book","📖"]].map(([mode,label]) => (
+            <button key={mode} onClick={() => setViewMode(mode)} style={{
+              height:38, padding:"0 12px", border:"none",
+              background: viewMode===mode ? (mode==="book" ? "#333" : "#2C2416") : "#EDE6D4",
+              color: viewMode===mode ? "#fff" : "#7A6E5F",
+              fontFamily:F.ui, fontSize: mode==="book" ? 17 : 11, fontWeight:600,
+              cursor:"pointer", display:"flex", alignItems:"center",
+              borderRadius: mode==="app" ? "8px 0 0 8px" : "0 8px 8px 0",
+            }}>{label}</button>
+          ))}
+        </div>
+        {/* Export button */}
+        <button onClick={() => setExportOpen(true)} style={{
+          width:38, height:38, padding:0,
+          border:"1.5px solid #3B6FD855",
+          borderRadius:10, background:"#3B6FD81C",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          fontSize:17, cursor:"pointer", lineHeight:1,
+        }} title="Esporta / condividi">📤</button>
+        {/* Favorite button */}
+        <button onClick={() => onUpdate({ ...recipe, favorite: !recipe.favorite })} style={{
+          width:38, height:38, padding:0,
+          border: "1.5px solid #D8A02655",
+          borderRadius:10, background:"#D8A0261C",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          cursor:"pointer", lineHeight:1,
+        }} title={recipe.favorite ? "Rimuovi dai preferiti" : "Aggiungi ai preferiti"}>
+          <svg width="19" height="19" viewBox="0 0 24 24" fill={recipe.favorite ? "#D8A026" : "none"} stroke="#D8A026" strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+        </button>
+        {/* Edit button */}
+        <button onClick={onEdit} style={{
+          width:38, height:38, padding:0,
+          border:"1.5px solid #2D8C6B55",
+          borderRadius:10, background:"#2D8C6B1C",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          fontSize:17, cursor:"pointer", lineHeight:1,
+        }} title="Modifica ricetta">✏️</button>
+        {/* Delete button */}
+        <button onClick={() => setShowDeleteConfirm(true)} style={{
+          width:38, height:38, padding:0,
+          border:"1.5px solid #D9302555",
+          borderRadius:10, background:"#D930251C",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          fontSize:17, cursor:"pointer", lineHeight:1,
+        }} title="Elimina ricetta">🗑️</button>
       </div>
 
       <Toast msg={toast.msg} visible={toast.visible}/>
