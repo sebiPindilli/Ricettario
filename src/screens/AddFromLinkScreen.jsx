@@ -3,6 +3,8 @@ import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 import { auth } from "../firebase.js";
 import BackBtn from "../components/BackBtn.jsx";
+import InfoButton from "../components/InfoButton.jsx";
+import { guideLink } from "../data/guideContent.jsx";
 
 export default function AddFromLinkScreen({ onBack, onSave }) {
   const th = useTheme();
@@ -96,6 +98,7 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
           <div style={{ fontFamily: F.display, fontSize: 17, color: th.appInk }}>Importa da Link</div>
           <div style={{ fontFamily: F.ui, fontSize: 10.5, color: th.appFaded }}>Estrai ricetta da URL con AI</div>
         </div>
+        <InfoButton>{guideLink}</InfoButton>
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: "12px 20px 40px", display: "flex", flexDirection: "column", gap: 16 }}>

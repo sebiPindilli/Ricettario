@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useTheme } from "../context.js";
 import { F, MACRO_SECTIONS } from "../data/constants.js";
 import { sortSectionsAltroLast } from "../utils/helpers.js";
+import InfoButton from "./InfoButton.jsx";
+import { guideEsporta } from "../data/guideContent.jsx";
 
 // ══════════════════════════════════════════════════════════════
 // COMPONENT: ExportFlow — overlay a passi per esportare ricette
@@ -29,7 +31,8 @@ export default function ExportFlow({ current, allRecipes = [], sectionList = MAC
 
   const Panel = ({ children }) => (
     <div style={{ position:"absolute", inset:0, zIndex:600, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", padding:18 }}>
-      <div style={{ width:"100%", maxHeight:"88%", background:th.appBg, borderRadius:20, padding:"20px 18px", display:"flex", flexDirection:"column", overflow:"hidden" }}>
+      <div style={{ width:"100%", maxHeight:"88%", background:th.appBg, borderRadius:20, padding:"20px 18px", display:"flex", flexDirection:"column", overflow:"hidden", position:"relative" }}>
+        <InfoButton triggerStyle={{ position:"absolute", top:14, right:14 }}>{guideEsporta}</InfoButton>
         {children}
       </div>
     </div>

@@ -48,6 +48,7 @@ import AutocompleteInput from "./components/AutocompleteInput.jsx";
 import RecipeCardList from "./components/RecipeCardList.jsx";
 import RecipeCardBook from "./components/RecipeCardBook.jsx";
 import GlobalNav from "./components/GlobalNav.jsx";
+import { guideOrganizza } from "./data/guideContent.jsx";
 import GuideScreen from "./screens/GuideScreen.jsx";
 import MemoriesBookScreen from "./screens/MemoriesBookScreen.jsx";
 import CookingMode from "./screens/CookingMode.jsx";
@@ -1191,6 +1192,7 @@ function AppInner({ me, role, initialDefaultBookId }) {
                 showSearch={false}
                 showFavorites={false}
                 activeLabel="Organizza Ingredienti"
+                infoContent={guideOrganizza}
               />
             }
             recipes={recipes}

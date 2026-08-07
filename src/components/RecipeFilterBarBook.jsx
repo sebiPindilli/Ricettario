@@ -4,6 +4,7 @@ import { F } from "../data/constants.js";
 import GlobalNav from "./GlobalNav.jsx";
 import RecipeCardBook from "./RecipeCardBook.jsx";
 import RecipeFilterBar from "./RecipeFilterBar.jsx";
+import { guideRicette } from "../data/guideContent.jsx";
 
 // Wrapper che usa RecipeFilterBar sopra la pagina del libro, restringendo le pagine sfogliabili al filtro
 export default function RecipeFilterBarBook({ recipes, extraTagGroups, sectionList, pageIndex, setPageIndex, turning, setTurning, onLanding, onRecipe, onRecipes, onMemories, onAdd, onFridge, onShopping }) {
@@ -22,6 +23,7 @@ export default function RecipeFilterBarBook({ recipes, extraTagGroups, sectionLi
           onShopping={onShopping}
           onLanding={onLanding}
           activeLabel="Libro Ricette"
+          infoContent={guideRicette}
         />
       )}
       topAction={(

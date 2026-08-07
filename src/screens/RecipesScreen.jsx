@@ -4,6 +4,7 @@ import { sortSectionsAltroLast } from "../utils/helpers.js";
 import { F, MACRO_SECTIONS, TAG_GROUPS } from "../data/constants.js";
 import GlobalNav from "../components/GlobalNav.jsx";
 import RecipeCardList from "../components/RecipeCardList.jsx";
+import { guideRicette } from "../data/guideContent.jsx";
 
 export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, onMemories, onAdd, onFridge, onShopping, extraTagGroups=[], sectionList=MACRO_SECTIONS }) {
   const th = useTheme();
@@ -62,6 +63,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
         onShopping={onShopping}
         onLanding={onLanding}
         activeLabel={activeSection ? MACRO_SECTIONS.find(s=>s.id===activeSection)?.label : "Libro Ricette"}
+        infoContent={guideRicette}
       />
 
       {/* ── Pulsante nuova ricetta (in alto al centro, come nei Ricordi) ── */}

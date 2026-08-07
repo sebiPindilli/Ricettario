@@ -18,6 +18,8 @@ import StepsView from "../components/StepsView.jsx";
 import ServingsDialog from "../components/ServingsDialog.jsx";
 import ShoppingMode from "../components/ShoppingMode.jsx";
 import CookingMode from "./CookingMode.jsx";
+import InfoButton from "../components/InfoButton.jsx";
+import { guideDettaglioRicetta } from "../data/guideContent.jsx";
 
 export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemory, onAddMemory, onManageIngredients, onManageEquivalences, onAddToShoppingList, nutritionMap = {}, equivalences = {}, customUnits = {}, customFoods = [], ingredientDict = null, aggregates = [], sourceByIngredient = {}, allRecipes = [], sectionList = MACRO_SECTIONS, onExportPDF, onExportCode }) {
   const th = useTheme();
@@ -129,6 +131,7 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
       <div style={{ padding:"8px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"center", gap:8 }}>
         <BackBtn onBack={onBack} dark={viewMode==="book"}/>
         <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+          <InfoButton size={38}>{guideDettaglioRicetta}</InfoButton>
           {/* View toggle */}
           <div style={{ display:"flex", gap:0 }}>
             {[["app","App"],["book","📖"]].map(([mode,label]) => (

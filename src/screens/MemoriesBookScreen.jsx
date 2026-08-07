@@ -5,6 +5,7 @@ import { memorySortKey, memoryPeriodLabel } from "../utils/helpers.js";
 import MemoryPhoto from "../components/MemoryPhoto.jsx";
 import PhotoLightbox from "../components/PhotoLightbox.jsx";
 import GlobalNav from "../components/GlobalNav.jsx";
+import { guideRicordi } from "../data/guideContent.jsx";
 
 // ══════════════════════════════════════════════════════════════
 // SCREEN: MEMORIES BOOK — all photos, each linked to recipes
@@ -90,6 +91,7 @@ export default function MemoriesBookScreen({ recipes, onBack, onRecipe, onRecipe
         onShopping={onShopping}
         onLanding={onBack}
         activeLabel="Libro dei Ricordi"
+        infoContent={guideRicordi}
         viewToggle={allMemories.length > 0 ? {
           isBook: viewMode === "book",
           onCards: () => setViewMode("cards"),

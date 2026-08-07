@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 import GlobalNav from "../components/GlobalNav.jsx";
+import { guideLibri } from "../data/guideContent.jsx";
 
 const DANGER = "#C4593A";
 
@@ -51,6 +52,7 @@ export default function BooksScreen({
       showSearch={false}
       showFavorites={false}
       activeLabel="I miei Ricettari"
+      infoContent={guideLibri}
     />
   );
 

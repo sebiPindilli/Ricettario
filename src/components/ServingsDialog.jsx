@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 import { flattenIngredients, ingredientToText, fmtQty } from "../utils/helpers.js";
+import InfoButton from "./InfoButton.jsx";
+import { guideCalcoloDosi } from "../data/guideContent.jsx";
 
 export default function ServingsDialog({ recipe, title, emoji, onConfirm, onClose, initialScale = null }) {
   const th = useTheme();
@@ -49,7 +51,8 @@ export default function ServingsDialog({ recipe, title, emoji, onConfirm, onClos
 
   return (
     <div style={{ position:"absolute", inset:0, zIndex:400, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
-      <div style={{ width:"100%", background:th.appBg, borderRadius:20, padding:"22px 20px", textAlign:"center", maxHeight:"90%", overflowY:"auto" }}>
+      <div style={{ width:"100%", background:th.appBg, borderRadius:20, padding:"22px 20px", textAlign:"center", maxHeight:"90%", overflowY:"auto", position:"relative" }}>
+        <InfoButton triggerStyle={{ position:"absolute", top:14, right:14 }}>{guideCalcoloDosi}</InfoButton>
         <div style={{ fontSize:32, marginBottom:4 }}>{emoji}</div>
         <div style={{ fontFamily:F.display, fontSize:19, color:th.appInk, marginBottom:12 }}>{title}</div>
 

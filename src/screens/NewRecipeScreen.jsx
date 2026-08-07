@@ -11,6 +11,8 @@ import EmojiColorPicker from "../components/EmojiColorPicker.jsx";
 import SectionPicker from "../components/SectionPicker.jsx";
 import EditSectionedList from "../components/EditSectionedList.jsx";
 import EditSectionedSteps from "../components/EditSectionedSteps.jsx";
+import InfoButton from "../components/InfoButton.jsx";
+import { guideNuovaModificaRicetta } from "../data/guideContent.jsx";
 
 // ══════════════════════════════════════════════════════════════
 // SCREEN: NEW RECIPE (manual entry)
@@ -65,15 +67,18 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
       {/* Header */}
       <div style={{ padding:"8px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
         <BackBtn onBack={onBack} label="Annulla"/>
-        <button onClick={() => canSave && onSave(draft)} style={{
-          background: canSave ? "#C4593A" : "#EDE6D4",
-          color: canSave ? "#fff" : "#7A6E5F",
-          border:"none", borderRadius:10,
-          padding:"8px 18px",
-          fontFamily:F.ui, fontSize:13, fontWeight:700,
-          cursor: canSave ? "pointer" : "default",
-          transition:"all 0.2s",
-        }}>Salva ✓</button>
+        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+          <InfoButton>{guideNuovaModificaRicetta}</InfoButton>
+          <button onClick={() => canSave && onSave(draft)} style={{
+            background: canSave ? "#C4593A" : "#EDE6D4",
+            color: canSave ? "#fff" : "#7A6E5F",
+            border:"none", borderRadius:10,
+            padding:"8px 18px",
+            fontFamily:F.ui, fontSize:13, fontWeight:700,
+            cursor: canSave ? "pointer" : "default",
+            transition:"all 0.2s",
+          }}>Salva ✓</button>
+        </div>
       </div>
 
       {/* Preview hero — updates live */}

@@ -6,6 +6,7 @@ import {
 } from "../utils/helpers.js";
 import { effectiveCategories } from "../utils/aggregates.js";
 import GlobalNav from "../components/GlobalNav.jsx";
+import { guideSpesa } from "../data/guideContent.jsx";
 
 const fmtNum = (n) => String(Math.round(n * 100) / 100).replace(".", ",");
 // L'unità "vuota" (conteggio senza unità, es. le uova) non mostra mai
@@ -277,6 +278,7 @@ export default function ShoppingListScreen({
       showSearch={false}
       showFavorites={false}
       activeLabel="Lista Spesa"
+      infoContent={guideSpesa}
     />
   );
 

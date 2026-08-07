@@ -3,6 +3,8 @@ import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 import { auth } from "../firebase.js";
 import BackBtn from "../components/BackBtn.jsx";
+import InfoButton from "../components/InfoButton.jsx";
+import { guideScansiona } from "../data/guideContent.jsx";
 
 export default function ScanScreen({ onBack, onSave, mode = "camera" }) {
   const isGallery = mode === "gallery";
@@ -106,6 +108,7 @@ export default function ScanScreen({ onBack, onSave, mode = "camera" }) {
           <div style={{ fontFamily: F.display, fontSize: 17, color: th.appInk }}>{isGallery ? "Importa dalla Galleria" : "Scansiona dalla Fotocamera"}</div>
           <div style={{ fontFamily: F.ui, fontSize: 10.5, color: th.appFaded }}>Crea ricetta da foto AI</div>
         </div>
+        <InfoButton>{guideScansiona}</InfoButton>
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: "12px 20px 40px", display: "flex", flexDirection: "column", gap: 16 }}>

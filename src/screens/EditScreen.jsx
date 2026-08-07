@@ -11,6 +11,8 @@ import EmojiColorPicker from "../components/EmojiColorPicker.jsx";
 import SectionPicker from "../components/SectionPicker.jsx";
 import EditSectionedList from "../components/EditSectionedList.jsx";
 import EditSectionedSteps from "../components/EditSectionedSteps.jsx";
+import InfoButton from "../components/InfoButton.jsx";
+import { guideNuovaModificaRicetta } from "../data/guideContent.jsx";
 
 // ══════════════════════════════════════════════════════════════
 // SCREEN: EDIT RECIPE
@@ -66,13 +68,16 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
     <div style={{ background:"#FAF7F0", minHeight:"100%", display:"flex", flexDirection:"column" }}>
       <div style={{ padding:"8px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
         <BackBtn onBack={onBack} label="Annulla"/>
-        <button onClick={handleSave} style={{
-          background:"#C4593A", color:"#fff",
-          border:"none", borderRadius:10,
-          padding:"8px 18px",
-          fontFamily:F.ui, fontSize:13, fontWeight:700,
-          cursor:"pointer",
-        }}>Salva ✓</button>
+        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+          <InfoButton>{guideNuovaModificaRicetta}</InfoButton>
+          <button onClick={handleSave} style={{
+            background:"#C4593A", color:"#fff",
+            border:"none", borderRadius:10,
+            padding:"8px 18px",
+            fontFamily:F.ui, fontSize:13, fontWeight:700,
+            cursor:"pointer",
+          }}>Salva ✓</button>
+        </div>
       </div>
 
       <div style={{ padding:"12px 20px 4px" }}>

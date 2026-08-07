@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 import { flattenIngredients, scaleIngredient, normName, fmtQty } from "../utils/helpers.js";
+import InfoButton from "./InfoButton.jsx";
+import { guideModalitaSpesa } from "../data/guideContent.jsx";
 
 // ══════════════════════════════════════════════════════════════
 // MODALITÀ SPESA — checklist ingredienti scalati, copia selezione
@@ -53,6 +55,7 @@ export default function ShoppingMode({ recipe, scale, onClose, onAddToList, pres
             <div style={{ fontFamily:F.ui, fontSize:10, color:"rgba(255,255,255,0.55)" }}>{recipe.title} · {scale?.label || "dosi originali"}</div>
           </div>
           <div style={{ fontFamily:F.ui, fontSize:11, color:"rgba(255,255,255,0.7)" }}>{checked.length}/{items.length}</div>
+          <InfoButton dark>{guideModalitaSpesa}</InfoButton>
         </div>
 
         {/* List — scrolla solo se non ci sta nello spazio rimasto sotto il tetto massimo della scheda */}

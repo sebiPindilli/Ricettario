@@ -10,6 +10,7 @@ import RecipeFilterBar from "../components/RecipeFilterBar.jsx";
 import ServingsDialog from "../components/ServingsDialog.jsx";
 import ShoppingMode from "../components/ShoppingMode.jsx";
 import CookingMode from "./CookingMode.jsx";
+import { guideFrigo } from "../data/guideContent.jsx";
 
 // ══════════════════════════════════════════════════════════════
 // SCREEN: SVUOTA FRIGO — seleziona ingredienti in casa → ricette
@@ -117,6 +118,7 @@ export default function EmptyFridgeScreen({
       showSearch={false}
       showFavorites={false}
       activeLabel="Svuota Frigo"
+      infoContent={guideFrigo}
     />
   );
 

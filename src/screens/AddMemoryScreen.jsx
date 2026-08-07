@@ -4,6 +4,7 @@ import { F } from "../data/constants.js";
 import GlobalNav from "../components/GlobalNav.jsx";
 import BackBtn from "../components/BackBtn.jsx";
 import EditLabel from "../components/EditLabel.jsx";
+import { guideNuovoRicordo } from "../data/guideContent.jsx";
 
 export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBack, onSave, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping }) {
   const th = useTheme();
@@ -50,6 +51,7 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
         showSearch={false}
         showFavorites={false}
         activeLabel="Nuovo Ricordo"
+        infoContent={guideNuovoRicordo}
       />
       <div style={{ padding:"8px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
         <BackBtn onBack={onBack} label="Annulla"/>

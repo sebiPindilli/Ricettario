@@ -3,6 +3,8 @@ import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 import { flattenSteps, flattenIngredients, ingredientToText, scaleIngredient, stepNumberLabel } from "../utils/helpers.js";
 import PhotoLightbox from "../components/PhotoLightbox.jsx";
+import InfoButton from "../components/InfoButton.jsx";
+import { guideCucina } from "../data/guideContent.jsx";
 
 // ══════════════════════════════════════════════════════════════
 // MODALITÀ CUCINA — step by step a schermo intero, tap per avanzare
@@ -127,6 +129,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
         {!isIntro && !isDone && (
           <div style={{ fontFamily:F.ui, fontSize:12, color:"rgba(255,255,255,0.6)" }}>{idx+1}/{steps.length}</div>
         )}
+        <InfoButton dark>{guideCucina}</InfoButton>
       </div>
 
       {/* Progress bar interattiva */}
