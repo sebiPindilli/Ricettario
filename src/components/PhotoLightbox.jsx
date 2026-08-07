@@ -1,14 +1,14 @@
-import { useState } from "react";
 import { F } from "../data/constants.js";
 
 export default function PhotoLightbox({ photo, caption, date, isImage = false, onClose }) {
-  const [saved, setSaved] = useState(false);
-
-  // In a real app this would use the Web Share API or canvas download
+  // Le foto sono URL di Firebase Storage: un salvataggio "vero" via
+  // fetch → blob richiederebbe CORS configurato sul bucket (mai fatto in
+  // questo progetto) e comunque Safari iOS ignora l'attributo download a
+  // prescindere da CORS. Aprire in una nuova scheda funziona ovunque senza
+  // dipendenze: l'utente salva col gesto nativo del suo dispositivo
+  // (pressione prolungata su mobile, tasto destro su desktop).
   const handleSave = () => {
-    // Simulate save — in real PWA: fetch(photo).then(blob => saveAs(blob))
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    if (photo) window.open(photo, "_blank");
   };
 
   return (
@@ -76,24 +76,26 @@ export default function PhotoLightbox({ photo, caption, date, isImage = false, o
         </div>
       )}
 
-      {/* Save to gallery button */}
-      <button
-        onClick={e => { e.stopPropagation(); handleSave(); }}
-        style={{
-          marginTop:24,
-          padding:"12px 28px",
-          background: saved ? "rgba(100,200,100,0.3)" : "rgba(255,255,255,0.12)",
-          border:`1px solid ${saved ? "rgba(100,200,100,0.6)" : "rgba(255,255,255,0.2)"}`,
-          borderRadius:30,
-          color:"#fff",
-          fontFamily:F.ui, fontSize:14, fontWeight:600,
-          cursor:"pointer",
-          display:"flex", alignItems:"center", gap:8,
-          transition:"all 0.2s",
-        }}
-      >
-        {saved ? "✅ Salvata!" : "⬇️ Salva in galleria"}
-      </button>
+      {/* Save to gallery button — solo se c'è una foto vera, non un'emoji */}
+      {isImage && photo && (
+        <button
+          onClick={e => { e.stopPropagation(); handleSave(); }}
+          style={{
+            marginTop:24,
+            padding:"12px 28px",
+            background:"rgba(255,255,255,0.12)",
+            border:"1px solid rgba(255,255,255,0.2)",
+            borderRadius:30,
+            color:"#fff",
+            fontFamily:F.ui, fontSize:14, fontWeight:600,
+            cursor:"pointer",
+            display:"flex", alignItems:"center", gap:8,
+            transition:"all 0.2s",
+          }}
+        >
+          ⬇️ Salva in galleria
+        </button>
+      )}
 
       <div style={{
         position:"absolute", bottom:24,
