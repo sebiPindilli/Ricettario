@@ -55,6 +55,8 @@ export default function BetaButton() {
   const btnRef = useRef(null);
   const dragRef = useRef({ dragging: false, moved: false, startX: 0, startY: 0, origTop: 0, origLeft: 0, shellRect: null });
   const [shellSize, setShellSize] = useState({ width: 0, height: 0 });
+  const menuRef = useRef(null);
+  const [menuHeight, setMenuHeight] = useState(0);
 
   // Misura .iphone-shell (il "contenitore" a cui il bottone è ancorato, sia
   // in position:absolute su desktop sia in position:fixed su mobile reale —
@@ -69,6 +71,20 @@ export default function BetaButton() {
     ro.observe(shell);
     return () => ro.disconnect();
   }, []);
+
+  // Altezza reale del menu (misurata, non stimata): il numero di voci può
+  // cambiare in futuro, una costante scritta a mano si disallineerebbe in
+  // silenzio. Si rimisura ogni volta che il menu si monta (view passa a
+  // "menu") — prima del paint, così non c'è flicker visibile.
+  useLayoutEffect(() => {
+    const el = menuRef.current;
+    if (!el) return;
+    const update = () => setMenuHeight(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [view]);
 
   if (role !== "admin" && role !== "tester") return null;
 
@@ -122,16 +138,28 @@ export default function BetaButton() {
   };
 
   // Posizione effettiva del bottone (default = basso a destra, stessi 20px
-  // di sempre) usata per calcolare dove agganciare il menu: lo segue
-  // ovunque sia stato trascinato, aprendosi a destra invece che a sinistra
-  // se a sinistra non c'è spazio sufficiente per la sua larghezza.
+  // di sempre) — lo segue ovunque sia stato trascinato.
   const btnTop = pos ? pos.top : shellSize.height - MARGIN - BTN_SIZE;
   const btnLeft = pos ? pos.left : shellSize.width - MARGIN - BTN_SIZE;
-  const menuBottom = shellSize.height - btnTop + 8;
-  const openToLeft = btnLeft >= MENU_WIDTH + MARGIN;
-  const menuSide = openToLeft
-    ? { right: shellSize.width - btnLeft - BTN_SIZE }
-    : { left: btnLeft };
+
+  // Direzione di apertura del menu, per asse indipendente: si confronta lo
+  // spazio disponibile sui due lati (non solo "c'è abbastanza spazio nella
+  // direzione preferita?", ma "quale dei due lati ne ha di più?"), poi si
+  // blocca (clamp) la posizione finale dentro i bordi della shell. Così,
+  // anche nella fascia centrale dove né il lato preferito né il suo
+  // opposto hanno spazio pieno, il menu resta comunque tutto visibile —
+  // solo scostato dal bottone invece che perfettamente allineato.
+  const spaceAbove = btnTop;
+  const spaceBelow = shellSize.height - (btnTop + BTN_SIZE);
+  const openUp = spaceAbove >= spaceBelow; // preferenza di default: verso l'alto
+  const desiredTop = openUp ? btnTop - menuHeight - 8 : btnTop + BTN_SIZE + 8;
+  const menuTop = Math.max(MARGIN, Math.min(desiredTop, shellSize.height - menuHeight - MARGIN));
+
+  const spaceLeft = btnLeft;
+  const spaceRight = shellSize.width - (btnLeft + BTN_SIZE);
+  const openLeft = spaceLeft >= spaceRight; // preferenza di default: verso sinistra
+  const desiredLeft = openLeft ? btnLeft + BTN_SIZE - MENU_WIDTH : btnLeft;
+  const menuLeft = Math.max(MARGIN, Math.min(desiredLeft, shellSize.width - MENU_WIDTH - MARGIN));
 
   return (
     <>
@@ -159,8 +187,8 @@ export default function BetaButton() {
 
       {view === "menu" && (
         <div onClick={close} style={{ position: "absolute", inset: 0, zIndex: 160 }}>
-          <div className="beta-fab-menu" onClick={(e) => e.stopPropagation()} style={{
-            position: "absolute", bottom: menuBottom, ...menuSide,
+          <div ref={menuRef} className="beta-fab-menu" onClick={(e) => e.stopPropagation()} style={{
+            position: "absolute", top: menuTop, left: menuLeft,
             background: th.appBg, borderRadius: 14, minWidth: MENU_WIDTH,
             border: `1px solid ${th.appBorder}`, overflow: "hidden",
             boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
