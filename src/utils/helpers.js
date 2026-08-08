@@ -4,6 +4,15 @@
 // ══════════════════════════════════════════════════════════════
 import { effectiveEquivalenceKey } from "./aggregates.js";
 
+// Rifiuta una promise che resta pendente oltre `ms` — usata sui percorsi
+// di bootstrap (login, caricamento libri) perché una chiamata di rete mai
+// risolta non deve mai tradursi in un caricamento eterno per l'utente.
+export const withTimeout = (promise, ms) =>
+  Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), ms)),
+  ]);
+
 // "Altro" resta sempre in fondo, anche dopo l'aggiunta di nuove sezioni
 export const sortSectionsAltroLast = (list) => [
   ...list.filter(s => s.id !== "altro"),

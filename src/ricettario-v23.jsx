@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   sortSectionsAltroLast, sortCategoriesBaseFirst,
   isSectioned, toSectioned, fromSectioned, stripPhotolessStep, stepPhotosOf,
@@ -9,7 +9,7 @@ import {
   UNIT_ALIASES, unitLabel, normUnit, macroLine,
   WEIGHT_UNITS, ingredientToGrams,
   parseIngredientAmount, decomposeIngredient, composeIngredient,
-  memoryPeriodLabel, memorySortKey, buildFridgeItems,
+  memoryPeriodLabel, memorySortKey, buildFridgeItems, withTimeout,
 } from "./utils/helpers.js";
 import { effectiveNutritionKey, findSimilarIngredients } from "./utils/aggregates.js";
 import {
@@ -19,6 +19,7 @@ import {
 } from "./services/bookStore.js";
 import { setDefaultBook } from "./services/authStore.js";
 import { auth } from "./firebase.js";
+import { signOut } from "firebase/auth";
 import AuthGate from "./components/AuthGate.jsx";
 import {
   T, F, MACRO_SECTIONS, PICKER_EMOJIS, INGREDIENT_CATEGORIES,
@@ -784,6 +785,10 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
   // su una rete lenta, potrebbe salvare i dati demo iniziali sopra a
   // quelli veri appena caricati, perdendoli).
   const [bookLoaded, setBookLoaded] = useState(false);
+  // true se il bootstrap sotto ha fallito o è andato in timeout — mostra
+  // uno stato di errore con possibilità di riprovare invece di restare
+  // bloccati su "Caricamento…" per sempre (vedi anche AuthGate.jsx).
+  const [bookBootError, setBookBootError] = useState(false);
 
   const snapshotData = () => ({
     recipes, extraTagGroups, sectionList, categoryList,
@@ -810,27 +815,43 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
   // primissima volta (nessun libro trovato), crea il libro personale via
   // /api/create-book. Sceglie come attivo il predefinito salvato (se ancora
   // valido) o il libro personale, poi ne carica subito i dati.
-  useEffect(() => {
-    (async () => {
-      let list = await listMyBooks(me, role);
-      if (list.length === 0) {
-        const idToken = await auth.currentUser.getIdToken();
-        const id = await createBookInFirestore({ idToken, name: "Il mio Ricettario", type: "personale" });
-        list = [{ id, name: "Il mio Ricettario", type: "personale", bookTheme: "classic", owner: me, memberEmails: [], memberRoles: {} }];
-      }
-      setBooks(list);
-      const personal = list.find(b => b.type === "personale" && b.owner === me);
-      const initial = (initialDefaultBookId && list.some(b => b.id === initialDefaultBookId))
-        ? initialDefaultBookId
-        : (personal ? personal.id : list[0].id);
-      setDefaultBookId(initial);
-      setActiveBookId(initial);
-      const data = await loadFullBook(initial);
-      if (data.meta) loadData(data);
+  // Isolato in una funzione a sé (invece che inline nell'effect) così può
+  // essere richiamato anche dal pulsante "Riprova" in caso di errore.
+  // Un timeout complessivo evita che una richiesta di rete mai risolta
+  // lasci l'app bloccata su "Caricamento…" per sempre.
+  const bootstrapBooks = useCallback(async () => {
+    setBookBootError(false);
+    try {
+      await withTimeout((async () => {
+        let list = await listMyBooks(me, role);
+        if (list.length === 0) {
+          const idToken = await auth.currentUser.getIdToken();
+          const id = await createBookInFirestore({ idToken, name: "Il mio Ricettario", type: "personale" });
+          list = [{ id, name: "Il mio Ricettario", type: "personale", bookTheme: "classic", owner: me, memberEmails: [], memberRoles: {} }];
+        }
+        setBooks(list);
+        const personal = list.find(b => b.type === "personale" && b.owner === me);
+        const initial = (initialDefaultBookId && list.some(b => b.id === initialDefaultBookId))
+          ? initialDefaultBookId
+          : (personal ? personal.id : list[0].id);
+        setDefaultBookId(initial);
+        setActiveBookId(initial);
+        const data = await loadFullBook(initial);
+        if (data.meta) loadData(data);
+      })(), 15000);
       setBookLoaded(true);
-    })();
+    } catch {
+      setBookBootError(true);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    bootstrapBooks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const signOutAndRetry = () => signOut(auth);
 
   // Salvataggio automatico — ogni cambiamento ai dati del libro viene
   // scritto su Firestore dopo una breve pausa (debounce), per non fare
@@ -1125,6 +1146,35 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
   };
 
   const openRecipe = (r) => { setSelected(r); setPrevScreen(screen); setScreen("recipe"); };
+
+  // Stesso principio applicato al login (AuthGate.jsx): finché i libri non
+  // sono caricati, non si mostra la UI principale con dati vuoti/demo — e
+  // in caso di errore/timeout c'è sempre un modo per uscirne, mai un
+  // caricamento eterno.
+  if (!bookLoaded) {
+    const bootPageStyle = {
+      minHeight: "100vh", display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center", gap: 16,
+      fontFamily: "sans-serif", padding: 20, textAlign: "center",
+    };
+    if (bookBootError) {
+      return (
+        <div style={bootPageStyle}>
+          <h1>Caricamento non riuscito</h1>
+          <p>Controlla la connessione e riprova.</p>
+          <div style={{ display: "flex", gap: 12 }}>
+            <button onClick={bootstrapBooks} style={{ padding: "10px 20px", cursor: "pointer" }}>
+              Riprova
+            </button>
+            <button onClick={signOutAndRetry} style={{ padding: "10px 20px", cursor: "pointer" }}>
+              Esci e riprova
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return <div style={bootPageStyle}>Caricamento…</div>;
+  }
 
   return (
     <RoleCtx.Provider value={role}>

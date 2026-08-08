@@ -2,12 +2,14 @@
 // finché l'utente non è loggato con Google E presente in allowlist.
 // children è una render-prop: children(user, role, defaultBookId) viene
 // chiamata solo quando lo stato è "authorized".
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { auth } from "../firebase.js";
 import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
 import { checkWhitelist, loadBetaConfig } from "../services/authStore.js";
+import { withTimeout } from "../utils/helpers.js";
 
 const provider = new GoogleAuthProvider();
+const BOOT_TIMEOUT_MS = 10000;
 
 const pageStyle = {
   minHeight: "100vh", display: "flex", flexDirection: "column",
@@ -16,7 +18,7 @@ const pageStyle = {
 };
 
 export default function AuthGate({ children }) {
-  // loading | loggedOut | unauthorized | authorized
+  // loading | loggedOut | unauthorized | authorized | error
   const [status, setStatus] = useState("loading");
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
@@ -24,25 +26,41 @@ export default function AuthGate({ children }) {
   const [betaEnabled, setBetaEnabled] = useState(true);
   const [error, setError] = useState("");
 
+  // Percorso post-autenticazione (whitelist + config beta): isolato in una
+  // funzione a sé così può essere ripetuto dal pulsante "Riprova" senza
+  // passare di nuovo dal popup Google. Qualsiasi eccezione qui dentro
+  // (rete, timeout) finisce in uno stato "error" esplicito — mai un
+  // caricamento senza uscita.
+  const runBootstrap = useCallback(async (u) => {
+    setUser(u);
+    try {
+      const { authorized, role: r, defaultBookId: d } =
+        await withTimeout(checkWhitelist(u.email), BOOT_TIMEOUT_MS);
+      if (!authorized) {
+        setRole(null); setDefaultBookId(null); setStatus("unauthorized");
+        return;
+      }
+      setRole(r); setDefaultBookId(d);
+      // Serve solo ad admin/tester (vedi BetaButton.jsx) — non blocca
+      // l'accesso di chi ha ruolo base, letto comunque per semplicità.
+      const { enabled } = await withTimeout(loadBetaConfig(), BOOT_TIMEOUT_MS);
+      setBetaEnabled(enabled);
+      setStatus("authorized");
+    } catch {
+      setStatus("error");
+    }
+  }, []);
+
   useEffect(() => {
-    return onAuthStateChanged(auth, async (u) => {
+    return onAuthStateChanged(auth, (u) => {
       if (!u) {
         setUser(null); setRole(null); setDefaultBookId(null); setStatus("loggedOut");
         return;
       }
-      const { authorized, role: r, defaultBookId: d } = await checkWhitelist(u.email);
-      setUser(u);
-      if (authorized) {
-        setRole(r); setDefaultBookId(d);
-        // Serve solo ad admin/tester (vedi BetaButton.jsx) — non blocca
-        // l'accesso di chi ha ruolo base, letto comunque per semplicità.
-        const { enabled } = await loadBetaConfig();
-        setBetaEnabled(enabled);
-        setStatus("authorized");
-      }
-      else { setRole(null); setDefaultBookId(null); setStatus("unauthorized"); }
+      setStatus("loading");
+      runBootstrap(u);
     });
-  }, []);
+  }, [runBootstrap]);
 
   const doSignIn = async () => {
     setError("");
@@ -54,6 +72,10 @@ export default function AuthGate({ children }) {
   };
 
   const doSignOut = () => signOut(auth);
+
+  const retry = () => {
+    if (auth.currentUser) { setStatus("loading"); runBootstrap(auth.currentUser); }
+  };
 
   if (status === "loading") {
     return <div style={pageStyle}>Caricamento…</div>;
@@ -79,6 +101,23 @@ export default function AuthGate({ children }) {
         <button onClick={doSignOut} style={{ padding: "10px 20px", cursor: "pointer" }}>
           Prova un altro account
         </button>
+      </div>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div style={pageStyle}>
+        <h1>Accesso non riuscito</h1>
+        <p>Controlla la connessione e riprova.</p>
+        <div style={{ display: "flex", gap: 12 }}>
+          <button onClick={retry} style={{ padding: "10px 20px", cursor: "pointer" }}>
+            Riprova
+          </button>
+          <button onClick={doSignOut} style={{ padding: "10px 20px", cursor: "pointer" }}>
+            Esci e riprova
+          </button>
+        </div>
       </div>
     );
   }
