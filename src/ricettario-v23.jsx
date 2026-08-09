@@ -536,6 +536,20 @@ class ErrorBoundary extends React.Component {
 }
 
 function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
+  // Solo per il banner "sei offline" — il salvataggio vero e proprio non
+  // dipende da questo stato (si appoggia alla coda offline di Firestore,
+  // vedi src/firebase.js, e al retry sull'evento "online" più sotto).
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  useEffect(() => {
+    const goOnline = () => setIsOnline(true);
+    const goOffline = () => setIsOnline(false);
+    window.addEventListener("online", goOnline);
+    window.addEventListener("offline", goOffline);
+    return () => {
+      window.removeEventListener("online", goOnline);
+      window.removeEventListener("offline", goOffline);
+    };
+  }, []);
   const [screen, setScreen] = useState("cover");
   // screen: cover | landing | recipes | book | memories | recipe | new | edit | scan | theme
   const [scanMode, setScanMode] = useState("camera"); // "camera" | "gallery" — vedi AddRecipeHubScreen
@@ -842,7 +856,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
     if (changed.length === 0 && removedIds.length === 0) return;
     try {
       await Promise.all([
-        ...changed.map(r => saveRecipe(activeBookId, r)),
+        ...changed.map(r => saveRecipe(activeBookId, r, lastSyncedRecipesRef.current.get(r.id))),
         ...removedIds.map(id => deleteRecipeDoc(activeBookId, id)),
       ]);
       lastSyncedRecipesRef.current = recipesToMap(recipes);
@@ -972,6 +986,28 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookLoaded, activeBookId, bookTheme]);
+
+  // Retry immediato alla riconnessione — senza, un salvataggio fallito da
+  // offline (tipicamente: una foto, vedi resolvePhoto in bookStore.js)
+  // resterebbe in sospeso finché l'utente non tocca di nuovo quella
+  // ricetta. flushAllRef è sempre la versione più recente dei 4 flush
+  // (riassegnata ad ogni render): l'effetto si registra una sola volta per
+  // "sessione di libro caricato", non ad ogni cambio di stato.
+  const flushAllRef = useRef(() => {});
+  useEffect(() => {
+    flushAllRef.current = () => {
+      flushRecipesNow();
+      flushSystemNow();
+      flushShoppingListNow();
+      flushMetaNow();
+    };
+  });
+  useEffect(() => {
+    if (!bookLoaded || !activeBook) return;
+    const onReconnect = () => flushAllRef.current();
+    window.addEventListener("online", onReconnect);
+    return () => window.removeEventListener("online", onReconnect);
+  }, [bookLoaded, activeBookId]);
 
   const switchBook = async (id) => {
     if (id === activeBookId) return;
@@ -1297,6 +1333,15 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
       </div>
 
       <IPhone>
+        {!isOnline && (
+          <div style={{
+            position:"fixed", top:0, left:0, right:0, zIndex:9999,
+            background:"#B8973A", color:"#fff", textAlign:"center",
+            fontFamily:"sans-serif", fontSize:11, padding:"5px 10px",
+          }}>
+            Sei offline — le modifiche verranno salvate alla riconnessione
+          </div>
+        )}
         {screen==="cover" && (
           <CoverScreen onEnter={() => setScreen("landing")}/>
         )}

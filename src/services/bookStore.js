@@ -193,12 +193,44 @@ export const removeBookMember = ({ idToken, bookId, targetEmail }) =>
 const isBase64Photo = (v) => typeof v === "string" && v.startsWith("data:");
 const isSectioned = (arr) => Array.isArray(arr) && arr.length > 0 && typeof arr[0] === "object" && "section" in arr[0];
 
+// Carica una singola foto; se l'upload fallisce (tipicamente: offline —
+// Storage non ha una coda offline come Firestore, vedi src/firebase.js)
+// non propaga l'errore: mantiene la foto già sincronizzata in precedenza
+// (previousValue) invece di bloccare il salvataggio dell'intera ricetta.
+// La ricetta in memoria conserva comunque il nuovo base64 (non toccata
+// qui), quindi resta "dirty" e il prossimo giro (o il retry alla
+// riconnessione, vedi ricettario-v23.jsx) ritenta da sola l'upload.
+const resolvePhoto = async (path, value, previousValue) => {
+  if (!isBase64Photo(value)) return value;
+  try {
+    return await uploadPhoto(path, value);
+  } catch (e) {
+    console.warn("Upload foto non riuscito, mantengo quella precedente", e);
+    return previousValue ?? null;
+  }
+};
+
+// Indicizza gli step della versione precedente per posizione (stessa
+// convenzione di stepKey sotto), per recuperare le foto già caricate a cui
+// tornare in caso di fallimento upload.
+const indexStepsByKey = (steps) => {
+  const map = new Map();
+  if (!Array.isArray(steps)) return map;
+  if (isSectioned(steps)) {
+    steps.forEach((sec, si) => (sec.items || []).forEach((st, ii) => map.set(`${si}_${ii}`, st)));
+  } else {
+    steps.forEach((st, i) => map.set(`${i}`, st));
+  }
+  return map;
+};
+
 // Carica le foto di un singolo step (se ne ha, in un array `photos`) e
 // ritorna lo step con le stesse foto sostituite dalle download URL.
-const uploadStepPhotos = async (bookId, recipeId, step, stepKey) => {
+const uploadStepPhotos = async (bookId, recipeId, step, stepKey, previousStepsByKey) => {
   if (typeof step === "string" || !Array.isArray(step.photos)) return step;
+  const prevPhotos = previousStepsByKey.get(`${stepKey}`)?.photos;
   const photos = await Promise.all(step.photos.map((p, j) =>
-    isBase64Photo(p) ? uploadPhoto(stepPhotoPath(bookId, recipeId, stepKey, j), p) : p
+    resolvePhoto(stepPhotoPath(bookId, recipeId, stepKey, j), p, Array.isArray(prevPhotos) ? prevPhotos[j] : null)
   ));
   return { ...step, photos };
 };
@@ -206,44 +238,51 @@ const uploadStepPhotos = async (bookId, recipeId, step, stepKey) => {
 // steps può essere piatto ([step,...]) o sezionato ([{section,items},...])
 // — stessa ambiguità già presente su ingredients (vedi mapIngredientsStruct
 // in utils/helpers.js). stepKey resta univoco in entrambi i casi.
-const uploadAllStepPhotos = async (bookId, recipeId, steps) => {
+const uploadAllStepPhotos = async (bookId, recipeId, steps, previousSteps) => {
   if (!Array.isArray(steps)) return steps;
+  const previousStepsByKey = indexStepsByKey(previousSteps);
   if (isSectioned(steps)) {
     return Promise.all(steps.map(async (sec, si) => ({
       ...sec,
-      items: await Promise.all((sec.items || []).map((st, ii) => uploadStepPhotos(bookId, recipeId, st, `${si}_${ii}`))),
+      items: await Promise.all((sec.items || []).map((st, ii) => uploadStepPhotos(bookId, recipeId, st, `${si}_${ii}`, previousStepsByKey))),
     })));
   }
-  return Promise.all(steps.map((st, i) => uploadStepPhotos(bookId, recipeId, st, i)));
+  return Promise.all(steps.map((st, i) => uploadStepPhotos(bookId, recipeId, st, i, previousStepsByKey)));
 };
 
 // I ricordi hanno una foto sola: può essere un'emoji (stringa breve,
 // photoIsImage:false) o una foto vera (base64, photoIsImage:true).
-// Solo il secondo caso va caricato su Storage.
-const uploadMemoryPhotos = async (bookId, recipeId, memories) => {
+// Solo il secondo caso va caricato su Storage. Abbinati per id (stabile
+// anche se l'ordine cambia), non per posizione.
+const uploadMemoryPhotos = async (bookId, recipeId, memories, previousMemories) => {
   if (!Array.isArray(memories)) return memories;
+  const previousById = new Map((previousMemories || []).map((m) => [m.id, m]));
   return Promise.all(memories.map(async (mem) => {
     if (!mem.photoIsImage || !isBase64Photo(mem.photo)) return mem;
-    const url = await uploadPhoto(memoryPhotoPath(bookId, recipeId, mem.id), mem.photo);
-    return { ...mem, photo: url };
+    const prev = previousById.get(mem.id);
+    const photo = await resolvePhoto(memoryPhotoPath(bookId, recipeId, mem.id), mem.photo, prev?.photoIsImage ? prev.photo : null);
+    return { ...mem, photo };
   }));
 };
 
 // Sostituisce ogni foto base64 della ricetta (piatto, step, ricordi) con
 // la sua download URL su Storage — mai base64 dentro al documento
 // Firestore. Le foto già caricate (URL) o assenti (null) restano intatte.
-const uploadRecipePhotos = async (bookId, recipe) => {
+// `previous` (opzionale) è l'ultima versione della ricetta effettivamente
+// sincronizzata: usata come fallback per le foto che non si riescono a
+// caricare ora (vedi resolvePhoto).
+const uploadRecipePhotos = async (bookId, recipe, previous) => {
   const out = { ...recipe };
   if (isBase64Photo(out.dishPhoto)) {
-    out.dishPhoto = await uploadPhoto(dishPhotoPath(bookId, recipe.id), out.dishPhoto);
+    out.dishPhoto = await resolvePhoto(dishPhotoPath(bookId, recipe.id), out.dishPhoto, previous?.dishPhoto);
   }
-  out.steps = await uploadAllStepPhotos(bookId, recipe.id, out.steps);
-  out.memories = await uploadMemoryPhotos(bookId, recipe.id, out.memories);
+  out.steps = await uploadAllStepPhotos(bookId, recipe.id, out.steps, previous?.steps);
+  out.memories = await uploadMemoryPhotos(bookId, recipe.id, out.memories, previous?.memories);
   return out;
 };
 
-export const saveRecipe = async (bookId, recipe) => {
-  const withUploadedPhotos = await uploadRecipePhotos(bookId, recipe);
+export const saveRecipe = async (bookId, recipe, previous) => {
+  const withUploadedPhotos = await uploadRecipePhotos(bookId, recipe, previous);
   return setDoc(recipeRef(bookId, withUploadedPhotos.id), withUploadedPhotos);
 };
 
