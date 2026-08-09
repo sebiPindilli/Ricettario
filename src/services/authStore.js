@@ -7,12 +7,24 @@ import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc } from "
 
 const normalizeEmail = (email) => (email || "").trim().toLowerCase();
 
+// Preferenze avviso timer di default: tutti i canali attivi finché
+// l'utente non le cambia esplicitamente (stesso principio di betaEnabled
+// assente = acceso — mai un valore "spento" implicito per chi non ha mai
+// toccato le impostazioni).
+export const DEFAULT_TIMER_ALERTS = { sound: true, vibrate: true, visual: true };
+
 export const checkWhitelist = async (email) => {
   const key = normalizeEmail(email);
-  if (!key) return { authorized: false, role: null, defaultBookId: null };
+  if (!key) return { authorized: false, role: null, defaultBookId: null, timerAlerts: DEFAULT_TIMER_ALERTS };
   const snap = await getDoc(doc(db, "allowlist", key));
-  if (!snap.exists()) return { authorized: false, role: null, defaultBookId: null };
-  return { authorized: true, role: snap.data().role || "base", defaultBookId: snap.data().defaultBookId || null };
+  if (!snap.exists()) return { authorized: false, role: null, defaultBookId: null, timerAlerts: DEFAULT_TIMER_ALERTS };
+  const data = snap.data();
+  return {
+    authorized: true,
+    role: data.role || "base",
+    defaultBookId: data.defaultBookId || null,
+    timerAlerts: { ...DEFAULT_TIMER_ALERTS, ...(data.timerAlerts || {}) },
+  };
 };
 
 export const loadAllowlist = async () => {
@@ -35,6 +47,12 @@ export const removeAllowlistEntry = (email) =>
 // solo il proprio campo, indipendente dalla gestione ruoli (vedi regole).
 export const setDefaultBook = (email, bookId) =>
   updateDoc(doc(db, "allowlist", email), { defaultBookId: bookId });
+
+// Preferenza personale sui canali di avviso dei timer di cucina (suono/
+// vibrazione/visivo) — stesso schema di setDefaultBook: ogni utente scrive
+// solo il proprio campo.
+export const setTimerAlertPrefs = (email, prefs) =>
+  updateDoc(doc(db, "allowlist", email), { timerAlerts: prefs });
 
 // Interruttore globale del pulsante β di segnalazione bug (non riguarda il
 // Ricettario Beta books/b1, sempre accessibile per ruolo). Se il documento

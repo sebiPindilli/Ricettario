@@ -44,6 +44,11 @@ service cloud.firestore {
       // voce — indipendente dalla gestione ruoli (regola sopra).
       allow update: if isSignedIn() && request.auth.token.email == email &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['defaultBookId']);
+
+      // Preferenza personale sui canali di avviso dei timer di cucina
+      // (suono/vibrazione/visivo): stesso schema di defaultBookId sopra.
+      allow update: if isSignedIn() && request.auth.token.email == email &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['timerAlerts']);
     }
 
     // Interruttore globale per il pulsante β di segnalazione bug (non

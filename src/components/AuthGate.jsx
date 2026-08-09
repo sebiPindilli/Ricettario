@@ -1,11 +1,12 @@
 // Fase C — gate di autenticazione: nessun dato dell'app viene caricato
 // finché l'utente non è loggato con Google E presente in allowlist.
-// children è una render-prop: children(user, role, defaultBookId) viene
-// chiamata solo quando lo stato è "authorized".
+// children è una render-prop: children(user, role, defaultBookId,
+// betaEnabled, timerAlerts) viene chiamata solo quando lo stato è
+// "authorized".
 import { useState, useEffect, useCallback } from "react";
 import { auth } from "../firebase.js";
 import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
-import { checkWhitelist, loadBetaConfig } from "../services/authStore.js";
+import { checkWhitelist, loadBetaConfig, DEFAULT_TIMER_ALERTS } from "../services/authStore.js";
 import { withTimeout } from "../utils/helpers.js";
 
 const provider = new GoogleAuthProvider();
@@ -24,6 +25,7 @@ export default function AuthGate({ children }) {
   const [role, setRole] = useState(null);
   const [defaultBookId, setDefaultBookId] = useState(null);
   const [betaEnabled, setBetaEnabled] = useState(true);
+  const [timerAlerts, setTimerAlerts] = useState(DEFAULT_TIMER_ALERTS);
   const [error, setError] = useState("");
 
   // Percorso post-autenticazione (whitelist + config beta): isolato in una
@@ -34,13 +36,13 @@ export default function AuthGate({ children }) {
   const runBootstrap = useCallback(async (u) => {
     setUser(u);
     try {
-      const { authorized, role: r, defaultBookId: d } =
+      const { authorized, role: r, defaultBookId: d, timerAlerts: ta } =
         await withTimeout(checkWhitelist(u.email), BOOT_TIMEOUT_MS);
       if (!authorized) {
         setRole(null); setDefaultBookId(null); setStatus("unauthorized");
         return;
       }
-      setRole(r); setDefaultBookId(d);
+      setRole(r); setDefaultBookId(d); setTimerAlerts(ta);
       // Serve solo ad admin/tester (vedi BetaButton.jsx) — non blocca
       // l'accesso di chi ha ruolo base, letto comunque per semplicità.
       const { enabled } = await withTimeout(loadBetaConfig(), BOOT_TIMEOUT_MS);
@@ -123,5 +125,5 @@ export default function AuthGate({ children }) {
     );
   }
 
-  return children(user, role, defaultBookId, betaEnabled);
+  return children(user, role, defaultBookId, betaEnabled, timerAlerts);
 }

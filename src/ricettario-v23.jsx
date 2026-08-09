@@ -538,7 +538,7 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
+function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAlerts }) {
   // Solo per il banner "sei offline" — il salvataggio vero e proprio non
   // dipende da questo stato (si appoggia alla coda offline di Firestore,
   // vedi src/firebase.js, e al retry sull'evento "online" più sotto).
@@ -1319,7 +1319,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
   }
 
   return (
-    <CookingTimersProvider>
+    <CookingTimersProvider me={me} initialPrefs={initialTimerAlerts}>
     <RoleCtx.Provider value={role}>
     <BetaEnabledCtx.Provider value={betaEnabled}>
     <OnlineCtx.Provider value={isOnline}>
@@ -1748,7 +1748,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AuthGate>
-        {(user, role, defaultBookId, betaEnabled) => <AppInner me={user.email} role={role} initialDefaultBookId={defaultBookId} betaEnabled={betaEnabled}/>}
+        {(user, role, defaultBookId, betaEnabled, timerAlerts) => <AppInner me={user.email} role={role} initialDefaultBookId={defaultBookId} betaEnabled={betaEnabled} initialTimerAlerts={timerAlerts}/>}
       </AuthGate>
     </ErrorBoundary>
   );

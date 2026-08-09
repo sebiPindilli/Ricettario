@@ -243,6 +243,33 @@ describe("firestore.rules — migrazione alias legacy: nessuna riscrittura dei d
   });
 });
 
+describe("firestore.rules — allowlist: preferenze personali (defaultBookId/timerAlerts)", () => {
+  beforeEach(() =>
+    seed(async (db) => {
+      await seedAllowlist(db, "u@test.it");
+    })
+  );
+
+  it("un utente può scrivere la propria preferenza timerAlerts", async () => {
+    await assertSucceeds(updateDoc(doc(asUser("u@test.it"), "allowlist/u@test.it"), {
+      timerAlerts: { sound: false, vibrate: true, visual: true },
+    }));
+  });
+
+  it("un utente non può scrivere timerAlerts sulla voce di un altro", async () => {
+    await assertFails(updateDoc(doc(asUser("u@test.it"), "allowlist/owner@test.it"), {
+      timerAlerts: { sound: false, vibrate: true, visual: true },
+    }));
+  });
+
+  it("scrivere timerAlerts insieme a role nello stesso update non è permesso (i campi devono restare separati)", async () => {
+    await assertFails(updateDoc(doc(asUser("u@test.it"), "allowlist/u@test.it"), {
+      timerAlerts: { sound: false, vibrate: true, visual: true },
+      role: "admin",
+    }));
+  });
+});
+
 describe("firestore.rules — books/b1 (Beta) non riceve nulla in più dal blocco generico", () => {
   beforeEach(() =>
     seed(async (db) => {

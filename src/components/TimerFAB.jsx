@@ -11,6 +11,8 @@ const TIMER_FAB_RESPONSIVE_CSS = `
   @media ${MOBILE_BREAKPOINT_CSS} {
     .timer-fab-button { position:fixed !important; }
   }
+  @keyframes timerFabPulse { 0%, 100% { box-shadow: 0 6px 16px rgba(0,0,0,0.3), 0 0 0 0 rgba(192,82,74,0.6); } 50% { box-shadow: 0 6px 16px rgba(0,0,0,0.3), 0 0 0 8px rgba(192,82,74,0); } }
+  .timer-fab-button.timer-fab-pulse { animation: timerFabPulse 1.2s ease-in-out infinite; }
 `;
 
 const BTN_SIZE = 52;
@@ -24,7 +26,7 @@ const MARGIN = 20;
 // sottostanti in quell'angolo.
 export default function TimerFAB() {
   const th = useTheme();
-  const { timers, now } = useCookingTimers();
+  const { timers, now, prefs } = useCookingTimers();
   const [open, setOpen] = useState(false);
 
   const anyExpired = timers.some(t => isExpired(t, now));
@@ -33,7 +35,7 @@ export default function TimerFAB() {
     <>
       <style dangerouslySetInnerHTML={{ __html: TIMER_FAB_RESPONSIVE_CSS }} />
       <button
-        className="timer-fab-button"
+        className={`timer-fab-button${anyExpired && prefs.visual ? " timer-fab-pulse" : ""}`}
         onClick={() => setOpen(true)}
         aria-label="Timer di cucina"
         style={{

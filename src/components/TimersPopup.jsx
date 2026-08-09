@@ -10,6 +10,21 @@ const smallBtnStyle = (th, color) => ({
   fontFamily: F.ui, fontSize: 13, fontWeight: 700, cursor: "pointer",
 });
 
+const PULSE_CSS = `
+  @keyframes timerPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(192,82,74,0.5); } 50% { box-shadow: 0 0 0 6px rgba(192,82,74,0); } }
+  .timer-pulse { animation: timerPulse 1.2s ease-in-out infinite; }
+`;
+
+const canVibrate = "vibrate" in navigator;
+
+const toggleBtnStyle = (th, active) => ({
+  display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 8,
+  border: `1.5px solid ${active ? th.appAccent : th.appBorder}`,
+  background: active ? `${th.appAccent}22` : "transparent",
+  color: active ? th.appAccent : th.appFaded,
+  fontFamily: F.ui, fontSize: 11, fontWeight: 700, cursor: "pointer",
+});
+
 // ── Popup timer — stesso schema a 3 parti di ShoppingMode.jsx: header
 // scuro con conteggio, lista scrollabile, footer con l'azione "+ nuovo
 // timer". Raccoglie sia i timer legati a uno step (initialDraft precompila
@@ -18,7 +33,7 @@ const smallBtnStyle = (th, color) => ({
 // sopra la Modalità Cucina stessa.
 export default function TimersPopup({ onClose, initialDraft = null }) {
   const th = useTheme();
-  const { timers, now, startTimer, cancelTimer, adjustTimer } = useCookingTimers();
+  const { timers, now, startTimer, cancelTimer, adjustTimer, prefs, updatePrefs } = useCookingTimers();
   const [draftLabel, setDraftLabel] = useState(initialDraft?.label || "");
   const [draftMinutes, setDraftMinutes] = useState(initialDraft?.minutes ?? 5);
 
@@ -31,12 +46,22 @@ export default function TimersPopup({ onClose, initialDraft = null }) {
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <style dangerouslySetInnerHTML={{ __html: PULSE_CSS }} />
       <div style={{ width: "100%", maxHeight: "90%", background: th.appBg, borderRadius: 20, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {/* Header */}
         <div style={{ background: th.appInk, padding: "14px 18px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
           <button onClick={onClose} style={{ background: "rgba(255,255,255,0.12)", border: "none", borderRadius: 8, padding: "6px 10px", color: "#fff", fontSize: 14, cursor: "pointer" }}>✕</button>
           <div style={{ flex: 1, fontFamily: F.display, fontSize: 15, color: "#fff", fontStyle: "italic" }}>⏱ Timer</div>
           <div style={{ fontFamily: F.ui, fontSize: 11, color: "rgba(255,255,255,0.7)" }}>{timers.length}</div>
+        </div>
+
+        {/* Preferenze avviso — combinabili, co-locate con ciò che controllano */}
+        <div style={{ display: "flex", gap: 6, padding: "10px 18px", borderBottom: `1px solid ${th.appBorder}`, flexShrink: 0 }}>
+          <button onClick={() => updatePrefs({ sound: !prefs.sound })} style={toggleBtnStyle(th, prefs.sound)}>🔊 Suono</button>
+          {canVibrate && (
+            <button onClick={() => updatePrefs({ vibrate: !prefs.vibrate })} style={toggleBtnStyle(th, prefs.vibrate)}>📳 Vibrazione</button>
+          )}
+          <button onClick={() => updatePrefs({ visual: !prefs.visual })} style={toggleBtnStyle(th, prefs.visual)}>💡 Visivo</button>
         </div>
 
         {/* Lista timer attivi */}
@@ -48,7 +73,7 @@ export default function TimersPopup({ onClose, initialDraft = null }) {
             const rem = remainingMs(t, now);
             const expired = isExpired(t, now);
             return (
-              <div key={t.id} style={{
+              <div key={t.id} className={expired && prefs.visual ? "timer-pulse" : undefined} style={{
                 display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", marginBottom: 8,
                 borderRadius: 12, border: `1.5px solid ${expired ? "#C0524A" : th.appBorder}`,
                 background: expired ? "#C0524A18" : th.appCard,
