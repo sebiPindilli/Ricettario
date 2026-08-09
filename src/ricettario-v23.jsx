@@ -341,9 +341,14 @@ const exportBookPDF = (recipes, sections = MACRO_SECTIONS) => {
   </div>`;
   };
 
-  // Sezioni con almeno una ricetta, nell'ordine di MACRO_SECTIONS
+  // Sezioni con almeno una ricetta, nell'ordine di MACRO_SECTIONS, ricette
+  // in ordine alfabetico dentro ciascuna sezione
   const sectionsWithRecipes = sortSectionsAltroLast(sections)
-    .map(sec => ({ ...sec, recipes: recipes.filter(r => r.macroSection === sec.id) }))
+    .map(sec => ({
+      ...sec,
+      recipes: recipes.filter(r => r.macroSection === sec.id)
+        .sort((a, b) => a.title.localeCompare(b.title, "it")),
+    }))
     .filter(sec => sec.recipes.length > 0);
 
   const html = `<!DOCTYPE html>
