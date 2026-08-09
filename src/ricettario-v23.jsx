@@ -13,10 +13,11 @@ import {
 } from "./utils/helpers.js";
 import { effectiveNutritionKey, findSimilarIngredients } from "./utils/aggregates.js";
 import {
-  loadFullBook, saveFullBook, saveRecipe,
+  loadFullBook, saveFullBook, saveRecipe, deleteRecipe as deleteRecipeDoc,
   createBookInFirestore, deleteBookInFirestore, listMyBooks,
   addBookMember as addBookMemberFs, removeBookMember as removeBookMemberFs, setBookMemberPermission as setBookMemberPermissionFs,
 } from "./services/bookStore.js";
+import { diffRecipes, recipesToMap } from "./utils/dirtyTracking.js";
 import { setDefaultBook } from "./services/authStore.js";
 import { auth } from "./firebase.js";
 import { signOut } from "firebase/auth";
@@ -557,6 +558,10 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
   // Vuoto finché il caricamento iniziale da Firestore non li sostituisce
   // (vedi useEffect più sotto) — non più dati demo hardcoded.
   const [recipes, setRecipes] = useState([]);
+  // Ultimo stato ricette effettivamente scritto su Firestore (id → riferimento),
+  // usato da flushRecipesNow per salvare/eliminare solo ciò che è cambiato
+  // invece di riscrivere tutte le ricette ad ogni modifica (vedi dirtyTracking.js).
+  const lastSyncedRecipesRef = useRef(new Map());
   const [bookTheme, setBookTheme] = useState(BOOK_THEMES[0]);
   // Custom tag groups added by user — shared across whole app
   const [extraTagGroups, setExtraTagGroups] = useState([]);
@@ -655,11 +660,18 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
     if (existing && existing !== ingId) return false;
     const oldKey = normName(ingredientDict[ingId]);
     setIngredientDict(d => ({ ...d, [ingId]: clean }));
-    setRecipes(prev => prev.map(r => ({
-      ...r,
-      ingredients: mapIngredientsStruct(r.ingredients, ing =>
-        normName(ing.name) === oldKey ? { ...ing, name: clean } : ing),
-    })));
+    // Tocca solo le ricette che contengono davvero l'ingrediente: mantenere lo
+    // stesso riferimento per le altre è ciò che permette al salvataggio
+    // mirato (vedi dirtyTracking.js) di scrivere solo le ricette toccate.
+    setRecipes(prev => prev.map(r => {
+      const hasIng = flattenIngredients(r.ingredients).some(ing => normName(ing.name) === oldKey);
+      if (!hasIng) return r;
+      return {
+        ...r,
+        ingredients: mapIngredientsStruct(r.ingredients, ing =>
+          normName(ing.name) === oldKey ? { ...ing, name: clean } : ing),
+      };
+    }));
     return true;
   };
   // Elimina definitivamente ingredienti NON usati in nessuna ricetta —
@@ -813,6 +825,23 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
     if (d.meta?.bookTheme) {
       setBookTheme(BOOK_THEMES.find(t => t.id === d.meta.bookTheme) || BOOK_THEMES[0]);
     }
+    lastSyncedRecipesRef.current = recipesToMap(d.recipes || []);
+  };
+
+  // Salvataggio mirato delle ricette: confronta lo stato attuale con l'ultimo
+  // sincronizzato (per riferimento, vedi dirtyTracking.js) e scrive solo le
+  // ricette create/modificate (saveRecipe) ed elimina solo quelle rimosse
+  // (deleteRecipe) — mai l'intero libro. Richiamabile sia dal debounce sotto
+  // sia — await-ata — da switchBook, per non perdere modifiche pendenti al
+  // cambio libro.
+  const flushRecipesNow = async () => {
+    const { changed, removedIds } = diffRecipes(lastSyncedRecipesRef.current, recipes);
+    if (changed.length === 0 && removedIds.length === 0) return;
+    await Promise.all([
+      ...changed.map(r => saveRecipe(activeBookId, r)),
+      ...removedIds.map(id => deleteRecipeDoc(activeBookId, id)),
+    ]);
+    lastSyncedRecipesRef.current = recipesToMap(recipes);
   };
 
   // Bootstrap iniziale: carica "i miei libri" da Firestore (owner + membro,
@@ -858,24 +887,39 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
 
   const signOutAndRetry = () => signOut(auth);
 
-  // Salvataggio automatico — ogni cambiamento ai dati del libro viene
-  // scritto su Firestore dopo una breve pausa (debounce), per non fare
-  // una scrittura ad ogni singolo carattere digitato. Salva tutto insieme
-  // (stessa forma di saveFullBook/loadFullBook) invece che per singola
-  // azione: più semplice da verificare in questo primo cutover.
+  // Salvataggio mirato delle ricette: scrive solo quelle create/modificate
+  // ed elimina solo quelle rimosse (vedi flushRecipesNow) — non l'intero
+  // libro. Primo pezzo staccato dal salvataggio "tutto insieme" qui sotto,
+  // perché è dove vive il costo N×M (N ricette × M modifiche).
+  useEffect(() => {
+    if (!bookLoaded || !activeBook) return;
+    const timer = setTimeout(() => { flushRecipesNow(); }, 1500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookLoaded, activeBookId, recipes]);
+
+  // Salvataggio automatico del resto del libro (system/shoppingList/meta) —
+  // ogni cambiamento viene scritto su Firestore dopo una breve pausa
+  // (debounce), per non fare una scrittura ad ogni singolo carattere
+  // digitato. Le ricette sono già gestite dall'effetto sopra: passate come
+  // array vuoto qui, saveFullBook non ne scrive/elimina nessuna in questo
+  // percorso (verranno tolte da questa chiamata negli step successivi,
+  // quando anche system/shoppingList/meta avranno il proprio salvataggio
+  // mirato).
   useEffect(() => {
     if (!bookLoaded || !activeBook) return;
     const timer = setTimeout(() => {
       saveFullBook(activeBookId, {
         meta: { name: activeBook.name, type: activeBook.type, owner: activeBook.owner, memberEmails: activeBook.memberEmails || [], memberRoles: activeBook.memberRoles || {}, bookTheme: bookTheme.id },
         ...snapshotData(),
+        recipes: [],
       });
     }, 1500);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     bookLoaded, activeBookId, bookTheme,
-    recipes, extraTagGroups, sectionList, categoryList,
+    extraTagGroups, sectionList, categoryList,
     ingredientCategories, aggregates, shoppingList, equivalences, customUnits,
     nutritionMap, customFoods, ingredientDict, sourceByIngredient, ignoredSimilarities,
   ]);
@@ -888,10 +932,14 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
     // il libro che si lascia (non aspetta il debounce), poi carica il nuovo
     setBookLoaded(false);
     if (activeBook) {
-      await saveFullBook(activeBookId, {
-        meta: { name: activeBook.name, type: activeBook.type, owner: activeBook.owner, memberEmails: activeBook.memberEmails || [], memberRoles: activeBook.memberRoles || {}, bookTheme: bookTheme.id },
-        ...snapshotData(),
-      });
+      await Promise.all([
+        flushRecipesNow(),
+        saveFullBook(activeBookId, {
+          meta: { name: activeBook.name, type: activeBook.type, owner: activeBook.owner, memberEmails: activeBook.memberEmails || [], memberRoles: activeBook.memberRoles || {}, bookTheme: bookTheme.id },
+          ...snapshotData(),
+          recipes: [],
+        }),
+      ]);
     }
     const data = await loadFullBook(id);
     loadData(data);
