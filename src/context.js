@@ -16,3 +16,9 @@ export const useRole = () => React.useContext(RoleCtx);
 // ── Beta context — interruttore globale del pulsante β (config/beta) ──
 export const BetaEnabledCtx = React.createContext(true);
 export const useBetaEnabled = () => React.useContext(BetaEnabledCtx);
+
+// ── Online context — navigator.onLine, per bloccare azioni che richiedono
+// rete (es. upload foto: Storage non ha una coda offline) ovunque nella UI
+// senza prop-drilling ──
+export const OnlineCtx = React.createContext(true);
+export const useOnline = () => React.useContext(OnlineCtx);

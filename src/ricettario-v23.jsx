@@ -30,7 +30,7 @@ import {
   MOBILE_BREAKPOINT_CSS,
 } from "./data/constants.js";
 import { NUTRITION_DB, NUTRIENT_LABELS } from "./data/nutrition.js";
-import { ThemeCtx, useTheme, NavCtx, useNavActions, RoleCtx, BetaEnabledCtx } from "./context.js";
+import { ThemeCtx, useTheme, NavCtx, useNavActions, RoleCtx, BetaEnabledCtx, OnlineCtx } from "./context.js";
 import OrganizeIcon from "./components/OrganizeIcon.jsx";
 import BackBtn from "./components/BackBtn.jsx";
 import Divider from "./components/Divider.jsx";
@@ -1318,6 +1318,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
   return (
     <RoleCtx.Provider value={role}>
     <BetaEnabledCtx.Provider value={betaEnabled}>
+    <OnlineCtx.Provider value={isOnline}>
     <ThemeCtx.Provider value={bookTheme}>
     <NavCtx.Provider value={{ onOrganize: () => openOrganize() }}>
     <div className="iphone-page-wrap" style={{
@@ -1732,6 +1733,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
     </div>
     </NavCtx.Provider>
     </ThemeCtx.Provider>
+    </OnlineCtx.Provider>
     </BetaEnabledCtx.Provider>
     </RoleCtx.Provider>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { useTheme } from "../context.js";
+import { useTheme, useOnline } from "../context.js";
 import { F, MACRO_SECTIONS } from "../data/constants.js";
 import { NUTRITION_DB } from "../data/nutrition.js";
 import { uid, dishPhotoOf, readImageFile, normName, ingDictIndex, resolveIngId, flattenIngredients } from "../utils/helpers.js";
@@ -23,6 +23,7 @@ import { guideDettaglioRicetta } from "../data/guideContent.jsx";
 
 export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemory, onAddMemory, onManageIngredients, onManageEquivalences, onAddToShoppingList, nutritionMap = {}, equivalences = {}, customUnits = {}, customFoods = [], ingredientDict = null, aggregates = [], sourceByIngredient = {}, allRecipes = [], sectionList = MACRO_SECTIONS, onExportPDF, onExportCode }) {
   const th = useTheme();
+  const isOnline = useOnline();
   const [tab, setTab] = useState("ingredienti");
   const [toast, setToast] = useState({ msg:"", visible:false });
   const [viewMode, setViewMode] = useState("app");
@@ -101,8 +102,11 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
   };
 
   // Caricamento foto reale — stesso meccanismo dei Ricordi (input file
-  // nascosto + FileReader → dataURL).
+  // nascosto + FileReader → dataURL). Richiede connessione (Storage non ha
+  // una coda offline come Firestore, vedi services/bookStore.js): bloccato
+  // qui invece che lasciar fallire l'upload in silenzio più avanti.
   const openDishPhotoPicker = () => {
+    if (!isOnline) { showToast("📡 Serve una connessione per aggiungere una foto"); return; }
     dishPhotoInputRef.current && dishPhotoInputRef.current.click();
   };
   const handleDishPhotoFile = (e) => {
@@ -330,7 +334,7 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
               </div>
             </div>
 
-            {/* Camera icon — add/modify dish photo */}
+            {/* Camera icon — add/modify dish photo (richiede connessione) */}
             <button
               onClick={(e) => { e.stopPropagation(); openDishPhotoPicker(); }}
               style={{
@@ -340,8 +344,9 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
                 border:"1px solid rgba(255,255,255,0.25)",
                 display:"flex", alignItems:"center", justifyContent:"center",
                 fontSize:17, cursor:"pointer",
+                opacity: isOnline ? 1 : 0.4,
               }}
-              title={dishPhotoOf(recipe) ? "Modifica foto piatto" : "Aggiungi foto piatto"}
+              title={!isOnline ? "Serve una connessione" : dishPhotoOf(recipe) ? "Modifica foto piatto" : "Aggiungi foto piatto"}
             >📷</button>
             {/* Remove dish photo */}
             {dishPhotoOf(recipe) && (

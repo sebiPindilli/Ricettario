@@ -1,13 +1,20 @@
 import React, { useState, useRef } from "react";
-import { useTheme } from "../context.js";
+import { useTheme, useOnline } from "../context.js";
 import { F } from "../data/constants.js";
 import { stepPhotosOf, stepNumbers, stepNumberLabel, MAX_STEP_PHOTOS, readImageFile } from "../utils/helpers.js";
+import Toast from "./Toast.jsx";
 
 // ── Editable sectioned steps ─────────────────────────────────────
 export default function EditSectionedSteps({ data, color, onUpdate }) {
   const th = useTheme();
+  const isOnline = useOnline();
   const fileInputRef = useRef(null);
   const [pendingTarget, setPendingTarget] = useState(null); // {si, ii} in attesa di una foto
+  const [toast, setToast] = useState({ msg:"", visible:false });
+  const showToast = (msg) => {
+    setToast({ msg, visible:true });
+    setTimeout(() => setToast({ msg:"", visible:false }), 2000);
+  };
   // Difesa: normalizza sempre gli item a oggetti {text, photos}, qualunque
   // sia il formato di provenienza (stringa, vecchio photo singolo, o già photos)
   const sections = data.map(sec => ({
@@ -49,7 +56,9 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
   // Caricamento foto reale — stesso meccanismo dei Ricordi (input file
   // nascosto + FileReader → dataURL), condiviso da tutti i passaggi:
   // un solo input, il target (quale passaggio) è tenuto in pendingTarget.
+  // Richiede connessione (Storage non ha una coda offline come Firestore).
   const openPhotoPicker = (si, ii) => {
+    if (!isOnline) { showToast("📡 Serve una connessione per aggiungere una foto"); return; }
     setPendingTarget({ si, ii });
     fileInputRef.current && fileInputRef.current.click();
   };
@@ -193,6 +202,7 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
                       borderRadius:10, background:"transparent",
                       color:th.appFaded, fontFamily:F.ui, fontSize:11, cursor:"pointer",
                       display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+                      opacity: isOnline ? 1 : 0.5,
                     }}>📷 Aggiungi foto{step.photos.length > 0 ? ` (${step.photos.length}/${MAX_STEP_PHOTOS})` : ""}</button>
                   )}
                 </div>
@@ -218,6 +228,7 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
         cursor:"pointer", marginTop:4,
         display:"flex", alignItems:"center", justifyContent:"center", gap:8,
       }}>＋ Aggiungi sottosezione</button>
+      <Toast msg={toast.msg} visible={toast.visible}/>
     </div>
   );
 }

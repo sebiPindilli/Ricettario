@@ -1,13 +1,20 @@
 import React, { useState } from "react";
-import { useTheme } from "../context.js";
+import { useTheme, useOnline } from "../context.js";
 import { F } from "../data/constants.js";
 import GlobalNav from "../components/GlobalNav.jsx";
 import BackBtn from "../components/BackBtn.jsx";
 import EditLabel from "../components/EditLabel.jsx";
+import Toast from "../components/Toast.jsx";
 import { guideNuovoRicordo } from "../data/guideContent.jsx";
 
 export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBack, onSave, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping }) {
   const th = useTheme();
+  const isOnline = useOnline();
+  const [toast, setToast] = useState({ msg:"", visible:false });
+  const showToast = (msg) => {
+    setToast({ msg, visible:true });
+    setTimeout(() => setToast({ msg:"", visible:false }), 2000);
+  };
   const todayISO = new Date().toISOString().slice(0,10);
   const dateLabel = (iso) => new Date(iso).toLocaleDateString("it-IT", { day:"numeric", month:"short", year:"numeric" });
   const [caption, setCaption] = useState("");
@@ -27,6 +34,12 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
     const reader = new FileReader();
     reader.onload = (ev) => { setChosenPhoto(ev.target.result); setPhotoIsImage(true); };
     reader.readAsDataURL(file);
+  };
+
+  // Richiede connessione (Storage non ha una coda offline come Firestore).
+  const openPhotoPicker = () => {
+    if (!isOnline) { showToast("📡 Serve una connessione per aggiungere una foto"); return; }
+    fileInputRef.current && fileInputRef.current.click();
   };
 
   const toggleRecipe = (id) => setSelectedRecipeIds(prev =>
@@ -102,19 +115,21 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
           {photoIsImage && chosenPhoto ? (
             <div style={{ position:"relative", borderRadius:14, overflow:"hidden", border:`1.5px solid ${th.appBorder}` }}>
               <img src={chosenPhoto} alt="anteprima" style={{ width:"100%", height:200, objectFit:"cover", display:"block" }}/>
-              <button onClick={() => fileInputRef.current && fileInputRef.current.click()} style={{
+              <button onClick={openPhotoPicker} style={{
                 position:"absolute", bottom:10, right:10,
                 background:"rgba(0,0,0,0.6)", color:"#fff", border:"none",
                 borderRadius:10, padding:"7px 12px", fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
+                opacity: isOnline ? 1 : 0.5,
               }}>🔄 Cambia foto</button>
             </div>
           ) : (
-            <button onClick={() => fileInputRef.current && fileInputRef.current.click()} style={{
+            <button onClick={openPhotoPicker} style={{
               width:"100%", padding:"22px 8px",
               border:`2px dashed ${th.appBorder}`, borderRadius:14,
               background:"transparent", color:th.appFaded,
               fontFamily:F.ui, fontSize:13, fontWeight:600, cursor:"pointer",
               display:"flex", flexDirection:"column", alignItems:"center", gap:8,
+              opacity: isOnline ? 1 : 0.5,
             }}>
               <span style={{ fontSize:30 }}>📷</span>
               <span>Scatta o scegli dalla galleria</span>
@@ -229,6 +244,7 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
           }
         </button>
       </div>
+      <Toast msg={toast.msg} visible={toast.visible}/>
     </div>
   );
 }
