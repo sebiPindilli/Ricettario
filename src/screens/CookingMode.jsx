@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useTheme, useCookingTimers } from "../context.js";
 import { F } from "../data/constants.js";
 import { flattenSteps, flattenIngredients, ingredientToText, scaleIngredient, stepNumberLabel } from "../utils/helpers.js";
@@ -30,6 +30,33 @@ export default function CookingMode({ recipe, scale, onClose }) {
   // punto d'accesso proprio. `null` = chiuso; altrimenti eventuale draft
   // {label, minutes} da un pulsante per-step.
   const [timerPopup, setTimerPopup] = useState(null);
+
+  // Wake Lock — schermo acceso per tutta la Modalità Cucina, anche a mani
+  // impastate lontane dal telefono. No-op silenzioso se l'API non esiste
+  // (Safari desktop, browser datati): niente controllo visibile che non
+  // funzionerebbe comunque. Il sistema operativo rilascia da solo il lock
+  // quando la scheda va in background — si riacquisisce al rientro in
+  // primo piano finché si è ancora su questa schermata (il cleanup
+  // dell'effetto, all'unmount, si occupa del rilascio all'uscita).
+  const wakeLockRef = useRef(null);
+  useEffect(() => {
+    if (!("wakeLock" in navigator)) return;
+    const acquire = async () => {
+      try { wakeLockRef.current = await navigator.wakeLock.request("screen"); }
+      catch { /* negato o schermo non visibile al momento della richiesta: si riprova al prossimo rientro in foreground */ }
+    };
+    acquire();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") acquire();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      wakeLockRef.current?.release();
+      wakeLockRef.current = null;
+    };
+  }, []);
+
   const isIntro = idx === -1;
   const isDone = idx >= steps.length;
   const step = steps[idx];
