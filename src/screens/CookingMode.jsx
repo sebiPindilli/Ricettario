@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { useTheme } from "../context.js";
+import { useTheme, useCookingTimers } from "../context.js";
 import { F } from "../data/constants.js";
 import { flattenSteps, flattenIngredients, ingredientToText, scaleIngredient, stepNumberLabel } from "../utils/helpers.js";
 import PhotoLightbox from "../components/PhotoLightbox.jsx";
 import InfoButton from "../components/InfoButton.jsx";
+import TimersPopup from "../components/TimersPopup.jsx";
 import { guideCucina } from "../data/guideContent.jsx";
 
 // ══════════════════════════════════════════════════════════════
@@ -11,6 +12,7 @@ import { guideCucina } from "../data/guideContent.jsx";
 // ══════════════════════════════════════════════════════════════
 export default function CookingMode({ recipe, scale, onClose }) {
   const th = useTheme();
+  const { timers } = useCookingTimers();
   const baseServings = recipe.servings || 1;
   const factor = scale?.factor ?? 1;
   const scaled = factor !== 1;
@@ -23,6 +25,11 @@ export default function CookingMode({ recipe, scale, onClose }) {
   // idx: -1 = intro ingredienti, 0..steps.length-1 = step, steps.length = fine
   const [idx, setIdx] = useState(-1);
   const [lightbox, setLightbox] = useState(null);
+  // Popup timer — il TimerFAB globale resta coperto dal fullscreen di questa
+  // schermata (stesso zIndex 400, sopra i suoi 150), quindi qui serve un
+  // punto d'accesso proprio. `null` = chiuso; altrimenti eventuale draft
+  // {label, minutes} da un pulsante per-step.
+  const [timerPopup, setTimerPopup] = useState(null);
   const isIntro = idx === -1;
   const isDone = idx >= steps.length;
   const step = steps[idx];
@@ -129,6 +136,14 @@ export default function CookingMode({ recipe, scale, onClose }) {
         {!isIntro && !isDone && (
           <div style={{ fontFamily:F.ui, fontSize:12, color:"rgba(255,255,255,0.6)" }}>{idx+1}/{steps.length}</div>
         )}
+        <button
+          onClick={(e) => { e.stopPropagation(); setTimerPopup({}); }}
+          title="Timer"
+          style={{
+            display:"flex", alignItems:"center", gap:4, background:"rgba(255,255,255,0.12)", border:"none",
+            borderRadius:8, padding:"6px 10px", color:"#fff", fontFamily:F.ui, fontSize:13, cursor:"pointer",
+          }}
+        >⏱{timers.length > 0 && <span style={{ fontWeight:700 }}>{timers.length}</span>}</button>
         <InfoButton dark>{guideCucina}</InfoButton>
       </div>
 
@@ -200,6 +215,18 @@ export default function CookingMode({ recipe, scale, onClose }) {
               )}
             </div>
             <div style={{ fontFamily:F.body, fontSize:22, lineHeight:1.6, color:"rgba(255,255,255,0.95)" }}>{step.text}</div>
+            {step.duration != null && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setTimerPopup({ label: `Passo ${stepNumberLabel(step.sectionIndex, step.indexInSection)}`, minutes: step.duration });
+                }}
+                style={{
+                  marginTop:18, display:"flex", alignItems:"center", gap:8, background:th.appAccent, border:"none",
+                  borderRadius:10, padding:"10px 16px", color:"#fff", fontFamily:F.ui, fontSize:14, fontWeight:700, cursor:"pointer",
+                }}
+              >▶ Timer {step.duration} min</button>
+            )}
             <div style={{ fontFamily:F.ui, fontSize:11, color:"rgba(255,255,255,0.3)", marginTop:28, textAlign:"center", lineHeight:1.6 }}>
               ‹ sinistra: indietro · destra: avanti ›
             </div>
@@ -222,6 +249,13 @@ export default function CookingMode({ recipe, scale, onClose }) {
           date={lightbox.date}
           isImage={lightbox.isImage}
           onClose={() => setLightbox(null)}
+        />
+      )}
+
+      {timerPopup && (
+        <TimersPopup
+          initialDraft={timerPopup.minutes != null ? timerPopup : null}
+          onClose={() => setTimerPopup(null)}
         />
       )}
     </div>
