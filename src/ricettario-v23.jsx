@@ -85,6 +85,8 @@ import BooksScreen from "./screens/BooksScreen.jsx";
 import BookViewScreen from "./screens/BookViewScreen.jsx";
 import AdminUsersScreen from "./screens/AdminUsersScreen.jsx";
 import BetaButton from "./components/BetaButton.jsx";
+import TimerFAB from "./components/TimerFAB.jsx";
+import CookingTimersProvider from "./components/CookingTimersProvider.jsx";
 
 // ── Subsection data helpers ────────────────────────────────────
 // ingredients and steps can be either:
@@ -195,6 +197,7 @@ const IPhone = ({ children }) => {
       {children}
     </div>
     <BetaButton/>
+    <TimerFAB/>
   </div>
   );
 };
@@ -1316,6 +1319,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
   }
 
   return (
+    <CookingTimersProvider>
     <RoleCtx.Provider value={role}>
     <BetaEnabledCtx.Provider value={betaEnabled}>
     <OnlineCtx.Provider value={isOnline}>
@@ -1736,6 +1740,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
     </OnlineCtx.Provider>
     </BetaEnabledCtx.Provider>
     </RoleCtx.Provider>
+    </CookingTimersProvider>
   );
 }
 

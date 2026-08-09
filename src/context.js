@@ -22,3 +22,12 @@ export const useBetaEnabled = () => React.useContext(BetaEnabledCtx);
 // senza prop-drilling ──
 export const OnlineCtx = React.createContext(true);
 export const useOnline = () => React.useContext(OnlineCtx);
+
+// ── Cooking timers context — stato dei timer di cucina, vive sopra il
+// punto in cui screen alterna RecipeScreen/EmptyFridgeScreen/altri (vedi
+// CookingTimersProvider) così sopravvive alla navigazione: uscire dalla
+// Modalità Cucina o cambiare schermata non deve fermare un timer attivo.
+// Valore di default { timers:[] } solo per sicurezza in test/storybook
+// isolati — in app il vero valore arriva sempre da CookingTimersProvider.
+export const CookingTimersCtx = React.createContext({ timers: [], now: Date.now() });
+export const useCookingTimers = () => React.useContext(CookingTimersCtx);
