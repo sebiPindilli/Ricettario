@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useTheme } from "../context.js";
 import { F, MACRO_SECTIONS, DEFAULT_UNIT_SUGGESTIONS } from "../data/constants.js";
-import { isSectioned, toSectioned, fromSectioned, stripPhotolessStep, stepPhotosOf, collectAllIngredients, flattenIngredients } from "../utils/helpers.js";
+import { isSectioned, toSectioned, fromSectioned, stripPhotolessStep, stepPhotosOf, durationOf, collectAllIngredients, flattenIngredients } from "../utils/helpers.js";
 import BackBtn from "../components/BackBtn.jsx";
 import EditField from "../components/EditField.jsx";
 import EditLabel from "../components/EditLabel.jsx";
@@ -24,7 +24,7 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
   // ciascuna, mai il wrapper {section, items} (vedi bug #steps-sezionati).
   const normaliseSteps = (steps) => {
     const normOne = (s) =>
-      typeof s === "string" ? { text: s, photos: [] } : { text: s?.text ?? "", photos: stepPhotosOf(s) };
+      typeof s === "string" ? { text: s, photos: [], duration: null } : { text: s?.text ?? "", photos: stepPhotosOf(s), duration: durationOf(s) };
     return isSectioned(steps)
       ? steps.map(sec => ({ ...sec, items: (sec.items || []).map(normOne) }))
       : (steps || []).map(normOne);

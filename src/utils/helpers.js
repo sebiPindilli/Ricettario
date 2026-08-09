@@ -67,14 +67,28 @@ export const stepPhotosOf = (step) => {
   return [];
 };
 
-// Un passo senza foto torna stringa semplice (formato legacy); un passo
-// con almeno una foto resta oggetto {text, photos}. Va applicato agli
-// ITEM dentro ciascuna sottosezione, mai al wrapper {section, items} —
-// vedi isSectioned/toSectioned/fromSectioned qui sopra.
+// Durata in minuti di uno step (Modalità Cucina) — null per gli step senza,
+// stesso identico pattern di stepPhotosOf. Una stringa semplice non ha mai
+// una durata: solo la forma oggetto può portarla.
+export const durationOf = (step) => {
+  if (!step || typeof step === "string") return null;
+  return typeof step.duration === "number" ? step.duration : null;
+};
+
+// Un passo senza foto NÉ durata torna stringa semplice (formato legacy); un
+// passo con almeno una foto o una durata resta oggetto {text, photos?,
+// duration?} (chiavi vuote omesse). Va applicato agli ITEM dentro ciascuna
+// sottosezione, mai al wrapper {section, items} — vedi
+// isSectioned/toSectioned/fromSectioned qui sopra.
 export const stripPhotolessStep = (s) => {
   if (typeof s === "string") return s;
   const photos = stepPhotosOf(s);
-  return photos.length > 0 ? { text: s?.text ?? "", photos } : (s?.text ?? "");
+  const duration = durationOf(s);
+  if (photos.length === 0 && duration == null) return s?.text ?? "";
+  const out = { text: s?.text ?? "" };
+  if (photos.length > 0) out.photos = photos;
+  if (duration != null) out.duration = duration;
+  return out;
 };
 
 // Foto principale (dishPhoto) di una ricetta: stessa logica di scarto dei
@@ -240,6 +254,7 @@ export const flattenSteps = (steps) => {
         text: typeof it === "string" ? it : it.text,
         photo: photos[0] ?? null, // compat: primo dei consumatori che leggono ancora photo singolo
         photos,
+        duration: durationOf(it),
         section: s.section,
         sectionIndex,
         indexInSection,
@@ -253,6 +268,7 @@ export const flattenSteps = (steps) => {
       text: typeof it === "string" ? it : it.text,
       photo: photos[0] ?? null,
       photos,
+      duration: durationOf(it),
       section: null,
       sectionIndex,
       indexInSection,
@@ -343,6 +359,55 @@ export const composeIngredient = (name, qty, unit) => {
   const q = qty.trim(), u = unit.trim();
   const tail = [q, u].filter(Boolean).join(" ");
   return tail ? `${name}: ${tail}` : name;
+};
+
+// ── Durata di uno step (Modalità Cucina) — rilevamento da testo libero ──
+// Stesso stile di parseIngredientAmount: piccole regex mirate + tabella di
+// alias, mai un'eccezione — null quando non si riconosce nulla, così chi
+// chiama tratta "nessun timer rilevato" come caso normale, non un errore.
+const DURATION_UNIT_ALIASES = {
+  min:"min", minuto:"min", minuti:"min",
+  h:"h", ora:"h", ore:"h",
+};
+// Frazioni d'ora usate in "un'ora e mezza/un quarto/tre quarti"
+const HOUR_FRACTIONS = { "mezza":30, "mezzo":30, "un quarto":15, "tre quarti":45 };
+const toMinutes = (amount, unit) => DURATION_UNIT_ALIASES[unit] === "h" ? amount * 60 : amount;
+
+// Ritorna i minuti individuati nel testo di uno step, o null se non ne
+// riconosce nessuno — è un suggerimento (vedi EditSectionedSteps.jsx), mai
+// un'imposizione. Negli intervalli ("20-25 minuti") propone il valore più
+// piccolo, come da richiesta esplicita.
+export const parseStepDuration = (text) => {
+  if (!text) return null;
+  // Normalizza le forme parlate più comuni prima dei pattern numerici,
+  // così "un'ora e mezza" diventa "1 ora e mezza" e riusa lo stesso pattern
+  // di "2 ore e mezza"; "mezz'ora" da sola diventa "30 min" e riusa il
+  // pattern semplice più sotto.
+  const t = text.toLowerCase()
+    .replace(/\bun'?\s*ora\b/g, "1 ora")
+    .replace(/\bmezz'?\s*ora\b/g, "30 min");
+
+  // "1h 30", "1h30", "1 h 30" — ore e minuti insieme
+  let m = t.match(/(\d+)\s*h\s*(\d{1,2})?\b/);
+  if (m) return parseInt(m[1], 10) * 60 + (m[2] ? parseInt(m[2], 10) : 0);
+
+  // "1 ora e mezza/un quarto/tre quarti" (dopo la normalizzazione sopra)
+  m = t.match(/(\d+(?:[.,]\d+)?)\s*(or[ae]|h)\s+e\s+(mezz[ao]|un quarto|tre quarti)/);
+  if (m) return parseFloat(m[1].replace(",", ".")) * 60 + (HOUR_FRACTIONS[m[3]] || 0);
+
+  // Intervallo "20-25 minuti" / "20 - 25 min" — il valore più piccolo
+  m = t.match(/(\d+(?:[.,]\d+)?)\s*-\s*(\d+(?:[.,]\d+)?)\s*(minuti|minuto|min|or[ae]|h)\b/);
+  if (m) {
+    const a = parseFloat(m[1].replace(",", "."));
+    const b = parseFloat(m[2].replace(",", "."));
+    return Math.round(toMinutes(Math.min(a, b), DURATION_UNIT_ALIASES[m[3]]));
+  }
+
+  // Caso semplice "N minuti/min/ore/ora/h"
+  m = t.match(/(\d+(?:[.,]\d+)?)\s*(minuti|minuto|min|or[ae]|h)\b/);
+  if (m) return Math.round(toMinutes(parseFloat(m[1].replace(",", ".")), DURATION_UNIT_ALIASES[m[2]]));
+
+  return null;
 };
 
 // Etichetta periodo da una data ISO (stagione + anno) per le intestazioni del diario

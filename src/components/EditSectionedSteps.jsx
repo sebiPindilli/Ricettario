@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { useTheme, useOnline } from "../context.js";
 import { F } from "../data/constants.js";
-import { stepPhotosOf, stepNumbers, stepNumberLabel, MAX_STEP_PHOTOS, readImageFile } from "../utils/helpers.js";
+import { stepPhotosOf, durationOf, parseStepDuration, stepNumbers, stepNumberLabel, MAX_STEP_PHOTOS, readImageFile } from "../utils/helpers.js";
 import Toast from "./Toast.jsx";
 
 // ── Editable sectioned steps ─────────────────────────────────────
@@ -22,6 +22,7 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
     items: (sec.items || []).map(s => ({
       text: typeof s === "string" ? s : (s?.text ?? ""),
       photos: stepPhotosOf(s),
+      duration: durationOf(s),
     })),
   }));
 
@@ -29,8 +30,22 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
   const updateStep = (si, ii, field, val) => onUpdate(sections.map((s,i) => i!==si ? s : {
     ...s, items: s.items.map((it,j) => j===ii ? {...it,[field]:val} : it)
   }));
+  // Il rilevamento automatico della durata è un suggerimento, non un'
+  // imposizione: riempie il campo solo se è ancora vuoto. Una volta che ha
+  // un valore (anche solo suggerito), altre modifiche al testo non lo
+  // toccano più finché l'utente non lo svuota di nuovo.
+  const updateStepText = (si, ii, text) => {
+    const current = sections[si].items[ii];
+    const suggested = current.duration == null ? parseStepDuration(text) : null;
+    onUpdate(sections.map((s,i) => i!==si ? s : {
+      ...s, items: s.items.map((it,j) => j!==ii ? it : {
+        ...it, text,
+        ...(suggested != null ? { duration: suggested } : {}),
+      })
+    }));
+  };
   const addStep = (si) => onUpdate(sections.map((s,i) => i!==si ? s : {
-    ...s, items:[...s.items, { text:"", photos:[] }]
+    ...s, items:[...s.items, { text:"", photos:[], duration:null }]
   }));
   const removeStep = (si, ii) => onUpdate(sections.map((s,i) => i!==si ? s : {
     ...s, items: s.items.filter((_,j) => j!==ii)
@@ -173,7 +188,7 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
                 </div>
                 <textarea
                   value={step.text}
-                  onChange={e => updateStep(si, ii, "text", e.target.value)}
+                  onChange={e => updateStepText(si, ii, e.target.value)}
                   rows={3}
                   placeholder="Descrivi questo passo…"
                   style={{
@@ -184,6 +199,27 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
                     boxSizing:"border-box",
                   }}
                 />
+                <div style={{ padding:"0 12px 10px", display:"flex", alignItems:"center", gap:8 }}>
+                  <span style={{ fontSize:14 }}>⏱</span>
+                  <input
+                    type="number" min="0" inputMode="numeric"
+                    value={step.duration ?? ""}
+                    onChange={e => {
+                      const v = e.target.value;
+                      updateStep(si, ii, "duration", v === "" ? null : Math.max(0, parseInt(v, 10) || 0));
+                    }}
+                    placeholder="min"
+                    style={{
+                      width:56, padding:"5px 8px",
+                      border:`1.5px solid ${th.appBorder}`, borderRadius:8,
+                      background:th.appBg, fontFamily:F.ui, fontSize:12, color:th.appInk,
+                      outline:"none",
+                    }}
+                  />
+                  <span style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded }}>
+                    minuti — timer disponibile in Modalità Cucina
+                  </span>
+                </div>
                 <div style={{ padding:"0 12px 12px" }}>
                   {step.photos.length > 0 && (
                     <div style={{ display:"flex", gap:8, overflowX:"auto", paddingBottom:4, marginBottom: step.photos.length < MAX_STEP_PHOTOS ? 8 : 0 }}>
