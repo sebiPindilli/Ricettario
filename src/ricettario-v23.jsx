@@ -790,7 +790,9 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
   const clearShoppingList = () => setShoppingList([]);
 
   // ══ Multi-ricettario — meta locale (nome/tipo/owner/membri); i dati
-  // di ogni libro vivono su Firestore (vedi loadFullBook/saveFullBook) ══
+  // di ogni libro vivono su Firestore, un salvataggio mirato per documento
+  // (vedi loadFullBook e flushRecipesNow/flushSystemNow/flushShoppingListNow/
+  // flushMetaNow più sotto) ══
   // me = email reale dell'utente loggato (da AuthGate, vedi export default App)
   const [books, setBooks] = useState([]);
   // Ricettario predefinito: quello caricato all'avvio dell'app — persistito
@@ -920,17 +922,28 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
     sourceByIngredient, ignoredSimilarities,
   ]);
 
-  // Salvataggio automatico di lista spesa e meta/tema — ricette e system
-  // hanno già il proprio salvataggio mirato (vedi gli effetti sopra).
+  // Salvataggio mirato della lista spesa: un documento a sé, indipendente
+  // da ricette e system — così una modifica alla spesa non tocca l'uno né
+  // l'altro (e viceversa), incluso il percorso updateRecipe → resolveShopUpdate
+  // (R6), che tocca shoppingList da solo, in reazione a una modifica ricetta
+  // già gestita dal proprio effetto.
+  const flushShoppingListNow = () => saveShoppingList(activeBookId, shoppingList);
   useEffect(() => {
     if (!bookLoaded || !activeBook) return;
-    const timer = setTimeout(() => {
-      saveBookMeta(activeBookId, { name: activeBook.name, type: activeBook.type, owner: activeBook.owner, memberEmails: activeBook.memberEmails || [], memberRoles: activeBook.memberRoles || {}, bookTheme: bookTheme.id });
-      saveShoppingList(activeBookId, shoppingList);
-    }, 1500);
+    const timer = setTimeout(() => { flushShoppingListNow(); }, 1500);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookLoaded, activeBookId, bookTheme, shoppingList]);
+  }, [bookLoaded, activeBookId, shoppingList]);
+
+  // Salvataggio mirato di meta/tema — cambia raramente (nome libro, tema),
+  // un piccolo documento a sé.
+  const flushMetaNow = () => saveBookMeta(activeBookId, { name: activeBook.name, type: activeBook.type, owner: activeBook.owner, memberEmails: activeBook.memberEmails || [], memberRoles: activeBook.memberRoles || {}, bookTheme: bookTheme.id });
+  useEffect(() => {
+    if (!bookLoaded || !activeBook) return;
+    const timer = setTimeout(() => { flushMetaNow(); }, 1500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookLoaded, activeBookId, bookTheme]);
 
   const switchBook = async (id) => {
     if (id === activeBookId) return;
@@ -943,8 +956,8 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
       await Promise.all([
         flushRecipesNow(),
         flushSystemNow(),
-        saveBookMeta(activeBookId, { name: activeBook.name, type: activeBook.type, owner: activeBook.owner, memberEmails: activeBook.memberEmails || [], memberRoles: activeBook.memberRoles || {}, bookTheme: bookTheme.id }),
-        saveShoppingList(activeBookId, shoppingList),
+        flushShoppingListNow(),
+        flushMetaNow(),
       ]);
     }
     const data = await loadFullBook(id);
