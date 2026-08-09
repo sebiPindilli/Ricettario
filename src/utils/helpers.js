@@ -152,14 +152,20 @@ export const buildIngredientDict = (recipes, existing = {}) => {
   const dict = { ...existing };
   const taken = new Set(Object.keys(dict));
   const byName = new Map(Object.entries(dict).map(([id, nm]) => [normName(nm), id]));
+  // Riferimento stabile a zero modifiche: senza, ogni modifica a una
+  // ricetta produrrebbe un nuovo oggetto anche quando il dizionario non
+  // cambia davvero, facendo scattare inutilmente il salvataggio del
+  // documento system (vedi l'effetto dedicato in ricettario-v23.jsx).
+  let added = false;
   collectAllIngredients(recipes).forEach(({ display }) => {
     const key = normName(display);
     if (byName.has(key)) return;
     let id = key, n = 2;
     while (taken.has(id)) id = key + "_" + (n++);
     dict[id] = display; taken.add(id); byName.set(key, id);
+    added = true;
   });
-  return dict;
+  return added ? dict : existing;
 };
 // Indice inverso (nome normalizzato → id); costruirlo una volta e riusarlo
 export const ingDictIndex = (dict = {}) => {

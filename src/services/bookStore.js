@@ -78,14 +78,29 @@ const mapFactorKeys = (equivalences, fromKey, toKey) => {
 const encodeEquivalences = (eq) => mapFactorKeys(eq, "", EMPTY_UNIT_KEY);
 const decodeEquivalences = (eq) => mapFactorKeys(eq, EMPTY_UNIT_KEY, "");
 
+// Firestore rifiuta gli array annidati: ignoredSimilarities è
+// [[idA,idB], ...] in memoria — codificato come array di oggetti {a,b}
+// prima di salvare, decodificato dopo aver letto (decode difensivo: accetta
+// anche la forma non codificata, per non rompersi su dati seminati a mano).
+const encodeIgnoredSimilarities = (pairs) => (pairs || []).map(([a, b]) => ({ a, b }));
+const decodeIgnoredSimilarities = (pairs) => (pairs || []).map((p) => Array.isArray(p) ? p : [p.a, p.b]);
+
 export const saveBookSystem = (bookId, system) =>
-  setDoc(systemRef(bookId), { ...system, equivalences: encodeEquivalences(system.equivalences) });
+  setDoc(systemRef(bookId), {
+    ...system,
+    equivalences: encodeEquivalences(system.equivalences),
+    ignoredSimilarities: encodeIgnoredSimilarities(system.ignoredSimilarities),
+  });
 
 export const loadBookSystem = async (bookId) => {
   const snap = await getDoc(systemRef(bookId));
   if (!snap.exists()) return null;
   const data = snap.data();
-  return { ...data, equivalences: decodeEquivalences(data.equivalences) };
+  return {
+    ...data,
+    equivalences: decodeEquivalences(data.equivalences),
+    ignoredSimilarities: decodeIgnoredSimilarities(data.ignoredSimilarities),
+  };
 };
 
 export const saveShoppingList = (bookId, entries) =>

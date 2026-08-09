@@ -13,7 +13,8 @@ import {
 } from "./utils/helpers.js";
 import { effectiveNutritionKey, findSimilarIngredients } from "./utils/aggregates.js";
 import {
-  loadFullBook, saveFullBook, saveRecipe, deleteRecipe as deleteRecipeDoc,
+  loadFullBook, saveRecipe, deleteRecipe as deleteRecipeDoc,
+  saveBookSystem, saveBookMeta, saveShoppingList,
   createBookInFirestore, deleteBookInFirestore, listMyBooks,
   addBookMember as addBookMemberFs, removeBookMember as removeBookMemberFs, setBookMemberPermission as setBookMemberPermissionFs,
 } from "./services/bookStore.js";
@@ -898,31 +899,38 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookLoaded, activeBookId, recipes]);
 
-  // Salvataggio automatico del resto del libro (system/shoppingList/meta) —
-  // ogni cambiamento viene scritto su Firestore dopo una breve pausa
-  // (debounce), per non fare una scrittura ad ogni singolo carattere
-  // digitato. Le ricette sono già gestite dall'effetto sopra: passate come
-  // array vuoto qui, saveFullBook non ne scrive/elimina nessuna in questo
-  // percorso (verranno tolte da questa chiamata negli step successivi,
-  // quando anche system/shoppingList/meta avranno il proprio salvataggio
-  // mirato).
+  // Salvataggio mirato del documento system: un solo documento per le sue 12
+  // proprietà, quindi "una qualunque è cambiata" è già la granularità
+  // giusta — a differenza delle ricette non serve un diff, solo osservare
+  // il gruppo intero. Prima viveva nel salvataggio "tutto insieme": ogni
+  // modifica a una ricetta o alla lista spesa lo riscriveva inutilmente.
+  const flushSystemNow = async () => {
+    const { recipes: _recipes, shoppingList: _shoppingList, ...system } = snapshotData();
+    await saveBookSystem(activeBookId, system);
+  };
   useEffect(() => {
     if (!bookLoaded || !activeBook) return;
-    const timer = setTimeout(() => {
-      saveFullBook(activeBookId, {
-        meta: { name: activeBook.name, type: activeBook.type, owner: activeBook.owner, memberEmails: activeBook.memberEmails || [], memberRoles: activeBook.memberRoles || {}, bookTheme: bookTheme.id },
-        ...snapshotData(),
-        recipes: [],
-      });
-    }, 1500);
+    const timer = setTimeout(() => { flushSystemNow(); }, 1500);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    bookLoaded, activeBookId, bookTheme,
-    extraTagGroups, sectionList, categoryList,
-    ingredientCategories, aggregates, shoppingList, equivalences, customUnits,
-    nutritionMap, customFoods, ingredientDict, sourceByIngredient, ignoredSimilarities,
+    bookLoaded, activeBookId,
+    extraTagGroups, sectionList, categoryList, ingredientCategories, aggregates,
+    equivalences, customUnits, nutritionMap, customFoods, ingredientDict,
+    sourceByIngredient, ignoredSimilarities,
   ]);
+
+  // Salvataggio automatico di lista spesa e meta/tema — ricette e system
+  // hanno già il proprio salvataggio mirato (vedi gli effetti sopra).
+  useEffect(() => {
+    if (!bookLoaded || !activeBook) return;
+    const timer = setTimeout(() => {
+      saveBookMeta(activeBookId, { name: activeBook.name, type: activeBook.type, owner: activeBook.owner, memberEmails: activeBook.memberEmails || [], memberRoles: activeBook.memberRoles || {}, bookTheme: bookTheme.id });
+      saveShoppingList(activeBookId, shoppingList);
+    }, 1500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookLoaded, activeBookId, bookTheme, shoppingList]);
 
   const switchBook = async (id) => {
     if (id === activeBookId) return;
@@ -934,11 +942,9 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
     if (activeBook) {
       await Promise.all([
         flushRecipesNow(),
-        saveFullBook(activeBookId, {
-          meta: { name: activeBook.name, type: activeBook.type, owner: activeBook.owner, memberEmails: activeBook.memberEmails || [], memberRoles: activeBook.memberRoles || {}, bookTheme: bookTheme.id },
-          ...snapshotData(),
-          recipes: [],
-        }),
+        flushSystemNow(),
+        saveBookMeta(activeBookId, { name: activeBook.name, type: activeBook.type, owner: activeBook.owner, memberEmails: activeBook.memberEmails || [], memberRoles: activeBook.memberRoles || {}, bookTheme: bookTheme.id }),
+        saveShoppingList(activeBookId, shoppingList),
       ]);
     }
     const data = await loadFullBook(id);
