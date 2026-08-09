@@ -840,11 +840,20 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
   const flushRecipesNow = async () => {
     const { changed, removedIds } = diffRecipes(lastSyncedRecipesRef.current, recipes);
     if (changed.length === 0 && removedIds.length === 0) return;
-    await Promise.all([
-      ...changed.map(r => saveRecipe(activeBookId, r)),
-      ...removedIds.map(id => deleteRecipeDoc(activeBookId, id)),
-    ]);
-    lastSyncedRecipesRef.current = recipesToMap(recipes);
+    try {
+      await Promise.all([
+        ...changed.map(r => saveRecipe(activeBookId, r)),
+        ...removedIds.map(id => deleteRecipeDoc(activeBookId, id)),
+      ]);
+      lastSyncedRecipesRef.current = recipesToMap(recipes);
+    } catch (e) {
+      // Non aggiorna lastSyncedRecipesRef: le ricette rimaste diverse dal
+      // sincronizzato risulteranno di nuovo dirty al prossimo giro (vedi
+      // dirtyTracking.js) — stesso principio del retry alla riconnessione
+      // (evento "online" più sotto). Un fallimento qui non deve mai
+      // propagarsi: bloccherebbe switchBook a metà (vedi Promise.allSettled).
+      console.warn("Salvataggio ricette non riuscito, verrà ritentato", e);
+    }
   };
 
   // Bootstrap iniziale: carica "i miei libri" da Firestore (owner + membro,
@@ -908,7 +917,14 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
   // modifica a una ricetta o alla lista spesa lo riscriveva inutilmente.
   const flushSystemNow = async () => {
     const { recipes: _recipes, shoppingList: _shoppingList, ...system } = snapshotData();
-    await saveBookSystem(activeBookId, system);
+    try {
+      await saveBookSystem(activeBookId, system);
+    } catch (e) {
+      // Un fallimento qui non deve mai propagarsi (bloccherebbe switchBook a
+      // metà, vedi Promise.allSettled) — il prossimo cambiamento di un campo
+      // system, o il retry alla riconnessione, ritenterà.
+      console.warn("Salvataggio system non riuscito, verrà ritentato", e);
+    }
   };
   useEffect(() => {
     if (!bookLoaded || !activeBook) return;
@@ -927,7 +943,13 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
   // l'altro (e viceversa), incluso il percorso updateRecipe → resolveShopUpdate
   // (R6), che tocca shoppingList da solo, in reazione a una modifica ricetta
   // già gestita dal proprio effetto.
-  const flushShoppingListNow = () => saveShoppingList(activeBookId, shoppingList);
+  const flushShoppingListNow = async () => {
+    try {
+      await saveShoppingList(activeBookId, shoppingList);
+    } catch (e) {
+      console.warn("Salvataggio lista spesa non riuscito, verrà ritentato", e);
+    }
+  };
   useEffect(() => {
     if (!bookLoaded || !activeBook) return;
     const timer = setTimeout(() => { flushShoppingListNow(); }, 1500);
@@ -937,7 +959,13 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
 
   // Salvataggio mirato di meta/tema — cambia raramente (nome libro, tema),
   // un piccolo documento a sé.
-  const flushMetaNow = () => saveBookMeta(activeBookId, { name: activeBook.name, type: activeBook.type, owner: activeBook.owner, memberEmails: activeBook.memberEmails || [], memberRoles: activeBook.memberRoles || {}, bookTheme: bookTheme.id });
+  const flushMetaNow = async () => {
+    try {
+      await saveBookMeta(activeBookId, { name: activeBook.name, type: activeBook.type, owner: activeBook.owner, memberEmails: activeBook.memberEmails || [], memberRoles: activeBook.memberRoles || {}, bookTheme: bookTheme.id });
+    } catch (e) {
+      console.warn("Salvataggio meta libro non riuscito, verrà ritentato", e);
+    }
+  };
   useEffect(() => {
     if (!bookLoaded || !activeBook) return;
     const timer = setTimeout(() => { flushMetaNow(); }, 1500);
@@ -953,7 +981,10 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled }) {
     // il libro che si lascia (non aspetta il debounce), poi carica il nuovo
     setBookLoaded(false);
     if (activeBook) {
-      await Promise.all([
+      // allSettled, non all: ogni flush gestisce già i propri errori (vedi
+      // sopra), ma un fallimento isolato (es. rete assente) non deve mai
+      // impedire il cambio libro o lasciare bookLoaded bloccato a false.
+      await Promise.allSettled([
         flushRecipesNow(),
         flushSystemNow(),
         flushShoppingListNow(),

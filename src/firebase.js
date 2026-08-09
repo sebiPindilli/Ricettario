@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getAuth } from 'firebase/auth';
 
@@ -13,7 +13,20 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+// Cache persistente su IndexedDB (non solo in memoria): i dati letti
+// restano disponibili offline anche dopo un ricaricamento della pagina, e
+// le scritture fatte offline (setDoc/deleteDoc) si accodano da sole e
+// partono alla riconnessione, senza bisogno di codice a mano — vedi
+// flushXNow in ricettario-v23.jsx, che si appoggiano a questo.
+// persistentMultipleTabManager: se l'app resta aperta in più schede sullo
+// stesso dispositivo (stesso indirizzo), Firestore altrimenti ottiene
+// accesso esclusivo alla cache solo nella prima scheda e ricade in
+// silenzio su una cache solo in memoria in tutte le altre (verificato
+// durante lo sviluppo: due schede sulla stessa origine bastano a
+// disattivare la persistenza senza nessun errore visibile in app).
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+});
 export const storage = getStorage(app);
 export const auth = getAuth(app);
 

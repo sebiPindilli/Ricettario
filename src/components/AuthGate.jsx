@@ -46,7 +46,8 @@ export default function AuthGate({ children }) {
       const { enabled } = await withTimeout(loadBetaConfig(), BOOT_TIMEOUT_MS);
       setBetaEnabled(enabled);
       setStatus("authorized");
-    } catch {
+    } catch (e) {
+      console.warn("Bootstrap non riuscito", e);
       setStatus("error");
     }
   }, []);
