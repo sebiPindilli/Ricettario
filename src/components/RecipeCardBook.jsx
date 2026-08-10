@@ -68,7 +68,15 @@ export default function RecipeCardBook({ recipe }) {
           }}
         >
           {dishPhotoOf(recipe)
-            ? <><img src={dishPhotoOf(recipe)} alt={recipe.title} style={{ width:"100%", height:"100%", objectFit:"cover" }}/><div style={{ position:"absolute", bottom:4, right:6, fontSize:13, opacity:0.5, color:"#fff" }}>⤢</div></>
+            ? <>
+                <img src={dishPhotoOf(recipe)} alt={recipe.title} style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
+                <div style={{ position:"absolute", bottom:4, right:6, fontSize:13, opacity:0.5, color:"#fff" }}>⤢</div>
+                <div style={{
+                  position:"absolute", top:6, left:6, width:28, height:28, borderRadius:"50%",
+                  background:"rgba(0,0,0,0.35)", backdropFilter:"blur(4px)", border:"1px solid rgba(255,255,255,0.25)",
+                  display:"flex", alignItems:"center", justifyContent:"center", fontSize:15,
+                }}>{recipe.emoji}</div>
+              </>
             : <span style={{ opacity:0.35 }}>{recipe.emoji}</span>
           }
         </div>
