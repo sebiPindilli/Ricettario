@@ -14,6 +14,16 @@ import { setTimerAlertPrefs, DEFAULT_TIMER_ALERTS } from "../services/authStore.
 export default function CookingTimersProvider({ children, me, initialPrefs }) {
   const [timers, setTimers] = useState([]);
   const [now, setNow] = useState(() => Date.now());
+  // Flag globale impostato da CookingMode.jsx (mount/unmount) — vive qui,
+  // sopra il punto in cui screen alterna gli schermi, così TopStack e
+  // GlobalNav possono leggerlo senza prop-drilling. Serve a nascondere la
+  // barra timer mentre si è già dentro la Modalità Cucina (che ha il
+  // proprio FAB dedicato).
+  const [cookingModeActive, setCookingModeActive] = useState(false);
+  // Altezza totale corrente dello stack in alto (banner offline + barra
+  // timer, vedi TopStack.jsx) — letta da GlobalNav.jsx per posizionarsi
+  // sempre sotto, mai sovrapposto.
+  const [topStackHeight, setTopStackHeight] = useState(0);
   // Letto dentro checkExpirations per decidere quali timer sono "appena
   // scaduti" PRIMA di chiamare setTimers — mai dentro l'updater di
   // setTimers stesso: React (in StrictMode) può invocarlo due volte per
@@ -131,6 +141,9 @@ export default function CookingTimersProvider({ children, me, initialPrefs }) {
     return () => document.removeEventListener("visibilitychange", onVisibilityChange);
   }, [checkExpirations]);
 
-  const value = { timers, now, startTimer, cancelTimer, adjustTimer, prefs, updatePrefs };
+  const value = {
+    timers, now, startTimer, cancelTimer, adjustTimer, prefs, updatePrefs,
+    cookingModeActive, setCookingModeActive, topStackHeight, setTopStackHeight,
+  };
   return <CookingTimersCtx.Provider value={value}>{children}</CookingTimersCtx.Provider>;
 }

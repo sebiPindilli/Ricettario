@@ -29,5 +29,9 @@ export const useOnline = () => React.useContext(OnlineCtx);
 // Modalità Cucina o cambiare schermata non deve fermare un timer attivo.
 // Valore di default { timers:[] } solo per sicurezza in test/storybook
 // isolati — in app il vero valore arriva sempre da CookingTimersProvider.
-export const CookingTimersCtx = React.createContext({ timers: [], now: Date.now(), prefs: { sound: true, vibrate: true, visual: true } });
+export const CookingTimersCtx = React.createContext({
+  timers: [], now: Date.now(), prefs: { sound: true, vibrate: true, visual: true },
+  cookingModeActive: false, setCookingModeActive: () => {},
+  topStackHeight: 0, setTopStackHeight: () => {},
+});
 export const useCookingTimers = () => React.useContext(CookingTimersCtx);
