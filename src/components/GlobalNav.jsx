@@ -1,5 +1,5 @@
 import { useState, useRef, useLayoutEffect } from "react";
-import { useTheme, useNavActions } from "../context.js";
+import { useTheme, useNavActions, useCookingTimers } from "../context.js";
 import { F, MOBILE_BREAKPOINT_CSS } from "../data/constants.js";
 import OrganizeIcon from "./OrganizeIcon.jsx";
 import InfoButton from "./InfoButton.jsx";
@@ -12,20 +12,6 @@ const NAV_ITEMS = [
   { id:"organize",  icon:<OrganizeIcon/>, label:"Organizza" },
 ];
 
-// Su mobile reale (vedi IPHONE_RESPONSIVE_CSS in ricettario-v23.jsx, stesso
-// breakpoint) il banner passa da "sticky" a "fixed" — su alcuni browser
-// mobile, sticky annidato dentro lo scroll interno dell'IPhone shell può
-// scorrere via invece di restare fermo. Da fixed, il banner esce dal
-// flusso: il div .globalnav-spacer subito sotto (altezza misurata dal
-// banner stesso via ResizeObserver) gli lascia il posto nel contenuto sotto.
-const GLOBALNAV_RESPONSIVE_CSS = `
-  .globalnav-spacer { display:none; }
-  @media ${MOBILE_BREAKPOINT_CSS} {
-    .globalnav-bar { position:fixed !important; top:0 !important; left:0 !important; right:0 !important; }
-    .globalnav-spacer { display:block !important; }
-  }
-`;
-
 export default function GlobalNav({
   activeScreen,
   onRecipes, onBook, onMemories, onAdd, onFridge, onShopping,
@@ -36,6 +22,7 @@ export default function GlobalNav({
 }) {
   const th = useTheme();
   const navActions = useNavActions();
+  const { topStackHeight } = useCookingTimers();
   const barRef = useRef(null);
   const [spacerHeight, setSpacerHeight] = useState(0);
 
@@ -48,6 +35,24 @@ export default function GlobalNav({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  // Su mobile reale (vedi IPHONE_RESPONSIVE_CSS in ricettario-v23.jsx, stesso
+  // breakpoint) il banner passa da "sticky" a "fixed" — su alcuni browser
+  // mobile, sticky annidato dentro lo scroll interno dell'IPhone shell può
+  // scorrere via invece di restare fermo. Da fixed, il banner esce dal
+  // flusso: il div .globalnav-spacer subito sotto (altezza misurata dal
+  // banner stesso via ResizeObserver, più topStackHeight — banner offline
+  // e/o barra timer sopra di lui) gli lascia il posto nel contenuto sotto.
+  // topStackHeight entra anche nel `top` (sia sticky desktop sia fixed
+  // mobile, quest'ultimo tramite CSS !important) così questa barra si
+  // posiziona sempre SOTTO quello stack invece di esserne coperta.
+  const globalNavResponsiveCss = `
+    .globalnav-spacer { display:none; }
+    @media ${MOBILE_BREAKPOINT_CSS} {
+      .globalnav-bar { position:fixed !important; top:${topStackHeight}px !important; left:0 !important; right:0 !important; }
+      .globalnav-spacer { display:block !important; }
+    }
+  `;
 
   // "recipes" e la vista libro condividono la stessa tab attiva (Ricette) e lo stesso banner.
   const inRecipes = activeScreen === "recipes" || bookView;
@@ -65,8 +70,8 @@ export default function GlobalNav({
 
   return (
     <>
-    <style dangerouslySetInnerHTML={{ __html: GLOBALNAV_RESPONSIVE_CSS }} />
-    <div ref={barRef} className="globalnav-bar" style={{ position:"sticky", top:0, zIndex:100, boxShadow:"0 2px 16px rgba(0,0,0,0.2)" }}>
+    <style dangerouslySetInnerHTML={{ __html: globalNavResponsiveCss }} />
+    <div ref={barRef} className="globalnav-bar" style={{ position:"sticky", top:topStackHeight, zIndex:100, boxShadow:"0 2px 16px rgba(0,0,0,0.2)" }}>
       {/* Row 1 — 4 tabs */}
       <div style={{ display:"flex", background:th.appInk, borderBottom:"1px solid rgba(255,255,255,0.08)" }}>
         {NAV_ITEMS.map(item => {
@@ -144,7 +149,7 @@ export default function GlobalNav({
         )}
       </div>
     </div>
-    <div className="globalnav-spacer" style={{ height: spacerHeight }} />
+    <div className="globalnav-spacer" style={{ height: spacerHeight + topStackHeight }} />
     </>
   );
 }
