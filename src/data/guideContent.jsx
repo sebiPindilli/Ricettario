@@ -108,7 +108,10 @@ export const guideEsporta = (
 );
 
 export const guideNuovaModificaRicetta = (
-  <p style={{ margin:0 }}>Il form per scrivere o correggere una ricetta, in quattro tab: <b>Info</b> (titolo, sezione, fonte, tempi, porzioni, tag), <b>Ingredienti</b> (scritti bene qui alimentano da soli Spesa, Frigo e Nutrizione), <b>Preparazione</b> (i passi, anche raggruppati, con foto) e <b>Note</b>.</p>
+  <>
+    <p style={pFirst}>Il form per scrivere o correggere una ricetta, in quattro tab: <b>Info</b> (titolo, sezione, fonte, tempi, porzioni, tag), <b>Ingredienti</b> (scritti bene qui alimentano da soli Spesa, Frigo e Nutrizione), <b>Preparazione</b> (i passi, anche raggruppati, con foto) e <b>Note</b>.</p>
+    <p style={pLast}>💡 In Ingredienti e Preparazione, 📂 sposta un elemento in un'altra sottosezione (o in una nuova); "Seleziona" attiva la selezione multipla per spostarne più di uno insieme, mantenendo l'ordine.</p>
+  </>
 );
 
 export const guideScansiona = (
