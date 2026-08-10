@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { ScanExtractionCtx } from "../context.js";
 import { uid } from "../utils/helpers.js";
 import { auth } from "../firebase.js";
@@ -52,25 +52,35 @@ const errorMessageFor = (kind, err) => kind === "link"
 // posto di CookingTimersProvider — sopravvive alla navigazione.
 export default function ScanExtractionProvider({ children }) {
   const [job, setJob] = useState(null);
+  // Letto dentro startExtraction/retryExtraction PRIMA di decidere se avviare
+  // la chiamata — mai dentro un updater funzionale di setJob: React (in
+  // StrictMode) può invocarlo due volte per verificarne la purezza, e la
+  // chiamata fetch dentro (un vero effetto collaterale) partirebbe due volte
+  // per un solo click (stesso motivo del ref in CookingTimersProvider.jsx).
+  const jobRef = useRef(null);
+  useEffect(() => { jobRef.current = job; }, [job]);
 
-  // Avvia la chiamata e ritorna subito il job "running" — non aspetta la
-  // Promise: startExtraction/retryExtraction devono restituire il controllo
-  // immediatamente perché lo screen chiamante possa mostrare lo spinner.
+  // Avvia la chiamata e imposta subito il job "running" — chiamata fuori da
+  // qualunque updater di setJob, così l'effetto collaterale (la fetch) parte
+  // esattamente una volta per invocazione reale.
   const launch = useCallback((kind, params) => {
     const id = uid("scan");
+    setJob({ id, kind, params, status: "running", result: null, errorMessage: null, startedAt: Date.now() });
     runExtraction(kind, params).then(
       (result) => setJob(cur => cur?.id === id ? { ...cur, status: "done", result } : cur),
       (err) => setJob(cur => cur?.id === id ? { ...cur, status: "error", errorMessage: errorMessageFor(kind, err) } : cur)
     );
-    return { id, kind, params, status: "running", result: null, errorMessage: null, startedAt: Date.now() };
   }, []);
 
   const startExtraction = useCallback((kind, params) => {
-    setJob(prev => prev?.status === "running" ? prev : launch(kind, params));
+    if (jobRef.current?.status === "running") return;
+    launch(kind, params);
   }, [launch]);
 
   const retryExtraction = useCallback(() => {
-    setJob(prev => (!prev || prev.status === "running") ? prev : launch(prev.kind, prev.params));
+    const prev = jobRef.current;
+    if (!prev || prev.status === "running") return;
+    launch(prev.kind, prev.params);
   }, [launch]);
 
   const dismissJob = useCallback(() => setJob(null), []);

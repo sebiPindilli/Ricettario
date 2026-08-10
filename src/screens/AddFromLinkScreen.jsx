@@ -1,7 +1,6 @@
-import React, { useState } from "react";
-import { useTheme } from "../context.js";
+import React, { useState, useEffect } from "react";
+import { useTheme, useScanExtraction } from "../context.js";
 import { F } from "../data/constants.js";
-import { auth } from "../firebase.js";
 import BackBtn from "../components/BackBtn.jsx";
 import InfoButton from "../components/InfoButton.jsx";
 import { guideLink } from "../data/guideContent.jsx";
@@ -11,9 +10,28 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
   const [urlInput, setUrlInput] = useState("");
   const [htmlContent, setHtmlContent] = useState("");
   const [fileName, setFileName] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [validationError, setValidationError] = useState(null);
   const [showManualPaste, setShowManualPaste] = useState(false);
+  const { job, startExtraction, retryExtraction, dismissJob } = useScanExtraction();
+
+  // Solo il proprio job: se un'estrazione di un ALTRO tipo (foto) è in corso
+  // o è appena fallita, questo screen non deve appropriarsene — vedi
+  // ScanStatusBanner per il caso "l'utente è altrove".
+  const mineRunning = job?.status === "running" && job.kind === "link";
+  const otherRunning = job?.status === "running" && job.kind !== "link";
+  const jobError = job?.status === "error" && job.kind === "link" ? job.errorMessage : null;
+  const displayError = validationError || jobError;
+
+  // Se l'estrazione finisce mentre si è rimasti su questo screen, va dritto
+  // nell'editor come sempre — se invece l'utente ha navigato altrove nel
+  // frattempo, questo screen è smontato e non può farlo: se ne occupa il
+  // banner globale (ScanStatusBanner).
+  useEffect(() => {
+    if (job?.status === "done" && job.kind === "link") {
+      onSave(job.result.title, [], job.result.ocrData, job.result.emoji, job.result.color, "altro");
+      dismissJob();
+    }
+  }, [job, onSave, dismissJob]);
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
@@ -23,56 +41,29 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
     const reader = new FileReader();
     reader.onload = (event) => {
       setHtmlContent(event.target.result);
-      setError(null);
+      setValidationError(null);
     };
     reader.readAsText(file);
   };
 
-  const handleAnalyze = async () => {
+  const handleAnalyze = () => {
     const targetUrl = urlInput.trim();
     const manualText = htmlContent.trim();
 
     if (!targetUrl && !manualText) {
-      setError("Inserisci l'indirizzo di una ricetta, oppure incolla il testo o carica un file HTML.");
+      setValidationError("Inserisci l'indirizzo di una ricetta, oppure incolla il testo o carica un file HTML.");
       return;
     }
+    setValidationError(null);
+    startExtraction("link", { url: targetUrl, text: manualText });
+  };
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      const idToken = await auth.currentUser.getIdToken();
-      const response = await fetch("/api/parse-recipe-link", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          targetUrl && !manualText ? { idToken, url: targetUrl } : { idToken, text: manualText }
-        ),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || `Errore (${response.status})`);
-      }
-
-      const ocrData = data.recipe;
-      if (targetUrl) ocrData.sourceUrl = targetUrl;
-
-      // Apri nell'editor precompilato
-      onSave(
-        ocrData.title || "",
-        [],
-        ocrData,
-        ocrData.emoji || "🍝",
-        ocrData.color || "#C4593A",
-        "altro"
-      );
-    } catch (err) {
-      console.error("Errore analisi ricetta da link:", err);
-      setError(`Errore: ${err.message || "Impossibile accedere o estrarre i dati"}. Prova ad incollare il testo manualmente o carica il file HTML.`);
-    } finally {
-      setLoading(false);
-    }
+  // Se si esce dopo aver già visto l'esito (non mentre è ancora in corso —
+  // quella prosegue in background), non lasciare un job terminato in giro:
+  // altrimenti il banner globale ripeterebbe un'informazione già vista qui.
+  const handleBack = () => {
+    if (job && job.status !== "running" && job.kind === "link") dismissJob();
+    onBack();
   };
 
   const cssAnimations = `
@@ -93,7 +84,7 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
 
       {/* Header */}
       <div style={{ padding: "12px 18px 6px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-        <BackBtn onBack={onBack} label="Annulla" />
+        <BackBtn onBack={handleBack} label="Annulla" />
         <div style={{ flex: 1 }}>
           <div style={{ fontFamily: F.display, fontSize: 17, color: th.appInk }}>Importa da Link</div>
           <div style={{ fontFamily: F.ui, fontSize: 10.5, color: th.appFaded }}>Estrai ricetta da URL con AI</div>
@@ -102,7 +93,7 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: "12px 20px 40px", display: "flex", flexDirection: "column", gap: 16 }}>
-        
+
         {/* Info Box */}
         <div style={{
           background: th.appCard,
@@ -124,12 +115,12 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
           </div>
         </div>
 
-        {!loading && (() => {
+        {!mineRunning && (() => {
           // Il bottone deve attivarsi se l'utente ha valorizzato ALMENO UNO
           // dei due input (URL, oppure testo/HTML incollato o caricato da
           // file — questi due condividono lo stesso state htmlContent):
           // handleAnalyze gestisce già entrambi i casi separatamente.
-          const canSubmit = urlInput.trim() || htmlContent.trim();
+          const canSubmit = (urlInput.trim() || htmlContent.trim()) && !otherRunning;
           return (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {/* Input URL */}
@@ -142,7 +133,7 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
                 value={urlInput}
                 onChange={(e) => {
                   setUrlInput(e.target.value);
-                  setError(null);
+                  setValidationError(null);
                 }}
                 placeholder="es. https://ricette.giallozafferano.it/..."
                 style={{
@@ -181,6 +172,12 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
             >
               Estrai Ricetta 🍳
             </button>
+
+            {otherRunning && (
+              <div style={{ fontFamily: F.ui, fontSize: 11.5, color: th.appFaded, textAlign: "center" }}>
+                ⏳ Un'altra estrazione è già in corso — attendi il completamento prima di avviarne un'altra.
+              </div>
+            )}
 
             {/* Alternativa Manuale Toggle */}
             <button
@@ -275,7 +272,7 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
         })()}
 
         {/* Loading State */}
-        {loading && (
+        {mineRunning && (
           <div style={{
             flex: 1,
             display: "flex",
@@ -313,11 +310,31 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
             }}>
               Estrazione di titolo, ingredienti, dosi e passaggi.
             </div>
+            <button
+              onClick={onBack}
+              style={{
+                marginTop: 8,
+                padding: "10px 20px",
+                borderRadius: 12,
+                border: `1.5px solid ${th.appBorder}`,
+                background: "transparent",
+                color: th.appInk,
+                fontFamily: F.ui,
+                fontSize: 12.5,
+                fontWeight: 700,
+                cursor: "pointer"
+              }}
+            >
+              ✅ Continua a usare l'app
+            </button>
+            <div style={{ fontFamily: F.ui, fontSize: 10.5, color: th.appFaded, textAlign: "center", maxWidth: 240 }}>
+              L'estrazione prosegue in background — ti avviseremo con un banner quando è pronta.
+            </div>
           </div>
         )}
 
         {/* Error Alert */}
-        {error && (
+        {displayError && (
           <div style={{
             background: "#FFF5F5",
             border: "1.5px solid #FEB2B2",
@@ -334,10 +351,10 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
               </div>
             </div>
             <div style={{ fontFamily: F.ui, fontSize: 12, color: "#9B2C2C", lineHeight: 1.5 }}>
-              {error}
+              {displayError}
             </div>
             <button
-              onClick={handleAnalyze}
+              onClick={jobError ? retryExtraction : handleAnalyze}
               style={{
                 alignSelf: "flex-end",
                 padding: "6px 12px",

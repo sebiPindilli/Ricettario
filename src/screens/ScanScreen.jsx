@@ -1,7 +1,6 @@
-import React, { useState } from "react";
-import { useTheme } from "../context.js";
+import React, { useState, useEffect } from "react";
+import { useTheme, useScanExtraction } from "../context.js";
 import { F } from "../data/constants.js";
-import { auth } from "../firebase.js";
 import BackBtn from "../components/BackBtn.jsx";
 import InfoButton from "../components/InfoButton.jsx";
 import { guideScansiona } from "../data/guideContent.jsx";
@@ -10,8 +9,27 @@ export default function ScanScreen({ onBack, onSave, mode = "camera" }) {
   const isGallery = mode === "gallery";
   const th = useTheme();
   const [images, setImages] = useState([]); // array di { id, base64, mimeType, previewUrl }
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [validationError, setValidationError] = useState(null);
+  const { job, startExtraction, retryExtraction, dismissJob } = useScanExtraction();
+
+  // Solo il proprio job: se un'estrazione di un ALTRO tipo (link) è in corso
+  // o è appena fallita, questo screen non deve appropriarsene — vedi
+  // ScanStatusBanner per il caso "l'utente è altrove".
+  const mineRunning = job?.status === "running" && job.kind === "photo";
+  const otherRunning = job?.status === "running" && job.kind !== "photo";
+  const jobError = job?.status === "error" && job.kind === "photo" ? job.errorMessage : null;
+  const displayError = validationError || jobError;
+
+  // Se l'estrazione finisce mentre si è rimasti su questo screen, va dritto
+  // nell'editor come sempre — se invece l'utente ha navigato altrove nel
+  // frattempo, questo screen è smontato e non può farlo: se ne occupa il
+  // banner globale (ScanStatusBanner).
+  useEffect(() => {
+    if (job?.status === "done" && job.kind === "photo") {
+      onSave(job.result.title, [], job.result.ocrData, job.result.emoji, job.result.color, "altro");
+      dismissJob();
+    }
+  }, [job, onSave, dismissJob]);
 
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files || []);
@@ -36,53 +54,25 @@ export default function ScanScreen({ onBack, onSave, mode = "camera" }) {
     try {
       const newImages = await Promise.all(promises);
       setImages(prev => [...prev, ...newImages]);
-      setError(null);
+      setValidationError(null);
     } catch (err) {
       console.error("Error reading files:", err);
-      setError("Si è verificato un errore nel caricamento di alcune foto.");
+      setValidationError("Si è verificato un errore nel caricamento di alcune foto.");
     }
     e.target.value = "";
   };
 
-  const handleAnalyze = async () => {
+  const handleAnalyze = () => {
     if (images.length === 0) return;
+    startExtraction("photo", { images });
+  };
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      const idToken = await auth.currentUser.getIdToken();
-      const response = await fetch("/api/parse-recipe-photo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          idToken,
-          images: images.map(img => ({ base64: img.base64, mimeType: img.mimeType })),
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || `Errore (${response.status})`);
-      }
-
-      const ocrData = data.recipe;
-
-      // Apri nell'editor precompilato
-      onSave(
-        ocrData.title || "",
-        [],
-        ocrData,
-        ocrData.emoji || "🍝",
-        ocrData.color || "#C4593A",
-        "altro"
-      );
-    } catch (err) {
-      console.error("Errore analisi foto ricetta:", err);
-      setError("Si è verificato un errore durante l'analisi. Riprova con un'immagine più nitida.");
-    } finally {
-      setLoading(false);
-    }
+  // Se si esce dopo aver già visto l'esito (non mentre è ancora in corso —
+  // quella prosegue in background), non lasciare un job terminato in giro:
+  // altrimenti il banner globale ripeterebbe un'informazione già vista qui.
+  const handleBack = () => {
+    if (job && job.status !== "running" && job.kind === "photo") dismissJob();
+    onBack();
   };
 
   const cssAnimations = `
@@ -103,7 +93,7 @@ export default function ScanScreen({ onBack, onSave, mode = "camera" }) {
 
       {/* Header */}
       <div style={{ padding: "12px 18px 6px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-        <BackBtn onBack={onBack} label="Annulla" />
+        <BackBtn onBack={handleBack} label="Annulla" />
         <div style={{ flex: 1 }}>
           <div style={{ fontFamily: F.display, fontSize: 17, color: th.appInk }}>{isGallery ? "Importa dalla Galleria" : "Scansiona dalla Fotocamera"}</div>
           <div style={{ fontFamily: F.ui, fontSize: 10.5, color: th.appFaded }}>Crea ricetta da foto AI</div>
@@ -134,7 +124,7 @@ export default function ScanScreen({ onBack, onSave, mode = "camera" }) {
         </div>
 
         {/* Upload Container */}
-        {images.length === 0 && (
+        {images.length === 0 && !mineRunning && (
           <label style={{
             flex: 1,
             minHeight: 200,
@@ -172,7 +162,7 @@ export default function ScanScreen({ onBack, onSave, mode = "camera" }) {
         )}
 
         {/* Image Grid Preview & Action Buttons */}
-        {images.length > 0 && !loading && (
+        {images.length > 0 && !mineRunning && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {/* Grid list */}
             <div style={{
@@ -270,28 +260,35 @@ export default function ScanScreen({ onBack, onSave, mode = "camera" }) {
 
               <button
                 onClick={handleAnalyze}
+                disabled={otherRunning}
                 style={{
                   flex: 2,
                   padding: "12px 16px",
                   borderRadius: 12,
                   border: "none",
-                  background: th.appAccent,
+                  background: otherRunning ? th.appBorder : th.appAccent,
                   color: "#fff",
                   fontFamily: F.ui,
                   fontSize: 13,
                   fontWeight: 700,
-                  cursor: "pointer",
-                  boxShadow: `0 4px 12px rgba(196,89,58,0.25)`
+                  cursor: otherRunning ? "default" : "pointer",
+                  boxShadow: otherRunning ? "none" : `0 4px 12px rgba(196,89,58,0.25)`
                 }}
               >
                 Analizza Foto ({images.length}) 🍳
               </button>
             </div>
+
+            {otherRunning && (
+              <div style={{ fontFamily: F.ui, fontSize: 11.5, color: th.appFaded, textAlign: "center" }}>
+                ⏳ Un'altra estrazione è già in corso — attendi il completamento prima di avviarne un'altra.
+              </div>
+            )}
           </div>
         )}
 
         {/* Loading State */}
-        {loading && (
+        {mineRunning && (
           <div style={{
             flex: 1,
             display: "flex",
@@ -329,11 +326,31 @@ export default function ScanScreen({ onBack, onSave, mode = "camera" }) {
             }}>
               Estrazione di titolo, ingredienti, dosi e passaggi.
             </div>
+            <button
+              onClick={onBack}
+              style={{
+                marginTop: 8,
+                padding: "10px 20px",
+                borderRadius: 12,
+                border: `1.5px solid ${th.appBorder}`,
+                background: "transparent",
+                color: th.appInk,
+                fontFamily: F.ui,
+                fontSize: 12.5,
+                fontWeight: 700,
+                cursor: "pointer"
+              }}
+            >
+              ✅ Continua a usare l'app
+            </button>
+            <div style={{ fontFamily: F.ui, fontSize: 10.5, color: th.appFaded, textAlign: "center", maxWidth: 240 }}>
+              L'estrazione prosegue in background — ti avviseremo con un banner quando è pronta.
+            </div>
           </div>
         )}
 
         {/* Error Alert */}
-        {error && (
+        {displayError && (
           <div style={{
             background: "#FFF5F5",
             border: "1.5px solid #FEB2B2",
@@ -350,10 +367,10 @@ export default function ScanScreen({ onBack, onSave, mode = "camera" }) {
               </div>
             </div>
             <div style={{ fontFamily: F.ui, fontSize: 12, color: "#9B2C2C", lineHeight: 1.5 }}>
-              {error}
+              {displayError}
             </div>
             <button
-              onClick={handleAnalyze}
+              onClick={jobError ? retryExtraction : handleAnalyze}
               style={{
                 alignSelf: "flex-end",
                 padding: "6px 12px",
