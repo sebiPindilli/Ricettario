@@ -7,6 +7,7 @@ import { effectiveNutritionKey } from "../utils/aggregates.js";
 import BackBtn from "../components/BackBtn.jsx";
 import Toast from "../components/Toast.jsx";
 import PhotoLightbox from "../components/PhotoLightbox.jsx";
+import PhotoCropOverlay from "../components/PhotoCropOverlay.jsx";
 import Pill from "../components/Pill.jsx";
 import Divider from "../components/Divider.jsx";
 import ExportFlow from "../components/ExportFlow.jsx";
@@ -109,15 +110,22 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
     if (!isOnline) { showToast("📡 Serve una connessione per aggiungere una foto"); return; }
     dishPhotoInputRef.current && dishPhotoInputRef.current.click();
   };
+  // La dataURL grezza appena scelta non va mai dritta in onUpdate: prima
+  // passa per PhotoCropOverlay (pan/zoom/ritaglio), che alla conferma
+  // restituisce la versione già ritagliata — stesso identico contratto
+  // verso onUpdate/Storage di prima, solo posticipato di un passaggio.
+  const [cropSource, setCropSource] = useState(null); // { dataUrl, wasPresent } | null
   const handleDishPhotoFile = (e) => {
     const file = e.target.files && e.target.files[0];
     e.target.value = "";
     if (!file) return;
     const wasPresent = !!dishPhotoOf(recipe);
-    readImageFile(file, (dataUrl) => {
-      onUpdate({ ...recipe, dishPhoto: dataUrl });
-      showToast(wasPresent ? "📸 Foto piatto aggiornata!" : "📸 Foto piatto aggiunta!");
-    });
+    readImageFile(file, (dataUrl) => setCropSource({ dataUrl, wasPresent }));
+  };
+  const handleCropConfirm = (croppedDataUrl) => {
+    onUpdate({ ...recipe, dishPhoto: croppedDataUrl });
+    showToast(cropSource.wasPresent ? "📸 Foto piatto aggiornata!" : "📸 Foto piatto aggiunta!");
+    setCropSource(null);
   };
 
   return (
@@ -297,6 +305,14 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
 
       {/* Input file nascosto per la foto principale — stesso meccanismo dei Ricordi */}
       <input ref={dishPhotoInputRef} type="file" accept="image/*" onChange={handleDishPhotoFile} style={{ display:"none" }}/>
+
+      {cropSource && (
+        <PhotoCropOverlay
+          image={cropSource.dataUrl}
+          onConfirm={handleCropConfirm}
+          onClose={() => setCropSource(null)}
+        />
+      )}
 
       {viewMode === "app" ? (
         // ── App view ────────────────────────────────────────────
