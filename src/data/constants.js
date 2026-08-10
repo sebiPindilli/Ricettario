@@ -37,6 +37,12 @@ export const F = {
 // aggiornarla qui invece che in tre punti separati (com'era prima).
 export const MOBILE_BREAKPOINT_CSS = "(max-width: 480px), (max-height: 480px) and (orientation: landscape)";
 
+// Aspect ratio fisso per il ritaglio della foto principale (PhotoCropOverlay)
+// — coerente con i contenitori 4:3-ish già usati nei vari punti di
+// visualizzazione (card libro, book page, PDF), che assorbono la piccola
+// differenza residua con object-fit:cover.
+export const DISH_PHOTO_ASPECT = 4 / 3;
+
 // ── Macro sections ────────────────────────────────────────────
 export const MACRO_SECTIONS = [
   { id:"basi",   label:"Preparazioni Base", emoji:"🧱", desc:"Salse, brodi, impasti e tecniche fondamentali" },
