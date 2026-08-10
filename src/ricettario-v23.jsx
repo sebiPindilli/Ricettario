@@ -86,7 +86,6 @@ import BookViewScreen from "./screens/BookViewScreen.jsx";
 import AdminUsersScreen from "./screens/AdminUsersScreen.jsx";
 import BetaButton from "./components/BetaButton.jsx";
 import TopStack from "./components/TopStack.jsx";
-import TimerFAB from "./components/TimerFAB.jsx";
 import CookingTimersProvider from "./components/CookingTimersProvider.jsx";
 
 // ── Subsection data helpers ────────────────────────────────────
@@ -198,7 +197,6 @@ const IPhone = ({ children }) => {
       {children}
     </div>
     <BetaButton/>
-    <TimerFAB/>
   </div>
   );
 };
