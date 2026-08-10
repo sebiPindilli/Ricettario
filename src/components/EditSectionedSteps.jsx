@@ -1,8 +1,9 @@
 import React, { useState, useRef } from "react";
 import { useTheme, useOnline } from "../context.js";
 import { F } from "../data/constants.js";
-import { stepPhotosOf, durationOf, parseStepDuration, stepNumbers, stepNumberLabel, MAX_STEP_PHOTOS, readImageFile } from "../utils/helpers.js";
+import { stepPhotosOf, durationOf, parseStepDuration, stepNumbers, stepNumberLabel, MAX_STEP_PHOTOS, readImageFile, moveItemsBetweenSections } from "../utils/helpers.js";
 import Toast from "./Toast.jsx";
+import SectionMovePicker from "./SectionMovePicker.jsx";
 
 // ── Editable sectioned steps ─────────────────────────────────────
 export default function EditSectionedSteps({ data, color, onUpdate }) {
@@ -15,6 +16,20 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
     setToast({ msg, visible:true });
     setTimeout(() => setToast({ msg:"", visible:false }), 2000);
   };
+  // Spostamento tra sottosezioni: movePickerFor null=chiuso,
+  // {mode:"single", si, ii} per un passo, {mode:"bulk"} per la selezione
+  // multipla. selectMode/selected sono indipendenti dallo spostamento
+  // singolo (sempre disponibile), attivabili dal bottone "Seleziona".
+  const [movePickerFor, setMovePickerFor] = useState(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState(() => new Set());
+  const toggleSelect = (si, ii) => setSelected(prev => {
+    const key = `${si}_${ii}`;
+    const next = new Set(prev);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    return next;
+  });
+  const exitSelectMode = () => { setSelectMode(false); setSelected(new Set()); };
   // Difesa: normalizza sempre gli item a oggetti {text, photos}, qualunque
   // sia il formato di provenienza (stringa, vecchio photo singolo, o già photos)
   const sections = data.map(sec => ({
@@ -68,6 +83,22 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
     onUpdate(sections.map((s,i) => i!==si ? s : { ...s, items: nextItems }));
   };
 
+  // Destinazione scelta nel picker → applica lo spostamento (singolo o
+  // multiplo, stessa funzione pura) e chiude/pulisce lo stato transitorio.
+  const handleMovePick = (destination) => {
+    const positions = movePickerFor.mode === "single"
+      ? [{ sectionIndex: movePickerFor.si, itemIndex: movePickerFor.ii }]
+      : [...selected].map(key => {
+          const [si, ii] = key.split("_").map(Number);
+          return { sectionIndex: si, itemIndex: ii };
+        });
+    onUpdate(moveItemsBetweenSections(sections, positions, destination));
+    const destLabel = destination.type === "new" ? (destination.name.trim() || "Sciolti") : (sections[destination.sectionIndex].section || "Sciolti");
+    showToast(`📂 Spostat${positions.length === 1 ? "o" : "i"} in «${destLabel}»`);
+    setMovePickerFor(null);
+    exitSelectMode();
+  };
+
   // Caricamento foto reale — stesso meccanismo dei Ricordi (input file
   // nascosto + FileReader → dataURL), condiviso da tutti i passaggi:
   // un solo input, il target (quale passaggio) è tenuto in pendingTarget.
@@ -102,8 +133,20 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
   return (
     <div>
       <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFile} style={{ display:"none" }}/>
-      <div style={{ fontFamily:F.ui, fontSize:12, color:th.appFaded, marginBottom:12 }}>
-        Scrivi i passi e, se vuoi, raggruppali in sottosezioni (es. "Pasta", "Salsa", "Impiattamento")
+      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+        <div style={{ flex:1, fontFamily:F.ui, fontSize:12, color:th.appFaded }}>
+          Scrivi i passi e, se vuoi, raggruppali in sottosezioni (es. "Pasta", "Salsa", "Impiattamento")
+        </div>
+        {selectMode && selected.size > 0 && (
+          <button onClick={() => setMovePickerFor({ mode:"bulk" })} style={{
+            flexShrink:0, padding:"6px 12px", border:"none", borderRadius:10,
+            background:color, color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer",
+          }}>📂 Sposta in… ({selected.size})</button>
+        )}
+        <button onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)} style={{
+          flexShrink:0, background:"none", border:"none", color:th.appFaded,
+          fontFamily:F.ui, fontSize:11.5, fontWeight:600, textDecoration:"underline", textUnderlineOffset:2, cursor:"pointer",
+        }}>{selectMode ? "Annulla" : "Seleziona"}</button>
       </div>
       {sections.map((sec, si) => (
         <div key={si} style={{ marginBottom:18 }}>
@@ -149,6 +192,11 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
           {sec.section && (
             <div style={{ height:1, background:`${color}44`, margin:"0 0 10px 12px" }}/>
           )}
+          {sec.section && sec.items.length === 0 && (
+            <div style={{ margin:"0 0 10px 12px", fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
+              Sottosezione vuota — puoi eliminarla con 🗑️ qui sopra, oppure lasciarla: se resterà vuota al salvataggio verrà rimossa automaticamente.
+            </div>
+          )}
 
           {/* Steps */}
           {sec.items.map((step, ii) => {
@@ -169,22 +217,36 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
                     fontFamily:F.ui, fontSize:11, fontWeight:700, flexShrink:0,
                   }}>{stepN}</div>
                   <div style={{ flex:1, fontFamily:F.ui, fontSize:11, color:th.appFaded }}>Passo {stepN}</div>
-                  <div style={{ display:"flex", flexDirection:"column", flexShrink:0 }}>
-                    <button onClick={() => moveStep(si, ii, -1)} disabled={ii === 0} title="Sposta su" style={{
-                      background:"none", border:"none", padding:0, height:14, lineHeight:"14px",
-                      fontSize:11, color: ii === 0 ? "#ddd" : th.appFaded,
-                      cursor: ii === 0 ? "default" : "pointer",
-                    }}>▲</button>
-                    <button onClick={() => moveStep(si, ii, 1)} disabled={ii === sec.items.length - 1} title="Sposta giù" style={{
-                      background:"none", border:"none", padding:0, height:14, lineHeight:"14px",
-                      fontSize:11, color: ii === sec.items.length - 1 ? "#ddd" : th.appFaded,
-                      cursor: ii === sec.items.length - 1 ? "default" : "pointer",
-                    }}>▼</button>
-                  </div>
-                  <button onClick={() => removeStep(si, ii)} style={{
-                    background:"none", border:"none", color:"#ccc",
-                    fontSize:16, cursor:"pointer",
-                  }}>×</button>
+                  {selectMode ? (
+                    <input
+                      type="checkbox"
+                      checked={selected.has(`${si}_${ii}`)}
+                      onChange={() => toggleSelect(si, ii)}
+                      style={{ width:18, height:18, flexShrink:0, cursor:"pointer" }}
+                    />
+                  ) : (
+                    <>
+                      <div style={{ display:"flex", flexDirection:"column", flexShrink:0 }}>
+                        <button onClick={() => moveStep(si, ii, -1)} disabled={ii === 0} title="Sposta su" style={{
+                          background:"none", border:"none", padding:0, height:14, lineHeight:"14px",
+                          fontSize:11, color: ii === 0 ? "#ddd" : th.appFaded,
+                          cursor: ii === 0 ? "default" : "pointer",
+                        }}>▲</button>
+                        <button onClick={() => moveStep(si, ii, 1)} disabled={ii === sec.items.length - 1} title="Sposta giù" style={{
+                          background:"none", border:"none", padding:0, height:14, lineHeight:"14px",
+                          fontSize:11, color: ii === sec.items.length - 1 ? "#ddd" : th.appFaded,
+                          cursor: ii === sec.items.length - 1 ? "default" : "pointer",
+                        }}>▼</button>
+                      </div>
+                      <button onClick={() => setMovePickerFor({ mode:"single", si, ii })} title="Sposta in…" style={{
+                        background:"none", border:"none", fontSize:15, cursor:"pointer", flexShrink:0, padding:0,
+                      }}>📂</button>
+                      <button onClick={() => removeStep(si, ii)} style={{
+                        background:"none", border:"none", color:"#ccc",
+                        fontSize:16, cursor:"pointer",
+                      }}>×</button>
+                    </>
+                  )}
                 </div>
                 <textarea
                   value={step.text}
@@ -246,25 +308,37 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
             );
           })}
 
-          <button onClick={() => addStep(si)} style={{
-            marginLeft:12, padding:"7px 14px",
-            border:`1.5px dashed ${th.appBorder}`,
-            borderRadius:10, background:"transparent",
-            color:th.appFaded, fontFamily:F.ui, fontSize:12,
-            cursor:"pointer",
-          }}>+ Aggiungi passo</button>
+          {!selectMode && (
+            <button onClick={() => addStep(si)} style={{
+              marginLeft:12, padding:"7px 14px",
+              border:`1.5px dashed ${th.appBorder}`,
+              borderRadius:10, background:"transparent",
+              color:th.appFaded, fontFamily:F.ui, fontSize:12,
+              cursor:"pointer",
+            }}>+ Aggiungi passo</button>
+          )}
         </div>
       ))}
 
-      <button onClick={addSection} style={{
-        width:"100%", padding:"12px",
-        border:`1.5px dashed ${color}`,
-        borderRadius:12, background:`${color}08`,
-        color:color, fontFamily:F.ui, fontSize:13, fontWeight:600,
-        cursor:"pointer", marginTop:4,
-        display:"flex", alignItems:"center", justifyContent:"center", gap:8,
-      }}>＋ Aggiungi sottosezione</button>
+      {!selectMode && (
+        <button onClick={addSection} style={{
+          width:"100%", padding:"12px",
+          border:`1.5px dashed ${color}`,
+          borderRadius:12, background:`${color}08`,
+          color:color, fontFamily:F.ui, fontSize:13, fontWeight:600,
+          cursor:"pointer", marginTop:4,
+          display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+        }}>＋ Aggiungi sottosezione</button>
+      )}
       <Toast msg={toast.msg} visible={toast.visible}/>
+      {movePickerFor && (
+        <SectionMovePicker
+          sections={sections}
+          excludeSectionIndex={movePickerFor.mode === "single" ? movePickerFor.si : null}
+          onPick={handleMovePick}
+          onClose={() => setMovePickerFor(null)}
+        />
+      )}
     </div>
   );
 }
