@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest run tests/bookRoles.test.js tests/dirtyTracking.test.js tests/buildIngredientDict.test.js tests/stepDuration.test.js tests/timers.test.js",
+    "test": "vitest run tests/bookRoles.test.js tests/dirtyTracking.test.js tests/buildIngredientDict.test.js tests/stepDuration.test.js tests/timers.test.js tests/geminiNormalize.test.js",
     "test:rules": "firebase emulators:exec --only firestore \"vitest run tests/firestore.rules.test.js tests/manageBookMember.test.js tests/recipeFlush.test.js tests/systemFlush.test.js\""
   },
   "dependencies": {
