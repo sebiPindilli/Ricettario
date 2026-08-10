@@ -35,3 +35,13 @@ export const CookingTimersCtx = React.createContext({
   topStackHeight: 0, setTopStackHeight: () => {},
 });
 export const useCookingTimers = () => React.useContext(CookingTimersCtx);
+
+// ── Scan extraction context — stato dell'estrazione AI (da link/testo/foto),
+// stesso motivo del context dei timer: vive sopra lo switch di `screen` così
+// un'estrazione avviata da AddFromLinkScreen/ScanScreen prosegue anche se
+// l'utente naviga altrove prima che Gemini risponda (vedi
+// ScanExtractionProvider). Un solo job alla volta a livello di app.
+export const ScanExtractionCtx = React.createContext({
+  job: null, startExtraction: () => {}, retryExtraction: () => {}, dismissJob: () => {},
+});
+export const useScanExtraction = () => React.useContext(ScanExtractionCtx);

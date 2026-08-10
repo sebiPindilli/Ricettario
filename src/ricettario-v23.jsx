@@ -87,6 +87,7 @@ import AdminUsersScreen from "./screens/AdminUsersScreen.jsx";
 import BetaButton from "./components/BetaButton.jsx";
 import TopStack from "./components/TopStack.jsx";
 import CookingTimersProvider from "./components/CookingTimersProvider.jsx";
+import ScanExtractionProvider from "./components/ScanExtractionProvider.jsx";
 
 // ── Subsection data helpers ────────────────────────────────────
 // ingredients and steps can be either:
@@ -1310,6 +1311,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
 
   return (
     <CookingTimersProvider me={me} initialPrefs={initialTimerAlerts}>
+    <ScanExtractionProvider>
     <RoleCtx.Provider value={role}>
     <BetaEnabledCtx.Provider value={betaEnabled}>
     <OnlineCtx.Provider value={isOnline}>
@@ -1723,6 +1725,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     </OnlineCtx.Provider>
     </BetaEnabledCtx.Provider>
     </RoleCtx.Provider>
+    </ScanExtractionProvider>
     </CookingTimersProvider>
   );
 }
