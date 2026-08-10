@@ -124,7 +124,13 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
           </div>
         </div>
 
-        {!loading && (
+        {!loading && (() => {
+          // Il bottone deve attivarsi se l'utente ha valorizzato ALMENO UNO
+          // dei due input (URL, oppure testo/HTML incollato o caricato da
+          // file — questi due condividono lo stesso state htmlContent):
+          // handleAnalyze gestisce già entrambi i casi separatamente.
+          const canSubmit = urlInput.trim() || htmlContent.trim();
+          return (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {/* Input URL */}
             <div>
@@ -157,19 +163,19 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
             {/* Submit Button */}
             <button
               onClick={handleAnalyze}
-              disabled={!urlInput.trim()}
+              disabled={!canSubmit}
               style={{
                 width: "100%",
                 padding: "12px 16px",
                 borderRadius: 12,
                 border: "none",
-                background: urlInput.trim() ? th.appAccent : th.appBorder,
+                background: canSubmit ? th.appAccent : th.appBorder,
                 color: "#fff",
                 fontFamily: F.ui,
                 fontSize: 13,
                 fontWeight: 700,
-                cursor: urlInput.trim() ? "pointer" : "default",
-                boxShadow: urlInput.trim() ? `0 4px 12px rgba(196,89,58,0.25)` : "none",
+                cursor: canSubmit ? "pointer" : "default",
+                boxShadow: canSubmit ? `0 4px 12px rgba(196,89,58,0.25)` : "none",
                 marginTop: 4
               }}
             >
@@ -265,7 +271,8 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
               </div>
             )}
           </div>
-        )}
+          );
+        })()}
 
         {/* Loading State */}
         {loading && (
