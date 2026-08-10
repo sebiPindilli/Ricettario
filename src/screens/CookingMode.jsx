@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { useTheme, useCookingTimers } from "../context.js";
 import { F } from "../data/constants.js";
 import { flattenSteps, flattenIngredients, ingredientToText, scaleIngredient, stepNumberLabel } from "../utils/helpers.js";
 import PhotoLightbox from "../components/PhotoLightbox.jsx";
 import InfoButton from "../components/InfoButton.jsx";
 import TimersPopup from "../components/TimersPopup.jsx";
+import TimerFAB from "../components/TimerFAB.jsx";
 import { guideCucina } from "../data/guideContent.jsx";
 
 // ══════════════════════════════════════════════════════════════
@@ -12,7 +13,7 @@ import { guideCucina } from "../data/guideContent.jsx";
 // ══════════════════════════════════════════════════════════════
 export default function CookingMode({ recipe, scale, onClose }) {
   const th = useTheme();
-  const { timers, setCookingModeActive } = useCookingTimers();
+  const { setCookingModeActive } = useCookingTimers();
 
   // Flag globale letto da TopStack.jsx (nasconde la barra timer, che ha
   // senso solo FUORI da qui, dove questa schermata ha il proprio FAB
@@ -34,11 +35,12 @@ export default function CookingMode({ recipe, scale, onClose }) {
   // idx: -1 = intro ingredienti, 0..steps.length-1 = step, steps.length = fine
   const [idx, setIdx] = useState(-1);
   const [lightbox, setLightbox] = useState(null);
-  // Popup timer — il TimerFAB globale resta coperto dal fullscreen di questa
-  // schermata (stesso zIndex 400, sopra i suoi 150), quindi qui serve un
-  // punto d'accesso proprio. `null` = chiuso; altrimenti eventuale draft
-  // {label, minutes} da un pulsante per-step.
+  // Popup timer per-step — invariato: precompila etichetta/minuti dal
+  // pulsante "▶ Timer X min" di uno step. Il FAB dedicato (sotto) gestisce
+  // il proprio TimersPopup standalone in autonomia.
   const [timerPopup, setTimerPopup] = useState(null);
+  const navRef = useRef(null);
+  const [navHeight, setNavHeight] = useState(0);
 
   // Wake Lock — schermo acceso per tutta la Modalità Cucina, anche a mani
   // impastate lontane dal telefono. No-op silenzioso se l'API non esiste
@@ -69,6 +71,23 @@ export default function CookingMode({ recipe, scale, onClose }) {
   const isIntro = idx === -1;
   const isDone = idx >= steps.length;
   const step = steps[idx];
+
+  // Altezza reale della bottom nav — il FAB dedicato ai timer (sotto) deve
+  // restare sollevato sopra di essa senza coprirne i tap. Rimisurata ad ogni
+  // cambio di isDone (la nav sparisce del tutto sulla schermata finale) e,
+  // come rete di sicurezza, via ResizeObserver — che in alcuni ambienti non
+  // scatta in modo affidabile (vedi TopStack.jsx), quindi non ci si affida
+  // SOLO a lui.
+  useLayoutEffect(() => {
+    setNavHeight(navRef.current ? navRef.current.offsetHeight : 0);
+  }, [isDone]);
+  useLayoutEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setNavHeight(el.offsetHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [isDone]);
 
   const goTo = (target) => setIdx(target);
   const prev = () => setIdx(i => Math.max(-1, i - 1));
@@ -159,7 +178,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
   );
 
   return (
-    <div style={{ position:"fixed", inset:0, zIndex:400, background:th.appInk, display:"flex", flexDirection:"column", color:"#fff" }}>
+    <div className="cooking-mode-shell" style={{ position:"fixed", inset:0, zIndex:400, background:th.appInk, display:"flex", flexDirection:"column", color:"#fff" }}>
       {/* Header */}
       <div style={{ padding:"14px 18px 10px", display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.12)", border:"none", borderRadius:8, padding:"6px 10px", color:"#fff", fontSize:14, cursor:"pointer" }}>✕</button>
@@ -172,14 +191,6 @@ export default function CookingMode({ recipe, scale, onClose }) {
         {!isIntro && !isDone && (
           <div style={{ fontFamily:F.ui, fontSize:12, color:"rgba(255,255,255,0.6)" }}>{idx+1}/{steps.length}</div>
         )}
-        <button
-          onClick={(e) => { e.stopPropagation(); setTimerPopup({}); }}
-          title="Timer"
-          style={{
-            display:"flex", alignItems:"center", gap:4, background:"rgba(255,255,255,0.12)", border:"none",
-            borderRadius:8, padding:"6px 10px", color:"#fff", fontFamily:F.ui, fontSize:13, cursor:"pointer",
-          }}
-        >⏱{timers.length > 0 && <span style={{ fontWeight:700 }}>{timers.length}</span>}</button>
         <InfoButton dark>{guideCucina}</InfoButton>
       </div>
 
@@ -272,11 +283,13 @@ export default function CookingMode({ recipe, scale, onClose }) {
 
       {/* Bottom nav */}
       {!isDone && (
-        <div style={{ display:"flex", flexShrink:0, borderTop:"1px solid rgba(255,255,255,0.1)" }}>
+        <div ref={navRef} style={{ display:"flex", flexShrink:0, borderTop:"1px solid rgba(255,255,255,0.1)" }}>
           <button onClick={(e) => { e.stopPropagation(); prev(); }} disabled={isIntro} style={{ flex:1, padding:"16px", background:"none", border:"none", color: isIntro ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.75)", fontFamily:F.ui, fontSize:14, cursor: isIntro ? "default" : "pointer", borderRight:"1px solid rgba(255,255,255,0.1)" }}>‹ Indietro</button>
           <button onClick={(e) => { e.stopPropagation(); next(); }} style={{ flex:1, padding:"16px", background:"none", border:"none", color:th.appAccent2, fontFamily:F.ui, fontSize:14, fontWeight:700, cursor:"pointer" }}>{isIntro ? "Inizia →" : idx === steps.length-1 ? "Fine ✓" : "Avanti ›"}</button>
         </div>
       )}
+
+      <TimerFAB anchorSelector=".cooking-mode-shell" bottomOffset={isDone ? 20 : (navHeight || 56) + 20} />
 
       {lightbox && (
         <PhotoLightbox
