@@ -74,23 +74,27 @@ export default function TimersPopup({ onClose, initialDraft = null }) {
             const expired = isExpired(t, now);
             return (
               <div key={t.id} className={expired && prefs.visual ? "timer-pulse" : undefined} style={{
-                display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", marginBottom: 8,
+                padding: "10px 12px", marginBottom: 8,
                 borderRadius: 12, border: `1.5px solid ${expired ? "#C0524A" : th.appBorder}`,
                 background: expired ? "#C0524A18" : th.appCard,
               }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: F.ui, fontSize: 12, fontWeight: 700, color: th.appInk, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.label}</div>
-                  <div style={{ fontFamily: F.display, fontSize: 18, color: expired ? "#C0524A" : th.appAccent }}>
-                    {expired ? formatOverdue(-rem) : formatRemaining(rem)}
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: F.ui, fontSize: 12, fontWeight: 700, color: th.appInk, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.label}</div>
+                    <div style={{ fontFamily: F.display, fontSize: 18, color: expired ? "#C0524A" : th.appAccent }}>
+                      {expired ? formatOverdue(-rem) : formatRemaining(rem)}
+                    </div>
                   </div>
+                  <button onClick={() => cancelTimer(t.id)} title={expired ? "Chiudi" : "Annulla"} style={smallBtnStyle(th, "#C0524A")}>{expired ? "OK" : "✕"}</button>
                 </div>
                 {!expired && (
-                  <>
-                    <button onClick={() => adjustTimer(t.id, -1)} title="-1 minuto" style={smallBtnStyle(th)}>−1</button>
-                    <button onClick={() => adjustTimer(t.id, 1)} title="+1 minuto" style={smallBtnStyle(th)}>+1</button>
-                  </>
+                  <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                    <button onClick={() => adjustTimer(t.id, -10)} title="-10 minuti" style={{ ...smallBtnStyle(th), flex: 1, width: "auto" }}>−10</button>
+                    <button onClick={() => adjustTimer(t.id, -1)} title="-1 minuto" style={{ ...smallBtnStyle(th), flex: 1, width: "auto" }}>−1</button>
+                    <button onClick={() => adjustTimer(t.id, 1)} title="+1 minuto" style={{ ...smallBtnStyle(th), flex: 1, width: "auto" }}>+1</button>
+                    <button onClick={() => adjustTimer(t.id, 10)} title="+10 minuti" style={{ ...smallBtnStyle(th), flex: 1, width: "auto" }}>+10</button>
+                  </div>
                 )}
-                <button onClick={() => cancelTimer(t.id)} title={expired ? "Chiudi" : "Annulla"} style={smallBtnStyle(th, "#C0524A")}>{expired ? "OK" : "✕"}</button>
               </div>
             );
           })}
