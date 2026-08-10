@@ -12,7 +12,16 @@ import { guideCucina } from "../data/guideContent.jsx";
 // ══════════════════════════════════════════════════════════════
 export default function CookingMode({ recipe, scale, onClose }) {
   const th = useTheme();
-  const { timers } = useCookingTimers();
+  const { timers, setCookingModeActive } = useCookingTimers();
+
+  // Flag globale letto da TopStack.jsx (nasconde la barra timer, che ha
+  // senso solo FUORI da qui, dove questa schermata ha il proprio FAB
+  // dedicato) — vive nel ciclo di vita di questo componente, non nei suoi
+  // due punti di mount (RecipeScreen.jsx/EmptyFridgeScreen.jsx).
+  useEffect(() => {
+    setCookingModeActive(true);
+    return () => setCookingModeActive(false);
+  }, [setCookingModeActive]);
   const baseServings = recipe.servings || 1;
   const factor = scale?.factor ?? 1;
   const scaled = factor !== 1;
