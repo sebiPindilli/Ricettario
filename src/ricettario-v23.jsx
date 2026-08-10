@@ -85,6 +85,7 @@ import BooksScreen from "./screens/BooksScreen.jsx";
 import BookViewScreen from "./screens/BookViewScreen.jsx";
 import AdminUsersScreen from "./screens/AdminUsersScreen.jsx";
 import BetaButton from "./components/BetaButton.jsx";
+import TopStack from "./components/TopStack.jsx";
 import TimerFAB from "./components/TimerFAB.jsx";
 import CookingTimersProvider from "./components/CookingTimersProvider.jsx";
 
@@ -1332,15 +1333,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
       </div>
 
       <IPhone>
-        {!isOnline && (
-          <div style={{
-            position:"fixed", top:0, left:0, right:0, zIndex:9999,
-            background:"#B8973A", color:"#fff", textAlign:"center",
-            fontFamily:"sans-serif", fontSize:11, padding:"5px 10px",
-          }}>
-            Sei offline — le modifiche verranno salvate alla riconnessione
-          </div>
-        )}
+        <TopStack isOnline={isOnline}/>
         {screen==="cover" && (
           <CoverScreen onEnter={() => setScreen("landing")}/>
         )}
