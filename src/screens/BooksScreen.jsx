@@ -23,7 +23,7 @@ const myRoleInBook = (b, me) => b.owner === me ? "proprietario" : normalizeRole(
 export default function BooksScreen({
   books, activeBookId, me, activeRecipes,
   onSwitch, onCreate, onRename, onDelete, onAddMember, onRemoveMember, onChangeMemberPermission,
-  onCopyRecipes, onExportCode, onImportCode,
+  onCopyRecipes, onExportCode, onExportPDF, onImportCode,
   defaultBookId, onSetDefault,
   onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping,
 }) {
@@ -453,6 +453,13 @@ export default function BooksScreen({
             background:th.appAccent, color:"#fff",
             fontFamily:F.ui, fontSize:13, fontWeight:700, cursor:"pointer", marginBottom:8,
           }}>📤 Esporta ricette da "{activeBook?.name}"</button>
+          {onExportPDF && (
+            <button onClick={onExportPDF} style={{
+              width:"100%", padding:"13px", borderRadius:12,
+              border:`1.5px solid ${th.appBorder}`, background:"transparent", color:th.appInk,
+              fontFamily:F.ui, fontSize:13, fontWeight:700, cursor:"pointer", marginBottom:8,
+            }}>📄 Esporta "{activeBook?.name}" in PDF</button>
+          )}
 
           {importOpen ? (
             <div style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:12, padding:"12px" }}>

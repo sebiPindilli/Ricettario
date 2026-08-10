@@ -1451,6 +1451,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             onChangeMemberPermission={changeMemberPermission}
             onCopyRecipes={copyRecipesToBook}
             onExportCode={exportShareCode}
+            onExportPDF={() => exportRecipesPDFByIds(recipes.map(r => r.id))}
             onImportCode={importShareCode}
             defaultBookId={defaultBookId}
             onSetDefault={(id) => { setDefaultBookId(id); setDefaultBook(me, id); }}
