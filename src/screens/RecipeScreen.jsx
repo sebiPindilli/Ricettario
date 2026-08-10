@@ -132,14 +132,16 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
           onClose={() => setExportOpen(false)}
         />
       )}
-      <div style={{ padding:"8px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"center", gap:8 }}>
-        <BackBtn onBack={onBack} dark={viewMode==="book"}/>
+      <div style={{ padding:"8px 20px 0", display:"flex", justifyContent:"center", alignItems:"center", gap:8 }}>
         <div style={{ display:"flex", alignItems:"center", gap:6 }}>
           <span style={{ fontFamily:F.ui, fontSize:12, fontWeight:700, color: viewMode==="book" ? "#555" : "#7A6E5F" }}>Scheda Ricetta</span>
           <InfoButton>{guideDettaglioRicetta}</InfoButton>
         </div>
       </div>
       <div style={{ padding:"8px 20px 0", display:"flex", justifyContent:"flex-end", alignItems:"center", gap:6 }}>
+        <div style={{ marginRight:"auto" }}>
+          <BackBtn onBack={onBack} dark={viewMode==="book"}/>
+        </div>
         {/* View toggle */}
         <div style={{ display:"flex", gap:0 }}>
           {[["app","App"],["book","📖"]].map(([mode,label]) => (
