@@ -213,6 +213,25 @@ const IPhone = ({ children }) => {
 // ══════════════════════════════════════════════════════════════
 // PDF EXPORT — generates a printable recipe PDF via browser
 // ══════════════════════════════════════════════════════════════
+// Apre l'HTML generato in una scheda dedicata e ne avvia la stampa. Un
+// iframe nascosto sembrerebbe la via più "silenziosa", ma su Chrome ha un
+// bug di lunga data (issues.chromium.org/issues/40896385 e /41323115):
+// contentWindow.print() stampa l'intera scheda ATTIVA invece del solo
+// iframe — esattamente il sintomo osservato (pagina 1 = screenshot della
+// vista corrente, pagina 2 vuota per l'overflow del contenuto vero, breve).
+// Una scheda vera dedicata al solo contenuto da stampare non ha questa
+// ambiguità: quando si stampa, è l'unico documento di quella scheda.
+function printHtmlDocument(html) {
+  const printWin = window.open("", "_blank");
+  if (!printWin) return; // popup bloccato dal browser — nulla da fare lato codice
+  printWin.document.open();
+  printWin.document.write(html);
+  printWin.document.close();
+  printWin.focus();
+  printWin.onafterprint = () => printWin.close();
+  setTimeout(() => printWin.print(), 400);
+}
+
 const exportRecipePDF = (recipe) => {
   const isSec = (arr) => Array.isArray(arr) && arr.length > 0 && typeof arr[0] === "object" && "section" in arr[0];
 
@@ -287,19 +306,7 @@ const exportRecipePDF = (recipe) => {
 </body>
 </html>`;
 
-  // Crea un iframe nascosto, ci inietta l'HTML e avvia la stampa
-  // → il browser mostra "Salva come PDF" nella finestra di stampa
-  const iframe = document.createElement("iframe");
-  iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:none;";
-  document.body.appendChild(iframe);
-  iframe.contentDocument.open();
-  iframe.contentDocument.write(html);
-  iframe.contentDocument.close();
-  iframe.contentWindow.focus();
-  setTimeout(() => {
-    iframe.contentWindow.print();
-    setTimeout(() => document.body.removeChild(iframe), 1000);
-  }, 400);
+  printHtmlDocument(html);
 };
 
 // ══════════════════════════════════════════════════════════════
@@ -440,17 +447,7 @@ const exportBookPDF = (recipes, sections = MACRO_SECTIONS) => {
 </body>
 </html>`;
 
-  const iframe = document.createElement("iframe");
-  iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:none;";
-  document.body.appendChild(iframe);
-  iframe.contentDocument.open();
-  iframe.contentDocument.write(html);
-  iframe.contentDocument.close();
-  iframe.contentWindow.focus();
-  setTimeout(() => {
-    iframe.contentWindow.print();
-    setTimeout(() => document.body.removeChild(iframe), 1000);
-  }, 400);
+  printHtmlDocument(html);
 };
 
 // ══════════════════════════════════════════════════════════════
