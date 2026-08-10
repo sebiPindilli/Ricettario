@@ -91,6 +91,66 @@ export const stripPhotolessStep = (s) => {
   return out;
 };
 
+// Sposta uno o più item (step o ingredienti — la forma {section,items} è
+// identica per entrambi, questa funzione non guarda mai il contenuto degli
+// item) da una o più sezioni sorgente a un'unica destinazione, preservando
+// l'ordine relativo ORIGINALE (visuale), non l'ordine di selezione — punto
+// critico per il caso reale "ho scritto 8 passaggi, i primi 4 sono
+// l'impasto": selezionare fuori ordine non deve alterare il risultato.
+//
+// positions: [{sectionIndex, itemIndex}, ...] — identificazione posizionale,
+// mai per contenuto testuale (il testo può ripetersi in più punti).
+// destination: {type:"existing", sectionIndex} | {type:"new", name}
+// ("new" con name:"" crea un nuovo gruppo sciolto, se non ne esiste già uno).
+//
+// La sezione sorgente svuotata da uno spostamento RESTA nell'array come
+// sezione vuota — ripulirla è responsabilità della normalizzazione a
+// salvataggio (normalizeIngredients/normalizeSteps), non di questa funzione.
+export const moveItemsBetweenSections = (sections, positions, destination) => {
+  const sorted = [...positions].sort((a, b) =>
+    a.sectionIndex - b.sectionIndex || a.itemIndex - b.itemIndex
+  );
+  const movedItems = sorted.map(({ sectionIndex, itemIndex }) => sections[sectionIndex].items[itemIndex]);
+
+  // Rimozione per indice via filter+Set (mai splice sequenziali/ordine
+  // decrescente: filter valuta l'array originale una sola volta, zero
+  // problemi di shift anche con più rimozioni nella stessa sezione).
+  const excludeBySection = new Map();
+  sorted.forEach(({ sectionIndex, itemIndex }) => {
+    if (!excludeBySection.has(sectionIndex)) excludeBySection.set(sectionIndex, new Set());
+    excludeBySection.get(sectionIndex).add(itemIndex);
+  });
+  let next = sections.map((sec, si) => {
+    const exclude = excludeBySection.get(si);
+    if (!exclude) return sec;
+    return { ...sec, items: sec.items.filter((_, ii) => !exclude.has(ii)) };
+  });
+
+  let targetIndex;
+  if (destination.type === "new") {
+    next = [...next, { section: destination.name.trim(), items: [] }];
+    targetIndex = next.length - 1;
+  } else {
+    targetIndex = destination.sectionIndex;
+  }
+
+  return next.map((sec, si) => si !== targetIndex ? sec : { ...sec, items: [...sec.items, ...movedItems] });
+};
+
+// Normalizza gli step a salvataggio: ripulisce le foto/durata assenti
+// (stripPhotolessStep) e scarta step a testo vuoto; sectioned-aware, come
+// normalizeIngredients — scarta anche le sezioni rimaste vuote SENZA nome
+// (una sezione vuota ma con nome resta, l'utente potrebbe starla ancora
+// riempiendo o aver solo momentaneamente svuotato tutti i suoi step).
+// Unica fonte di verità: prima duplicata (con piccola asimmetria) tra
+// saveNewRecipe e EditScreen.jsx, che non filtrava affatto gli step vuoti.
+export const normalizeSteps = (steps) =>
+  isSectioned(steps)
+    ? steps
+        .map(sec => ({ ...sec, items: sec.items.map(stripPhotolessStep).filter(s => s.trim ? s.trim() : s) }))
+        .filter(sec => sec.items.length > 0 || sec.section)
+    : (steps || []).map(stripPhotolessStep).filter(s => s.trim ? s.trim() : s);
+
 // Foto principale (dishPhoto) di una ricetta: stessa logica di scarto dei
 // placeholder finti usata per le foto degli step, ma per un valore singolo.
 export const dishPhotoOf = (recipe) => isRealStepPhoto(recipe?.dishPhoto) ? recipe.dishPhoto : null;

@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   sortSectionsAltroLast, sortCategoriesBaseFirst,
-  isSectioned, toSectioned, fromSectioned, stripPhotolessStep, stepPhotosOf,
-  stepNumbers, stepNumberLabel, dishPhotoOf, readImageFile,
+  isSectioned, toSectioned, fromSectioned, stepPhotosOf,
+  stepNumbers, stepNumberLabel, dishPhotoOf, readImageFile, normalizeSteps,
   normName, uid, fmtQty, ingredientToText, scaleIngredient,
   flattenIngredients, collectAllIngredients, buildIngredientDict,
   ingDictIndex, resolveIngId, mapIngredientsStruct, flattenSteps,
@@ -1227,13 +1227,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
       sourceUrl: draft.sourceUrl || "",
       category: draft.tags[0] || "Altro",
       ingredients: normalizeIngredients(draft.ingredients),
-      // sectioned-aware, come normalizeIngredients: ripulisce gli item di
-      // ciascuna sottosezione (mai il wrapper), scarta le sezioni rimaste vuote
-      steps: isSectioned(draft.steps)
-        ? draft.steps
-            .map(sec => ({ ...sec, items: sec.items.map(stripPhotolessStep).filter(s => s.trim ? s.trim() : s) }))
-            .filter(sec => sec.items.length > 0 || sec.section)
-        : draft.steps.map(stripPhotolessStep).filter(s => s.trim ? s.trim() : s),
+      steps: normalizeSteps(draft.steps),
       memories: [],
       comments: [],
     };

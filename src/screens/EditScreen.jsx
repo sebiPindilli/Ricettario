@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useTheme } from "../context.js";
 import { F, MACRO_SECTIONS, DEFAULT_UNIT_SUGGESTIONS } from "../data/constants.js";
-import { isSectioned, toSectioned, fromSectioned, stripPhotolessStep, stepPhotosOf, durationOf, collectAllIngredients, flattenIngredients } from "../utils/helpers.js";
+import { isSectioned, toSectioned, fromSectioned, stripPhotolessStep, stepPhotosOf, durationOf, collectAllIngredients, flattenIngredients, normalizeSteps } from "../utils/helpers.js";
 import BackBtn from "../components/BackBtn.jsx";
 import EditField from "../components/EditField.jsx";
 import EditLabel from "../components/EditLabel.jsx";
@@ -39,14 +39,12 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
     set("tags", draft.tags.includes(tag) ? draft.tags.filter(t=>t!==tag) : [...draft.tags, tag]);
   };
 
-  // Before saving, convert steps back to plain strings if no photo
-  // (sectioned-aware: con sottosezioni ripulisce gli item di ciascuna,
-  // mai il wrapper {section, items} — vedi bug #steps-sezionati)
+  // Normalizzazione a salvataggio unificata con saveNewRecipe (vedi
+  // normalizeSteps in helpers.js) — prima questo screen usava solo
+  // stripPhotolessStep, senza filtrare step/sezioni vuote come invece
+  // faceva già la creazione di una ricetta nuova: bug corretto qui.
   const handleSave = () => {
-    const steps = isSectioned(draft.steps)
-      ? draft.steps.map(sec => ({ ...sec, items: sec.items.map(stripPhotolessStep) }))
-      : draft.steps.map(stripPhotolessStep);
-    onSave({ ...draft, steps });
+    onSave({ ...draft, steps: normalizeSteps(draft.steps) });
   };
 
 
