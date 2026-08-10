@@ -1,7 +1,10 @@
 import React, { useState } from "react";
 import { useTheme } from "../context.js";
 import { F, DEFAULT_UNIT_SUGGESTIONS } from "../data/constants.js";
+import { moveItemsBetweenSections } from "../utils/helpers.js";
 import AutocompleteInput from "./AutocompleteInput.jsx";
+import SectionMovePicker from "./SectionMovePicker.jsx";
+import Toast from "./Toast.jsx";
 
 // ── Editable sectioned ingredient list ───────────────────────────
 export default function EditSectionedList({ data, color, itemType, onUpdate, nameSuggestions = [], unitSuggestions = DEFAULT_UNIT_SUGGESTIONS }) {
@@ -9,6 +12,35 @@ export default function EditSectionedList({ data, color, itemType, onUpdate, nam
   const sections = data;
   const [nutriOpen, setNutriOpen] = useState(null); // "si_ii" con la riga % aperta
   const [nutriInfo, setNutriInfo] = useState(false); // popup "i" mostrato mentre premuto
+  const [toast, setToast] = useState({ msg:"", visible:false });
+  const showToast = (msg) => {
+    setToast({ msg, visible:true });
+    setTimeout(() => setToast({ msg:"", visible:false }), 2000);
+  };
+  // Spostamento tra sottosezioni — stesso schema di EditSectionedSteps.jsx.
+  const [movePickerFor, setMovePickerFor] = useState(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState(() => new Set());
+  const toggleSelect = (si, ii) => setSelected(prev => {
+    const key = `${si}_${ii}`;
+    const next = new Set(prev);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    return next;
+  });
+  const exitSelectMode = () => { setSelectMode(false); setSelected(new Set()); };
+  const handleMovePick = (destination) => {
+    const positions = movePickerFor.mode === "single"
+      ? [{ sectionIndex: movePickerFor.si, itemIndex: movePickerFor.ii }]
+      : [...selected].map(key => {
+          const [si, ii] = key.split("_").map(Number);
+          return { sectionIndex: si, itemIndex: ii };
+        });
+    onUpdate(moveItemsBetweenSections(sections, positions, destination));
+    const destLabel = destination.type === "new" ? (destination.name.trim() || "Sciolti") : (sections[destination.sectionIndex].section || "Sciolti");
+    showToast(`📂 Spostat${positions.length === 1 ? "o" : "i"} in «${destLabel}»`);
+    setMovePickerFor(null);
+    exitSelectMode();
+  };
 
   const updateSection = (si, key, val) => {
     const next = sections.map((s,i) => i===si ? {...s,[key]:val} : s);
@@ -36,8 +68,20 @@ export default function EditSectionedList({ data, color, itemType, onUpdate, nam
 
   return (
     <div>
-      <div style={{ fontFamily:F.ui, fontSize:12, color:th.appFaded, marginBottom:12 }}>
-        Aggiungi ingredienti e, se vuoi, raggruppali in sottosezioni (es. "Pasta", "Sugo", "Guarnizione")
+      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+        <div style={{ flex:1, fontFamily:F.ui, fontSize:12, color:th.appFaded }}>
+          Aggiungi ingredienti e, se vuoi, raggruppali in sottosezioni (es. "Pasta", "Sugo", "Guarnizione")
+        </div>
+        {selectMode && selected.size > 0 && (
+          <button onClick={() => setMovePickerFor({ mode:"bulk" })} style={{
+            flexShrink:0, padding:"6px 12px", border:"none", borderRadius:10,
+            background:color, color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer",
+          }}>📂 Sposta in… ({selected.size})</button>
+        )}
+        <button onClick={() => { if (selectMode) { exitSelectMode(); } else { setNutriOpen(null); setSelectMode(true); } }} style={{
+          flexShrink:0, background:"none", border:"none", color:th.appFaded,
+          fontFamily:F.ui, fontSize:11.5, fontWeight:600, textDecoration:"underline", textUnderlineOffset:2, cursor:"pointer",
+        }}>{selectMode ? "Annulla" : "Seleziona"}</button>
       </div>
       {sections.map((sec, si) => (
         <div key={si} style={{ marginBottom:16 }}>
@@ -65,6 +109,11 @@ export default function EditSectionedList({ data, color, itemType, onUpdate, nam
               }}>🗑️</button>
             )}
           </div>
+          {sec.section && sec.items.length === 0 && (
+            <div style={{ margin:"0 0 8px 12px", fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
+              Sottosezione vuota — puoi eliminarla con 🗑️ qui sopra, oppure lasciarla: se resterà vuota al salvataggio verrà rimossa automaticamente.
+            </div>
+          )}
 
           {/* Items */}
           {sec.items.map((item, ii) => {
@@ -89,7 +138,17 @@ export default function EditSectionedList({ data, color, itemType, onUpdate, nam
               return (
                 <React.Fragment key={ii}>
                 <div style={{ display:"flex", gap:5, marginBottom: pctOpen ? 4 : 6, alignItems:"center", paddingLeft:12 }}>
-                  <span style={{ color:th.appAccent2, fontSize:12, flexShrink:0 }}>✦</span>
+                  {selectMode ? (
+                    <input
+                      type="checkbox"
+                      checked={selected.has(`${si}_${ii}`)}
+                      onChange={() => toggleSelect(si, ii)}
+                      style={{ width:18, height:18, flexShrink:0, cursor:"pointer" }}
+                    />
+                  ) : (
+                    <span style={{ color:th.appAccent2, fontSize:12, flexShrink:0 }}>✦</span>
+                  )}
+                  <div style={{ display:"flex", gap:5, alignItems:"center", flex:1, minWidth:0, ...(selectMode ? disabledStyle : {}) }}>
                   <AutocompleteInput
                     value={name}
                     onChange={v => patch({ name: v })}
@@ -144,10 +203,18 @@ export default function EditSectionedList({ data, color, itemType, onUpdate, nam
                     <span style={{ fontSize:14, filter: hasPct ? "none" : "grayscale(1) opacity(0.55)" }}>🍎</span>
                     <span style={{ fontFamily:F.ui, fontSize:8, color: hasPct ? th.appAccent : th.appFaded, fontWeight:700 }}>{hasPct ? String(ing.nutriPct).replace(".", ",")+"%" : "%"}</span>
                   </button>
-                  <button onClick={() => removeItem(si, ii)} style={{
-                    background:"none", border:"none", color:"#ccc",
-                    fontSize:16, cursor:"pointer", flexShrink:0, padding:"0 2px",
-                  }}>×</button>
+                  </div>
+                  {!selectMode && (
+                    <>
+                      <button onClick={() => setMovePickerFor({ mode:"single", si, ii })} title="Sposta in…" style={{
+                        background:"none", border:"none", fontSize:15, cursor:"pointer", flexShrink:0, padding:0,
+                      }}>📂</button>
+                      <button onClick={() => removeItem(si, ii)} style={{
+                        background:"none", border:"none", color:"#ccc",
+                        fontSize:16, cursor:"pointer", flexShrink:0, padding:"0 2px",
+                      }}>×</button>
+                    </>
+                  )}
                 </div>
                 {pctOpen && (() => {
                   const pctVal = ing.nutriPct === "" || ing.nutriPct == null ? 100 : Math.max(0, Math.min(100, parseFloat(String(ing.nutriPct).replace(",", ".")) || 0));
@@ -199,45 +266,76 @@ export default function EditSectionedList({ data, color, itemType, onUpdate, nam
             }
             return (
               <div key={ii} style={{ display:"flex", gap:8, marginBottom:6, alignItems:"center", paddingLeft:12 }}>
-                <span style={{ color:th.appAccent2, fontSize:12, flexShrink:0 }}>✦</span>
+                {selectMode ? (
+                  <input
+                    type="checkbox"
+                    checked={selected.has(`${si}_${ii}`)}
+                    onChange={() => toggleSelect(si, ii)}
+                    style={{ width:18, height:18, flexShrink:0, cursor:"pointer" }}
+                  />
+                ) : (
+                  <span style={{ color:th.appAccent2, fontSize:12, flexShrink:0 }}>✦</span>
+                )}
                 <input
                   value={item}
                   onChange={e => updateItem(si, ii, e.target.value)}
                   placeholder={`Elemento ${ii+1}…`}
+                  disabled={selectMode}
                   style={{
                     flex:1, padding:"9px 12px",
                     border:`1.5px solid ${th.appBorder}`,
                     borderRadius:10, background:th.appCard,
                     fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none",
+                    ...(selectMode ? { opacity:0.4 } : {}),
                   }}
                 />
-                <button onClick={() => removeItem(si, ii)} style={{
-                  background:"none", border:"none", color:"#ccc",
-                  fontSize:16, cursor:"pointer", flexShrink:0,
-                }}>×</button>
+                {!selectMode && (
+                  <>
+                    <button onClick={() => setMovePickerFor({ mode:"single", si, ii })} title="Sposta in…" style={{
+                      background:"none", border:"none", fontSize:15, cursor:"pointer", flexShrink:0, padding:0,
+                    }}>📂</button>
+                    <button onClick={() => removeItem(si, ii)} style={{
+                      background:"none", border:"none", color:"#ccc",
+                      fontSize:16, cursor:"pointer", flexShrink:0,
+                    }}>×</button>
+                  </>
+                )}
               </div>
             );
           })}
 
-          <button onClick={() => addItem(si)} style={{
-            marginLeft:12, padding:"7px 14px",
-            border:`1.5px dashed ${th.appBorder}`,
-            borderRadius:10, background:"transparent",
-            color:th.appFaded, fontFamily:F.ui, fontSize:12,
-            cursor:"pointer",
-          }}>+ Aggiungi {itemType === "ingredient" ? "ingrediente" : "elemento"}</button>
+          {!selectMode && (
+            <button onClick={() => addItem(si)} style={{
+              marginLeft:12, padding:"7px 14px",
+              border:`1.5px dashed ${th.appBorder}`,
+              borderRadius:10, background:"transparent",
+              color:th.appFaded, fontFamily:F.ui, fontSize:12,
+              cursor:"pointer",
+            }}>+ Aggiungi {itemType === "ingredient" ? "ingrediente" : "elemento"}</button>
+          )}
         </div>
       ))}
 
       {/* Add subsection */}
-      <button onClick={addSection} style={{
-        width:"100%", padding:"12px",
-        border:`1.5px dashed ${color}`,
-        borderRadius:12, background:`${color}08`,
-        color:color, fontFamily:F.ui, fontSize:13, fontWeight:600,
-        cursor:"pointer", marginTop:4,
-        display:"flex", alignItems:"center", justifyContent:"center", gap:8,
-      }}>＋ Aggiungi sottosezione</button>
+      {!selectMode && (
+        <button onClick={addSection} style={{
+          width:"100%", padding:"12px",
+          border:`1.5px dashed ${color}`,
+          borderRadius:12, background:`${color}08`,
+          color:color, fontFamily:F.ui, fontSize:13, fontWeight:600,
+          cursor:"pointer", marginTop:4,
+          display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+        }}>＋ Aggiungi sottosezione</button>
+      )}
+      <Toast msg={toast.msg} visible={toast.visible}/>
+      {movePickerFor && (
+        <SectionMovePicker
+          sections={sections}
+          excludeSectionIndex={movePickerFor.mode === "single" ? movePickerFor.si : null}
+          onPick={handleMovePick}
+          onClose={() => setMovePickerFor(null)}
+        />
+      )}
     </div>
   );
 }
