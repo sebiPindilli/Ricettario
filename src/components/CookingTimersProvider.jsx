@@ -4,6 +4,13 @@ import { uid } from "../utils/helpers.js";
 import { isExpired } from "../utils/timers.js";
 import { setTimerAlertPrefs, DEFAULT_TIMER_ALERTS } from "../services/authStore.js";
 
+// Ogni quanto ripetere l'avviso di un timer scaduto non ancora confermato,
+// e per quanto tempo insistere prima di arrendersi (il timer resta comunque
+// visibile come scaduto, richiede solo più l'utente per essere chiuso —
+// evita un allarme che squilla all'infinito se nessuno risponde).
+const ALERT_REPEAT_MS = 15_000;
+const ALERT_MAX_DURATION_MS = 5 * 60_000;
+
 // ── Provider dei timer di cucina ──────────────────────────────────
 // Monta qui lo stato (non nei singoli screen): AppInner/IPhone non si
 // smontano mai al cambio di `screen`, quindi un timer avviato durante la
@@ -83,7 +90,7 @@ export default function CookingTimersProvider({ children, me, initialPrefs }) {
   const startTimer = useCallback((label, minutes) => {
     ensureAudioCtx();
     const id = uid("timer");
-    setTimers(prev => [...prev, { id, label: label || "Timer", minutes, endAt: Date.now() + minutes * 60000, alerted: false }]);
+    setTimers(prev => [...prev, { id, label: label || "Timer", minutes, endAt: Date.now() + minutes * 60000, lastAlertAt: null }]);
     return id;
   }, [ensureAudioCtx]);
 
@@ -101,23 +108,35 @@ export default function CookingTimersProvider({ children, me, initialPrefs }) {
   // Suono e vibrazione secondo le preferenze correnti — l'avviso visivo
   // (bordo/lampeggio sui timer scaduti) è gestito direttamente da chi
   // legge `prefs.visual` dal context (TimerFAB/TimersPopup), non da qui.
+  // ensureAudioCtx() (non solo playBeep) ad ogni chiamata: su una finestra
+  // di ripetizione di alcuni minuti è plausibile che il browser sospenda
+  // l'AudioContext (scheda in background) tra uno squillo e il successivo —
+  // senza ri-eseguire il resume qui, i bip successivi al primo resterebbero
+  // muti in silenzio.
   const fireAlert = useCallback(() => {
     const p = prefsRef.current;
-    if (p.sound) playBeep();
+    if (p.sound) { ensureAudioCtx(); playBeep(); }
     if (p.vibrate && "vibrate" in navigator) navigator.vibrate([200, 100, 200, 100, 200]);
-  }, [playBeep]);
+  }, [playBeep, ensureAudioCtx]);
 
-  // Controlla le scadenze rispetto a "adesso": emette l'avviso una sola
-  // volta per timer (flag alerted), ma non lo rimuove dalla lista — resta
-  // visibile come scaduto ("scaduto N fa") finché l'utente non lo chiude,
-  // anche se la scadenza è avvenuta mentre l'app era in background.
+  // Controlla le scadenze rispetto a "adesso": emette l'avviso al primo
+  // superamento di endAt e poi lo ripete ogni ALERT_REPEAT_MS finché il
+  // timer non viene chiuso (cancelTimer) o non supera ALERT_MAX_DURATION_MS
+  // dalla scadenza. Un solo fireAlert() per tick anche se più timer sono
+  // "dovuti" insieme — un singolo bip+vibrazione basta a segnalare "c'è
+  // qualcosa che aspetta", niente cacofonia proporzionale al numero di
+  // timer scaduti in contemporanea.
   const checkExpirations = useCallback(() => {
     const at = Date.now();
     setNow(at);
-    const newlyExpired = timersRef.current.filter(t => !t.alerted && isExpired(t, at));
-    if (newlyExpired.length === 0) return;
-    newlyExpired.forEach(fireAlert);
-    setTimers(prev => prev.map(t => newlyExpired.some(e => e.id === t.id) ? { ...t, alerted: true } : t));
+    const due = timersRef.current.filter(t =>
+      isExpired(t, at) &&
+      (at - t.endAt) < ALERT_MAX_DURATION_MS &&
+      (t.lastAlertAt === null || at - t.lastAlertAt >= ALERT_REPEAT_MS)
+    );
+    if (due.length === 0) return;
+    fireAlert();
+    setTimers(prev => prev.map(t => due.some(d => d.id === t.id) ? { ...t, lastAlertAt: at } : t));
   }, [fireAlert]);
 
   // Tick di visualizzazione — un solo intervallo condiviso, attivo solo
