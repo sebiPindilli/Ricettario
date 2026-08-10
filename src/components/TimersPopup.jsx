@@ -37,6 +37,8 @@ export default function TimersPopup({ onClose, initialDraft = null }) {
   const [draftLabel, setDraftLabel] = useState(initialDraft?.label || "");
   const [draftMinutes, setDraftMinutes] = useState(initialDraft?.minutes ?? 5);
 
+  const expiredIds = timers.filter(t => isExpired(t, now)).map(t => t.id);
+
   const handleStart = () => {
     if (!(draftMinutes > 0)) return;
     startTimer(draftLabel.trim(), draftMinutes);
@@ -68,6 +70,13 @@ export default function TimersPopup({ onClose, initialDraft = null }) {
         <div style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto", padding: "12px 18px" }}>
           {timers.length === 0 && (
             <div style={{ textAlign: "center", color: th.appFaded, fontFamily: F.ui, fontSize: 12, padding: "20px 0" }}>Nessun timer attivo</div>
+          )}
+          {expiredIds.length >= 2 && (
+            <button onClick={() => expiredIds.forEach(cancelTimer)} style={{
+              width: "100%", padding: "10px", marginBottom: 10, borderRadius: 10,
+              border: "none", background: "#C0524A", color: "#fff",
+              fontFamily: F.ui, fontSize: 12, fontWeight: 700, cursor: "pointer",
+            }}>🔕 Ferma tutti ({expiredIds.length})</button>
           )}
           {timers.map(t => {
             const rem = remainingMs(t, now);
