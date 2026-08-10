@@ -1,18 +1,22 @@
 import { useRef, useLayoutEffect } from "react";
-import { useCookingTimers } from "../context.js";
+import { useCookingTimers, useScanExtraction } from "../context.js";
 import CookingTimerBar from "./CookingTimerBar.jsx";
+import ScanStatusBanner from "./ScanStatusBanner.jsx";
 
-// ── Stack condiviso in cima allo schermo — banner offline e, fuori dalla
-// Modalità Cucina, la barra timer (nulla se non ci sono timer attivi:
-// dentro la Modalità Cucina c'è il FAB dedicato, qui fuori l'accesso è
-// solo se già c'è qualcosa da mostrare). L'altezza TOTALE viene scritta in
-// topStackHeight, letta da GlobalNav.jsx per posizionarsi sempre sotto
-// invece di sovrapporsi (bug preesistente: prima il banner, zIndex 9999,
-// copriva GlobalNav, zIndex 100, senza spingerlo giù).
-export default function TopStack({ isOnline }) {
+// ── Stack condiviso in cima allo schermo — banner offline, barra timer
+// (fuori dalla Modalità Cucina, nulla se non ci sono timer attivi: dentro
+// c'è il FAB dedicato) e banner di completamento estrazione AI (nulla se
+// non c'è un job concluso o se si è già sullo screen che l'ha avviata).
+// L'altezza TOTALE viene scritta in topStackHeight, letta da GlobalNav.jsx
+// per posizionarsi sempre sotto invece di sovrapporsi (bug preesistente:
+// prima il banner, zIndex 9999, copriva GlobalNav, zIndex 100, senza
+// spingerlo giù).
+export default function TopStack({ isOnline, isOnExtractionScreen, onOpenExtractionResult, onOpenExtractionScreen }) {
   const { setTopStackHeight, timers, cookingModeActive } = useCookingTimers();
+  const { job } = useScanExtraction();
   const wrapRef = useRef(null);
   const showTimerBar = timers.length > 0 && !cookingModeActive;
+  const showScanBanner = !!job && job.status !== "running" && !isOnExtractionScreen;
 
   // ResizeObserver come rete di sicurezza per variazioni di altezza NON
   // legate a isOnline/showTimerBar (es. il testo della barra timer che
@@ -31,7 +35,7 @@ export default function TopStack({ isOnline }) {
   // "visibile" al compositor del browser — può non scattare affatto).
   useLayoutEffect(() => {
     if (wrapRef.current) setTopStackHeight(wrapRef.current.offsetHeight);
-  }, [isOnline, showTimerBar, setTopStackHeight]);
+  }, [isOnline, showTimerBar, showScanBanner, setTopStackHeight]);
 
   return (
     <div ref={wrapRef} style={{ position:"fixed", top:0, left:0, right:0, zIndex:9999 }}>
@@ -44,6 +48,13 @@ export default function TopStack({ isOnline }) {
         </div>
       )}
       {showTimerBar && <CookingTimerBar/>}
+      {showScanBanner && (
+        <ScanStatusBanner
+          isOnExtractionScreen={isOnExtractionScreen}
+          onOpenResult={onOpenExtractionResult}
+          onOpenScreen={onOpenExtractionScreen}
+        />
+      )}
     </div>
   );
 }

@@ -1330,7 +1330,12 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
       </div>
 
       <IPhone>
-        <TopStack isOnline={isOnline}/>
+        <TopStack
+          isOnline={isOnline}
+          isOnExtractionScreen={screen==="scan" || screen==="addFromLink"}
+          onOpenExtractionResult={(result) => saveScanned(result.title, [], result.ocrData, result.emoji, result.color, "altro")}
+          onOpenExtractionScreen={(kind) => setScreen(kind==="photo" ? "scan" : "addFromLink")}
+        />
         {screen==="cover" && (
           <CoverScreen onEnter={() => setScreen("landing")}/>
         )}
