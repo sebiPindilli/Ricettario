@@ -41,11 +41,13 @@ export default function GlobalNav({
   // mobile, sticky annidato dentro lo scroll interno dell'IPhone shell può
   // scorrere via invece di restare fermo. Da fixed, il banner esce dal
   // flusso: il div .globalnav-spacer subito sotto (altezza misurata dal
-  // banner stesso via ResizeObserver, più topStackHeight — banner offline
-  // e/o barra timer sopra di lui) gli lascia il posto nel contenuto sotto.
-  // topStackHeight entra anche nel `top` (sia sticky desktop sia fixed
-  // mobile, quest'ultimo tramite CSS !important) così questa barra si
-  // posiziona sempre SOTTO quello stack invece di esserne coperta.
+  // banner stesso via ResizeObserver) gli lascia il posto nel contenuto
+  // sotto — lo spazio per topStackHeight (banner offline e/o barra timer
+  // sopra di lui) lo riserva già lo spacer universale in TopStack.jsx, qui
+  // non va sommato di nuovo. topStackHeight entra comunque nel `top` (sia
+  // sticky desktop sia fixed mobile, quest'ultimo tramite CSS !important)
+  // così questa barra si posiziona sempre SOTTO quello stack invece di
+  // esserne coperta.
   const globalNavResponsiveCss = `
     .globalnav-spacer { display:none; }
     @media ${MOBILE_BREAKPOINT_CSS} {
@@ -149,7 +151,7 @@ export default function GlobalNav({
         )}
       </div>
     </div>
-    <div className="globalnav-spacer" style={{ height: spacerHeight + topStackHeight }} />
+    <div className="globalnav-spacer" style={{ height: spacerHeight }} />
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { useRef, useLayoutEffect } from "react";
+import { Fragment, useRef, useLayoutEffect } from "react";
 import { useCookingTimers, useScanExtraction } from "../context.js";
 import CookingTimerBar from "./CookingTimerBar.jsx";
 import ScanStatusBanner from "./ScanStatusBanner.jsx";
@@ -7,16 +7,19 @@ import ScanStatusBanner from "./ScanStatusBanner.jsx";
 // (fuori dalla Modalità Cucina, nulla se non ci sono timer attivi: dentro
 // c'è il FAB dedicato) e banner di completamento estrazione AI (nulla se
 // non c'è un job concluso o se si è già sullo screen che l'ha avviata).
-// L'altezza TOTALE viene scritta in topStackHeight, letta da GlobalNav.jsx
-// per posizionarsi sempre sotto invece di sovrapporsi (bug preesistente:
-// prima il banner, zIndex 9999, copriva GlobalNav, zIndex 100, senza
-// spingerlo giù).
+// L'altezza TOTALE viene scritta in topStackHeight. Essendo position:fixed
+// (sia su desktop-mock che su mobile reale), lo stack esce dal flusso: lo
+// spacer subito sotto gli lascia il posto in OGNI schermata, che ci sia
+// GlobalNav o no (bug preesistente: solo GlobalNav.jsx riservava spazio
+// per topStackHeight, quindi le schermate senza GlobalNav — es. Home,
+// Aggiungi ricetta — restavano coperte). GlobalNav.jsx non aggiunge più
+// topStackHeight al proprio spacer per non contarlo due volte.
 export default function TopStack({ isOnline, isOnExtractionScreen, onOpenExtractionResult, onOpenExtractionScreen }) {
-  const { setTopStackHeight, timers, cookingModeActive } = useCookingTimers();
+  const { topStackHeight, setTopStackHeight, timers, cookingModeActive } = useCookingTimers();
   const { job } = useScanExtraction();
   const wrapRef = useRef(null);
   const showTimerBar = timers.length > 0 && !cookingModeActive;
-  const showScanBanner = !!job && job.status !== "running" && !isOnExtractionScreen;
+  const showScanBanner = !!job && !isOnExtractionScreen;
 
   // ResizeObserver come rete di sicurezza per variazioni di altezza NON
   // legate a isOnline/showTimerBar (es. il testo della barra timer che
@@ -38,6 +41,7 @@ export default function TopStack({ isOnline, isOnExtractionScreen, onOpenExtract
   }, [isOnline, showTimerBar, showScanBanner, setTopStackHeight]);
 
   return (
+    <Fragment>
     <div ref={wrapRef} style={{ position:"fixed", top:0, left:0, right:0, zIndex:9999 }}>
       {!isOnline && (
         <div style={{
@@ -56,5 +60,8 @@ export default function TopStack({ isOnline, isOnExtractionScreen, onOpenExtract
         />
       )}
     </div>
+    {/* Spacer universale: rimpiazza lo spazio "rubato" dal fixed qui sopra, in ogni schermata */}
+    <div style={{ height: topStackHeight }}/>
+    </Fragment>
   );
 }

@@ -3,10 +3,18 @@ import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 import BackBtn from "../components/BackBtn.jsx";
 
+// Età della bozza in una didascalia breve, in italiano.
+function ageLabel(createdAt) {
+  const days = Math.floor((Date.now() - createdAt) / (24 * 60 * 60 * 1000));
+  if (days <= 0) return "oggi";
+  if (days === 1) return "ieri";
+  return `${days} giorni fa`;
+}
+
 // ══════════════════════════════════════════════════════════════
 // SCREEN: ADD RECIPE HUB — choose how to add
 // ══════════════════════════════════════════════════════════════
-export default function AddRecipeHubScreen({ onBack, onManual, onScan, onLink, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping }) {
+export default function AddRecipeHubScreen({ onBack, onManual, onScan, onLink, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping, pendingExtractions=[], onOpenPending, onDiscardPending }) {
   const th = useTheme();
   return (
     <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
@@ -19,6 +27,45 @@ export default function AddRecipeHubScreen({ onBack, onManual, onScan, onLink, o
           <div style={{ fontFamily:F.display, fontSize:26, color:th.appInk, fontStyle:"italic" }}>Aggiungi Ricetta</div>
           <div style={{ fontFamily:F.ui, fontSize:12, color:th.appFaded, marginTop:6 }}>Scegli come vuoi inserirla</div>
         </div>
+
+        {pendingExtractions.length > 0 && (
+          <div style={{ width:"100%" }}>
+            <div style={{ fontFamily:F.ui, fontSize:11, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:8 }}>
+              Estrazioni da confermare
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:8 }}>
+              {pendingExtractions.map(p => (
+                <div key={p.id} style={{
+                  display:"flex", alignItems:"center", gap:12,
+                  background:th.appCard, border:`1px solid ${th.appBorder}`,
+                  borderRadius:14, padding:"10px 12px",
+                }}>
+                  <button onClick={() => onOpenPending(p)} style={{
+                    flex:1, minWidth:0, display:"flex", alignItems:"center", gap:12,
+                    background:"none", border:"none", cursor:"pointer", textAlign:"left", padding:0,
+                  }}>
+                    <div style={{
+                      width:38, height:38, borderRadius:10, background:p.draft.color || th.appAccent,
+                      display:"flex", alignItems:"center", justifyContent:"center", fontSize:19, flexShrink:0,
+                    }}>{p.draft.emoji || "🍝"}</div>
+                    <div style={{ minWidth:0 }}>
+                      <div style={{ fontFamily:F.display, fontSize:14, color:th.appInk, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                        {p.draft.title?.trim() || "Ricetta senza titolo"}
+                      </div>
+                      <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:1 }}>
+                        Non salvata — {ageLabel(p.createdAt)}
+                      </div>
+                    </div>
+                  </button>
+                  <button onClick={() => onDiscardPending(p.id)} title="Scarta bozza" style={{
+                    flexShrink:0, width:28, height:28, borderRadius:8, border:"none",
+                    background:"transparent", color:th.appFaded, fontSize:14, cursor:"pointer",
+                  }}>✕</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {[
           {

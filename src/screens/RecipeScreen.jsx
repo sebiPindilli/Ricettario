@@ -129,7 +129,7 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
   };
 
   return (
-    <div style={{ background: viewMode==="book" ? th.bookBg : th.appBg, minHeight:"100%", position:"relative" }}>
+    <div style={{ background: viewMode==="book" ? th.bookBg : th.appBg, minHeight:"100%" }}>
       {exportOpen && (
         <ExportFlow
           current={recipe}
@@ -208,14 +208,14 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
         <div style={{
           position:"absolute", inset:0, zIndex:200,
           background:"rgba(0,0,0,0.5)",
-          display:"flex", alignItems:"flex-end",
-          backdropFilter:"blur(4px)",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          backdropFilter:"blur(4px)", padding:20,
         }}>
           <div style={{
             width:"100%",
             background:"#FAF7F0",
-            borderRadius:"24px 24px 0 0",
-            padding:"28px 24px 40px",
+            borderRadius:20,
+            padding:"28px 24px",
           }}>
             <div style={{ textAlign:"center", marginBottom:6 }}>
               <div style={{ fontSize:40, marginBottom:10 }}>🗑️</div>
@@ -253,14 +253,14 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
         <div style={{
           position:"absolute", inset:0, zIndex:200,
           background:"rgba(0,0,0,0.5)",
-          display:"flex", alignItems:"flex-end",
-          backdropFilter:"blur(4px)",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          backdropFilter:"blur(4px)", padding:20,
         }}>
           <div style={{
             width:"100%",
             background:"#FAF7F0",
-            borderRadius:"24px 24px 0 0",
-            padding:"28px 24px 40px",
+            borderRadius:20,
+            padding:"28px 24px",
           }}>
             <div style={{ textAlign:"center", marginBottom:6 }}>
               <div style={{ fontSize:40, marginBottom:10 }}>🗑️</div>

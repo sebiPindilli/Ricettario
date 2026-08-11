@@ -53,6 +53,7 @@ import RecipeCardBook from "./components/RecipeCardBook.jsx";
 import GlobalNav from "./components/GlobalNav.jsx";
 import { guideOrganizza } from "./data/guideContent.jsx";
 import GuideScreen from "./screens/GuideScreen.jsx";
+import { listPendingExtractions, savePendingExtraction, removePendingExtraction } from "./utils/pendingExtractions.js";
 import MemoriesBookScreen from "./screens/MemoriesBookScreen.jsx";
 import CookingMode from "./screens/CookingMode.jsx";
 import OrganizeIngredientsScreen, { SHOPPING_SOURCE } from "./screens/OrganizeIngredientsScreen.jsx";
@@ -222,15 +223,26 @@ const IPhone = ({ children }) => {
 // vista corrente, pagina 2 vuota per l'overflow del contenuto vero, breve).
 // Una scheda vera dedicata al solo contenuto da stampare non ha questa
 // ambiguità: quando si stampa, è l'unico documento di quella scheda.
+//
+// Il contenuto passa da un Blob URL invece di document.write() su
+// "about:blank": document.write() lascia la scheda sull'URL opaco
+// "about:blank" a tempo indeterminato, e print() partiva dopo un timeout
+// fisso di 400ms — non abbastanza per le foto (piatto/step, caricate da
+// Storage) ancora in scaricamento. Chiedere l'anteprima di stampa mentre
+// mancano ancora immagini ha causato in test un blocco del renderer di
+// diversi minuti, non un errore rapido. Un Blob URL è una navigazione vera:
+// l'evento "load" della scheda garantisce che TUTTE le immagini abbiano
+// finito di caricare (con successo o in errore) prima di stampare.
 function printHtmlDocument(html) {
-  const printWin = window.open("", "_blank");
-  if (!printWin) return; // popup bloccato dal browser — nulla da fare lato codice
-  printWin.document.open();
-  printWin.document.write(html);
-  printWin.document.close();
-  printWin.focus();
-  printWin.onafterprint = () => printWin.close();
-  setTimeout(() => printWin.print(), 400);
+  const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+  const printWin = window.open(url, "_blank");
+  if (!printWin) { URL.revokeObjectURL(url); return; } // popup bloccato dal browser — nulla da fare lato codice
+  const cleanup = () => { printWin.close(); URL.revokeObjectURL(url); };
+  printWin.onafterprint = cleanup;
+  printWin.addEventListener("load", () => {
+    printWin.focus();
+    printWin.print();
+  });
 }
 
 const exportRecipePDF = (recipe) => {
@@ -568,6 +580,12 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   const [fridgePhase, setFridgePhase] = useState("select");
   const [fridgeOwnedMembers, setFridgeOwnedMembers] = useState([]);
   const [scanDraft, setScanDraft] = useState(null); // draft precompilato da una scansione
+  // id della bozza persistita (src/utils/pendingExtractions.js) che questa
+  // sessione di NewRecipeScreen sta modificando — null per l'inserimento
+  // manuale (nessuna bozza AI da tracciare).
+  const [scanDraftPendingId, setScanDraftPendingId] = useState(null);
+  const [pendingExtractions, setPendingExtractions] = useState(() => listPendingExtractions());
+  const refreshPendingExtractions = () => setPendingExtractions(listPendingExtractions());
   const [pendingShopUpdate, setPendingShopUpdate] = useState(null); // {updated} ricetta modificata già in lista spesa
   const [prevScreen, setPrevScreen] = useState("landing");
   // Vuoto finché il caricamento iniziale da Firestore non li sostituisce
@@ -1235,8 +1253,11 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
 
   // Dopo la scansione: NON salva subito, ma apre il form manuale precompilato
   // con i dati letti dalla foto, così si possono correggere prima di salvare.
+  // Il draft viene anche persistito (src/utils/pendingExtractions.js) PRIMA
+  // di entrare nell'editor: se l'utente tocca "indietro" invece di "salva",
+  // resta recuperabile dall'hub "Aggiungi ricetta" invece di sparire.
   const saveScanned = (name, tags, ocrData, emoji, color, macroSection) => {
-    setScanDraft({
+    const draft = {
       title: name || ocrData?.title || "",
       source: ocrData?.source || "", sourceUrl: ocrData?.sourceUrl || "",
       prepTime: ocrData?.prepTime || 0, cookTime: ocrData?.cookTime || 0,
@@ -1249,8 +1270,25 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
       emoji: emoji || "🍝",
       dishPhoto: null,
       macroSection: macroSection || "altro",
-    });
+    };
+    const id = uid("pending");
+    savePendingExtraction(id, draft);
+    refreshPendingExtractions();
+    setScanDraftPendingId(id);
+    setScanDraft(draft);
     setScreen("new");
+  };
+
+  // Riapre nell'editor una bozza già in "Estrazioni da confermare".
+  const openPendingExtraction = (pending) => {
+    setScanDraftPendingId(pending.id);
+    setScanDraft(pending.draft);
+    setScreen("new");
+  };
+
+  const discardPendingExtraction = (id) => {
+    removePendingExtraction(id);
+    refreshPendingExtractions();
   };
 
   const currentRecipe = selected ? recipes.find(r=>r.id===selected.id) : null;
@@ -1561,7 +1599,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
         {screen==="addRecipeHub" && (
           <AddRecipeHubScreen
             onBack={() => setScreen(prevScreen)}
-            onManual={() => setScreen("new")}
+            onManual={() => { setScanDraft(null); setScanDraftPendingId(null); setScreen("new"); }}
             onScan={(mode) => { setScanMode(mode || "camera"); setScreen("scan"); }}
             onLink={() => setScreen("addFromLink")}
             onLanding={() => setScreen("landing")}
@@ -1571,12 +1609,19 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             onAdd={(type) => type==="memory" ? openAddMemory() : setScreen("addRecipeHub")}
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
+            pendingExtractions={pendingExtractions}
+            onOpenPending={openPendingExtraction}
+            onDiscardPending={discardPendingExtraction}
           />
         )}
         {screen==="new" && (
           <NewRecipeScreen
-            onBack={() => { setScanDraft(null); setScreen("addRecipeHub"); }}
-            onSave={(d) => { setScanDraft(null); saveNewRecipe(d); }}
+            onBack={() => { setScanDraft(null); setScanDraftPendingId(null); setScreen("addRecipeHub"); }}
+            onSave={(d) => {
+              if (scanDraftPendingId) { discardPendingExtraction(scanDraftPendingId); }
+              setScanDraft(null); setScanDraftPendingId(null);
+              saveNewRecipe(d);
+            }}
             initialDraft={scanDraft}
             onLanding={() => setScreen("landing")}
             onRecipes={() => setScreen("recipes")}
