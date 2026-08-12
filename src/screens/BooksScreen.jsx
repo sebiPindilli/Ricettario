@@ -132,6 +132,16 @@ export default function BooksScreen({
             <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, padding:"4px 20px 8px" }}>
               Seleziona una o più ricette, poi scegli dove copiarle.
             </div>
+            {activeRecipes.length > 0 && (
+              <div style={{ padding:"0 18px 8px" }}>
+                <button onClick={() => setSelIds(selIds.length === activeRecipes.length ? [] : activeRecipes.map(r => r.id))} style={{
+                  width:"100%", padding:"9px", borderRadius:10, border:`1.5px solid ${th.appAccent}`,
+                  background: selIds.length === activeRecipes.length ? th.appAccent : "transparent",
+                  color: selIds.length === activeRecipes.length ? "#fff" : th.appAccent,
+                  fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer",
+                }}>{selIds.length === activeRecipes.length ? "✓ Tutte selezionate" : "Seleziona tutto"}</button>
+              </div>
+            )}
             <div style={{ flex:1, overflowY:"auto", padding:"0 18px 150px" }}>
               {activeRecipes.map(r => {
                 const on = selIds.includes(r.id);

@@ -237,11 +237,26 @@ function printHtmlDocument(html) {
   const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
   const printWin = window.open(url, "_blank");
   if (!printWin) { URL.revokeObjectURL(url); return; } // popup bloccato dal browser — nulla da fare lato codice
-  const cleanup = () => { printWin.close(); URL.revokeObjectURL(url); };
-  printWin.onafterprint = cleanup;
+  // NON ripulire su "afterprint": su Android la stampa è delegata al
+  // Servizio di Stampa di sistema (un'Activity fuori dal ciclo di vita
+  // della pagina), che spesso ricarica/ripagina il contenuto per generare
+  // il PDF DOPO che "afterprint" è già scattato nella scheda — lì significa
+  // solo "il controllo è passato al sistema", non "la stampa è finita".
+  // Chiudere la scheda e revocare il Blob URL a quel punto toglie il
+  // contenuto da sotto ai piedi del servizio di stampa: si vede l'anteprima
+  // per un istante, poi errore, e al "riprova" non c'è più nulla da
+  // caricare. Si rilascia tutto solo dopo un margine di sicurezza fisso.
+  let released = false;
+  const release = () => {
+    if (released) return;
+    released = true;
+    try { printWin.close(); } catch (e) {}
+    URL.revokeObjectURL(url);
+  };
   printWin.addEventListener("load", () => {
     printWin.focus();
     printWin.print();
+    setTimeout(release, 120000);
   });
 }
 
@@ -325,7 +340,7 @@ const exportRecipePDF = (recipe) => {
 // ══════════════════════════════════════════════════════════════
 // EXPORT: intero ricettario in PDF — indice + pagine sezione + ricette
 // ══════════════════════════════════════════════════════════════
-const exportBookPDF = (recipes, sections = MACRO_SECTIONS) => {
+const exportBookPDF = (recipes, sections = MACRO_SECTIONS, bookName = "Il mio Ricettario") => {
   const isSec = (arr) => Array.isArray(arr) && arr.length > 0 && typeof arr[0] === "object" && "section" in arr[0];
 
   // Corpo di una singola ricetta (stesso layout dell'export singolo)
@@ -379,11 +394,11 @@ const exportBookPDF = (recipes, sections = MACRO_SECTIONS) => {
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<title>Il mio Ricettario</title>
+<title>${bookName}</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family: Georgia, serif; color: #1a1a1a; max-width: 700px; margin: 0 auto; }
-  .page { page-break-after: always; padding: 40px; }
+  .page { page-break-before: always; page-break-after: always; break-before: page; break-after: page; padding: 40px; }
   /* Copertina */
   .cover { text-align:center; padding-top: 200px; }
   .cover .small { font-size: 12px; letter-spacing: 4px; color: #8a7c66; text-transform: uppercase; font-family: sans-serif; }
@@ -404,7 +419,7 @@ const exportBookPDF = (recipes, sections = MACRO_SECTIONS) => {
   .secpage .desc { font-size: 14px; color: #7A6E5F; font-style: italic; }
   .secpage .orn { color: #B8973A; font-size: 15px; margin-top: 24px; }
   /* Ricetta */
-  .recipe { page-break-before: always; padding: 40px; }
+  .recipe { page-break-before: always; page-break-after: always; break-before: page; break-after: page; padding: 40px; }
   .recipe h1 { font-size: 26px; font-style: italic; text-align: center; margin-bottom: 4px; }
   .source { text-align: center; font-size: 13px; color: #666; margin-bottom: 12px; }
   .dish-photo { width: 170px; height: 128px; margin: 0 auto 14px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: #fafaf8; }
@@ -428,7 +443,7 @@ const exportBookPDF = (recipes, sections = MACRO_SECTIONS) => {
   <!-- Copertina -->
   <div class="page cover">
     <div class="small">Le nostre ricette, i nostri ricordi</div>
-    <h1>Il mio Ricettario</h1>
+    <h1>${bookName}</h1>
     <div class="orn">✦ ✦ ✦</div>
     <div class="sub">${recipes.length} ricette</div>
   </div>
@@ -1151,7 +1166,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   const exportRecipesPDFByIds = (recipeIds) => {
     const sel = recipes.filter(r => recipeIds.includes(r.id));
     if (sel.length === 1) { exportRecipePDF(sel[0]); }
-    else if (sel.length > 1) { exportBookPDF(sel, sectionList); }
+    else if (sel.length > 1) { exportBookPDF(sel, sectionList, activeBook?.name); }
   };
 
   const importShareCode = (code) => {
