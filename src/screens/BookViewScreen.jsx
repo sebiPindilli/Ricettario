@@ -3,7 +3,7 @@ import { useTheme } from "../context.js";
 import { MACRO_SECTIONS } from "../data/constants.js";
 import RecipeFilterBarBook from "../components/RecipeFilterBarBook.jsx";
 
-export default function BookViewScreen({ recipes, onLanding, onRecipe, onRecipes, onMemories, onAdd, onFridge, onShopping, extraTagGroups=[], sectionList=MACRO_SECTIONS }) {
+export default function BookViewScreen({ recipes, onLanding, onRecipe, onRecipes, onMemories, onAdd, onFridge, onShopping, onExport, extraTagGroups=[], sectionList=MACRO_SECTIONS }) {
   const th = useTheme();
   const [pageIndex, setPageIndex] = useState(0);
   const [turning, setTurning] = useState(null);
@@ -24,6 +24,7 @@ export default function BookViewScreen({ recipes, onLanding, onRecipe, onRecipes
       onAdd={onAdd}
       onFridge={onFridge}
       onShopping={onShopping}
+      onExport={onExport}
     />
   );
 }

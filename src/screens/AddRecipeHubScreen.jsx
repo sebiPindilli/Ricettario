@@ -14,8 +14,11 @@ function ageLabel(createdAt) {
 // ══════════════════════════════════════════════════════════════
 // SCREEN: ADD RECIPE HUB — choose how to add
 // ══════════════════════════════════════════════════════════════
-export default function AddRecipeHubScreen({ onBack, onManual, onScan, onLink, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping, pendingExtractions=[], onOpenPending, onDiscardPending }) {
+export default function AddRecipeHubScreen({ onBack, onManual, onScan, onLink, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping, pendingExtractions=[], onOpenPending, onDiscardPending, onImportCode }) {
   const th = useTheme();
+  const [importOpen, setImportOpen] = React.useState(false);
+  const [importVal, setImportVal] = React.useState("");
+  const [importMsg, setImportMsg] = React.useState(null);
   return (
     <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
       <div style={{ padding:"8px 20px 0" }}>
@@ -96,6 +99,13 @@ export default function AddRecipeHubScreen({ onBack, onManual, onScan, onLink, o
             fn:onLink,
             color:th.appAccent2,
           },
+          ...(onImportCode ? [{
+            icon:"📥",
+            label:"Importa da codice",
+            desc:"Incolla un codice di condivisione ricevuto da un altro ricettario",
+            fn:() => setImportOpen(o => !o),
+            color:"#4A7A8C",
+          }] : []),
         ].map(item => (
           <button key={item.label} onClick={item.fn} style={{
             width:"100%", padding:"18px 20px",
@@ -114,6 +124,35 @@ export default function AddRecipeHubScreen({ onBack, onManual, onScan, onLink, o
             <span style={{ marginLeft:"auto", color:th.appFaded, fontSize:18, flexShrink:0 }}>›</span>
           </button>
         ))}
+
+        {importOpen && onImportCode && (
+          <div style={{ width:"100%", background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:14, padding:"12px" }}>
+            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginBottom:8 }}>
+              Incolla il codice ricevuto: le ricette verranno copiate nel ricettario attivo.
+            </div>
+            <textarea
+              value={importVal}
+              onChange={e => setImportVal(e.target.value)}
+              placeholder="Incolla qui il codice…"
+              style={{ width:"100%", height:80, padding:"9px 11px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appBg, fontFamily:"monospace", fontSize:10, color:th.appInk, boxSizing:"border-box", resize:"none", marginBottom:8 }}
+            />
+            {importMsg && (
+              <div style={{ fontFamily:F.ui, fontSize:11.5, fontWeight:700, color: importMsg.ok ? "#6B8C6E" : "#C4593A", marginBottom:8 }}>
+                {importMsg.ok
+                  ? `✓ ${importMsg.count} ricett${importMsg.count===1?"a importata":"e importate"}!${importMsg.systemImported ? " Importate anche le impostazioni di Organizza Ingredienti." : ""}`
+                  : "⚠️ Codice non valido"}
+              </div>
+            )}
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={() => { setImportOpen(false); setImportVal(""); setImportMsg(null); }} style={{ flex:1, padding:"10px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:12, cursor:"pointer" }}>Chiudi</button>
+              <button onClick={() => {
+                const res = onImportCode(importVal);
+                setImportMsg(res);
+                if (res.ok) setImportVal("");
+              }} disabled={!importVal.trim()} style={{ flex:2, padding:"10px", border:"none", borderRadius:10, background: importVal.trim() ? th.appInk : th.appBorder, color: importVal.trim() ? "#fff" : th.appFaded, fontFamily:F.ui, fontSize:12, fontWeight:700, cursor: importVal.trim() ? "pointer" : "default" }}>Importa</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

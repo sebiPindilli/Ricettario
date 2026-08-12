@@ -18,7 +18,7 @@ export default function GlobalNav({
   onLanding, onSearch, onFavorites,
   showSearch, showFavorites,
   activeLabel, extraAction, bookView = false, viewToggle = null,
-  infoContent = null,
+  infoContent = null, onExport = null,
 }) {
   const th = useTheme();
   const navActions = useNavActions();
@@ -60,6 +60,8 @@ export default function GlobalNav({
   const inRecipes = activeScreen === "recipes" || bookView;
   // Interruttore schede/libro: nel Libro Ricette (recipes/book) o quando fornito esplicitamente (viewToggle)
   const showViewToggle = activeScreen === "recipes" || bookView || !!viewToggle;
+  // Esporta ricettario: stesso ambito del pulsante vista schede/libro (sezione Libro Ricette)
+  const showExport = showViewToggle && !!onExport;
 
   const handlers = {
     recipes: () => onRecipes(),
@@ -117,8 +119,8 @@ export default function GlobalNav({
           color:"rgba(255,255,255,0.85)", fontSize:14, flexShrink:0,
         }}>🏠</button>
 
-        {/* Spaziatore sinistro: 🏠(≈34) + questo ≈ larghezza interruttore(≈62), così il titolo è centrato */}
-        {showViewToggle && <div style={{ width:28, flexShrink:0 }}/>}
+        {/* Spaziatore sinistro: 🏠(≈34) + questo ≈ larghezza interruttore/export a destra, così il titolo è centrato */}
+        {showViewToggle && <div style={{ width: 28 + (showExport ? 30 : 0), flexShrink:0 }}/>}
 
         <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6, minWidth:0 }}>
           <span style={{
@@ -132,19 +134,28 @@ export default function GlobalNav({
           </InfoButton>
         </div>
 
-        {/* Interruttore schede/libro — posizione fissa all'estrema destra */}
+        {/* Esporta ricettario + interruttore schede/libro — posizione fissa all'estrema destra */}
         {showViewToggle ? (
-          <div style={{ display:"flex", borderRadius:8, overflow:"hidden", border:"1px solid rgba(255,255,255,0.2)", flexShrink:0 }}>
-            <button onClick={viewToggle ? viewToggle.onCards : onRecipes} title="Vista schede" style={{
-              padding:"5px 9px", border:"none", cursor:"pointer", fontSize:13,
-              background: (viewToggle ? !viewToggle.isBook : !bookView) ? th.appAccent : "rgba(255,255,255,0.08)",
-              color: (viewToggle ? !viewToggle.isBook : !bookView) ? "#fff" : "rgba(255,255,255,0.7)",
-            }}>▦</button>
-            <button onClick={viewToggle ? viewToggle.onBook : onBook} title="Sfoglia come libro" style={{
-              padding:"5px 9px", border:"none", cursor:"pointer", fontSize:13,
-              background: (viewToggle ? viewToggle.isBook : bookView) ? th.appAccent : "rgba(255,255,255,0.08)",
-              color: (viewToggle ? viewToggle.isBook : bookView) ? "#fff" : "rgba(255,255,255,0.7)",
-            }}>📖</button>
+          <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+            {showExport && (
+              <button onClick={onExport} title="Esporta ricettario" style={{
+                background:"rgba(255,255,255,0.1)", border:"none",
+                borderRadius:8, padding:"5px 8px", cursor:"pointer",
+                color:"rgba(255,255,255,0.85)", fontSize:14, flexShrink:0,
+              }}>📤</button>
+            )}
+            <div style={{ display:"flex", borderRadius:8, overflow:"hidden", border:"1px solid rgba(255,255,255,0.2)", flexShrink:0 }}>
+              <button onClick={viewToggle ? viewToggle.onCards : onRecipes} title="Vista schede" style={{
+                padding:"5px 9px", border:"none", cursor:"pointer", fontSize:13,
+                background: (viewToggle ? !viewToggle.isBook : !bookView) ? th.appAccent : "rgba(255,255,255,0.08)",
+                color: (viewToggle ? !viewToggle.isBook : !bookView) ? "#fff" : "rgba(255,255,255,0.7)",
+              }}>▦</button>
+              <button onClick={viewToggle ? viewToggle.onBook : onBook} title="Sfoglia come libro" style={{
+                padding:"5px 9px", border:"none", cursor:"pointer", fontSize:13,
+                background: (viewToggle ? viewToggle.isBook : bookView) ? th.appAccent : "rgba(255,255,255,0.08)",
+                color: (viewToggle ? viewToggle.isBook : bookView) ? "#fff" : "rgba(255,255,255,0.7)",
+              }}>📖</button>
+            </div>
           </div>
         ) : (
           <div style={{ width:34, flexShrink:0 }}/> // bilancia 🏠 sugli altri schermi

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
+import SuggestionHint from "./SuggestionHint.jsx";
 import { NUTRITION_DB, NUTRIENT_LABELS } from "../data/nutrition.js";
 import { normName, ingDictIndex, resolveIngId, flattenIngredients, ingredientToGrams } from "../utils/helpers.js";
 import { effectiveNutritionKey } from "../utils/aggregates.js";
@@ -98,21 +99,22 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
   const linkStyle = { color:th.appAccent, fontWeight:700, cursor:"pointer", textDecoration:"underline", textUnderlineOffset:2 };
   const hintsBox = (
     ((hasNonConvertible && onManageEquivalences) || (hasUnlinked && onManageIngredients)) && (
-      <div style={{
-        marginBottom:8, padding:"9px 12px", display:"flex", flexDirection:"column", gap:6,
-        background:`${th.appAccent}10`, border:`1px dashed ${th.appAccent}55`, borderRadius:10,
-      }}>
+      <div>
         {hasNonConvertible && onManageEquivalences && (
-          <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
-            ⚖️* Alcuni ingredienti usano un'unità senza un'equivalenza in grammi definita (es. 1 cucchiaio = ? g): per un funzionamento ottimale{" "}
-            <span onClick={() => onManageEquivalences(recipe.id)} style={linkStyle}>gestisci le equivalenze mancanti di questa ricetta</span>.
-          </div>
+          <SuggestionHint>
+            <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
+              ⚖️* Alcuni ingredienti usano un'unità senza un'equivalenza in grammi definita (es. 1 cucchiaio = ? g): per un funzionamento ottimale{" "}
+              <span onClick={() => onManageEquivalences(recipe.id)} style={linkStyle}>gestisci le equivalenze mancanti di questa ricetta</span>.
+            </span>
+          </SuggestionHint>
         )}
         {hasUnlinked && onManageIngredients && (
-          <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
-            🍎* Alcuni ingredienti non sono ancora collegati a un valore nutrizionale: per un funzionamento ottimale{" "}
-            <span onClick={() => onManageIngredients(recipe.id)} style={linkStyle}>gestisci i valori nutrizionali mancanti di questa ricetta</span>.
-          </div>
+          <SuggestionHint>
+            <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
+              🍎* Alcuni ingredienti non sono ancora collegati a un valore nutrizionale: per un funzionamento ottimale{" "}
+              <span onClick={() => onManageIngredients(recipe.id)} style={linkStyle}>gestisci i valori nutrizionali mancanti di questa ricetta</span>.
+            </span>
+          </SuggestionHint>
         )}
       </div>
     )

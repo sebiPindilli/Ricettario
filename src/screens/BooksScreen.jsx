@@ -23,12 +23,12 @@ const myRoleInBook = (b, me) => b.owner === me ? "proprietario" : normalizeRole(
 export default function BooksScreen({
   books, activeBookId, me, activeRecipes,
   onSwitch, onCreate, onRename, onDelete, onAddMember, onRemoveMember, onChangeMemberPermission,
-  onCopyRecipes, onExportCode, onExportPDF, onImportCode,
+  onCopyRecipes, onExportCode, onExportPDF, initialPhase = "list",
   defaultBookId, onSetDefault,
   onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping,
 }) {
   const th = useTheme();
-  const [phase, setPhase] = useState("list"); // "list" | "transfer"
+  const [phase, setPhase] = useState(initialPhase); // "list" | "transfer"
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmails, setNewEmails] = useState("");
@@ -42,13 +42,12 @@ export default function BooksScreen({
   const [memberBusy, setMemberBusy] = useState({}); // bookId → true mentre una chiamata è in corso
   const [roleFilter, setRoleFilter] = useState(null); // null = tutti i libri
   const [pendingDelete, setPendingDelete] = useState(null); // book id
-  const [importOpen, setImportOpen] = useState(false);
-  const [importVal, setImportVal] = useState("");
-  const [importMsg, setImportMsg] = useState(null);
   // transfer phase
   const [selIds, setSelIds] = useState([]);
   const [shareCode, setShareCode] = useState(null);
   const [copiedMsg, setCopiedMsg] = useState(null);
+  const [includeMemories, setIncludeMemories] = useState(false);
+  const [includeSystem, setIncludeSystem] = useState(false);
 
   const activeBook = books.find(b => b.id === activeBookId);
   const otherBooks = books.filter(b => b.id !== activeBookId);
@@ -189,14 +188,35 @@ export default function BooksScreen({
                   <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>crea prima un altro ricettario</div>
                 )}
               </div>
-              <button disabled={selIds.length===0} onClick={() => setShareCode(onExportCode(selIds))} style={{
+              <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:10 }}>
+                <label style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", fontFamily:F.ui, fontSize:11.5, color:th.appFaded }}>
+                  <input type="checkbox" checked={includeMemories} onChange={e => setIncludeMemories(e.target.checked)} />
+                  Includi foto e ricordi delle ricette
+                </label>
+                <label style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", fontFamily:F.ui, fontSize:11.5, color:th.appFaded }}>
+                  <input type="checkbox" checked={includeSystem} onChange={e => setIncludeSystem(e.target.checked)} />
+                  Includi impostazioni di Organizza Ingredienti
+                </label>
+              </div>
+              <button disabled={selIds.length===0} onClick={() => setShareCode(onExportCode(selIds, { includeMemories, includeSystem }))} style={{
                 width:"100%", padding:"13px", borderRadius:12,
                 border:`1.5px solid ${selIds.length===0 ? th.appBorder : th.appInk}`,
                 background:"transparent",
                 color: selIds.length===0 ? th.appFaded : th.appInk,
                 fontFamily:F.ui, fontSize:13, fontWeight:700,
                 cursor: selIds.length===0 ? "default" : "pointer",
+                marginBottom: onExportPDF ? 8 : 0,
               }}>🔗 Genera codice per esterni ({selIds.length})</button>
+              {onExportPDF && (
+                <button disabled={selIds.length===0} onClick={() => onExportPDF(selIds)} style={{
+                  width:"100%", padding:"13px", borderRadius:12,
+                  border:`1.5px solid ${selIds.length===0 ? th.appBorder : th.appInk}`,
+                  background:"transparent",
+                  color: selIds.length===0 ? th.appFaded : th.appInk,
+                  fontFamily:F.ui, fontSize:13, fontWeight:700,
+                  cursor: selIds.length===0 ? "default" : "pointer",
+                }}>📄 Esporta in PDF ({selIds.length})</button>
+              )}
             </div>
           </>
         )}
@@ -445,55 +465,6 @@ export default function BooksScreen({
           </>
         )}
 
-        {/* Azioni: trasferisci / importa */}
-        <div style={{ marginTop:14, paddingTop:14, borderTop:`1px solid ${th.appBorder}` }}>
-          <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appFaded, textTransform:"uppercase", marginBottom:8, fontWeight:700 }}>Condivisione ricette</div>
-          <button onClick={() => setPhase("transfer")} style={{
-            width:"100%", padding:"13px", borderRadius:12, border:"none",
-            background:th.appAccent, color:"#fff",
-            fontFamily:F.ui, fontSize:13, fontWeight:700, cursor:"pointer", marginBottom:8,
-          }}>📤 Esporta ricette da "{activeBook?.name}"</button>
-          {onExportPDF && (
-            <button onClick={onExportPDF} style={{
-              width:"100%", padding:"13px", borderRadius:12,
-              border:`1.5px solid ${th.appBorder}`, background:"transparent", color:th.appInk,
-              fontFamily:F.ui, fontSize:13, fontWeight:700, cursor:"pointer", marginBottom:8,
-            }}>📄 Esporta "{activeBook?.name}" in PDF</button>
-          )}
-
-          {importOpen ? (
-            <div style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:12, padding:"12px" }}>
-              <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginBottom:8 }}>
-                Incolla il codice ricevuto: le ricette verranno copiate in "{activeBook?.name}".
-              </div>
-              <textarea
-                value={importVal}
-                onChange={e => setImportVal(e.target.value)}
-                placeholder="Incolla qui il codice…"
-                style={{ width:"100%", height:80, padding:"9px 11px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appBg, fontFamily:"monospace", fontSize:10, color:th.appInk, boxSizing:"border-box", resize:"none", marginBottom:8 }}
-              />
-              {importMsg && (
-                <div style={{ fontFamily:F.ui, fontSize:11.5, fontWeight:700, color: importMsg.ok ? "#6B8C6E" : "#C4593A", marginBottom:8 }}>
-                  {importMsg.ok ? `✓ ${importMsg.count} ricett${importMsg.count===1?"a importata":"e importate"}!` : "⚠️ Codice non valido"}
-                </div>
-              )}
-              <div style={{ display:"flex", gap:8 }}>
-                <button onClick={() => { setImportOpen(false); setImportVal(""); setImportMsg(null); }} style={{ flex:1, padding:"10px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:12, cursor:"pointer" }}>Chiudi</button>
-                <button onClick={() => {
-                  const res = onImportCode(importVal);
-                  setImportMsg(res);
-                  if (res.ok) setImportVal("");
-                }} disabled={!importVal.trim()} style={{ flex:2, padding:"10px", border:"none", borderRadius:10, background: importVal.trim() ? th.appInk : th.appBorder, color: importVal.trim() ? "#fff" : th.appFaded, fontFamily:F.ui, fontSize:12, fontWeight:700, cursor: importVal.trim() ? "pointer" : "default" }}>Importa</button>
-              </div>
-            </div>
-          ) : (
-            <button onClick={() => setImportOpen(true)} style={{
-              width:"100%", padding:"13px", borderRadius:12,
-              border:`1.5px solid ${th.appInk}`, background:"transparent",
-              color:th.appInk, fontFamily:F.ui, fontSize:13, fontWeight:700, cursor:"pointer",
-            }}>📥 Importa da codice</button>
-          )}
-        </div>
       </div>
     </div>
   );

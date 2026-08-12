@@ -588,6 +588,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   const refreshPendingExtractions = () => setPendingExtractions(listPendingExtractions());
   const [pendingShopUpdate, setPendingShopUpdate] = useState(null); // {updated} ricetta modificata già in lista spesa
   const [prevScreen, setPrevScreen] = useState("landing");
+  const [booksEntryPhase, setBooksEntryPhase] = useState("list"); // fase con cui BooksScreen si apre: "list" o "transfer" (export diretto dal banner)
   // Vuoto finché il caricamento iniziale da Firestore non li sostituisce
   // (vedi useEffect più sotto) — non più dati demo hardcoded.
   const [recipes, setRecipes] = useState([]);
@@ -1130,10 +1131,19 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   };
 
   // ── Condivisione esterna: codice testuale copiabile (import/export reale) ──
-  const exportShareCode = (recipeIds) => {
+  // includeMemories: porta con sé anche i ricordi (che contengono le loro foto).
+  // includeSystem: aggiunge le impostazioni di "Organizza Ingredienti" del libro attivo.
+  const exportShareCode = (recipeIds, { includeMemories = false, includeSystem = false } = {}) => {
     const sel = recipes.filter(r => recipeIds.includes(r.id))
-      .map(({ memories, comments, favorite, ...rest }) => rest); // solo la ricetta
-    const json = JSON.stringify({ v:2, recipes: sel });
+      .map(({ memories, comments, favorite, ...rest }) => includeMemories ? { ...rest, memories: memories || [] } : rest);
+    const payload = { v:3, recipes: sel };
+    if (includeSystem) {
+      payload.system = {
+        ingredientCategories, aggregates, equivalences, customUnits, nutritionMap,
+        customFoods, ingredientDict, sourceByIngredient, ignoredSimilarities,
+      };
+    }
+    const json = JSON.stringify(payload);
     return btoa(unescape(encodeURIComponent(json)));
   };
 
@@ -1161,18 +1171,41 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
           ? ings.map(s => ({ ...s, items: (s.items || []).map(legacyToObj) }))
           : ings.map(legacyToObj);
       const copies = parsed.recipes.map((r, i) => ({
-        ...r, id: uid("r"), memories:[], comments:[], favorite:false,
+        ...r, id: uid("r"), memories: Array.isArray(r.memories) ? r.memories : [], comments:[], favorite:false,
         macroSection: r.macroSection || "altro",
         ingredients: convIngs(r.ingredients),
       }));
       setRecipes(prev => [...prev, ...copies]);
-      return { ok:true, count: copies.length };
+      // Le impostazioni di Organizza Ingredienti si applicano solo se il libro
+      // attivo non ne ha ancora di proprie — altrimenti rischierebbero di
+      // sovrascrivere in silenzio categorie/aggregati già configurati dall'utente.
+      let systemImported = false;
+      if (parsed.system && typeof parsed.system === "object") {
+        const bookIsEmpty = Object.keys(ingredientCategories).length === 0 && aggregates.length === 0
+          && Object.keys(nutritionMap).length === 0 && Object.keys(equivalences).length === 0
+          && customFoods.length === 0 && Object.keys(ingredientDict).length === 0;
+        if (bookIsEmpty) {
+          const s = parsed.system;
+          if (s.ingredientCategories) setIngredientCategories(s.ingredientCategories);
+          if (s.aggregates) setAggregates(s.aggregates);
+          if (s.equivalences) setEquivalences(s.equivalences);
+          if (s.customUnits) setCustomUnits(s.customUnits);
+          if (s.nutritionMap) setNutritionMap(s.nutritionMap);
+          if (s.customFoods) setCustomFoods(s.customFoods);
+          if (s.ingredientDict) setIngredientDict(s.ingredientDict);
+          if (s.sourceByIngredient) setSourceByIngredient(s.sourceByIngredient);
+          if (s.ignoredSimilarities) setIgnoredSimilarities(s.ignoredSimilarities);
+          systemImported = true;
+        }
+      }
+      return { ok:true, count: copies.length, systemImported };
     } catch {
       return { ok:false };
     }
   };
 
   const goTo = (s) => { setPrevScreen(screen); setScreen(s); };
+  const openBookExport = () => { setBooksEntryPhase("transfer"); goTo("books"); };
   const openAddMemory = (recipeId = null) => { setMemoryPrefillRecipeId(recipeId); goTo("addMemory"); };
   const openOrganize = (recipeId = null, alertTypes = null, manageAggs = false, manageCats = false, aggScope = "all") => {
     // Ingresso "contestuale" (da un alert/link specifico) vs "generico" (icona
@@ -1385,7 +1418,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
           <LandingScreen
             recipes={recipes}
             bookName={activeBook?.name}
-            onBooks={() => goTo("books")}
+            onBooks={() => { setBooksEntryPhase("list"); goTo("books"); }}
             onOrganize={() => openOrganize()}
             onRecipes={() => setScreen("recipes")}
             onBook={() => setScreen("book")}
@@ -1484,8 +1517,8 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             onChangeMemberPermission={changeMemberPermission}
             onCopyRecipes={copyRecipesToBook}
             onExportCode={exportShareCode}
-            onExportPDF={() => exportRecipesPDFByIds(recipes.map(r => r.id))}
-            onImportCode={importShareCode}
+            onExportPDF={(ids) => exportRecipesPDFByIds(ids)}
+            initialPhase={booksEntryPhase}
             defaultBookId={defaultBookId}
             onSetDefault={(id) => { setDefaultBookId(id); setDefaultBook(me, id); }}
             onLanding={() => setScreen("landing")}
@@ -1562,6 +1595,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
             extraTagGroups={extraTagGroups}
+            onExport={openBookExport}
           />
         )}
         {screen==="book" && (
@@ -1576,6 +1610,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             onAdd={(type) => type==="memory" ? openAddMemory() : goTo("addRecipeHub")}
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
+            onExport={openBookExport}
           />
         )}
         {screen==="memories" && (
@@ -1612,6 +1647,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             pendingExtractions={pendingExtractions}
             onOpenPending={openPendingExtraction}
             onDiscardPending={discardPendingExtraction}
+            onImportCode={importShareCode}
           />
         )}
         {screen==="new" && (

@@ -13,6 +13,11 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
   const [searchQuery, setSearchQuery] = useState("");
   const [showFavorites, setShowFavorites] = useState(false);
   const [openTagGroup, setOpenTagGroup] = useState(null);
+  const [timeOpen, setTimeOpen] = useState(false);
+  const prepBound = Math.max(180, ...recipes.map(r => r.prepTime || 0));
+  const cookBound = Math.max(180, ...recipes.map(r => r.cookTime || 0));
+  const [prepRange, setPrepRange] = useState([0, prepBound]);
+  const [cookRange, setCookRange] = useState([0, cookBound]);
 
   const goSection = (id) => {
     setActiveSection(id === activeSection ? null : id);
@@ -30,7 +35,14 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
   const tagFiltered = activeTags.length > 0
     ? sectionFiltered.filter(r => activeTags.every(t => r.tags.includes(t)))
     : sectionFiltered;
-  const favFiltered = showFavorites ? tagFiltered.filter(r => r.favorite) : tagFiltered;
+  const timeActive = prepRange[0] > 0 || prepRange[1] < prepBound || cookRange[0] > 0 || cookRange[1] < cookBound;
+  const timeFiltered = timeActive
+    ? tagFiltered.filter(r => {
+        const p = r.prepTime || 0, c = r.cookTime || 0;
+        return p >= prepRange[0] && p <= prepRange[1] && c >= cookRange[0] && c <= cookRange[1];
+      })
+    : tagFiltered;
+  const favFiltered = showFavorites ? timeFiltered.filter(r => r.favorite) : timeFiltered;
   const displayRecipes = searchQuery.trim()
     ? favFiltered.filter(r => r.title.toLowerCase().includes(searchQuery.toLowerCase()))
     : favFiltered;
@@ -166,6 +178,62 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
                     })}
                   </div>
                 )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Tempo di preparazione/cottura (accordion) */}
+      <div style={{ borderBottom:`1px solid ${th.appBorder}`, flexShrink:0 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 16px", overflowX:"auto", scrollbarWidth:"none" }}>
+          <button onClick={() => setTimeOpen(o => !o)} style={{
+            flexShrink:0, padding:"5px 12px", borderRadius:20,
+            border:`1.5px solid ${timeActive ? th.appAccent : th.appBorder}`,
+            background: timeActive ? `${th.appAccent}15` : "transparent",
+            color: timeActive ? th.appAccent : th.appFaded,
+            fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
+            display:"flex", alignItems:"center", gap:5,
+          }}>
+            ⏱️ Filtra per tempo
+            {timeActive && <span style={{ background:th.appAccent, color:"#fff", borderRadius:10, padding:"1px 6px", fontSize:10 }}>●</span>}
+            <span style={{ fontSize:10, opacity:0.6 }}>{timeOpen ? "▲" : "▼"}</span>
+          </button>
+          {timeActive && (
+            <button onClick={() => { setPrepRange([0, prepBound]); setCookRange([0, cookBound]); }} style={{
+              flexShrink:0, padding:"4px 10px", borderRadius:20,
+              background:"none", border:`1px solid ${th.appBorder}`,
+              color:th.appFaded, fontFamily:F.ui, fontSize:10, cursor:"pointer",
+            }}>Azzera</button>
+          )}
+        </div>
+        {timeOpen && (
+          <div style={{ padding:"2px 16px 12px", display:"flex", flexDirection:"column", gap:12 }}>
+            {[
+              { label:"🍳 Preparazione", range:prepRange, setRange:setPrepRange, bound:prepBound },
+              { label:"🔥 Cottura", range:cookRange, setRange:setCookRange, bound:cookBound },
+            ].map(({ label, range, setRange, bound }) => (
+              <div key={label}>
+                <div style={{ display:"flex", justifyContent:"space-between", fontFamily:F.ui, fontSize:11, color:th.appFaded, marginBottom:4 }}>
+                  <span>{label}</span>
+                  <span>{range[0]}–{range[1] >= bound ? `${bound}+` : range[1]} min</span>
+                </div>
+                <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+                  <div style={{ flex:1 }}>
+                    <input type="range" min={0} max={bound} step={5} value={range[0]}
+                      onChange={e => setRange([Math.min(Number(e.target.value), range[1]), range[1]])}
+                      style={{ width:"100%", accentColor:th.appAccent }}
+                    />
+                    <div style={{ fontFamily:F.ui, fontSize:9, color:th.appFaded, textAlign:"center" }}>min</div>
+                  </div>
+                  <div style={{ flex:1 }}>
+                    <input type="range" min={0} max={bound} step={5} value={range[1]}
+                      onChange={e => setRange([range[0], Math.max(Number(e.target.value), range[0])])}
+                      style={{ width:"100%", accentColor:th.appAccent }}
+                    />
+                    <div style={{ fontFamily:F.ui, fontSize:9, color:th.appFaded, textAlign:"center" }}>max</div>
+                  </div>
+                </div>
               </div>
             ))}
           </div>

@@ -7,6 +7,7 @@ import {
 } from "../utils/helpers.js";
 import GlobalNav from "../components/GlobalNav.jsx";
 import RecipeFilterBar from "../components/RecipeFilterBar.jsx";
+import SuggestionHint from "../components/SuggestionHint.jsx";
 import ServingsDialog from "../components/ServingsDialog.jsx";
 import ShoppingMode from "../components/ShoppingMode.jsx";
 import CookingMode from "./CookingMode.jsx";
@@ -234,16 +235,39 @@ export default function EmptyFridgeScreen({
           </div>
         )}
 
+        {/* Suggerimenti verso Organizza Ingredienti: entrambi fissi in cima, tendine collassabili */}
+        {(suggestedAggregates.length > 0 && onManageAggregates) || (uncategorizedItems.length > 0 && (onManageCategories || onManageCategoriesDb)) ? (
+          <div style={{ padding:"6px 18px 0" }}>
+            {suggestedAggregates.length > 0 && onManageAggregates && (
+              <SuggestionHint onClick={() => onManageAggregates()}>
+                <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
+                  💡 Sono stati rilevati ingredienti con nomi simili. Per un funzionamento ottimale{" "}
+                  <span style={{ color:th.appAccent, fontWeight:700, textDecoration:"underline" }}>raggruppali in aggregati o ignora le similitudini</span>.
+                </span>
+              </SuggestionHint>
+            )}
+            {uncategorizedItems.length > 0 && (onManageCategories || onManageCategoriesDb) && (
+              <SuggestionHint>
+                <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
+                  💡 Sono stati rilevati degli ingredienti senza categoria. Per un funzionamento ottimale{" "}
+                  {onManageCategories && (
+                    <span onClick={() => onManageCategories()} style={{ color:th.appAccent, fontWeight:700, cursor:"pointer", textDecoration:"underline" }}>assegnali a delle categorie esistenti</span>
+                  )}
+                  {onManageCategories && onManageCategoriesDb && " "}
+                  {onManageCategoriesDb && (
+                    <>oppure{" "}
+                      <span onClick={() => onManageCategoriesDb()} style={{ color:th.appAccent, fontWeight:700, cursor:"pointer", textDecoration:"underline" }}>creane di nuove</span>
+                    </>
+                  )}
+                  .
+                </span>
+              </SuggestionHint>
+            )}
+          </div>
+        ) : null}
+
         {/* Lista per categoria */}
         <div onScroll={() => tooltipKey && setTooltipKey(null)} style={{ flex:1, overflowY:"auto", padding:"8px 18px 100px" }}>
-          {suggestedAggregates.length > 0 && onManageAggregates && (
-            <div onClick={() => onManageAggregates()} style={{ marginBottom:14, padding:"9px 12px", background:`${th.appAccent}10`, border:`1px dashed ${th.appAccent}55`, borderRadius:10, cursor:"pointer" }}>
-              <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
-                💡 Sono stati rilevati ingredienti con nomi simili. Per un funzionamento ottimale{" "}
-                <span style={{ color:th.appAccent, fontWeight:700, textDecoration:"underline" }}>raggruppali in aggregati o ignora le similitudini</span>.
-              </span>
-            </div>
-          )}
           {byCategory.length === 0 && uncategorizedItems.length === 0 ? (
             <div style={{ textAlign:"center", padding:"30px 0", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>
               Nessun ingrediente trovato
@@ -270,23 +294,6 @@ export default function EmptyFridgeScreen({
                   <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
                     {uncategorizedItems.map(renderItemBtn)}
                   </div>
-                  {(onManageCategories || onManageCategoriesDb) && (
-                    <div style={{ marginTop:10, padding:"9px 12px", background:`${th.appAccent}10`, border:`1px dashed ${th.appAccent}55`, borderRadius:10 }}>
-                      <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
-                        💡 Sono stati rilevati degli ingredienti senza categoria. Per un funzionamento ottimale{" "}
-                        {onManageCategories && (
-                          <span onClick={() => onManageCategories()} style={{ color:th.appAccent, fontWeight:700, cursor:"pointer", textDecoration:"underline" }}>assegnali a delle categorie esistenti</span>
-                        )}
-                        {onManageCategories && onManageCategoriesDb && " "}
-                        {onManageCategoriesDb && (
-                          <>oppure{" "}
-                            <span onClick={() => onManageCategoriesDb()} style={{ color:th.appAccent, fontWeight:700, cursor:"pointer", textDecoration:"underline" }}>creane di nuove</span>
-                          </>
-                        )}
-                        .
-                      </span>
-                    </div>
-                  )}
                 </div>
               )}
             </>

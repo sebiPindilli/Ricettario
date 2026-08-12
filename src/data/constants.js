@@ -97,10 +97,6 @@ export const TAG_GROUPS = [
     tags:["Semplice","Media","Elaborata"],
   },
   {
-    group:"Tempo",
-    tags:["Meno di 30 min","30-60 min","Più di 1 ora"],
-  },
-  {
     group:"Origine",
     tags:["Italiana","Regionale","Internazionale","Di famiglia"],
   },

@@ -80,12 +80,16 @@ export const durationOf = (step) => {
 // duration?} (chiavi vuote omesse). Va applicato agli ITEM dentro ciascuna
 // sottosezione, mai al wrapper {section, items} — vedi
 // isSectioned/toSectioned/fromSectioned qui sopra.
+// Se il passo non porta già una durata esplicita, la deduce dal testo
+// (stesso parseStepDuration usato durante la digitazione manuale): così
+// anche gli step arrivati già scritti — es. da uno scan/link AI, mai
+// "digitati" dall'utente — si vedono comunque proporre il timer.
 export const stripPhotolessStep = (s) => {
-  if (typeof s === "string") return s;
-  const photos = stepPhotosOf(s);
-  const duration = durationOf(s);
-  if (photos.length === 0 && duration == null) return s?.text ?? "";
-  const out = { text: s?.text ?? "" };
+  const text = typeof s === "string" ? s : (s?.text ?? "");
+  const photos = typeof s === "string" ? [] : stepPhotosOf(s);
+  const duration = (typeof s === "string" ? null : durationOf(s)) ?? parseStepDuration(text);
+  if (photos.length === 0 && duration == null) return text;
+  const out = { text };
   if (photos.length > 0) out.photos = photos;
   if (duration != null) out.duration = duration;
   return out;

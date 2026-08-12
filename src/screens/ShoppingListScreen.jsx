@@ -6,6 +6,7 @@ import {
 } from "../utils/helpers.js";
 import { effectiveCategories } from "../utils/aggregates.js";
 import GlobalNav from "../components/GlobalNav.jsx";
+import SuggestionHint from "../components/SuggestionHint.jsx";
 import { guideSpesa } from "../data/guideContent.jsx";
 
 const fmtNum = (n) => String(Math.round(n * 100) / 100).replace(".", ",");
@@ -314,12 +315,12 @@ export default function ShoppingListScreen({
       ) : (
         <div style={{ flex:1, overflowY:"auto", padding:"8px 18px 110px" }}>
           {shoppingSuggestedAggregates.length > 0 && onManageAggregates && (
-            <div onClick={() => onManageAggregates()} style={{ marginBottom:14, padding:"9px 12px", background:`${th.appAccent}10`, border:`1px dashed ${th.appAccent}55`, borderRadius:10, cursor:"pointer" }}>
+            <SuggestionHint onClick={() => onManageAggregates()}>
               <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
                 💡 Sono stati rilevati ingredienti con nomi simili nella tua lista spesa. Per un funzionamento ottimale{" "}
                 <span style={{ color:th.appAccent, fontWeight:700, textDecoration:"underline" }}>raggruppali in aggregati o ignora le similitudini</span>.
               </span>
-            </div>
+            </SuggestionHint>
           )}
           {/* Ricette attive nella lista — rimozione in un clic di tutti gli ingredienti */}
           <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appFaded, textTransform:"uppercase", margin:"4px 0 8px", fontWeight:700 }}>

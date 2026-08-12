@@ -6,7 +6,7 @@ import GlobalNav from "../components/GlobalNav.jsx";
 import RecipeCardList from "../components/RecipeCardList.jsx";
 import { guideRicette } from "../data/guideContent.jsx";
 
-export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, onMemories, onAdd, onFridge, onShopping, extraTagGroups=[], sectionList=MACRO_SECTIONS }) {
+export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, onMemories, onAdd, onFridge, onShopping, onExport, extraTagGroups=[], sectionList=MACRO_SECTIONS }) {
   const th = useTheme();
   const [activeSection, setActiveSection] = useState(null);
   const [activeTags, setActiveTags] = useState([]);
@@ -62,6 +62,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
         onFridge={onFridge}
         onShopping={onShopping}
         onLanding={onLanding}
+        onExport={onExport}
         activeLabel={activeSection ? MACRO_SECTIONS.find(s=>s.id===activeSection)?.label : "Libro Ricette"}
         infoContent={guideRicette}
       />
