@@ -142,7 +142,7 @@ export default function BooksScreen({
                 }}>{selIds.length === activeRecipes.length ? "✓ Tutte selezionate" : "Seleziona tutto"}</button>
               </div>
             )}
-            <div style={{ flex:1, overflowY:"auto", padding:"0 18px 150px" }}>
+            <div style={{ flex:1, overflowY:"auto", padding:"0 18px 12px" }}>
               {activeRecipes.map(r => {
                 const on = selIds.includes(r.id);
                 return (
@@ -171,8 +171,8 @@ export default function BooksScreen({
               )}
             </div>
 
-            {/* Azioni fisse in basso */}
-            <div style={{ position:"absolute", bottom:0, left:0, right:0, padding:"12px 18px 20px", background:`linear-gradient(transparent, ${th.appBg} 25%)` }}>
+            {/* Azioni in basso — riga fissa nel flusso flex (non sovrapposta alla lista), mai sotto la lista qualunque sia la sua altezza */}
+            <div style={{ flexShrink:0, padding:"12px 18px 20px", background:th.appBg, borderTop:`1px solid ${th.appBorder}` }}>
               {copiedMsg && (
                 <div style={{ textAlign:"center", fontFamily:F.ui, fontSize:12, color:"#6B8C6E", fontWeight:700, marginBottom:8 }}>{copiedMsg}</div>
               )}

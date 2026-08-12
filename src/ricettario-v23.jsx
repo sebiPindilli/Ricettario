@@ -399,8 +399,17 @@ const exportBookPDF = (recipes, sections = MACRO_SECTIONS, bookName = "Il mio Ri
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family: Georgia, serif; color: #1a1a1a; max-width: 700px; margin: 0 auto; }
   .page { page-break-before: always; page-break-after: always; break-before: page; break-after: page; padding: 40px; }
-  /* Copertina */
-  .cover { text-align:center; padding-top: 200px; }
+  /* Copertina — pagina intera, contenuto centrato verticalmente (non solo
+     text-align, anche allineato a metà altezza pagina). Le proprietà di
+     interruzione pagina sono ripetute qui invece di fare solo affidamento
+     sull'ereditarietà da .page: alcuni motori di stampa (es. il servizio di
+     stampa di sistema Android) le rispettano meno quando derivano da una
+     combinazione di classi. */
+  .cover {
+    page-break-before: always; page-break-after: always; break-before: page; break-after: page;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; text-align:center;
+  }
   .cover .small { font-size: 12px; letter-spacing: 4px; color: #8a7c66; text-transform: uppercase; font-family: sans-serif; }
   .cover h1 { font-size: 44px; font-style: italic; margin: 10px 0 6px; }
   .cover .sub { font-size: 15px; color: #7A6E5F; font-style: italic; }
@@ -412,8 +421,14 @@ const exportBookPDF = (recipes, sections = MACRO_SECTIONS, bookName = "Il mio Ri
   .index .row .t { }
   .index .row .dots { flex:1; border-bottom: 1px dotted #c9bda5; margin: 0 8px; }
   .index .row .c { font-size: 11px; color: #7A6E5F; font-family: sans-serif; }
-  /* Pagina sezione */
-  .secpage { text-align:center; padding-top: 230px; }
+  /* Pagina sezione — stessa ragione di .cover per le proprietà ripetute:
+     deve sempre isolarsi dalla ricetta precedente, mai condividerne la
+     pagina. */
+  .secpage {
+    page-break-before: always; page-break-after: always; break-before: page; break-after: page;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; text-align:center;
+  }
   .secpage .emoji { font-size: 80px; }
   .secpage h1 { font-size: 34px; font-style: italic; margin: 18px 0 8px; }
   .secpage .desc { font-size: 14px; color: #7A6E5F; font-style: italic; }

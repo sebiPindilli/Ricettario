@@ -16,8 +16,14 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
   const [timeOpen, setTimeOpen] = useState(false);
   const prepBound = Math.max(180, ...recipes.map(r => r.prepTime || 0));
   const cookBound = Math.max(180, ...recipes.map(r => r.cookTime || 0));
+  // prepRange/cookRange sono i valori APPLICATI (usati per filtrare); gli
+  // slider scrivono invece in draftPrepRange/draftCookRange e si applicano
+  // solo al tocco di "Applica" — altrimenti ogni pixel di trascinamento
+  // rifiltrerebbe subito tutta la lista, con lag percepibile.
   const [prepRange, setPrepRange] = useState([0, prepBound]);
   const [cookRange, setCookRange] = useState([0, cookBound]);
+  const [draftPrepRange, setDraftPrepRange] = useState(prepRange);
+  const [draftCookRange, setDraftCookRange] = useState(cookRange);
 
   const goSection = (id) => {
     setActiveSection(id === activeSection ? null : id);
@@ -35,7 +41,9 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
   const tagFiltered = activeTags.length > 0
     ? sectionFiltered.filter(r => activeTags.every(t => r.tags.includes(t)))
     : sectionFiltered;
-  const timeActive = prepRange[0] > 0 || prepRange[1] < prepBound || cookRange[0] > 0 || cookRange[1] < cookBound;
+  const prepActive = prepRange[0] > 0 || prepRange[1] < prepBound;
+  const cookActive = cookRange[0] > 0 || cookRange[1] < cookBound;
+  const timeActive = prepActive || cookActive;
   const timeFiltered = timeActive
     ? tagFiltered.filter(r => {
         const p = r.prepTime || 0, c = r.cookTime || 0;
@@ -184,10 +192,13 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
         )}
       </div>
 
-      {/* Tempo di preparazione/cottura (accordion) */}
+      {/* Tempo di preparazione/cottura (accordion, applicato solo su "Applica") */}
       <div style={{ borderBottom:`1px solid ${th.appBorder}`, flexShrink:0 }}>
         <div style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 16px", overflowX:"auto", scrollbarWidth:"none" }}>
-          <button onClick={() => setTimeOpen(o => !o)} style={{
+          <button onClick={() => setTimeOpen(o => {
+            if (!o) { setDraftPrepRange(prepRange); setDraftCookRange(cookRange); }
+            return !o;
+          })} style={{
             flexShrink:0, padding:"5px 12px", borderRadius:20,
             border:`1.5px solid ${timeActive ? th.appAccent : th.appBorder}`,
             background: timeActive ? `${th.appAccent}15` : "transparent",
@@ -195,12 +206,19 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
             fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
             display:"flex", alignItems:"center", gap:5,
           }}>
-            ⏱️ Filtra per tempo
-            {timeActive && <span style={{ background:th.appAccent, color:"#fff", borderRadius:10, padding:"1px 6px", fontSize:10 }}>●</span>}
+            ⏱️ Tempo
+            {timeActive && (
+              <span style={{ background:th.appAccent, color:"#fff", borderRadius:10, padding:"1px 7px", fontSize:9.5, fontWeight:700 }}>
+                {[
+                  prepActive && `🍳 ${prepRange[0]}–${prepRange[1] >= prepBound ? prepBound+"+" : prepRange[1]}`,
+                  cookActive && `🔥 ${cookRange[0]}–${cookRange[1] >= cookBound ? cookBound+"+" : cookRange[1]}`,
+                ].filter(Boolean).join(" · ")}
+              </span>
+            )}
             <span style={{ fontSize:10, opacity:0.6 }}>{timeOpen ? "▲" : "▼"}</span>
           </button>
           {timeActive && (
-            <button onClick={() => { setPrepRange([0, prepBound]); setCookRange([0, cookBound]); }} style={{
+            <button onClick={() => { setPrepRange([0, prepBound]); setCookRange([0, cookBound]); setDraftPrepRange([0, prepBound]); setDraftCookRange([0, cookBound]); }} style={{
               flexShrink:0, padding:"4px 10px", borderRadius:20,
               background:"none", border:`1px solid ${th.appBorder}`,
               color:th.appFaded, fontFamily:F.ui, fontSize:10, cursor:"pointer",
@@ -210,8 +228,8 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
         {timeOpen && (
           <div style={{ padding:"2px 16px 12px", display:"flex", flexDirection:"column", gap:12 }}>
             {[
-              { label:"🍳 Preparazione", range:prepRange, setRange:setPrepRange, bound:prepBound },
-              { label:"🔥 Cottura", range:cookRange, setRange:setCookRange, bound:cookBound },
+              { label:"🍳 Preparazione", range:draftPrepRange, setRange:setDraftPrepRange, bound:prepBound },
+              { label:"🔥 Cottura", range:draftCookRange, setRange:setDraftCookRange, bound:cookBound },
             ].map(({ label, range, setRange, bound }) => (
               <div key={label}>
                 <div style={{ display:"flex", justifyContent:"space-between", fontFamily:F.ui, fontSize:11, color:th.appFaded, marginBottom:4 }}>
@@ -236,6 +254,11 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
                 </div>
               </div>
             ))}
+            <button onClick={() => { setPrepRange(draftPrepRange); setCookRange(draftCookRange); setTimeOpen(false); }} style={{
+              padding:"9px", borderRadius:10, border:"none",
+              background:th.appAccent, color:"#fff",
+              fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer",
+            }}>✓ Applica</button>
           </div>
         )}
       </div>
