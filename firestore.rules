@@ -179,5 +179,69 @@ service cloud.firestore {
       allow update: if isAdmin() &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','resolvedBy','resolvedAt']);
     }
+
+    // Condivisione di una singola ricetta via link — vedi sharedRecipesStore.js.
+    // Split in due parti perché Firestore nega la lettura a livello di
+    // intero documento, mai di singolo campo: se mettessi le condizioni di
+    // scaduto/revocato/ristretto direttamente sul documento con la ricetta,
+    // chi riceve un link non più valido vedrebbe sempre lo stesso errore
+    // generico "permission denied", senza modo di distinguere il motivo.
+    // Il documento "di stato" (piccolo, senza il contenuto vero) resta
+    // sempre leggibile da chiunque sia whitelistato, così il client può
+    // sempre calcolare e mostrare il messaggio giusto; il contenuto vero
+    // vive nella sottocollezione content/ con le condizioni reali. Stesso
+    // schema di books/{bookId}/system/data (documento singolo dentro una
+    // sottocollezione dedicata).
+    match /sharedRecipes/{shareId} {
+      function isSharer() { return isWhitelisted() && resource.data.sharedBy == request.auth.token.email; }
+
+      allow read: if isWhitelisted();
+
+      allow create: if isWhitelisted() &&
+        request.resource.data.sharedBy == request.auth.token.email &&
+        request.resource.data.keys().hasOnly(['recipeTitle', 'sharedBy', 'sharedAt', 'expiresAt', 'revoked', 'visibility', 'allowedEmails', 'sourceBookId', 'sourceRecipeId', 'includedData']) &&
+        request.resource.data.revoked == false &&
+        request.resource.data.visibility in ['anyone', 'restricted'] &&
+        request.resource.data.allowedEmails is list &&
+        request.resource.data.expiresAt > request.time &&
+        request.resource.data.expiresAt < request.time + duration.value(31, 'd');
+
+      // Solo chi ha condiviso può modificare, e solo destinatari/visibilità/
+      // revoca — mai il contenuto (che comunque non vive qui, ma in
+      // content/), né sharedBy/sharedAt/sourceBookId/sourceRecipeId/expiresAt.
+      // Permette di aggiungere un destinatario a un link già inviato senza
+      // dover revocare e rimandare un nuovo link a tutti.
+      allow update: if isSharer() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['allowedEmails', 'visibility', 'revoked']);
+
+      // Eliminazione reale (pulizia alla scadenza/revoca, vedi la schermata
+      // "I miei link condivisi") — solo da chi ha condiviso.
+      allow delete: if isSharer();
+
+      match /content/{document} {
+        function statusDoc() { return get(/databases/$(database)/documents/sharedRecipes/$(shareId)).data; }
+        function isNotExpired() { return request.time < statusDoc().expiresAt; }
+        function isNotRevoked() { return statusDoc().revoked != true; }
+        function isSharerEmail() { return request.auth.token.email == statusDoc().sharedBy; }
+        function canSeeContent() {
+          return statusDoc().visibility == 'anyone' ||
+            request.auth.token.email == statusDoc().sharedBy ||
+            request.auth.token.email in statusDoc().allowedEmails;
+        }
+
+        // Chi ha condiviso legge SEMPRE il proprio contenuto, anche dopo
+        // revoca/scadenza — serve alla pulizia (deve sapere quali foto
+        // cancellare, vedi photoPaths) e in generale è ragionevole: si può
+        // sempre rivedere ciò che si è condivisi, indipendentemente da
+        // quando i destinatari hanno perso l'accesso.
+        allow read: if isWhitelisted() && (isSharerEmail() || (isNotRevoked() && isNotExpired() && canSeeContent()));
+        allow create: if isWhitelisted() &&
+          statusDoc().sharedBy == request.auth.token.email &&
+          request.resource.data.keys().hasOnly(['recipe', 'ingredientData', 'photoPaths']);
+        // Immutabile: è una fotografia, non un documento vivo.
+        allow update: if false;
+        allow delete: if isWhitelisted() && statusDoc().sharedBy == request.auth.token.email;
+      }
+    }
   }
 }

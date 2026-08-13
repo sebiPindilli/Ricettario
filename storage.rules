@@ -58,5 +58,30 @@ service firebase.storage {
     match /reports/{reportId}/{allPaths=**} {
       allow read, write: if isAdmin() || isTester();
     }
+
+    // Foto duplicate delle ricette condivise via link — vedi
+    // sharedRecipesStore.js e photoStore.js. La lettura rispecchia le
+    // condizioni del documento "di stato" sharedRecipes/{shareId} in
+    // firestore.rules (non scaduto, non revocato, visibilità); la scrittura
+    // (creazione alla condivisione, eliminazione alla pulizia) è permessa
+    // solo a chi ha creato la condivisione. Mai un aggiornamento: sono
+    // fotografie immutabili, non le foto vive della ricetta originale.
+    function sharedStatus(shareId) {
+      return firestore.get(/databases/(default)/documents/sharedRecipes/$(shareId)).data;
+    }
+    function sharedIsSharer(shareId) {
+      return sharedStatus(shareId).sharedBy == request.auth.token.email;
+    }
+    function sharedCanRead(shareId) {
+      return sharedStatus(shareId).revoked != true &&
+        request.time < sharedStatus(shareId).expiresAt &&
+        (sharedStatus(shareId).visibility == 'anyone' ||
+         request.auth.token.email == sharedStatus(shareId).sharedBy ||
+         request.auth.token.email in sharedStatus(shareId).allowedEmails);
+    }
+    match /sharedRecipes/{shareId}/{allPaths=**} {
+      allow read: if isWhitelisted() && sharedCanRead(shareId);
+      allow write: if isWhitelisted() && sharedIsSharer(shareId);
+    }
   }
 }

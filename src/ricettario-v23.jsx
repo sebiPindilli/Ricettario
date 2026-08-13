@@ -10,16 +10,26 @@ import {
   WEIGHT_UNITS, ingredientToGrams,
   parseIngredientAmount, decomposeIngredient, composeIngredient,
   memoryPeriodLabel, memorySortKey, buildFridgeItems, withTimeout,
+  isSystemDataEmpty, applyImportedSystemData,
 } from "./utils/helpers.js";
 import { effectiveNutritionKey, findSimilarIngredients } from "./utils/aggregates.js";
 import {
   loadFullBook, saveRecipe, deleteRecipe as deleteRecipeDoc,
-  saveBookSystem, saveBookMeta, saveShoppingList,
+  saveBookSystem, saveBookMeta, saveShoppingList, loadBookSystem,
   createBookInFirestore, deleteBookInFirestore, listMyBooks,
   addBookMember as addBookMemberFs, removeBookMember as removeBookMemberFs, setBookMemberPermission as setBookMemberPermissionFs,
 } from "./services/bookStore.js";
 import { diffRecipes, recipesToMap } from "./utils/dirtyTracking.js";
 import { setDefaultBook } from "./services/authStore.js";
+import { buildRecipeIngredientData } from "./utils/shareIngredientData.js";
+import {
+  createSharedRecipe, loadSharedStatus, loadSharedContent, duplicateRecipePhotos,
+  listMySharedRecipes, updateSharedRecipeAccess, revokeSharedRecipe, deleteSharedRecipeFully,
+} from "./services/sharedRecipesStore.js";
+import { dishPhotoPath, stepPhotoPath, memoryPhotoPath } from "./services/photoStore.js";
+import { isEditorRole, normalizeRole } from "./utils/bookRoles.js";
+import SharedRecipeScreen from "./screens/SharedRecipeScreen.jsx";
+import MySharedLinksScreen from "./screens/MySharedLinksScreen.jsx";
 import { auth } from "./firebase.js";
 import { signOut } from "firebase/auth";
 import AuthGate from "./components/AuthGate.jsx";
@@ -592,7 +602,22 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
       window.removeEventListener("offline", goOffline);
     };
   }, []);
-  const [screen, setScreen] = useState("cover");
+  // Deep-link di un link condiviso (?shared=ID nella query string): letto
+  // una sola volta all'avvio, non con un router — questa è l'unica pagina,
+  // la query string arriva sempre su "/" e ci arriva anche da service
+  // worker attivo (nessun navigateFallbackDenylist la esclude, vedi
+  // vite.config.js). Il login usa signInWithPopup (non redirect): l'URL
+  // della pagina non cambia mai durante l'accesso, quindi anche un utente
+  // non ancora loggato la ritrova qui intatta una volta autenticato — non
+  // serve un meccanismo dedicato di "azione in sospeso dopo il login".
+  // L'URL viene ripulito subito dopo averla letta, così un refresh o una
+  // navigazione successiva non ripropongono lo stesso link.
+  const [sharedRecipeId] = useState(() => {
+    const id = new URLSearchParams(window.location.search).get("shared");
+    if (id) window.history.replaceState(null, "", window.location.pathname);
+    return id;
+  });
+  const [screen, setScreen] = useState(() => sharedRecipeId ? "sharedRecipe" : "cover");
   // screen: cover | landing | recipes | book | memories | recipe | new | edit | scan | theme
   const [scanMode, setScanMode] = useState("camera"); // "camera" | "gallery" — vedi AddRecipeHubScreen
   const [selected, setSelected] = useState(null);
@@ -1177,6 +1202,82 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     return btoa(unescape(encodeURIComponent(json)));
   };
 
+  // Condivisione di una singola ricetta via link (sharedRecipes) — vedi
+  // ExportFlow.jsx e sharedRecipesStore.js. Il filtro dei dati ingredienti
+  // resta scoped alla ricetta (mai il libro intero, a differenza
+  // dell'export a codice): vedi utils/shareIngredientData.js.
+  const shareRecipeViaLink = async (recipeId, { includeIngredients, includePhotos, visibility, allowedEmails }) => {
+    const recipe = recipes.find(r => r.id === recipeId);
+    if (!recipe) throw new Error("Ricetta non trovata");
+    const ingredientData = includeIngredients
+      ? buildRecipeIngredientData(recipe, {
+          ingredientCategories, aggregates, equivalences, customUnits,
+          nutritionMap, customFoods, ingredientDict, sourceByIngredient,
+        })
+      : null;
+    return createSharedRecipe({
+      recipe, ingredientData, sharedBy: me, visibility, allowedEmails,
+      sourceBookId: activeBookId, sourceRecipeId: recipeId,
+      includePhotos,
+    });
+  };
+
+  // Libri su cui l'utente ha permesso di scrittura (proprietario/
+  // co-proprietario/collaboratore, non lettore) — per la scelta "aggiungi
+  // al mio ricettario" quando si apre un link condiviso. Stesso controllo
+  // di bookRoles.js usato ovunque nell'app, non riscritto qui.
+  const myEditableBooks = books.filter(b => {
+    const role = b.owner === me ? "proprietario" : normalizeRole((b.memberRoles || {})[me]);
+    return isEditorRole(role);
+  });
+
+  // Copia una ricetta condivisa (ricevuta via link) in un libro proprio —
+  // stesso schema di copyRecipesToBook, più l'applicazione dei dati
+  // ingredienti (se inclusi) con la stessa regola "solo se il libro di
+  // destinazione è vuoto" usata dall'import a codice. Se il libro target
+  // non è quello attivo, il suo system/data non è in memoria: va letto e
+  // scritto direttamente su Firestore invece di passare dagli state setter
+  // (che riflettono solo il libro attivo).
+  const addSharedRecipeToBook = async (targetBookId, content, { applyIngredientData }) => {
+    let newRecipe = {
+      ...content.recipe,
+      id: uid("r"),
+      macroSection: content.recipe.macroSection || "altro",
+      comments: [], favorite: false,
+      memories: Array.isArray(content.recipe.memories) ? content.recipe.memories : [],
+    };
+    // Le foto della ricetta condivisa vivono sotto sharedRecipes/{shareId}/…
+    // e spariscono quando quel link scade o viene revocato: una ricetta
+    // "aggiunta" al proprio libro deve avere le sue foto indipendenti,
+    // sotto il path del libro/ricetta di destinazione (no-op se la
+    // condivisione non includeva foto: duplicateRecipePhotos non trova
+    // nulla da duplicare).
+    const dup = await duplicateRecipePhotos(newRecipe, {
+      dishPath: () => dishPhotoPath(targetBookId, newRecipe.id),
+      stepPath: (i, p) => stepPhotoPath(targetBookId, newRecipe.id, String(i), p),
+      memoryPath: (memId) => memoryPhotoPath(targetBookId, newRecipe.id, memId),
+    });
+    newRecipe = dup.recipe;
+    await saveRecipe(targetBookId, newRecipe);
+
+    if (applyIngredientData && content.ingredientData) {
+      if (targetBookId === activeBookId) {
+        if (isSystemDataEmpty({ ingredientCategories, aggregates, nutritionMap, equivalences, customFoods, ingredientDict })) {
+          applyImportedSystemData(content.ingredientData, {
+            setIngredientCategories, setAggregates, setEquivalences, setCustomUnits,
+            setNutritionMap, setCustomFoods, setIngredientDict, setSourceByIngredient,
+          });
+        }
+      } else {
+        const targetSystem = await loadBookSystem(targetBookId);
+        if (isSystemDataEmpty(targetSystem || {})) {
+          await saveBookSystem(targetBookId, { ...(targetSystem || {}), ...content.ingredientData });
+        }
+      }
+    }
+    return newRecipe.id;
+  };
+
   // Esporta PDF di una o più ricette (per id)
   const exportRecipesPDFByIds = (recipeIds) => {
     const sel = recipes.filter(r => recipeIds.includes(r.id));
@@ -1210,23 +1311,11 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
       // attivo non ne ha ancora di proprie — altrimenti rischierebbero di
       // sovrascrivere in silenzio categorie/aggregati già configurati dall'utente.
       let systemImported = false;
-      if (parsed.system && typeof parsed.system === "object") {
-        const bookIsEmpty = Object.keys(ingredientCategories).length === 0 && aggregates.length === 0
-          && Object.keys(nutritionMap).length === 0 && Object.keys(equivalences).length === 0
-          && customFoods.length === 0 && Object.keys(ingredientDict).length === 0;
-        if (bookIsEmpty) {
-          const s = parsed.system;
-          if (s.ingredientCategories) setIngredientCategories(s.ingredientCategories);
-          if (s.aggregates) setAggregates(s.aggregates);
-          if (s.equivalences) setEquivalences(s.equivalences);
-          if (s.customUnits) setCustomUnits(s.customUnits);
-          if (s.nutritionMap) setNutritionMap(s.nutritionMap);
-          if (s.customFoods) setCustomFoods(s.customFoods);
-          if (s.ingredientDict) setIngredientDict(s.ingredientDict);
-          if (s.sourceByIngredient) setSourceByIngredient(s.sourceByIngredient);
-          if (s.ignoredSimilarities) setIgnoredSimilarities(s.ignoredSimilarities);
-          systemImported = true;
-        }
+      if (parsed.system && isSystemDataEmpty({ ingredientCategories, aggregates, nutritionMap, equivalences, customFoods, ingredientDict })) {
+        systemImported = applyImportedSystemData(parsed.system, {
+          setIngredientCategories, setAggregates, setEquivalences, setCustomUnits,
+          setNutritionMap, setCustomFoods, setIngredientDict, setSourceByIngredient, setIgnoredSimilarities,
+        });
       }
       return { ok:true, count: copies.length, systemImported };
     } catch {
@@ -1439,6 +1528,15 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
         />
         {screen==="cover" && (
           <CoverScreen onEnter={() => setScreen("landing")}/>
+        )}
+        {screen==="sharedRecipe" && (
+          <SharedRecipeScreen
+            shareId={sharedRecipeId}
+            me={me}
+            editableBooks={myEditableBooks}
+            onAddToBook={addSharedRecipeToBook}
+            onClose={() => setScreen("landing")}
+          />
         )}
         {screen==="guide" && (
           <GuideScreen onBack={() => setScreen(prevScreen === "guide" ? "landing" : prevScreen)}/>
@@ -1744,6 +1842,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             sectionList={sectionList}
             onExportPDF={exportRecipesPDFByIds}
             onExportCode={exportShareCode}
+            onShareLink={shareRecipeViaLink}
           />
         )}
         {screen==="edit" && currentRecipe && (

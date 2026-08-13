@@ -22,7 +22,7 @@ import CookingMode from "./CookingMode.jsx";
 import InfoButton from "../components/InfoButton.jsx";
 import { guideDettaglioRicetta } from "../data/guideContent.jsx";
 
-export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemory, onAddMemory, onManageIngredients, onManageEquivalences, onAddToShoppingList, nutritionMap = {}, equivalences = {}, customUnits = {}, customFoods = [], ingredientDict = null, aggregates = [], sourceByIngredient = {}, allRecipes = [], sectionList = MACRO_SECTIONS, onExportPDF, onExportCode }) {
+export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemory, onAddMemory, onManageIngredients, onManageEquivalences, onAddToShoppingList, nutritionMap = {}, equivalences = {}, customUnits = {}, customFoods = [], ingredientDict = null, aggregates = [], sourceByIngredient = {}, allRecipes = [], sectionList = MACRO_SECTIONS, onExportPDF, onExportCode, onShareLink }) {
   const th = useTheme();
   const isOnline = useOnline();
   const [tab, setTab] = useState("ingredienti");
@@ -137,6 +137,7 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
           sectionList={sectionList}
           onExportPDF={(ids) => onExportPDF && onExportPDF(ids)}
           onExportCode={(ids) => onExportCode && onExportCode(ids)}
+          onShareLink={onShareLink}
           onClose={() => setExportOpen(false)}
         />
       )}

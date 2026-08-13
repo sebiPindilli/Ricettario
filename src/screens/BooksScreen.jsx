@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 import GlobalNav from "../components/GlobalNav.jsx";
+import MySharedLinksScreen from "./MySharedLinksScreen.jsx";
 import { guideLibri } from "../data/guideContent.jsx";
 import {
   ROLES, normalizeRole, assignableRoles, canAssignRole, canRemoveMember,
@@ -28,7 +29,7 @@ export default function BooksScreen({
   onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping,
 }) {
   const th = useTheme();
-  const [phase, setPhase] = useState(initialPhase); // "list" | "transfer"
+  const [phase, setPhase] = useState(initialPhase); // "list" | "transfer" | "sharedLinks"
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmails, setNewEmails] = useState("");
@@ -234,15 +235,27 @@ export default function BooksScreen({
     );
   }
 
+  // ══ FASE "I MIEI LINK CONDIVISI" ══
+  if (phase === "sharedLinks") {
+    return <MySharedLinksScreen me={me} nav={nav} onBack={() => setPhase("list")} />;
+  }
+
   // ══ FASE LISTA RICETTARI ══
   return (
     <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
       {nav}
-      <div style={{ padding:"14px 20px 6px" }}>
-        <div style={{ fontFamily:F.display, fontSize:22, color:th.appInk }}>📚 I miei Ricettari</div>
-        <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginTop:3 }}>
-          account: {me}
+      <div style={{ padding:"14px 20px 6px", display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10 }}>
+        <div>
+          <div style={{ fontFamily:F.display, fontSize:22, color:th.appInk }}>📚 I miei Ricettari</div>
+          <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginTop:3 }}>
+            account: {me}
+          </div>
         </div>
+        <button onClick={() => setPhase("sharedLinks")} style={{
+          flexShrink:0, background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10,
+          padding:"7px 11px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:11, fontWeight:600,
+          display:"flex", alignItems:"center", gap:5,
+        }}>🔗 Link condivisi</button>
       </div>
 
       {distinctRoles.length > 1 && (

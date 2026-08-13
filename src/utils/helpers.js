@@ -542,3 +542,36 @@ export const buildFridgeItems = (recipes, aggregates, ingredientCategories, ingr
 
   return items;
 };
+
+// ── Import di impostazioni "Organizza Ingredienti" da una fonte esterna ──
+// (codice condiviso o link di condivisione ricetta) — si applicano SOLO se
+// il libro di destinazione non ha già impostazioni proprie, per non
+// sovrascrivere in silenzio quello che l'utente ha già configurato. Unica
+// fonte di verità per questa regola: sia l'import da codice sia l'import da
+// link condiviso chiamano queste stesse funzioni, mai una logica duplicata.
+export const isSystemDataEmpty = ({ ingredientCategories, aggregates, nutritionMap, equivalences, customFoods, ingredientDict }) =>
+  Object.keys(ingredientCategories || {}).length === 0
+  && (aggregates || []).length === 0
+  && Object.keys(nutritionMap || {}).length === 0
+  && Object.keys(equivalences || {}).length === 0
+  && (customFoods || []).length === 0
+  && Object.keys(ingredientDict || {}).length === 0;
+
+// setters: { setIngredientCategories, setAggregates, setEquivalences,
+// setCustomUnits, setNutritionMap, setCustomFoods, setIngredientDict,
+// setSourceByIngredient, setIgnoredSimilarities } — ognuno opzionale, si usa
+// solo quello passato (il link condiviso non porta ignoredSimilarities, per
+// esempio). Ritorna true se ha applicato qualcosa.
+export const applyImportedSystemData = (s, setters) => {
+  if (!s || typeof s !== "object") return false;
+  if (s.ingredientCategories && setters.setIngredientCategories) setters.setIngredientCategories(s.ingredientCategories);
+  if (s.aggregates && setters.setAggregates) setters.setAggregates(s.aggregates);
+  if (s.equivalences && setters.setEquivalences) setters.setEquivalences(s.equivalences);
+  if (s.customUnits && setters.setCustomUnits) setters.setCustomUnits(s.customUnits);
+  if (s.nutritionMap && setters.setNutritionMap) setters.setNutritionMap(s.nutritionMap);
+  if (s.customFoods && setters.setCustomFoods) setters.setCustomFoods(s.customFoods);
+  if (s.ingredientDict && setters.setIngredientDict) setters.setIngredientDict(s.ingredientDict);
+  if (s.sourceByIngredient && setters.setSourceByIngredient) setters.setSourceByIngredient(s.sourceByIngredient);
+  if (s.ignoredSimilarities && setters.setIgnoredSimilarities) setters.setIgnoredSimilarities(s.ignoredSimilarities);
+  return true;
+};
