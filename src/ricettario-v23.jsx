@@ -1451,7 +1451,10 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
       servings: ocrData?.servings || 4,
       note: ocrData?.note || "",
       ingredients: (ocrData?.ingredients && ocrData.ingredients.length) ? ocrData.ingredients : [{ name:"", qty:"", unit:"" }],
-      steps: (ocrData?.steps && ocrData.steps.length) ? ocrData.steps : [""],
+      // normalizeSteps deduce già qui il timer dal testo di ogni step (es.
+      // "Cuocere per 20 minuti") — senza, il timer comparirebbe solo dopo
+      // aver salvato la ricetta, invisibile nella schermata di conferma.
+      steps: (ocrData?.steps && ocrData.steps.length) ? normalizeSteps(ocrData.steps) : [""],
       tags: tags.length ? tags : [],
       color: color || "#6B8C6E",
       emoji: emoji || "🍝",
