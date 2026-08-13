@@ -619,6 +619,41 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   });
   const [screen, setScreen] = useState(() => sharedRecipeId ? "sharedRecipe" : "cover");
   // screen: cover | landing | recipes | book | memories | recipe | new | edit | scan | theme
+
+  // Tasto/gesto Indietro del telefono: senza questo, su Android chiude
+  // subito l'app da qualunque schermata (nessuna cronologia gestita, vedi
+  // sopra per il deep-link). Qui ogni cambio di `screen` diventa una voce
+  // di cronologia; "indietro" la fa scorrere all'indietro invece di uscire.
+  // Limite consapevole: copre solo i cambi di `screen` (le schermate
+  // principali), non le fasi interne di un componente (es. i passi di
+  // ExportFlow o le fasi di BooksScreen) né gli overlay aperti sopra una
+  // schermata — coprirli tutti richiederebbe che ognuno gestisca la propria
+  // voce di cronologia, fuori scope per ora. Il tasto Home resta e deve
+  // restare fuori portata: è un'azione di sistema operativo, nessuna API
+  // web può intercettarla.
+  const poppingRef = useRef(false);
+  const firstScreenEffectRef = useRef(true);
+  useEffect(() => {
+    if (poppingRef.current) { poppingRef.current = false; return; }
+    if (firstScreenEffectRef.current) {
+      firstScreenEffectRef.current = false;
+      window.history.replaceState({ screen }, "");
+      return;
+    }
+    window.history.pushState({ screen }, "");
+  }, [screen]);
+  useEffect(() => {
+    const onPopState = (e) => {
+      if (e.state && e.state.screen) {
+        poppingRef.current = true;
+        setScreen(e.state.screen);
+      }
+      // Nessuno stato salvato: siamo alla prima voce di cronologia — si
+      // lascia che il browser/sistema gestisca l'uscita, non va impedita.
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
   const [scanMode, setScanMode] = useState("camera"); // "camera" | "gallery" — vedi AddRecipeHubScreen
   const [selected, setSelected] = useState(null);
   const [memoryPrefillRecipeId, setMemoryPrefillRecipeId] = useState(null);
@@ -1539,7 +1574,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
           />
         )}
         {screen==="guide" && (
-          <GuideScreen onBack={() => setScreen(prevScreen === "guide" ? "landing" : prevScreen)}/>
+          <GuideScreen onBack={() => window.history.back()}/>
         )}
 
         {screen==="landing" && (
@@ -1744,7 +1779,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
         {screen==="memories" && (
           <MemoriesBookScreen
             recipes={recipes}
-            onBack={() => setScreen("landing")}
+            onBack={() => window.history.back()}
             onRecipe={openRecipe}
             onRecipes={() => setScreen("recipes")}
             onBook={() => setScreen("book")}
@@ -1755,13 +1790,13 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
         )}
         {screen==="theme" && (
           <ThemePickerScreen
-            onBack={() => setScreen(prevScreen)}
+            onBack={() => window.history.back()}
             onSelect={(t) => { setBookTheme(t); setScreen("cover"); }}
           />
         )}
         {screen==="addRecipeHub" && (
           <AddRecipeHubScreen
-            onBack={() => setScreen(prevScreen)}
+            onBack={() => window.history.back()}
             onManual={() => { setScanDraft(null); setScanDraftPendingId(null); setScreen("new"); }}
             onScan={(mode) => { setScanMode(mode || "camera"); setScreen("scan"); }}
             onLink={() => setScreen("addFromLink")}
@@ -1808,7 +1843,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
           <AddMemoryScreen
             recipes={recipes}
             initialRecipeId={memoryPrefillRecipeId}
-            onBack={() => setScreen(prevScreen)}
+            onBack={() => window.history.back()}
             onSave={(mem) => { addMemory(mem); setScreen(prevScreen); }}
             onLanding={() => setScreen("landing")}
             onRecipes={() => setScreen("recipes")}
@@ -1829,7 +1864,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             ingredientDict={ingredientDict}
             aggregates={aggregates}
             sourceByIngredient={sourceByIngredient}
-            onBack={() => setScreen(prevScreen === "recipe" ? "recipes" : prevScreen)}
+            onBack={() => window.history.back()}
             onUpdate={updateRecipe}
             onEdit={() => goTo("edit")}
             onDelete={deleteRecipe}
@@ -1848,7 +1883,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
         {screen==="edit" && currentRecipe && (
           <EditScreen
             recipe={currentRecipe}
-            onBack={() => setScreen("recipe")}
+            onBack={() => window.history.back()}
             onSave={(updated) => { updateRecipe({ ...updated, ingredients: normalizeIngredients(updated.ingredients) }); setScreen("recipe"); }}
             extraTagGroups={extraTagGroups}
             onAddGroup={addTagGroup}
@@ -1863,7 +1898,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
         {screen==="scan" && (
           <ScanScreen
             mode={scanMode}
-            onBack={() => setScreen("addRecipeHub")}
+            onBack={() => window.history.back()}
             onSave={saveScanned}
             sectionList={sectionList}
             onAddSection={addSection}
@@ -1880,7 +1915,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
         )}
         {screen==="addFromLink" && (
           <AddFromLinkScreen
-            onBack={() => setScreen("addRecipeHub")}
+            onBack={() => window.history.back()}
             onSave={saveScanned}
             sectionList={sectionList}
             onAddSection={addSection}
