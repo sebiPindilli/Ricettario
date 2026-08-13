@@ -633,14 +633,38 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   // web può intercettarla.
   const poppingRef = useRef(false);
   const firstScreenEffectRef = useRef(true);
+  const prevScreenForHistoryRef = useRef(screen);
   useEffect(() => {
-    if (poppingRef.current) { poppingRef.current = false; return; }
+    if (poppingRef.current) { poppingRef.current = false; prevScreenForHistoryRef.current = screen; return; }
     if (firstScreenEffectRef.current) {
       firstScreenEffectRef.current = false;
-      window.history.replaceState({ screen }, "");
+      // La homepage è sempre la base della cronologia — l'ultima tappa
+      // prima di uscire dall'app, mai la copertina (una semplice
+      // animazione d'ingresso, non una vera schermata su cui "tornare").
+      // Se la schermata iniziale vera è diversa (di norma "cover", oppure
+      // una ricetta condivisa via deep-link), diventa il passo successivo.
+      window.history.replaceState({ screen: "landing" }, "");
+      if (screen !== "landing" && screen !== "cover") {
+        window.history.pushState({ screen }, "");
+      }
+      prevScreenForHistoryRef.current = screen;
       return;
     }
-    window.history.pushState({ screen }, "");
+    // Rientro senza un vero cambiamento (in sviluppo, StrictMode invoca gli
+    // effect due volte all'avvio per diagnostica): senza questa guardia la
+    // seconda invocazione "fantasma" — stesso screen, prevScreenForHistoryRef
+    // già aggiornato dalla prima — verrebbe scambiata per una transizione
+    // reale fuori dalla copertina, sovrascrivendo la base appena seminata.
+    if (screen === prevScreenForHistoryRef.current) return;
+    // La transizione FUORI dalla copertina sostituisce invece di
+    // aggiungere: dopo, in cronologia resta solo la homepage come base,
+    // senza un passo "a vuoto" dentro l'animazione d'ingresso.
+    if (prevScreenForHistoryRef.current === "cover") {
+      window.history.replaceState({ screen }, "");
+    } else {
+      window.history.pushState({ screen }, "");
+    }
+    prevScreenForHistoryRef.current = screen;
   }, [screen]);
   useEffect(() => {
     const onPopState = (e) => {
