@@ -75,8 +75,11 @@ const mapFactorKeys = (equivalences, fromKey, toKey) => {
   }
   return out;
 };
-const encodeEquivalences = (eq) => mapFactorKeys(eq, "", EMPTY_UNIT_KEY);
-const decodeEquivalences = (eq) => mapFactorKeys(eq, EMPTY_UNIT_KEY, "");
+// Esportate (non solo uso interno): sharedRecipesStore.js le riusa per lo
+// stesso motivo alla condivisione di una ricetta via link — mai una
+// seconda implementazione della stessa codifica.
+export const encodeEquivalences = (eq) => mapFactorKeys(eq, "", EMPTY_UNIT_KEY);
+export const decodeEquivalences = (eq) => mapFactorKeys(eq, EMPTY_UNIT_KEY, "");
 
 // Firestore rifiuta gli array annidati: ignoredSimilarities è
 // [[idA,idB], ...] in memoria — codificato come array di oggetti {a,b}

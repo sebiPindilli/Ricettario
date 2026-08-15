@@ -12,6 +12,7 @@ import {
 } from "firebase/firestore";
 import { isSectioned, stepPhotosOf } from "../utils/helpers.js";
 import { duplicatePhoto, deletePhoto, sharedDishPhotoPath, sharedStepPhotoPath, sharedMemoryPhotoPath } from "./photoStore.js";
+import { encodeEquivalences, decodeEquivalences } from "./bookStore.js";
 
 const SHARE_DAYS = 30;
 
@@ -146,9 +147,17 @@ export const createSharedRecipe = async ({
     sourceBookId, sourceRecipeId,
     includedData: { ingredients: !!ingredientData, photos: !!includePhotos },
   });
+  // equivalences può usare la chiave "" (unità implicita, es. "1 uovo" ≈
+  // 60g) — Firestore rifiuta le chiavi di mappa vuote, va codificata prima
+  // di scrivere (stessa funzione già usata da saveBookSystem, mai una
+  // seconda implementazione) o la scrittura fallisce quando la condivisione
+  // include i dati ingredienti.
+  const encodedIngredientData = ingredientData
+    ? { ...ingredientData, equivalences: encodeEquivalences(ingredientData.equivalences) }
+    : null;
   await setDoc(contentRef(shareId), {
     recipe: sharedRecipe,
-    ingredientData: ingredientData || null,
+    ingredientData: encodedIngredientData,
     photoPaths,
   });
 
@@ -169,7 +178,16 @@ export const loadSharedStatus = async (shareId) => {
 // (es. revoca avvenuta proprio tra le due letture).
 export const loadSharedContent = async (shareId) => {
   const snap = await getDoc(contentRef(shareId));
-  return snap.exists() ? snap.data() : null;
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  // Decodifica simmetrica a createSharedRecipe: da qui in poi (schermata
+  // di apertura, aggiunta al proprio libro) equivalences è sempre nella
+  // forma "decodificata" che il resto dell'app si aspetta — nessun
+  // chiamante deve sapere della codifica per Firestore.
+  if (data.ingredientData) {
+    data.ingredientData = { ...data.ingredientData, equivalences: decodeEquivalences(data.ingredientData.equivalences) };
+  }
+  return data;
 };
 
 // Condivisioni create da un'email — per la schermata "I miei link
