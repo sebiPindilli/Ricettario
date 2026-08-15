@@ -27,12 +27,12 @@ export default function BooksScreen({
   books, activeBookId, me, activeRecipes,
   onSwitch, onCreate, onRename, onDelete, onAddMember, onRemoveMember, onChangeMemberPermission,
   onCopyRecipes, onExportCode, onExportPDF, initialPhase = "list",
-  onDownloadBackup, onRestoreBackup, onTransferAll,
+  onDownloadBackup, onRestoreBackup, onTransferAll, onTransferBookData,
   defaultBookId, onSetDefault,
   onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping,
 }) {
   const th = useTheme();
-  const [phase, setPhase] = useState(initialPhase); // "list" | "transfer" | "sharedLinks" | "backup"
+  const [phase, setPhase] = useState(initialPhase); // "list" | "transfer" | "sharedLinks"
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmails, setNewEmails] = useState("");
@@ -55,13 +55,17 @@ export default function BooksScreen({
   const [pendingTransferTarget, setPendingTransferTarget] = useState(null); // bookId
   const [transferBusy, setTransferBusy] = useState(false);
   const [transferMsg, setTransferMsg] = useState(null);
-  // backup phase
+  // backup — annidato nella scheda di ogni ricettario, non più una fase a sé
   const [remindBackup, setRemindBackup] = useState(shouldRemindBackup);
   const [backupDoneMsg, setBackupDoneMsg] = useState(null);
+  const [restoreTargetId, setRestoreTargetId] = useState(null); // bookId per cui si sta ripristinando
   const [restoreBusy, setRestoreBusy] = useState(false);
   const [restoreError, setRestoreError] = useState(null);
   const [restoreSuccess, setRestoreSuccess] = useState(null);
   const fileInputRef = useRef(null);
+  const [pendingBackupCopyId, setPendingBackupCopyId] = useState(null); // backup id in conferma copia
+  const [backupCopyBusyId, setBackupCopyBusyId] = useState(null);
+  const [backupCopyMsg, setBackupCopyMsg] = useState({}); // backup id → {ok, text}
 
   const activeBook = books.find(b => b.id === activeBookId);
   const otherBooks = books.filter(b => b.id !== activeBookId);
@@ -73,7 +77,14 @@ export default function BooksScreen({
   // non entra nel calcolo (accesso per ruolo globale, non membership) e
   // resta sempre visibile, filtro o no.
   const distinctRoles = ROLES.filter(r => books.some(b => b.id !== "b1" && myRoleInBook(b, me) === r));
-  const visibleBooks = books.filter(b => b.id === "b1" || !roleFilter || myRoleInBook(b, me) === roleFilter);
+  // Un backup "orfano" (il ricettario a cui era associato è stato eliminato)
+  // torna a comparire come voce normale della lista invece di sparire nel
+  // nulla — è comunque eliminabile da lì con lo stesso pulsante degli altri
+  // ricettari personali (vedi più sotto), non serve UI dedicata.
+  const isOrphanBackup = (b) => b.isBackup && !books.some(x => x.id === b.backupForBookId);
+  const visibleBooks = books
+    .filter(b => b.id === "b1" || !roleFilter || myRoleInBook(b, me) === roleFilter)
+    .filter(b => !b.isBackup || isOrphanBackup(b));
 
   const setMemberErr = (bookId, msg) => setMemberError(p => ({ ...p, [bookId]: msg }));
   const withMemberBusy = async (bookId, fn) => {
@@ -98,7 +109,8 @@ export default function BooksScreen({
   const handleFileChosen = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = ""; // consente di riselezionare subito lo stesso file
-    if (!file) return;
+    const targetId = restoreTargetId;
+    if (!file || !targetId) return;
     setRestoreError(null);
     setRestoreSuccess(null);
     setRestoreBusy(true);
@@ -106,12 +118,26 @@ export default function BooksScreen({
       const text = await file.text();
       const payload = JSON.parse(text);
       if (payload.app !== "ricettario" || !payload.data) throw new Error("Questo file non è un backup valido di Ricettario.");
-      await onRestoreBackup(payload);
-      setRestoreSuccess("✓ Backup ripristinato come nuovo ricettario. Aprilo dalla lista qui sotto.");
+      await onRestoreBackup(payload, targetId);
+      setRestoreSuccess("✓ Backup ripristinato e associato a questo ricettario.");
     } catch (err) {
       setRestoreError(err.message || "Ripristino non riuscito.");
     } finally {
       setRestoreBusy(false);
+    }
+  };
+
+  const doBackupCopy = async (backupId, targetId, targetName) => {
+    setBackupCopyBusyId(backupId);
+    try {
+      await onTransferBookData(backupId, targetId);
+      setPendingBackupCopyId(null);
+      setBackupCopyMsg(p => ({ ...p, [backupId]: { ok: true, text: `✓ Copiato in "${targetName}"` } }));
+    } catch (err) {
+      setBackupCopyMsg(p => ({ ...p, [backupId]: { ok: false, text: err.message || "Copia non riuscita." } }));
+    } finally {
+      setBackupCopyBusyId(null);
+      setTimeout(() => setBackupCopyMsg(p => ({ ...p, [backupId]: null })), 3000);
     }
   };
 
@@ -319,48 +345,6 @@ export default function BooksScreen({
     );
   }
 
-  // ══ FASE BACKUP E RIPRISTINO ══
-  if (phase === "backup") {
-    return (
-      <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
-        {nav}
-        <div style={{ padding:"12px 20px 6px", display:"flex", alignItems:"center", gap:10 }}>
-          <button onClick={() => setPhase("list")} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
-          <div style={{ flex:1 }}>
-            <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>Backup e ripristino</div>
-            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>libro attivo: {activeBook?.name}</div>
-          </div>
-        </div>
-
-        <div style={{ flex:1, overflowY:"auto", padding:"14px 20px 40px" }}>
-          <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:8 }}>Backup locale</div>
-          <div style={{ fontFamily:F.ui, fontSize:12, color:th.appInk, lineHeight:1.5, marginBottom:12 }}>
-            Scarica un file con tutti i dati del ricettario <b>{activeBook?.name}</b> (ricette, categorie, impostazioni di Organizza Ingredienti). Utile per avere una copia di sicurezza o per accedere all'app senza connessione al primo avvio su un nuovo dispositivo. Le foto restano online: non sono incluse nel file.
-          </div>
-          <button onClick={handleDownloadBackup} style={{
-            width:"100%", padding:"13px", borderRadius:12, border:"none",
-            background: backupDoneMsg ? "#6B8C6E" : th.appAccent, color:"#fff",
-            fontFamily:F.ui, fontSize:13, fontWeight:700, cursor:"pointer",
-          }}>{backupDoneMsg || "⬇️ Scarica backup (JSON)"}</button>
-
-          <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", margin:"26px 0 8px" }}>Ripristina da backup</div>
-          <div style={{ fontFamily:F.ui, fontSize:12, color:th.appInk, lineHeight:1.5, marginBottom:12 }}>
-            Crea un <b>nuovo ricettario "Backup {"{data}"}"</b> a partire da un file scaricato in precedenza — non sovrascrive mai il ricettario attivo né altri già esistenti. È un archivio permanente, pensato per restarci: usa "🔀 Trasferisci tutto" nella schermata Esporta ricette per portarne facilmente ricette e impostazioni in un ricettario vero.
-          </div>
-          <input ref={fileInputRef} type="file" accept="application/json" style={{ display:"none" }} onChange={handleFileChosen} />
-          <button disabled={restoreBusy} onClick={() => fileInputRef.current?.click()} style={{
-            width:"100%", padding:"13px", borderRadius:12,
-            border:`1.5px solid ${th.appInk}`, background:"transparent", color:th.appInk,
-            fontFamily:F.ui, fontSize:13, fontWeight:700, cursor: restoreBusy ? "default" : "pointer",
-            opacity: restoreBusy ? 0.6 : 1,
-          }}>{restoreBusy ? "Ripristino in corso…" : "📥 Scegli file di backup"}</button>
-          {restoreError && <div style={{ fontFamily:F.ui, fontSize:11.5, color:DANGER, marginTop:10 }}>{restoreError}</div>}
-          {restoreSuccess && <div style={{ fontFamily:F.ui, fontSize:11.5, color:"#6B8C6E", marginTop:10 }}>{restoreSuccess}</div>}
-        </div>
-      </div>
-    );
-  }
-
   // ══ FASE "I MIEI LINK CONDIVISI" ══
   if (phase === "sharedLinks") {
     return <MySharedLinksScreen me={me} nav={nav} onBack={() => setPhase("list")} />;
@@ -378,11 +362,6 @@ export default function BooksScreen({
           </div>
         </div>
         <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-          <button onClick={() => setPhase("backup")} style={{
-            background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10,
-            padding:"7px 11px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:11, fontWeight:600,
-            display:"flex", alignItems:"center", gap:5,
-          }}>💾 Backup</button>
           <button onClick={() => setPhase("sharedLinks")} style={{
             background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10,
             padding:"7px 11px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:11, fontWeight:600,
@@ -391,11 +370,16 @@ export default function BooksScreen({
         </div>
       </div>
 
+      {/* Input file nascosto e condiviso da tutte le schede: quale libro
+          riceve il ripristino è deciso da restoreTargetId, impostato dal
+          pulsante "Ripristina backup qui" della scheda cliccata. */}
+      <input ref={fileInputRef} type="file" accept="application/json" style={{ display:"none" }} onChange={handleFileChosen} />
+
       {remindBackup && (
         <div style={{ padding:"0 18px 4px" }}>
-          <SuggestionHint onClick={() => setPhase("backup")}>
+          <SuggestionHint>
             <span style={{ fontFamily:F.ui, fontSize:11.5, color:th.appInk }}>
-              💾 Non hai ancora un backup locale recente. Tocca qui per scaricarne uno.
+              💾 Non hai ancora un backup locale recente. Scaricalo dalla scheda del ricettario attivo qui sotto ("⬇️ Scarica backup").
             </span>
           </SuggestionHint>
         </div>
@@ -423,6 +407,7 @@ export default function BooksScreen({
           const myRole = isBeta ? null : myRoleInBook(b, me);
           const canManageMembers = myRole === "proprietario" || myRole === "collaboratore";
           const confirmingDelete = pendingDelete === b.id;
+          const linkedBackups = books.filter(x => x.isBackup && x.backupForBookId === b.id);
           return (
             <div key={b.id} style={{
               position:"relative", overflow:"hidden",
@@ -431,7 +416,7 @@ export default function BooksScreen({
               borderRadius:14, padding:"12px 14px", marginBottom:10,
             }}>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                <span style={{ fontSize:20 }}>{isBeta ? "🧪" : b.type === "personale" ? "🔒" : "👥"}</span>
+                <span style={{ fontSize:20 }}>{isBeta ? "🧪" : b.isBackup ? "📦" : b.type === "personale" ? "🔒" : "👥"}</span>
                 {isRen ? (
                   <input
                     value={renameVal}
@@ -444,7 +429,7 @@ export default function BooksScreen({
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontFamily:F.display, fontSize:16, color:th.appInk }}>{b.name}</div>
                     <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded }}>
-                      {isBeta ? "Ricettario Beta" : b.type === "personale" ? "personale" : `condiviso · ${(b.memberEmails || []).length + 1}/${MAX_MEMBERS} membri`}
+                      {isBeta ? "Ricettario Beta" : b.isBackup ? "backup senza ricettario associato" : b.type === "personale" ? "personale" : `condiviso · ${(b.memberEmails || []).length + 1}/${MAX_MEMBERS} membri`}
                       {!isBeta && b.type === "condiviso" && !isOwner && <> · tu: {roleLabel(myRole)}</>}
                       {active && <span style={{ color:th.appAccent, fontWeight:700 }}> · attivo</span>}
                     </div>
@@ -475,6 +460,69 @@ export default function BooksScreen({
                   ? <><span>⭐</span> Predefinito all'avvio dell'app</>
                   : <><span style={{ opacity:0.5 }}>☆</span> <span style={{ textDecoration:"underline", textUnderlineOffset:2 }}>Imposta come predefinito all'avvio</span></>}
               </button>
+
+              {/* Backup orfano (il ricettario a cui era associato non esiste
+                  più): resta comunque eliminabile, stesso overlay di conferma
+                  usato per gli altri ricettari (vedi confirmingDelete sotto). */}
+              {b.isBackup && (
+                <button onClick={() => setPendingDelete(b.id)} style={{ marginTop:8, background:"none", border:"none", color:DANGER, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, display:"block" }}>🗑️ Elimina ricettario di backup</button>
+              )}
+
+              {/* Backup: scarica (solo libro attivo) e ripristina-qui (tutti i
+                  libri, compresi i backup orfani) — non sul Beta. */}
+              {!isBeta && (
+                <div style={{ marginTop:8, display:"flex", gap:6, flexWrap:"wrap" }}>
+                  {active && (
+                    <button onClick={handleDownloadBackup} style={{ padding:"6px 10px", borderRadius:8, border:`1px solid ${th.appBorder}`, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:10, fontWeight:600, cursor:"pointer" }}>
+                      {backupDoneMsg || "⬇️ Scarica backup"}
+                    </button>
+                  )}
+                  <button disabled={restoreBusy && restoreTargetId === b.id} onClick={() => { setRestoreTargetId(b.id); setRestoreError(null); setRestoreSuccess(null); fileInputRef.current?.click(); }} style={{ padding:"6px 10px", borderRadius:8, border:`1px solid ${th.appBorder}`, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:10, fontWeight:600, cursor:"pointer" }}>
+                    {restoreBusy && restoreTargetId === b.id ? "Ripristino…" : "📥 Ripristina backup qui"}
+                  </button>
+                </div>
+              )}
+              {restoreTargetId === b.id && restoreError && (
+                <div style={{ fontFamily:F.ui, fontSize:10.5, color:DANGER, marginTop:5 }}>{restoreError}</div>
+              )}
+              {restoreTargetId === b.id && restoreSuccess && (
+                <div style={{ fontFamily:F.ui, fontSize:10.5, color:"#6B8C6E", marginTop:5 }}>{restoreSuccess}</div>
+              )}
+
+              {/* Backup associati a questo ricettario (ripristinati da file) */}
+              {linkedBackups.length > 0 && (
+                <div style={{ marginTop:10, paddingTop:10, borderTop:`1px dashed ${th.appBorder}` }}>
+                  <div style={{ fontFamily:F.ui, fontSize:9, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:6 }}>📦 Backup associati</div>
+                  {linkedBackups.map(bk => (
+                    <div key={bk.id} style={{ marginBottom:6 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                        <span style={{ fontFamily:F.ui, fontSize:11, color:th.appInk, flex:1, minWidth:0 }}>{bk.name}</span>
+                        {pendingDelete === bk.id ? (
+                          <>
+                            <span style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded }}>Eliminare?</span>
+                            <button onClick={() => { onDelete(bk.id); setPendingDelete(null); }} style={{ padding:"5px 9px", borderRadius:8, border:"none", background:DANGER, color:"#fff", fontFamily:F.ui, fontSize:10.5, fontWeight:700, cursor:"pointer" }}>Sì</button>
+                            <button onClick={() => setPendingDelete(null)} style={{ padding:"5px 9px", borderRadius:8, border:`1px solid ${th.appBorder}`, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:10.5, cursor:"pointer" }}>No</button>
+                          </>
+                        ) : pendingBackupCopyId === bk.id ? (
+                          <>
+                            <span style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded }}>Copiare tutto in "{b.name}"?</span>
+                            <button disabled={backupCopyBusyId === bk.id} onClick={() => doBackupCopy(bk.id, b.id, b.name)} style={{ padding:"5px 9px", borderRadius:8, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:10.5, fontWeight:700, cursor:"pointer" }}>{backupCopyBusyId === bk.id ? "…" : "✓ Conferma"}</button>
+                            <button disabled={backupCopyBusyId === bk.id} onClick={() => setPendingBackupCopyId(null)} style={{ padding:"5px 9px", borderRadius:8, border:`1px solid ${th.appBorder}`, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:10.5, cursor:"pointer" }}>Annulla</button>
+                          </>
+                        ) : (
+                          <>
+                            <button onClick={() => setPendingBackupCopyId(bk.id)} style={{ padding:"5px 9px", borderRadius:8, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:10.5, fontWeight:700, cursor:"pointer" }}>🔀 Copia tutto qui</button>
+                            <button onClick={() => setPendingDelete(bk.id)} title="Elimina backup" style={{ padding:"5px 9px", borderRadius:8, border:`1px solid ${th.appBorder}`, background:"transparent", color:DANGER, fontFamily:F.ui, fontSize:10.5, cursor:"pointer" }}>🗑️</button>
+                          </>
+                        )}
+                      </div>
+                      {backupCopyMsg[bk.id] && (
+                        <div style={{ fontFamily:F.ui, fontSize:10, color: backupCopyMsg[bk.id].ok ? "#6B8C6E" : DANGER, marginTop:3 }}>{backupCopyMsg[bk.id].text}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Ricettario Beta: accesso automatico per ruolo, nessuna gestione membri */}
               {isBeta && (

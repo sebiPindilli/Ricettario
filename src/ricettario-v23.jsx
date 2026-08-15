@@ -1012,10 +1012,11 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     markBackupDone();
   };
 
-  // Ripristina un file di backup come NUOVO libro — non tocca mai il libro
-  // attivo né alcun libro esistente (vedi discussione con l'utente: un
-  // backup serve a recuperare dati persi, sovrascrivere silenziosamente
-  // sarebbe rischioso). Le foto (referenziate via URL nel file) vengono
+  // Ripristina un file di backup come NUOVO libro associato a targetBookId
+  // — non tocca mai i dati di quel libro (o di qualunque altro esistente):
+  // l'associazione serve solo a mostrare il backup annidato nella sua
+  // scheda (vedi BooksScreen.jsx) con un tasto "Copia tutto qui", non a
+  // fondere subito i dati. Le foto (referenziate via URL nel file) vengono
   // ri-duplicate sui path Storage del nuovo libro così restano autonome
   // anche se il libro/le foto d'origine del backup non esistono più —
   // stesso principio già usato per "aggiungi ricetta condivisa al mio
@@ -1024,7 +1025,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   // raggiungibile), la ricetta viene comunque salvata con l'URL originale
   // invece di far fallire l'intero ripristino: i dati testuali contano più
   // delle foto per lo scopo di questa funzione.
-  const restoreBackup = async (payload) => {
+  const restoreBackup = async (payload, targetBookId) => {
     const d = payload?.data;
     if (!d || !Array.isArray(d.recipes)) throw new Error("File di backup non valido.");
     // Nome fisso (non quello del libro d'origine): un ripristino crea sempre
@@ -1036,6 +1037,10 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     const bookThemeId = BOOK_THEMES.some(t => t.id === payload.meta?.bookTheme) ? payload.meta.bookTheme : "classic";
     const idToken = await auth.currentUser.getIdToken();
     const id = await createBookInFirestore({ idToken, name, type: "personale", bookTheme: bookThemeId });
+    // isBackup: sblocca l'eliminazione (vedi /api/delete-book.js, che
+    // altrimenti rifiuta qualunque libro "personale"); backupForBookId
+    // determina sotto quale scheda comparire annidato.
+    await saveBookMeta(id, { isBackup: true, backupForBookId: targetBookId });
 
     await saveBookSystem(id, {
       extraTagGroups: d.extraTagGroups, sectionList: d.sectionList, categoryList: d.categoryList,
@@ -1065,23 +1070,34 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     setBooks(prev => [...prev, {
       id, name, type: "personale", bookTheme: bookThemeId,
       owner: me, memberEmails: [], memberRoles: {},
+      isBackup: true, backupForBookId: targetBookId,
     }]);
     return id;
   };
 
-  // Trasferisce TUTTI i dati del libro attivo (ricette + impostazioni di
-  // Organizza Ingredienti) in un altro libro — pensato per svuotare un
-  // ricettario di backup ripristinato in uno "vero", ma non ristretto a
-  // quel caso. Fusione sempre additiva: non sovrascrive né elimina mai
-  // nulla di già presente nel libro di destinazione — sulle chiavi in
-  // conflitto (es. stessa categoria ingrediente con valore diverso) vince
-  // il libro di destinazione, il backup riempie solo ciò che manca. Le
-  // ricette diventano copie con id nuovi (mai in conflitto con quelle
-  // esistenti); le foto restano sui path del libro attivo — accettabile
-  // perché un libro "personale" (compresi i backup ripristinati) non è mai
-  // eliminabile, quindi quei path non spariscono.
-  const transferAllToBook = async (targetId) => {
-    if (targetId === activeBookId) return;
+  // Trasferisce TUTTI i dati di un libro sorgente (ricette + impostazioni
+  // di Organizza Ingredienti) in un libro di destinazione — usata sia per
+  // "Trasferisci tutto" nella schermata Esporta ricette (sorgente = libro
+  // attivo) sia per "Copia tutto qui" sui backup associati a un libro
+  // (sorgente = quel backup, quasi mai il libro attivo). Fusione sempre
+  // additiva: non sovrascrive né elimina mai nulla di già presente nel
+  // libro di destinazione — sulle chiavi in conflitto (es. stessa categoria
+  // ingrediente con valore diverso) vince il libro di destinazione, la
+  // sorgente riempie solo ciò che manca. Le ricette diventano copie con id
+  // nuovi (mai in conflitto con quelle esistenti); le foto restano sui path
+  // Storage del libro sorgente — restano valide anche se quel libro viene
+  // poi eliminato, perché l'eliminazione di un libro (vedi /api/delete-
+  // book.js) tocca solo Firestore, mai Storage (stesso limite già noto
+  // delle foto orfane di una ricetta eliminata).
+  const transferBookDataToBook = async (sourceId, targetId) => {
+    if (sourceId === targetId) return;
+    const source = sourceId === activeBookId
+      ? {
+          recipes, extraTagGroups, sectionList, categoryList, ingredientCategories,
+          aggregates, equivalences, customUnits, nutritionMap, customFoods,
+          ingredientDict, sourceByIngredient, ignoredSimilarities,
+        }
+      : await loadFullBook(sourceId);
     const targetSystem = (await loadBookSystem(targetId)) || {};
     const unionArr = (a, b) => Array.from(new Set([...(a || []), ...(b || [])]));
     const unionByKey = (base, extra, keyFn) => {
@@ -1089,21 +1105,21 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
       return [...(base || []), ...(extra || []).filter(x => !seen.has(keyFn(x)))];
     };
     const mergedSystem = {
-      sectionList: unionArr(targetSystem.sectionList, sectionList),
-      categoryList: unionArr(targetSystem.categoryList, categoryList),
-      extraTagGroups: unionByKey(targetSystem.extraTagGroups, extraTagGroups, (g) => g.group),
-      aggregates: unionByKey(targetSystem.aggregates, aggregates, (a) => a.id),
-      customFoods: unionByKey(targetSystem.customFoods, customFoods, (f) => f.name),
-      ignoredSimilarities: unionByKey(targetSystem.ignoredSimilarities, ignoredSimilarities, (p) => JSON.stringify([...p].sort())),
-      ingredientCategories: { ...ingredientCategories, ...(targetSystem.ingredientCategories || {}) },
-      equivalences: { ...equivalences, ...(targetSystem.equivalences || {}) },
-      customUnits: { ...customUnits, ...(targetSystem.customUnits || {}) },
-      nutritionMap: { ...nutritionMap, ...(targetSystem.nutritionMap || {}) },
-      ingredientDict: { ...ingredientDict, ...(targetSystem.ingredientDict || {}) },
-      sourceByIngredient: { ...sourceByIngredient, ...(targetSystem.sourceByIngredient || {}) },
+      sectionList: unionArr(targetSystem.sectionList, source.sectionList),
+      categoryList: unionArr(targetSystem.categoryList, source.categoryList),
+      extraTagGroups: unionByKey(targetSystem.extraTagGroups, source.extraTagGroups, (g) => g.group),
+      aggregates: unionByKey(targetSystem.aggregates, source.aggregates, (a) => a.id),
+      customFoods: unionByKey(targetSystem.customFoods, source.customFoods, (f) => f.name),
+      ignoredSimilarities: unionByKey(targetSystem.ignoredSimilarities, source.ignoredSimilarities, (p) => JSON.stringify([...p].sort())),
+      ingredientCategories: { ...source.ingredientCategories, ...(targetSystem.ingredientCategories || {}) },
+      equivalences: { ...source.equivalences, ...(targetSystem.equivalences || {}) },
+      customUnits: { ...source.customUnits, ...(targetSystem.customUnits || {}) },
+      nutritionMap: { ...source.nutritionMap, ...(targetSystem.nutritionMap || {}) },
+      ingredientDict: { ...source.ingredientDict, ...(targetSystem.ingredientDict || {}) },
+      sourceByIngredient: { ...source.sourceByIngredient, ...(targetSystem.sourceByIngredient || {}) },
     };
     await saveBookSystem(targetId, mergedSystem);
-    const copies = recipes.map((r) => ({ ...r, id: uid("r") }));
+    const copies = (source.recipes || []).map((r) => ({ ...r, id: uid("r") }));
     await Promise.all(copies.map((c) => saveRecipe(targetId, c)));
   };
 
@@ -1157,7 +1173,9 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
           list = [{ id, name: "Il mio Ricettario", type: "personale", bookTheme: "classic", owner: me, memberEmails: [], memberRoles: {} }];
         }
         setBooks(list);
-        const personal = list.find(b => b.type === "personale" && b.owner === me);
+        // Esclude i backup (stesso type "personale", vedi restoreBackup):
+        // non devono mai diventare la base d'atterraggio all'avvio.
+        const personal = list.find(b => b.type === "personale" && !b.isBackup && b.owner === me);
         const initial = (initialDefaultBookId && list.some(b => b.id === initialDefaultBookId))
           ? initialDefaultBookId
           : (personal ? personal.id : list[0].id);
@@ -1327,7 +1345,10 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     // e quel salvataggio fallirebbe con "permessi insufficienti" se il
     // documento fosse già stato cancellato nel frattempo.
     if (id === activeBookId) {
-      const personal = books.find(b => b.type === "personale" && b.owner === me && b.id !== id);
+      // Esclude i backup dalla ricerca: ora sono eliminabili pur restando
+      // type "personale" (vedi restoreBackup), non vanno mai scelti come
+      // "libro personale vero" su cui atterrare dopo l'eliminazione.
+      const personal = books.find(b => b.type === "personale" && !b.isBackup && b.owner === me && b.id !== id);
       if (personal) await switchBook(personal.id);
     }
     const idToken = await auth.currentUser.getIdToken();
@@ -1861,7 +1882,8 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             onExportPDF={(ids) => exportRecipesPDFByIds(ids)}
             onDownloadBackup={downloadLocalBackup}
             onRestoreBackup={restoreBackup}
-            onTransferAll={transferAllToBook}
+            onTransferAll={(targetId) => transferBookDataToBook(activeBookId, targetId)}
+            onTransferBookData={transferBookDataToBook}
             initialPhase={booksEntryPhase}
             defaultBookId={defaultBookId}
             onSetDefault={(id) => { setDefaultBookId(id); setDefaultBook(me, id); }}

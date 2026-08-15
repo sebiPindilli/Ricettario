@@ -28,7 +28,11 @@ export default async function handler(req, res) {
   if (meta.owner !== user.email) {
     return res.status(403).json({ error: "Solo il proprietario può eliminare questo libro." });
   }
-  if (meta.type === "personale") {
+  // I libri di backup restano di tipo "personale" (niente gestione membri,
+  // vedi ricettario-v23.jsx/restoreBackup) ma non sono la base personale
+  // insostituibile che questo controllo protegge — devono poter essere
+  // eliminati una volta travasati i dati altrove.
+  if (meta.type === "personale" && !meta.isBackup) {
     return res.status(400).json({ error: "Il libro personale non può essere eliminato." });
   }
 
