@@ -127,6 +127,10 @@ export default function OrganizeIngredientsScreen({
   const visibleIgnoredSuggestedGroups = aggSuggestionScope === "shopping"
     ? ignoredSuggestedGroups.filter(isShoppingRelevant)
     : ignoredSuggestedGroups;
+  // Numero di card mostrate in "Da decidere" — un gruppo "join" con più
+  // membri liberi produce una card per membro (vedi sotto), quindi non
+  // coincide più con visibleSuggestedAggregates.length.
+  const decideCardCount = visibleSuggestedAggregates.reduce((n, g) => n + (g.type === "join" ? g.newMembers.length : 1), 0);
   // Voci del dizionario ordinate per nome (name = ID, display = nome)
   const allDictEntries = React.useMemo(
     () => Object.entries(dictM)
@@ -148,6 +152,26 @@ export default function OrganizeIngredientsScreen({
     recipes.forEach(r => flattenIngredients(r.ingredients).forEach(ing => s.add(resolveIngId(dictIdx, ing.name))));
     return s;
   }, [recipes, dictIdx]);
+
+  // Una card di suggerimento aggregato — estratta perché un gruppo "join"
+  // con più membri liberi produce ora una card per ciascuno (vedi sotto),
+  // invece di una sola card con "aggiungi N ingredienti insieme": l'utente
+  // deve poter decidere ingrediente per ingrediente.
+  const renderAggSuggestionCard = (key, { shopping, title, subtitle, addLabel, onAdd, onIgnore }) => (
+    <div key={key} style={{ background:th.appCard, border:`1.5px solid ${th.appAccent}55`, borderRadius:12, padding:"11px 13px", marginBottom:8 }}>
+      <div style={{ fontFamily:F.body, fontSize:14, fontWeight:700, color:th.appInk }}>
+        {shopping && <span title="Rilevante per la lista spesa">🛒 </span>}
+        {title}
+      </div>
+      <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:2, marginBottom:9 }}>
+        {subtitle}
+      </div>
+      <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+        <button onClick={onAdd} style={{ background:th.appAccent, border:"none", borderRadius:9, padding:"7px 11px", color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer" }}>{addLabel}</button>
+        <button onClick={onIgnore} style={{ background:"transparent", border:`1.5px solid ${th.appBorder}`, borderRadius:9, padding:"7px 11px", color:th.appFaded, fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer" }}>Ignora</button>
+      </div>
+    </div>
+  );
 
   // ── Database aggregati: lista + crea/modifica ──
   if (manageAggs) {
@@ -204,7 +228,7 @@ export default function OrganizeIngredientsScreen({
             padding:"10px 12px", marginBottom:8, cursor:"pointer",
           }}>
             <span style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.2, color:th.appAccent, textTransform:"uppercase", fontWeight:700 }}>
-              🔎 Aggregati suggeriti{(visibleSuggestedAggregates.length + visibleIgnoredSuggestedGroups.length) > 0 ? ` (${visibleSuggestedAggregates.length + visibleIgnoredSuggestedGroups.length})` : ""}
+              🔎 Aggregati suggeriti{(decideCardCount + visibleIgnoredSuggestedGroups.length) > 0 ? ` (${decideCardCount + visibleIgnoredSuggestedGroups.length})` : ""}
             </span>
             <span style={{ color:th.appFaded, fontSize:12 }}>{openAggSections.suggested ? "▾" : "▸"}</span>
           </button>
@@ -234,31 +258,29 @@ export default function OrganizeIngredientsScreen({
                 <div style={{ textAlign:"center", padding:"16px 0", color:th.appFaded, fontFamily:F.ui, fontSize:11.5, fontStyle:"italic" }}>
                   Nessun suggerimento{aggSuggestionScope === "shopping" ? " nella lista spesa" : ""}.
                 </div>
-              ) : visibleSuggestedAggregates.map(g => (
-                <div key={g.key} style={{ background:th.appCard, border:`1.5px solid ${th.appAccent}55`, borderRadius:12, padding:"11px 13px", marginBottom:8 }}>
-                  <div style={{ fontFamily:F.body, fontSize:14, fontWeight:700, color:th.appInk }}>
-                    {isShoppingRelevant(g) && <span title="Rilevante per la lista spesa">🛒 </span>}
-                    {g.type === "join"
-                      ? (g.newMembers.length === 1
-                          ? <>Aggiungi «{dictName(g.newMembers[0])}» a un aggregato esistente</>
-                          : `Aggiungi ${g.newMembers.length} ingredienti a un aggregato esistente`)
-                      : g.label}
-                  </div>
-                  <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:2, marginBottom:9 }}>
-                    {g.type === "join"
-                      ? <>{g.aggregate.name} ({(g.aggregate.members || []).map(dictName).join(", ")})</>
-                      : g.members.map(dictName).join(" · ")}
-                  </div>
-                  <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                    {g.type === "join" ? (
-                      <button onClick={() => onSaveAggregate && onSaveAggregate({ ...g.aggregate, members:[...(g.aggregate.members || []), ...g.newMembers] })} style={{ background:th.appAccent, border:"none", borderRadius:9, padding:"7px 11px", color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer" }}>⊕ Aggiungi a «{g.label}»</button>
-                    ) : (
-                      <button onClick={() => { setManageAggs(false); setEditingFrom("manageAggs"); setEditing({ kind:"aggregate", name:g.label, members:[...g.members], categories:[] }); }} style={{ background:th.appAccent, border:"none", borderRadius:9, padding:"7px 11px", color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer" }}>⊕ Crea aggregato</button>
-                    )}
-                    <button onClick={() => g.pairs.forEach(([a, b]) => onIgnoreSimilarity && onIgnoreSimilarity(a, b))} style={{ background:"transparent", border:`1.5px solid ${th.appBorder}`, borderRadius:9, padding:"7px 11px", color:th.appFaded, fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer" }}>Ignora</button>
-                  </div>
-                </div>
-              ))}
+              ) : visibleSuggestedAggregates.flatMap(g => g.type === "join"
+                  // Un gruppo "join" può avere più membri liberi da aggiungere allo
+                  // stesso aggregato esistente: una card per ciascuno, non una sola
+                  // con "aggiungi N insieme" — l'utente deve poter scegliere caso per
+                  // caso. "Ignora" su una card tocca solo le coppie che riguardano
+                  // quel singolo membro, non l'intero gruppo.
+                  ? g.newMembers.map(m => renderAggSuggestionCard(`${g.key}:${m}`, {
+                      shopping: isShoppingRelevant(g),
+                      title: <>Aggiungi «{dictName(m)}» a un aggregato esistente</>,
+                      subtitle: <>{g.aggregate.name} ({(g.aggregate.members || []).map(dictName).join(", ")})</>,
+                      addLabel: <>⊕ Aggiungi a «{g.label}»</>,
+                      onAdd: () => onSaveAggregate && onSaveAggregate({ ...g.aggregate, members:[...(g.aggregate.members || []), m] }),
+                      onIgnore: () => g.pairs.filter(([a, b]) => a === m || b === m).forEach(([a, b]) => onIgnoreSimilarity && onIgnoreSimilarity(a, b)),
+                    }))
+                  : [renderAggSuggestionCard(g.key, {
+                      shopping: isShoppingRelevant(g),
+                      title: g.label,
+                      subtitle: g.members.map(dictName).join(" · "),
+                      addLabel: "⊕ Crea aggregato",
+                      onAdd: () => { setManageAggs(false); setEditingFrom("manageAggs"); setEditing({ kind:"aggregate", name:g.label, members:[...g.members], categories:[] }); },
+                      onIgnore: () => g.pairs.forEach(([a, b]) => onIgnoreSimilarity && onIgnoreSimilarity(a, b)),
+                    })]
+              )}
 
               <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appFaded, textTransform:"uppercase", margin:"14px 0 8px", fontWeight:700 }}>
                 Ignorati
