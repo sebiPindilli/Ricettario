@@ -1027,7 +1027,12 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   const restoreBackup = async (payload) => {
     const d = payload?.data;
     if (!d || !Array.isArray(d.recipes)) throw new Error("File di backup non valido.");
-    const name = `${payload.bookName || "Ricettario"} (ripristinato)`;
+    // Nome fisso (non quello del libro d'origine): un ripristino crea sempre
+    // un archivio a sé, mai da confondere con un libro "vero" — la data è
+    // quella in cui il file di backup è stato scaricato, non quella del
+    // ripristino, così identifica sempre lo stesso contenuto.
+    const backupDate = payload.exportedAt ? new Date(payload.exportedAt) : new Date();
+    const name = `Backup ${backupDate.toLocaleDateString("it-IT", { day:"2-digit", month:"2-digit", year:"numeric" })}`;
     const bookThemeId = BOOK_THEMES.some(t => t.id === payload.meta?.bookTheme) ? payload.meta.bookTheme : "classic";
     const idToken = await auth.currentUser.getIdToken();
     const id = await createBookInFirestore({ idToken, name, type: "personale", bookTheme: bookThemeId });
@@ -1062,6 +1067,44 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
       owner: me, memberEmails: [], memberRoles: {},
     }]);
     return id;
+  };
+
+  // Trasferisce TUTTI i dati del libro attivo (ricette + impostazioni di
+  // Organizza Ingredienti) in un altro libro — pensato per svuotare un
+  // ricettario di backup ripristinato in uno "vero", ma non ristretto a
+  // quel caso. Fusione sempre additiva: non sovrascrive né elimina mai
+  // nulla di già presente nel libro di destinazione — sulle chiavi in
+  // conflitto (es. stessa categoria ingrediente con valore diverso) vince
+  // il libro di destinazione, il backup riempie solo ciò che manca. Le
+  // ricette diventano copie con id nuovi (mai in conflitto con quelle
+  // esistenti); le foto restano sui path del libro attivo — accettabile
+  // perché un libro "personale" (compresi i backup ripristinati) non è mai
+  // eliminabile, quindi quei path non spariscono.
+  const transferAllToBook = async (targetId) => {
+    if (targetId === activeBookId) return;
+    const targetSystem = (await loadBookSystem(targetId)) || {};
+    const unionArr = (a, b) => Array.from(new Set([...(a || []), ...(b || [])]));
+    const unionByKey = (base, extra, keyFn) => {
+      const seen = new Set((base || []).map(keyFn));
+      return [...(base || []), ...(extra || []).filter(x => !seen.has(keyFn(x)))];
+    };
+    const mergedSystem = {
+      sectionList: unionArr(targetSystem.sectionList, sectionList),
+      categoryList: unionArr(targetSystem.categoryList, categoryList),
+      extraTagGroups: unionByKey(targetSystem.extraTagGroups, extraTagGroups, (g) => g.group),
+      aggregates: unionByKey(targetSystem.aggregates, aggregates, (a) => a.id),
+      customFoods: unionByKey(targetSystem.customFoods, customFoods, (f) => f.name),
+      ignoredSimilarities: unionByKey(targetSystem.ignoredSimilarities, ignoredSimilarities, (p) => JSON.stringify([...p].sort())),
+      ingredientCategories: { ...ingredientCategories, ...(targetSystem.ingredientCategories || {}) },
+      equivalences: { ...equivalences, ...(targetSystem.equivalences || {}) },
+      customUnits: { ...customUnits, ...(targetSystem.customUnits || {}) },
+      nutritionMap: { ...nutritionMap, ...(targetSystem.nutritionMap || {}) },
+      ingredientDict: { ...ingredientDict, ...(targetSystem.ingredientDict || {}) },
+      sourceByIngredient: { ...sourceByIngredient, ...(targetSystem.sourceByIngredient || {}) },
+    };
+    await saveBookSystem(targetId, mergedSystem);
+    const copies = recipes.map((r) => ({ ...r, id: uid("r") }));
+    await Promise.all(copies.map((c) => saveRecipe(targetId, c)));
   };
 
   // Salvataggio mirato delle ricette: confronta lo stato attuale con l'ultimo
@@ -1818,6 +1861,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             onExportPDF={(ids) => exportRecipesPDFByIds(ids)}
             onDownloadBackup={downloadLocalBackup}
             onRestoreBackup={restoreBackup}
+            onTransferAll={transferAllToBook}
             initialPhase={booksEntryPhase}
             defaultBookId={defaultBookId}
             onSetDefault={(id) => { setDefaultBookId(id); setDefaultBook(me, id); }}

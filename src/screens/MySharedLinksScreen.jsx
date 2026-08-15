@@ -27,6 +27,7 @@ export default function MySharedLinksScreen({ me, nav, onBack }) {
   const [editingId, setEditingId] = useState(null);
   const [editVisibility, setEditVisibility] = useState("anyone");
   const [editEmailsText, setEditEmailsText] = useState("");
+  const [copiedId, setCopiedId] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,6 +61,13 @@ export default function MySharedLinksScreen({ me, nav, onBack }) {
     } finally {
       setBusyId(null);
     }
+  };
+
+  const copyLink = (id) => {
+    const url = `${window.location.origin}/?shared=${id}`;
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).catch(() => {});
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 1500);
   };
 
   const openEdit = (item) => {
@@ -146,11 +154,16 @@ export default function MySharedLinksScreen({ me, nav, onBack }) {
             )}
 
             {editingId !== item.id && (
-              <div style={{ display:"flex", gap:6 }}>
-                <button onClick={() => openEdit(item)} disabled={busyId === item.id} style={{ flex:1, padding:"9px", borderRadius:9, border:`1.5px solid ${th.appBorder}`, background:"transparent", color:th.appInk, fontFamily:F.ui, fontSize:11.5, fontWeight:600, cursor:"pointer" }}>✏️ Modifica destinatari</button>
-                <button onClick={() => doRevoke(item.id)} disabled={busyId === item.id} style={{ flex:1, padding:"9px", borderRadius:9, border:"none", background:"#C4593A", color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer" }}>
-                  {busyId === item.id ? "…" : "🚫 Revoca"}
+              <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                <button onClick={() => copyLink(item.id)} style={{ padding:"9px", borderRadius:9, border:`1.5px solid ${th.appAccent}`, background: copiedId === item.id ? "#6B8C6E" : "transparent", color: copiedId === item.id ? "#fff" : th.appAccent, fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer" }}>
+                  {copiedId === item.id ? "✓ Copiato" : "🔗 Copia link"}
                 </button>
+                <div style={{ display:"flex", gap:6 }}>
+                  <button onClick={() => openEdit(item)} disabled={busyId === item.id} style={{ flex:1, padding:"9px", borderRadius:9, border:`1.5px solid ${th.appBorder}`, background:"transparent", color:th.appInk, fontFamily:F.ui, fontSize:11.5, fontWeight:600, cursor:"pointer" }}>✏️ Modifica destinatari</button>
+                  <button onClick={() => doRevoke(item.id)} disabled={busyId === item.id} style={{ flex:1, padding:"9px", borderRadius:9, border:"none", background:"#C4593A", color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer" }}>
+                    {busyId === item.id ? "…" : "🚫 Revoca"}
+                  </button>
+                </div>
               </div>
             )}
           </div>

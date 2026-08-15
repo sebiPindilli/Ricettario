@@ -27,7 +27,7 @@ export default function BooksScreen({
   books, activeBookId, me, activeRecipes,
   onSwitch, onCreate, onRename, onDelete, onAddMember, onRemoveMember, onChangeMemberPermission,
   onCopyRecipes, onExportCode, onExportPDF, initialPhase = "list",
-  onDownloadBackup, onRestoreBackup,
+  onDownloadBackup, onRestoreBackup, onTransferAll,
   defaultBookId, onSetDefault,
   onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping,
 }) {
@@ -52,6 +52,9 @@ export default function BooksScreen({
   const [copiedMsg, setCopiedMsg] = useState(null);
   const [includeMemories, setIncludeMemories] = useState(false);
   const [includeSystem, setIncludeSystem] = useState(false);
+  const [pendingTransferTarget, setPendingTransferTarget] = useState(null); // bookId
+  const [transferBusy, setTransferBusy] = useState(false);
+  const [transferMsg, setTransferMsg] = useState(null);
   // backup phase
   const [remindBackup, setRemindBackup] = useState(shouldRemindBackup);
   const [backupDoneMsg, setBackupDoneMsg] = useState(null);
@@ -104,11 +107,26 @@ export default function BooksScreen({
       const payload = JSON.parse(text);
       if (payload.app !== "ricettario" || !payload.data) throw new Error("Questo file non è un backup valido di Ricettario.");
       await onRestoreBackup(payload);
-      setRestoreSuccess(`✓ Ricettario "${payload.bookName || "Ricettario"} (ripristinato)" creato. Aprilo dalla lista qui sotto.`);
+      setRestoreSuccess("✓ Backup ripristinato come nuovo ricettario. Aprilo dalla lista qui sotto.");
     } catch (err) {
       setRestoreError(err.message || "Ripristino non riuscito.");
     } finally {
       setRestoreBusy(false);
+    }
+  };
+
+  const doTransferAll = async (targetId, targetName) => {
+    setTransferBusy(true);
+    try {
+      await onTransferAll(targetId);
+      setPendingTransferTarget(null);
+      setTransferMsg(`✓ Tutti i dati trasferiti in "${targetName}"`);
+      setTimeout(() => setTransferMsg(null), 3000);
+    } catch (err) {
+      setTransferMsg(err.message || "Trasferimento non riuscito.");
+      setTimeout(() => setTransferMsg(null), 3000);
+    } finally {
+      setTransferBusy(false);
     }
   };
 
@@ -144,6 +162,35 @@ export default function BooksScreen({
             <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>da: {activeBook?.name}</div>
           </div>
         </div>
+
+        {!shareCode && otherBooks.length > 0 && (
+          <div style={{ padding:"0 20px 10px" }}>
+            <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:6 }}>
+              Trasferisci tutto questo ricettario
+            </div>
+            <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginBottom:8, lineHeight:1.4 }}>
+              Copia tutte le ricette e le impostazioni di Organizza Ingredienti in un altro tuo ricettario, senza doverle selezionare una per una. Non elimina né sovrascrive nulla nel ricettario di destinazione.
+            </div>
+            <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+              {otherBooks.map(b => (
+                pendingTransferTarget === b.id ? (
+                  <div key={b.id} style={{ display:"flex", alignItems:"center", gap:6, background:th.appCard, border:`1.5px solid ${th.appAccent}`, borderRadius:11, padding:"6px 8px" }}>
+                    <span style={{ fontFamily:F.ui, fontSize:11, color:th.appInk }}>Confermi in "{b.name}"?</span>
+                    <button disabled={transferBusy} onClick={() => doTransferAll(b.id, b.name)} style={{ padding:"6px 10px", borderRadius:9, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer" }}>{transferBusy ? "…" : "✓ Conferma"}</button>
+                    <button disabled={transferBusy} onClick={() => setPendingTransferTarget(null)} style={{ padding:"6px 10px", borderRadius:9, border:`1px solid ${th.appBorder}`, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:11, cursor:"pointer" }}>Annulla</button>
+                  </div>
+                ) : (
+                  <button key={b.id} disabled={transferBusy} onClick={() => setPendingTransferTarget(b.id)} style={{
+                    padding:"9px 13px", borderRadius:11, border:`1.5px solid ${th.appBorder}`,
+                    background:"transparent", color:th.appInk,
+                    fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer",
+                  }}>🔀 {b.name}</button>
+                )
+              ))}
+            </div>
+            {transferMsg && <div style={{ fontFamily:F.ui, fontSize:11.5, color: transferMsg.startsWith("✓") ? "#6B8C6E" : DANGER, marginTop:8 }}>{transferMsg}</div>}
+          </div>
+        )}
 
         {shareCode ? (
           <div style={{ flex:1, overflowY:"auto", padding:"12px 20px 40px" }}>
@@ -298,7 +345,7 @@ export default function BooksScreen({
 
           <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", margin:"26px 0 8px" }}>Ripristina da backup</div>
           <div style={{ fontFamily:F.ui, fontSize:12, color:th.appInk, lineHeight:1.5, marginBottom:12 }}>
-            Crea un <b>nuovo ricettario</b> a partire da un file scaricato in precedenza. Non sovrascrive mai il ricettario attivo né altri già esistenti.
+            Crea un <b>nuovo ricettario "Backup {"{data}"}"</b> a partire da un file scaricato in precedenza — non sovrascrive mai il ricettario attivo né altri già esistenti. È un archivio permanente, pensato per restarci: usa "🔀 Trasferisci tutto" nella schermata Esporta ricette per portarne facilmente ricette e impostazioni in un ricettario vero.
           </div>
           <input ref={fileInputRef} type="file" accept="application/json" style={{ display:"none" }} onChange={handleFileChosen} />
           <button disabled={restoreBusy} onClick={() => fileInputRef.current?.click()} style={{
