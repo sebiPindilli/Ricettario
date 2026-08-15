@@ -27,6 +27,8 @@ import {
   listMySharedRecipes, updateSharedRecipeAccess, revokeSharedRecipe, deleteSharedRecipeFully,
 } from "./services/sharedRecipesStore.js";
 import { dishPhotoPath, stepPhotoPath, memoryPhotoPath } from "./services/photoStore.js";
+import { OfflineNoCacheError } from "./services/offlineFirst.js";
+import { markBackupDone } from "./utils/backupReminder.js";
 import { isEditorRole, normalizeRole } from "./utils/bookRoles.js";
 import SharedRecipeScreen from "./screens/SharedRecipeScreen.jsx";
 import MySharedLinksScreen from "./screens/MySharedLinksScreen.jsx";
@@ -956,6 +958,10 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   // uno stato di errore con possibilità di riprovare invece di restare
   // bloccati su "Caricamento…" per sempre (vedi anche AuthGate.jsx).
   const [bookBootError, setBookBootError] = useState(false);
+  // true se offline e nulla in cache su questo dispositivo per questo
+  // libro (es. primo avvio da zero senza rete) — messaggio dedicato,
+  // distinto dall'errore generico (vedi anche AuthGate.jsx).
+  const [bookBootOffline, setBookBootOffline] = useState(false);
 
   const snapshotData = () => ({
     recipes, extraTagGroups, sectionList, categoryList,
@@ -976,6 +982,86 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
       setBookTheme(BOOK_THEMES.find(t => t.id === d.meta.bookTheme) || BOOK_THEMES[0]);
     }
     lastSyncedRecipesRef.current = recipesToMap(d.recipes || []);
+  };
+
+  // Backup locale: scarica un file JSON con tutti i dati del libro attivo
+  // (stesso snapshot usato dal salvataggio automatico, nessuna lettura in
+  // più) — permette di recuperare i dati anche se l'app o Firestore hanno
+  // un problema. Le foto restano referenziate via URL Storage (non incluse
+  // nel file, sarebbe enorme): un ripristino le rende autonome ri-
+  // duplicandole (vedi restoreBackup più sotto).
+  const downloadLocalBackup = () => {
+    const payload = {
+      app: "ricettario", formatVersion: 1, exportedAt: new Date().toISOString(),
+      bookName: activeBook?.name || "Ricettario",
+      meta: { bookTheme: bookTheme?.id },
+      data: snapshotData(),
+    };
+    const json = JSON.stringify(payload, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const stamp = new Date().toISOString().slice(0, 10);
+    const safeName = (activeBook?.name || "ricettario").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `backup-${safeName || "ricettario"}-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    markBackupDone();
+  };
+
+  // Ripristina un file di backup come NUOVO libro — non tocca mai il libro
+  // attivo né alcun libro esistente (vedi discussione con l'utente: un
+  // backup serve a recuperare dati persi, sovrascrivere silenziosamente
+  // sarebbe rischioso). Le foto (referenziate via URL nel file) vengono
+  // ri-duplicate sui path Storage del nuovo libro così restano autonome
+  // anche se il libro/le foto d'origine del backup non esistono più —
+  // stesso principio già usato per "aggiungi ricetta condivisa al mio
+  // ricettario" (vedi sharedRecipesStore.js, duplicateRecipePhotos). Se la
+  // duplicazione di una foto fallisce (es. foto d'origine non più
+  // raggiungibile), la ricetta viene comunque salvata con l'URL originale
+  // invece di far fallire l'intero ripristino: i dati testuali contano più
+  // delle foto per lo scopo di questa funzione.
+  const restoreBackup = async (payload) => {
+    const d = payload?.data;
+    if (!d || !Array.isArray(d.recipes)) throw new Error("File di backup non valido.");
+    const name = `${payload.bookName || "Ricettario"} (ripristinato)`;
+    const bookThemeId = BOOK_THEMES.some(t => t.id === payload.meta?.bookTheme) ? payload.meta.bookTheme : "classic";
+    const idToken = await auth.currentUser.getIdToken();
+    const id = await createBookInFirestore({ idToken, name, type: "personale", bookTheme: bookThemeId });
+
+    await saveBookSystem(id, {
+      extraTagGroups: d.extraTagGroups, sectionList: d.sectionList, categoryList: d.categoryList,
+      ingredientCategories: d.ingredientCategories, aggregates: d.aggregates,
+      equivalences: d.equivalences || {}, customUnits: d.customUnits || {},
+      nutritionMap: d.nutritionMap || {}, customFoods: d.customFoods || [],
+      ingredientDict: d.ingredientDict || {}, sourceByIngredient: d.sourceByIngredient || {},
+      ignoredSimilarities: d.ignoredSimilarities || [],
+    });
+    await saveShoppingList(id, d.shoppingList || []);
+
+    for (const r of d.recipes) {
+      let toSave = r;
+      try {
+        const { recipe } = await duplicateRecipePhotos(r, {
+          dishPath: () => dishPhotoPath(id, r.id),
+          stepPath: (i, p) => stepPhotoPath(id, r.id, i, p),
+          memoryPath: (memId) => memoryPhotoPath(id, r.id, memId),
+        });
+        toSave = recipe;
+      } catch (e) {
+        console.warn(`Duplicazione foto non riuscita per la ricetta "${r.title}", salvata senza foto autonome`, e);
+      }
+      await saveRecipe(id, toSave);
+    }
+
+    setBooks(prev => [...prev, {
+      id, name, type: "personale", bookTheme: bookThemeId,
+      owner: me, memberEmails: [], memberRoles: {},
+    }]);
+    return id;
   };
 
   // Salvataggio mirato delle ricette: confronta lo stato attuale con l'ultimo
@@ -1014,6 +1100,11 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   // lasci l'app bloccata su "Caricamento…" per sempre.
   const bootstrapBooks = useCallback(async () => {
     setBookBootError(false);
+    setBookBootOffline(false);
+    // Offline, non c'è rete da aspettare: la lettura va dritta alla cache
+    // locale (vedi services/offlineFirst.js), quindi un margine più corto
+    // basta e non fa percepire un'attesa inutile.
+    const timeoutMs = navigator.onLine ? 15000 : 4000;
     try {
       await withTimeout((async () => {
         let list = await listMyBooks(me, role);
@@ -1031,10 +1122,11 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
         setActiveBookId(initial);
         const data = await loadFullBook(initial);
         if (data.meta) loadData(data);
-      })(), 15000);
+      })(), timeoutMs);
       setBookLoaded(true);
-    } catch {
-      setBookBootError(true);
+    } catch (e) {
+      if (e instanceof OfflineNoCacheError) setBookBootOffline(true);
+      else setBookBootError(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1542,6 +1634,22 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
       alignItems: "center", justifyContent: "center", gap: 16,
       fontFamily: "sans-serif", padding: 20, textAlign: "center",
     };
+    if (bookBootOffline) {
+      return (
+        <div style={bootPageStyle}>
+          <h1>Nessuna connessione</h1>
+          <p>Non ci sono ancora dati salvati su questo dispositivo per questo libro: la prima apertura richiede una connessione internet.</p>
+          <div style={{ display: "flex", gap: 12 }}>
+            <button onClick={bootstrapBooks} style={{ padding: "10px 20px", cursor: "pointer" }}>
+              Riprova
+            </button>
+            <button onClick={signOutAndRetry} style={{ padding: "10px 20px", cursor: "pointer" }}>
+              Esci e riprova
+            </button>
+          </div>
+        </div>
+      );
+    }
     if (bookBootError) {
       return (
         <div style={bootPageStyle}>
@@ -1708,6 +1816,8 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             onCopyRecipes={copyRecipesToBook}
             onExportCode={exportShareCode}
             onExportPDF={(ids) => exportRecipesPDFByIds(ids)}
+            onDownloadBackup={downloadLocalBackup}
+            onRestoreBackup={restoreBackup}
             initialPhase={booksEntryPhase}
             defaultBookId={defaultBookId}
             onSetDefault={(id) => { setDefaultBookId(id); setDefaultBook(me, id); }}

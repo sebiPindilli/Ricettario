@@ -3,7 +3,8 @@
 // determina i permessi lato regole di sicurezza (firestore.rules).
 // Il ruolo "admin" non è mai gestibile da qui: solo a mano da Console.
 import { db } from "../firebase.js";
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, doc, getDocs, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { getDocOfflineFirst } from "./offlineFirst.js";
 
 const normalizeEmail = (email) => (email || "").trim().toLowerCase();
 
@@ -16,7 +17,7 @@ export const DEFAULT_TIMER_ALERTS = { sound: true, vibrate: true, visual: true }
 export const checkWhitelist = async (email) => {
   const key = normalizeEmail(email);
   if (!key) return { authorized: false, role: null, defaultBookId: null, timerAlerts: DEFAULT_TIMER_ALERTS };
-  const snap = await getDoc(doc(db, "allowlist", key));
+  const snap = await getDocOfflineFirst(doc(db, "allowlist", key));
   if (!snap.exists()) return { authorized: false, role: null, defaultBookId: null, timerAlerts: DEFAULT_TIMER_ALERTS };
   const data = snap.data();
   return {
@@ -60,7 +61,7 @@ export const setTimerAlertPrefs = (email, prefs) =>
 // si tratta come "acceso": stesso comportamento di sempre finché nessun
 // admin lo spegne esplicitamente.
 export const loadBetaConfig = async () => {
-  const snap = await getDoc(doc(db, "config", "beta"));
+  const snap = await getDocOfflineFirst(doc(db, "config", "beta"));
   return { enabled: snap.exists() ? snap.data().enabled !== false : true };
 };
 

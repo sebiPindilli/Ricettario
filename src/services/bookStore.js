@@ -6,11 +6,12 @@
 //   books/{bookId}/recipes/{recipeId} → sotto-collezione (vedi Fase 1.2)
 import { db } from "../firebase.js";
 import {
-  doc, getDoc, getDocs, setDoc, deleteDoc, collection,
+  doc, setDoc, deleteDoc, collection,
   query, where,
 } from "firebase/firestore";
 import { MACRO_SECTIONS, INGREDIENT_CATEGORIES } from "../data/constants.js";
 import { uploadPhoto, dishPhotoPath, stepPhotoPath, memoryPhotoPath } from "./photoStore.js";
+import { getDocOfflineFirst, getDocsOfflineFirst } from "./offlineFirst.js";
 
 // Le funzioni /api/* rispondono sempre in JSON quando servite da Vercel
 // (produzione o `vercel dev`) — ma il semplice `npm run dev` (Vite puro,
@@ -53,7 +54,7 @@ export const saveBookMeta = (bookId, meta) =>
   setDoc(bookRef(bookId), { meta }, { merge: true });
 
 export const loadBookMeta = async (bookId) => {
-  const snap = await getDoc(bookRef(bookId));
+  const snap = await getDocOfflineFirst(bookRef(bookId));
   return snap.exists() ? (snap.data().meta || null) : null;
 };
 
@@ -96,7 +97,7 @@ export const saveBookSystem = (bookId, system) =>
   });
 
 export const loadBookSystem = async (bookId) => {
-  const snap = await getDoc(systemRef(bookId));
+  const snap = await getDocOfflineFirst(systemRef(bookId));
   if (!snap.exists()) return null;
   const data = snap.data();
   return {
@@ -110,7 +111,7 @@ export const saveShoppingList = (bookId, entries) =>
   setDoc(shoppingListRef(bookId), { entries });
 
 export const loadShoppingList = async (bookId) => {
-  const snap = await getDoc(shoppingListRef(bookId));
+  const snap = await getDocOfflineFirst(shoppingListRef(bookId));
   return snap.exists() ? (snap.data().entries || []) : [];
 };
 
@@ -153,14 +154,20 @@ export const deleteBookInFirestore = async ({ idToken, bookId }) => {
 // vedi firestore.rules), sempre incluso senza bisogno di essere membro.
 export const listMyBooks = async (email, role) => {
   const [ownedSnap, memberSnap] = await Promise.all([
-    getDocs(query(collection(db, "books"), where("meta.owner", "==", email))),
-    getDocs(query(collection(db, "books"), where("meta.memberEmails", "array-contains", email))),
+    getDocsOfflineFirst(query(collection(db, "books"), where("meta.owner", "==", email))),
+    getDocsOfflineFirst(query(collection(db, "books"), where("meta.memberEmails", "array-contains", email))),
   ]);
   const byId = new Map();
   [...ownedSnap.docs, ...memberSnap.docs].forEach((d) => byId.set(d.id, { id: d.id, ...d.data().meta }));
   if (role === "admin" || role === "tester") {
-    const betaSnap = await getDoc(bookRef("b1"));
-    if (betaSnap.exists()) byId.set("b1", { id: "b1", ...betaSnap.data().meta });
+    // Non fatale se non disponibile offline (es. mai aperto il Beta su
+    // questo dispositivo): i libri propri restano comunque utilizzabili.
+    try {
+      const betaSnap = await getDocOfflineFirst(bookRef("b1"));
+      if (betaSnap.exists()) byId.set("b1", { id: "b1", ...betaSnap.data().meta });
+    } catch {
+      // ignorato di proposito
+    }
   }
   return Array.from(byId.values());
 };
@@ -293,7 +300,7 @@ export const deleteRecipe = (bookId, recipeId) =>
   deleteDoc(recipeRef(bookId, recipeId));
 
 export const loadAllRecipes = async (bookId) => {
-  const snap = await getDocs(recipesCol(bookId));
+  const snap = await getDocsOfflineFirst(recipesCol(bookId));
   return snap.docs.map((d) => ({ ...d.data(), id: d.id }));
 };
 

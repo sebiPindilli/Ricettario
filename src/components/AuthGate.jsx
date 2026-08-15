@@ -7,10 +7,15 @@ import { useState, useEffect, useCallback } from "react";
 import { auth } from "../firebase.js";
 import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
 import { checkWhitelist, loadBetaConfig, DEFAULT_TIMER_ALERTS } from "../services/authStore.js";
+import { OfflineNoCacheError } from "../services/offlineFirst.js";
 import { withTimeout } from "../utils/helpers.js";
 
 const provider = new GoogleAuthProvider();
 const BOOT_TIMEOUT_MS = 10000;
+// Offline, il margine serve solo a coprire la lettura dalla cache locale
+// (istantanea) — non c'è alcuna rete da aspettare, quindi un timeout più
+// corto evita di far percepire un'attesa che non porterà comunque a nulla.
+const BOOT_TIMEOUT_MS_OFFLINE = 4000;
 
 const pageStyle = {
   minHeight: "100vh", display: "flex", flexDirection: "column",
@@ -19,7 +24,7 @@ const pageStyle = {
 };
 
 export default function AuthGate({ children }) {
-  // loading | loggedOut | unauthorized | authorized | error
+  // loading | loggedOut | unauthorized | authorized | offlineNoCache | error
   const [status, setStatus] = useState("loading");
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
@@ -35,22 +40,29 @@ export default function AuthGate({ children }) {
   // caricamento senza uscita.
   const runBootstrap = useCallback(async (u) => {
     setUser(u);
+    const offline = !navigator.onLine;
+    const timeoutMs = offline ? BOOT_TIMEOUT_MS_OFFLINE : BOOT_TIMEOUT_MS;
     try {
       const { authorized, role: r, defaultBookId: d, timerAlerts: ta } =
-        await withTimeout(checkWhitelist(u.email), BOOT_TIMEOUT_MS);
+        await withTimeout(checkWhitelist(u.email), timeoutMs);
       if (!authorized) {
         setRole(null); setDefaultBookId(null); setStatus("unauthorized");
         return;
       }
       setRole(r); setDefaultBookId(d); setTimerAlerts(ta);
       // Serve solo ad admin/tester (vedi BetaButton.jsx) — non blocca
-      // l'accesso di chi ha ruolo base, letto comunque per semplicità.
-      const { enabled } = await withTimeout(loadBetaConfig(), BOOT_TIMEOUT_MS);
-      setBetaEnabled(enabled);
+      // l'accesso di chi ha ruolo base. Non fatale: se non disponibile
+      // offline non deve impedire l'ingresso nell'app.
+      try {
+        const { enabled } = await withTimeout(loadBetaConfig(), timeoutMs);
+        setBetaEnabled(enabled);
+      } catch (e) {
+        console.warn("Config beta non disponibile", e);
+      }
       setStatus("authorized");
     } catch (e) {
       console.warn("Bootstrap non riuscito", e);
-      setStatus("error");
+      setStatus(e instanceof OfflineNoCacheError ? "offlineNoCache" : "error");
     }
   }, []);
 
@@ -104,6 +116,23 @@ export default function AuthGate({ children }) {
         <button onClick={doSignOut} style={{ padding: "10px 20px", cursor: "pointer" }}>
           Prova un altro account
         </button>
+      </div>
+    );
+  }
+
+  if (status === "offlineNoCache") {
+    return (
+      <div style={pageStyle}>
+        <h1>Nessuna connessione</h1>
+        <p>Non ci sono ancora dati salvati su questo dispositivo: la prima apertura richiede una connessione internet.</p>
+        <div style={{ display: "flex", gap: 12 }}>
+          <button onClick={retry} style={{ padding: "10px 20px", cursor: "pointer" }}>
+            Riprova
+          </button>
+          <button onClick={doSignOut} style={{ padding: "10px 20px", cursor: "pointer" }}>
+            Esci e riprova
+          </button>
+        </div>
       </div>
     );
   }

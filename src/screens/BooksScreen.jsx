@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 import GlobalNav from "../components/GlobalNav.jsx";
 import MySharedLinksScreen from "./MySharedLinksScreen.jsx";
+import SuggestionHint from "../components/SuggestionHint.jsx";
 import { guideLibri } from "../data/guideContent.jsx";
+import { shouldRemindBackup } from "../utils/backupReminder.js";
 import {
   ROLES, normalizeRole, assignableRoles, canAssignRole, canRemoveMember,
   canAddMember, MAX_MEMBERS,
@@ -25,11 +27,12 @@ export default function BooksScreen({
   books, activeBookId, me, activeRecipes,
   onSwitch, onCreate, onRename, onDelete, onAddMember, onRemoveMember, onChangeMemberPermission,
   onCopyRecipes, onExportCode, onExportPDF, initialPhase = "list",
+  onDownloadBackup, onRestoreBackup,
   defaultBookId, onSetDefault,
   onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping,
 }) {
   const th = useTheme();
-  const [phase, setPhase] = useState(initialPhase); // "list" | "transfer" | "sharedLinks"
+  const [phase, setPhase] = useState(initialPhase); // "list" | "transfer" | "sharedLinks" | "backup"
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmails, setNewEmails] = useState("");
@@ -49,6 +52,13 @@ export default function BooksScreen({
   const [copiedMsg, setCopiedMsg] = useState(null);
   const [includeMemories, setIncludeMemories] = useState(false);
   const [includeSystem, setIncludeSystem] = useState(false);
+  // backup phase
+  const [remindBackup, setRemindBackup] = useState(shouldRemindBackup);
+  const [backupDoneMsg, setBackupDoneMsg] = useState(null);
+  const [restoreBusy, setRestoreBusy] = useState(false);
+  const [restoreError, setRestoreError] = useState(null);
+  const [restoreSuccess, setRestoreSuccess] = useState(null);
+  const fileInputRef = useRef(null);
 
   const activeBook = books.find(b => b.id === activeBookId);
   const otherBooks = books.filter(b => b.id !== activeBookId);
@@ -72,6 +82,33 @@ export default function BooksScreen({
       setMemberErr(bookId, err.message || "Operazione non riuscita.");
     } finally {
       setMemberBusy(p => ({ ...p, [bookId]: false }));
+    }
+  };
+
+  const handleDownloadBackup = () => {
+    onDownloadBackup();
+    setRemindBackup(false);
+    setBackupDoneMsg("✓ Backup scaricato");
+    setTimeout(() => setBackupDoneMsg(null), 2500);
+  };
+
+  const handleFileChosen = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // consente di riselezionare subito lo stesso file
+    if (!file) return;
+    setRestoreError(null);
+    setRestoreSuccess(null);
+    setRestoreBusy(true);
+    try {
+      const text = await file.text();
+      const payload = JSON.parse(text);
+      if (payload.app !== "ricettario" || !payload.data) throw new Error("Questo file non è un backup valido di Ricettario.");
+      await onRestoreBackup(payload);
+      setRestoreSuccess(`✓ Ricettario "${payload.bookName || "Ricettario"} (ripristinato)" creato. Aprilo dalla lista qui sotto.`);
+    } catch (err) {
+      setRestoreError(err.message || "Ripristino non riuscito.");
+    } finally {
+      setRestoreBusy(false);
     }
   };
 
@@ -235,6 +272,48 @@ export default function BooksScreen({
     );
   }
 
+  // ══ FASE BACKUP E RIPRISTINO ══
+  if (phase === "backup") {
+    return (
+      <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+        {nav}
+        <div style={{ padding:"12px 20px 6px", display:"flex", alignItems:"center", gap:10 }}>
+          <button onClick={() => setPhase("list")} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
+          <div style={{ flex:1 }}>
+            <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>Backup e ripristino</div>
+            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>libro attivo: {activeBook?.name}</div>
+          </div>
+        </div>
+
+        <div style={{ flex:1, overflowY:"auto", padding:"14px 20px 40px" }}>
+          <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:8 }}>Backup locale</div>
+          <div style={{ fontFamily:F.ui, fontSize:12, color:th.appInk, lineHeight:1.5, marginBottom:12 }}>
+            Scarica un file con tutti i dati del ricettario <b>{activeBook?.name}</b> (ricette, categorie, impostazioni di Organizza Ingredienti). Utile per avere una copia di sicurezza o per accedere all'app senza connessione al primo avvio su un nuovo dispositivo. Le foto restano online: non sono incluse nel file.
+          </div>
+          <button onClick={handleDownloadBackup} style={{
+            width:"100%", padding:"13px", borderRadius:12, border:"none",
+            background: backupDoneMsg ? "#6B8C6E" : th.appAccent, color:"#fff",
+            fontFamily:F.ui, fontSize:13, fontWeight:700, cursor:"pointer",
+          }}>{backupDoneMsg || "⬇️ Scarica backup (JSON)"}</button>
+
+          <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", margin:"26px 0 8px" }}>Ripristina da backup</div>
+          <div style={{ fontFamily:F.ui, fontSize:12, color:th.appInk, lineHeight:1.5, marginBottom:12 }}>
+            Crea un <b>nuovo ricettario</b> a partire da un file scaricato in precedenza. Non sovrascrive mai il ricettario attivo né altri già esistenti.
+          </div>
+          <input ref={fileInputRef} type="file" accept="application/json" style={{ display:"none" }} onChange={handleFileChosen} />
+          <button disabled={restoreBusy} onClick={() => fileInputRef.current?.click()} style={{
+            width:"100%", padding:"13px", borderRadius:12,
+            border:`1.5px solid ${th.appInk}`, background:"transparent", color:th.appInk,
+            fontFamily:F.ui, fontSize:13, fontWeight:700, cursor: restoreBusy ? "default" : "pointer",
+            opacity: restoreBusy ? 0.6 : 1,
+          }}>{restoreBusy ? "Ripristino in corso…" : "📥 Scegli file di backup"}</button>
+          {restoreError && <div style={{ fontFamily:F.ui, fontSize:11.5, color:DANGER, marginTop:10 }}>{restoreError}</div>}
+          {restoreSuccess && <div style={{ fontFamily:F.ui, fontSize:11.5, color:"#6B8C6E", marginTop:10 }}>{restoreSuccess}</div>}
+        </div>
+      </div>
+    );
+  }
+
   // ══ FASE "I MIEI LINK CONDIVISI" ══
   if (phase === "sharedLinks") {
     return <MySharedLinksScreen me={me} nav={nav} onBack={() => setPhase("list")} />;
@@ -251,12 +330,29 @@ export default function BooksScreen({
             account: {me}
           </div>
         </div>
-        <button onClick={() => setPhase("sharedLinks")} style={{
-          flexShrink:0, background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10,
-          padding:"7px 11px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:11, fontWeight:600,
-          display:"flex", alignItems:"center", gap:5,
-        }}>🔗 Link condivisi</button>
+        <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+          <button onClick={() => setPhase("backup")} style={{
+            background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10,
+            padding:"7px 11px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:11, fontWeight:600,
+            display:"flex", alignItems:"center", gap:5,
+          }}>💾 Backup</button>
+          <button onClick={() => setPhase("sharedLinks")} style={{
+            background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10,
+            padding:"7px 11px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:11, fontWeight:600,
+            display:"flex", alignItems:"center", gap:5,
+          }}>🔗 Link condivisi</button>
+        </div>
       </div>
+
+      {remindBackup && (
+        <div style={{ padding:"0 18px 4px" }}>
+          <SuggestionHint onClick={() => setPhase("backup")}>
+            <span style={{ fontFamily:F.ui, fontSize:11.5, color:th.appInk }}>
+              💾 Non hai ancora un backup locale recente. Tocca qui per scaricarne uno.
+            </span>
+          </SuggestionHint>
+        </div>
+      )}
 
       {distinctRoles.length > 1 && (
         <div style={{ display:"flex", gap:6, flexWrap:"wrap", padding:"0 18px 10px" }}>
