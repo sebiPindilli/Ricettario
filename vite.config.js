@@ -13,12 +13,19 @@ export default defineConfig({
     // pagina di errore nativa del browser. Nessun runtimeCaching: le
     // chiamate a Firestore/Auth/Storage restano gestite dalla cache di
     // Firestore, non da una seconda cache qui che potrebbe confliggere.
-    // autoUpdate: nessun popup "nuova versione disponibile" da gestire,
-    // adatto a un'app per pochi utenti fidati — chi la riapre prende da
-    // solo l'ultima versione pubblicata. Attivo solo in build di
-    // produzione, non in `vite dev` (vedi npm run build && vite preview).
+    // autoUpdate: il nuovo service worker si attiva subito in background
+    // (skipWaiting+clientsClaim), senza aspettare che tutte le schede
+    // vecchie si chiudano. Non basta da solo a far vedere il codice nuovo a
+    // chi ha già la pagina aperta (serve comunque un reload) — per questo
+    // c'è PwaUpdatePrompt.jsx, che avvisa e lascia scegliere quando
+    // ricaricare invece di farlo sparire in silenzio. injectRegister:false
+    // perché la registrazione la fa quel componente (useRegisterSW), non lo
+    // script iniettato di default — le due assieme registrerebbero due
+    // volte. Attivo solo in build di produzione, non in `vite dev` (vedi
+    // npm run build && vite preview).
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: false,
       // Il precache di default segue solo i file effettivamente referenziati
       // dalla build (bundle JS/CSS, manifest, icone del manifest) — favicon
       // e apple-touch-icon sono referenziati solo da <link> in index.html,

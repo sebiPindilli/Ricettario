@@ -36,6 +36,7 @@ import MySharedLinksScreen from "./screens/MySharedLinksScreen.jsx";
 import { auth } from "./firebase.js";
 import { signOut } from "firebase/auth";
 import AuthGate from "./components/AuthGate.jsx";
+import PwaBanners from "./components/PwaBanners.jsx";
 import {
   T, F, MACRO_SECTIONS, PICKER_EMOJIS, INGREDIENT_CATEGORIES,
   TAG_GROUPS, ALL_PRESET_TAGS, BOOK_THEMES,
@@ -2170,6 +2171,10 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
 export default function App() {
   return (
     <ErrorBoundary>
+      {/* Fuori da AuthGate apposta: visibili anche prima del login (aiuta
+          chi non ha ancora installato l'app, e un aggiornamento pubblicato
+          può riguardare anche la schermata di accesso stessa). */}
+      <PwaBanners/>
       <AuthGate>
         {(user, role, defaultBookId, betaEnabled, timerAlerts) => <AppInner me={user.email} role={role} initialDefaultBookId={defaultBookId} betaEnabled={betaEnabled} initialTimerAlerts={timerAlerts}/>}
       </AuthGate>
