@@ -19,12 +19,32 @@ export default defineConfig({
     // produzione, non in `vite dev` (vedi npm run build && vite preview).
     VitePWA({
       registerType: 'autoUpdate',
+      // Il precache di default segue solo i file effettivamente referenziati
+      // dalla build (bundle JS/CSS, manifest, icone del manifest) — favicon
+      // e apple-touch-icon sono referenziati solo da <link> in index.html,
+      // non individuati automaticamente: senza questo restano scaricabili
+      // solo online (irrilevante per l'installazione, ma non per l'uso
+      // offline della scheda/icona già installata).
+      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'Ricettario',
         short_name: 'Ricettario',
         start_url: '/',
+        scope: '/',
         display: 'standalone',
-        icons: [{ src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' }],
+        lang: 'it',
+        // Stessi colori del tema "classic" (il primo di BOOK_THEMES, vedi
+        // data/constants.js) — non c'è un unico "colore dell'app" dato che
+        // ogni libro ha un tema scelto dall'utente, ma questi restano i
+        // valori di default finché non se ne sceglie uno diverso, e sono
+        // gli stessi usati per generare le icone (public/icon*.svg).
+        theme_color: '#C4593A',
+        background_color: '#FAF7F0',
+        icons: [
+          { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/pwa-maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
       },
     }),
   ],

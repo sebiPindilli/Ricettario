@@ -1,10 +1,19 @@
 <!doctype html>
-<html lang="en">
+<html lang="it">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>ricettario</title>
+    <meta name="theme-color" content="#C4593A" />
+    <!-- iOS/Safari non legge il web manifest per "Aggiungi a Home": senza
+         questi meta legacy l'app si apre comunque dentro Safari (barra
+         indirizzi inclusa) invece che a schermo intero, e la barra di stato
+         resta quella di default invece di seguire il tema. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Ricettario" />
+    <title>Ricettario</title>
   </head>
   <body>
     <div id="root"></div>
