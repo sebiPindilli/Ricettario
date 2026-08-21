@@ -16,11 +16,18 @@ export default async function handler(req, res) {
   const name = (req.body?.name || "").trim() || "Nuovo ricettario";
   const bookTheme = req.body?.bookTheme || "classic";
   const type = req.body?.type === "personale" ? "personale" : "condiviso";
+  // isBackup/backupForBookId: impostati qui in creazione (Admin SDK, bypassa
+  // le regole) invece che con un update client successivo — le firestore.rules
+  // permettono di aggiornare solo name/bookTheme su un libro esistente (vedi
+  // restoreBackup in ricettario-v23.jsx, che altrimenti riceverebbe permission-denied).
+  const isBackup = req.body?.isBackup === true;
+  const backupForBookId = isBackup && typeof req.body?.backupForBookId === "string" ? req.body.backupForBookId : null;
 
   const db = getFirestore();
   const allowlistRef = db.doc(`allowlist/${user.email}`);
   const newBookRef = db.collection("books").doc();
   const meta = { name, type, bookTheme, owner: user.email, memberEmails: [], memberRoles: {} };
+  if (isBackup) { meta.isBackup = true; meta.backupForBookId = backupForBookId; }
 
   try {
     // Il conteggio va fatto qui, lato server con Admin SDK: un contatore

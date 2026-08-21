@@ -28,12 +28,20 @@ export default async function handler(req, res) {
   if (meta.owner !== user.email) {
     return res.status(403).json({ error: "Solo il proprietario può eliminare questo libro." });
   }
-  // I libri di backup restano di tipo "personale" (niente gestione membri,
-  // vedi ricettario-v23.jsx/restoreBackup) ma non sono la base personale
-  // insostituibile che questo controllo protegge — devono poter essere
-  // eliminati una volta travasati i dati altrove.
-  if (meta.type === "personale" && !meta.isBackup) {
-    return res.status(400).json({ error: "Il libro personale non può essere eliminato." });
+  // Un libro personale è eliminabile come qualunque altro (owner-only, mai
+  // b1) — l'unico vincolo è non lasciare l'utente a zero ricettari: senza
+  // questo, l'app romperebbe a metà sessione (activeBookId punterebbe a un
+  // libro appena cancellato). Se l'utente arriva comunque a zero libri tra
+  // un avvio e l'altro, il bootstrap se ne accorge e ne ricrea uno vuoto
+  // (vedi bootstrapBooks in ricettario-v23.jsx) — qui si evita solo la
+  // rottura immediata nella sessione corrente.
+  const [ownedSnap, memberSnap] = await Promise.all([
+    db.collection("books").where("meta.owner", "==", user.email).limit(2).get(),
+    db.collection("books").where("meta.memberEmails", "array-contains", user.email).limit(2).get(),
+  ]);
+  const hasAnotherBook = [...ownedSnap.docs, ...memberSnap.docs].some((d) => d.id !== bookId);
+  if (!hasAnotherBook) {
+    return res.status(400).json({ error: "Non puoi eliminare l'unico ricettario rimasto." });
   }
 
   await db.recursiveDelete(bookRef);

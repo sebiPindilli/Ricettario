@@ -1012,11 +1012,12 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     const name = `Backup ${backupDate.toLocaleDateString("it-IT", { day:"2-digit", month:"2-digit", year:"numeric" })}`;
     const bookThemeId = BOOK_THEMES.some(t => t.id === payload.meta?.bookTheme) ? payload.meta.bookTheme : "classic";
     const idToken = await auth.currentUser.getIdToken();
-    const id = await createBookInFirestore({ idToken, name, type: "personale", bookTheme: bookThemeId });
-    // isBackup: sblocca l'eliminazione (vedi /api/delete-book.js, che
-    // altrimenti rifiuta qualunque libro "personale"); backupForBookId
-    // determina sotto quale scheda comparire annidato.
-    await saveBookMeta(id, { isBackup: true, backupForBookId: targetBookId });
+    // isBackup/backupForBookId passati alla creazione (Admin SDK): sbloccano
+    // l'eliminazione (vedi /api/delete-book.js) e determinano sotto quale
+    // scheda comparire annidato. Le firestore.rules permettono di aggiornare
+    // solo name/bookTheme su un libro già esistente, quindi vanno impostati
+    // qui e non con un update client successivo (avrebbe dato permission-denied).
+    const id = await createBookInFirestore({ idToken, name, type: "personale", bookTheme: bookThemeId, isBackup: true, backupForBookId: targetBookId });
 
     await saveBookSystem(id, {
       extraTagGroups: d.extraTagGroups, sectionList: d.sectionList, categoryList: d.categoryList,
@@ -1321,11 +1322,16 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     // e quel salvataggio fallirebbe con "permessi insufficienti" se il
     // documento fosse già stato cancellato nel frattempo.
     if (id === activeBookId) {
-      // Esclude i backup dalla ricerca: ora sono eliminabili pur restando
-      // type "personale" (vedi restoreBackup), non vanno mai scelti come
-      // "libro personale vero" su cui atterrare dopo l'eliminazione.
-      const personal = books.find(b => b.type === "personale" && !b.isBackup && b.owner === me && b.id !== id);
-      if (personal) await switchBook(personal.id);
+      // Preferisce un altro libro personale vero (esclusi i backup, che pur
+      // restando type "personale" — vedi restoreBackup — non vanno mai
+      // scelti come atterraggio); in mancanza, va bene qualunque altro
+      // libro accessibile. I libri personali sono ora eliminabili come
+      // tutti gli altri (vedi api/delete-book.js), quindi non è più
+      // garantito che ne resti sempre uno "vero" — se non c'è proprio
+      // nessun altro libro, il server rifiuta comunque l'eliminazione.
+      const fallback = books.find(b => b.type === "personale" && !b.isBackup && b.owner === me && b.id !== id)
+        || books.find(b => b.id !== id);
+      if (fallback) await switchBook(fallback.id);
     }
     const idToken = await auth.currentUser.getIdToken();
     await deleteBookInFirestore({ idToken, bookId: id });
@@ -1664,9 +1670,14 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     }));
   };
 
+  // Rimuove il ricordo da TUTTE le ricette che lo referenziano (non solo
+  // quella aperta): un ricordo può essere collegato a più ricette (stesso
+  // id duplicato nell'array memories di ciascuna, vedi MemoriesBookScreen
+  // che le deduplica per id), quindi eliminarlo solo dalla ricetta
+  // selezionata lascerebbe copie "zombie" nelle altre.
   const deleteMemory = (memId) => {
     setRecipes(prev => prev.map(r => {
-      if (r.id !== selected?.id) return r;
+      if (!(r.memories||[]).some(m => m.id === memId)) return r;
       return { ...r, memories: (r.memories||[]).filter(m => m.id !== memId) };
     }));
   };
@@ -1974,6 +1985,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             onAdd={(type) => type==="memory" ? openAddMemory() : goTo("addRecipeHub")}
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
+            onDeleteMemory={deleteMemory}
           />
         )}
         {screen==="theme" && (

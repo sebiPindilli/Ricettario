@@ -121,11 +121,11 @@ export const loadShoppingList = async (bookId) => {
 // permettono create diretti sul client, vedi firestore.rules). Dopo la
 // creazione, system/shoppingList vuoti si scrivono come prima dal client
 // (l'utente è già owner secondo le nuove regole).
-export const createBookInFirestore = async ({ idToken, name, type = "personale", bookTheme = "classic" }) => {
+export const createBookInFirestore = async ({ idToken, name, type = "personale", bookTheme = "classic", isBackup, backupForBookId }) => {
   const res = await fetch("/api/create-book", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ idToken, name, type, bookTheme }),
+    body: JSON.stringify({ idToken, name, type, bookTheme, isBackup, backupForBookId }),
   });
   const data = await parseApiResponse(res);
   if (!res.ok) throw new Error(data.error || "Creazione del ricettario non riuscita.");

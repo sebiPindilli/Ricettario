@@ -408,6 +408,12 @@ export default function BooksScreen({
           const canManageMembers = myRole === "proprietario" || myRole === "collaboratore";
           const confirmingDelete = pendingDelete === b.id;
           const linkedBackups = books.filter(x => x.isBackup && x.backupForBookId === b.id);
+          // Un libro personale vero è eliminabile come qualunque altro, ma
+          // solo se ne resta almeno un altro accessibile — altrimenti l'app
+          // resterebbe senza ricettario attivo a metà sessione (il server
+          // rifiuta comunque questo caso, vedi api/delete-book.js: qui si
+          // evita solo di mostrare un pulsante che fallirebbe sempre).
+          const canDeletePersonal = !isBeta && b.type === "personale" && !b.isBackup && isOwner && books.length > 1;
           return (
             <div key={b.id} style={{
               position:"relative", overflow:"hidden",
@@ -466,6 +472,12 @@ export default function BooksScreen({
                   usato per gli altri ricettari (vedi confirmingDelete sotto). */}
               {b.isBackup && (
                 <button onClick={() => setPendingDelete(b.id)} style={{ marginTop:8, background:"none", border:"none", color:DANGER, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, display:"block" }}>🗑️ Elimina ricettario di backup</button>
+              )}
+
+              {/* Libro personale vero: eliminabile come i condivisi, stesso
+                  overlay di conferma (confirmingDelete sotto). */}
+              {canDeletePersonal && (
+                <button onClick={() => setPendingDelete(b.id)} style={{ marginTop:8, background:"none", border:"none", color:DANGER, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, display:"block" }}>🗑️ Elimina ricettario</button>
               )}
 
               {/* Backup: scarica (solo libro attivo) e ripristina-qui (tutti i
