@@ -124,31 +124,59 @@ export const createSharedRecipe = async ({
   delete sharedRecipe.id;
   sharedRecipe.memories = includeMemories && Array.isArray(recipe.memories) ? recipe.memories : [];
   let photoPaths = [];
+  // Riflettono cosa è FINITO davvero nel link (possono scendere a false
+  // sotto, se la duplicazione fallisce) — includePhotos/includeMemories
+  // sono invece quello che l'utente ha chiesto.
+  let photosIncluded = !!includePhotos;
+  let memoriesIncluded = sharedRecipe.memories.length > 0;
 
   if (!includePhotos) {
     sharedRecipe.dishPhoto = null;
     sharedRecipe.steps = stripStepsPhotos(sharedRecipe.steps);
   }
-  if (includePhotos || includeMemories) {
-    const dup = await duplicateRecipePhotos(sharedRecipe, {
-      dishPath: () => sharedDishPhotoPath(shareId),
-      stepPath: (i, p) => sharedStepPhotoPath(shareId, i, p),
-      memoryPath: (memId) => sharedMemoryPhotoPath(shareId, memId),
-    });
-    sharedRecipe = dup.recipe;
-    photoPaths = dup.photoPaths;
-  }
 
-  // includedData vive nello stato (non nel contenuto): serve alla
-  // schermata "I miei link condivisi" per mostrare cosa include ciascun
-  // link senza dover leggere il contenuto protetto di ognuno.
+  // Il documento di stato va scritto PRIMA di caricare le foto duplicate su
+  // Storage, non dopo: storage.rules per sharedRecipes/{shareId}/... legge
+  // proprio questo documento (sharedIsSharer) per autorizzare l'upload — se
+  // non esiste ancora, ogni uploadBytes fallisce con "storage/unauthorized"
+  // a prescindere da chi sta scrivendo. Le preferenze scritte qui sono
+  // quelle richieste; se la duplicazione fallisce sotto, vengono corrette
+  // con un updateDoc.
   await setDoc(statusRef(shareId), {
     recipeTitle: recipe.title || "",
     sharedBy, sharedAt: now, expiresAt, revoked: false,
     visibility, allowedEmails: allowedEmails || [],
     sourceBookId, sourceRecipeId,
-    includedData: { ingredients: !!ingredientData, photos: !!includePhotos, memories: !!includeMemories },
+    includedData: { ingredients: !!ingredientData, photos: photosIncluded, memories: memoriesIncluded },
   });
+
+  if (includePhotos || includeMemories) {
+    try {
+      const dup = await duplicateRecipePhotos(sharedRecipe, {
+        dishPath: () => sharedDishPhotoPath(shareId),
+        stepPath: (i, p) => sharedStepPhotoPath(shareId, i, p),
+        memoryPath: (memId) => sharedMemoryPhotoPath(shareId, memId),
+      });
+      sharedRecipe = dup.recipe;
+      photoPaths = dup.photoPaths;
+    } catch (e) {
+      // La duplicazione richiede di leggere (fetch) le foto originali dallo
+      // Storage e poi ricaricarle: se fallisce (es. CORS non configurato sul
+      // bucket per l'origine corrente), il link va comunque creato — senza
+      // foto/ricordi invece di bloccarsi del tutto, stesso principio già
+      // usato in copyRecipesToBooks (ricettario-v23.jsx).
+      console.warn("Duplicazione foto non riuscita per la condivisione, creo il link senza foto", e);
+      sharedRecipe.dishPhoto = null;
+      sharedRecipe.steps = stripStepsPhotos(sharedRecipe.steps);
+      sharedRecipe.memories = [];
+      photosIncluded = false;
+      memoriesIncluded = false;
+      await updateDoc(statusRef(shareId), {
+        includedData: { ingredients: !!ingredientData, photos: false, memories: false },
+      });
+    }
+  }
+
   // equivalences può usare la chiave "" (unità implicita, es. "1 uovo" ≈
   // 60g) — Firestore rifiuta le chiavi di mappa vuote, va codificata prima
   // di scrivere (stessa funzione già usata da saveBookSystem, mai una
@@ -163,7 +191,11 @@ export const createSharedRecipe = async ({
     photoPaths,
   });
 
-  return shareId;
+  // photosDegraded: l'utente aveva chiesto foto/ricordi ma la duplicazione
+  // è fallita — il chiamante (UnifiedExportFlow) lo usa per avvisare invece
+  // di far credere che tutto sia andato secondo le preferenze scelte.
+  const photosDegraded = (includePhotos || includeMemories) && !photosIncluded && !memoriesIncluded;
+  return { shareId, photosDegraded };
 };
 
 // Documento "di stato" — sempre leggibile da chi è whitelistato, anche a

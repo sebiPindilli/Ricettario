@@ -1459,8 +1459,8 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     const out = [];
     for (const recipeId of recipeIds) {
       const recipe = recipes.find(r => r.id === recipeId);
-      const shareId = await shareRecipeViaLink(recipeId, opts);
-      out.push({ recipeId, recipeTitle: recipe?.title || "", shareId });
+      const { shareId, photosDegraded } = await shareRecipeViaLink(recipeId, opts);
+      out.push({ recipeId, recipeTitle: recipe?.title || "", shareId, photosDegraded });
     }
     return out;
   };

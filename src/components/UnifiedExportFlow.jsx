@@ -395,12 +395,17 @@ export default function UnifiedExportFlow({
       <Panel>
         <Title>🔗 {result.links.length > 1 ? "Link creati" : "Link creato"}</Title>
         <Sub>Validi 30 giorni, revocabili in ogni momento da "I miei link condivisi".</Sub>
+        {result.links.some(l => l.photosDegraded) && (
+          <div style={{ fontFamily: F.ui, fontSize: 11, color: "#C4593A", background: "#C4593A18", border: "1px solid #C4593A40", borderRadius: 10, padding: "8px 10px", marginBottom: 10 }}>
+            ⚠️ {result.links.filter(l => l.photosDegraded).length === result.links.length ? "Foto/ricordi non inclusi" : "Foto/ricordi non inclusi in alcuni link"}: duplicazione non riuscita, il link è stato creato comunque senza.
+          </div>
+        )}
         <div style={{ flex: 1, overflowY: "auto", marginBottom: 12 }}>
           {result.links.map(l => {
             const url = `${window.location.origin}/?shared=${l.shareId}`;
             return (
               <div key={l.shareId} style={{ marginBottom: 10 }}>
-                <div style={{ fontFamily: F.ui, fontSize: 11.5, color: th.appInk, fontWeight: 700, marginBottom: 4 }}>{l.recipeTitle}</div>
+                <div style={{ fontFamily: F.ui, fontSize: 11.5, color: th.appInk, fontWeight: 700, marginBottom: 4 }}>{l.recipeTitle}{l.photosDegraded ? " ⚠️" : ""}</div>
                 <textarea readOnly value={url} onClick={e => e.target.select()} style={{
                   width: "100%", height: 40, resize: "none", borderRadius: 10, padding: "8px 10px",
                   border: `1.5px solid ${th.appBorder}`, background: th.appCard, color: th.appInk,
