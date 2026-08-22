@@ -1,9 +1,10 @@
 // Costruisce il sottoinsieme di "Organizza Ingredienti" pertinente a UNA
 // ricetta, per la condivisione via link (vedi sharedRecipesStore.js).
 //
-// L'export a codice esistente (exportShareCode in ricettario-v23.jsx) con
-// "includi impostazioni" scarica l'INTERO libro — ha senso lì (si esporta
-// il ricettario), ma per il link di una singola ricetta sarebbe eccessivo:
+// La copia di ricette in un altro proprio ricettario (copyRecipesToBooks in
+// ricettario-v23.jsx), con "includi impostazioni", copia l'INTERO libro —
+// ha senso lì (si copia in un ricettario), ma per il link di una singola
+// ricetta sarebbe eccessivo:
 // rivelerebbe categorie/nutrizione/equivalenze di ingredienti non
 // pertinenti e gonfierebbe il documento condiviso. Qui si filtra a ciò che
 // serve davvero per quella ricetta: i suoi ingredienti, gli aggregati a cui

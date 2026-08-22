@@ -8,7 +8,7 @@ import {
   ingDictIndex, resolveIngId, mapIngredientsStruct, flattenSteps,
   UNIT_ALIASES, unitLabel, normUnit, macroLine,
   WEIGHT_UNITS, ingredientToGrams,
-  parseIngredientAmount, decomposeIngredient, composeIngredient,
+  parseIngredientAmount, composeIngredient,
   memoryPeriodLabel, memorySortKey, buildFridgeItems, withTimeout,
   isSystemDataEmpty, applyImportedSystemData,
 } from "./utils/helpers.js";
@@ -25,6 +25,7 @@ import { buildRecipeIngredientData } from "./utils/shareIngredientData.js";
 import {
   createSharedRecipe, loadSharedStatus, loadSharedContent, duplicateRecipePhotos,
   listMySharedRecipes, updateSharedRecipeAccess, revokeSharedRecipe, deleteSharedRecipeFully,
+  stripStepsPhotos,
 } from "./services/sharedRecipesStore.js";
 import { dishPhotoPath, stepPhotoPath, memoryPhotoPath } from "./services/photoStore.js";
 import { OfflineNoCacheError } from "./services/offlineFirst.js";
@@ -84,7 +85,8 @@ import ScanScreen from "./screens/ScanScreen.jsx";
 import AddFromLinkScreen from "./screens/AddFromLinkScreen.jsx";
 import EditScreen from "./screens/EditScreen.jsx";
 import NutritionCard from "./components/NutritionCard.jsx";
-import ExportFlow from "./components/ExportFlow.jsx";
+import { computeRecipeNutrition } from "./utils/recipeNutrition.js";
+import UnifiedExportFlow from "./components/UnifiedExportFlow.jsx";
 import MemoriesSection from "./components/MemoriesSection.jsx";
 import BookPageView from "./components/BookPageView.jsx";
 import IngredientsView from "./components/IngredientsView.jsx";
@@ -274,106 +276,130 @@ function printHtmlDocument(html) {
   });
 }
 
-const exportRecipePDF = (recipe) => {
+// ══════════════════════════════════════════════════════════════
+// EXPORT PDF: stili — token di colore/font per ciascuno stile, usati per
+// parametrizzare un'unica struttura CSS condivisa (pdfCss sotto) invece di
+// triplicare l'intero foglio di stile per ogni variante grafica.
+// ══════════════════════════════════════════════════════════════
+const PDF_STYLES = {
+  classico: { label:"Classico", bodyFont:"Georgia, serif", uiFont:"sans-serif", ink:"#1a1a1a", faded:"#666", accent:"#8B4520", accent2:"#B8973A", cardBg:"#fafaf8", border:"#ddd", borderLight:"#eee" },
+  minimal:  { label:"Minimal",  bodyFont:"'Helvetica Neue', Arial, sans-serif", uiFont:"'Helvetica Neue', Arial, sans-serif", ink:"#111111", faded:"#666666", accent:"#111111", accent2:"#999999", cardBg:"#f7f7f7", border:"#ddd", borderLight:"#eee" },
+  moderno:  { label:"Moderno",  bodyFont:"'Segoe UI', system-ui, sans-serif", uiFont:"'Segoe UI', system-ui, sans-serif", ink:"#20232a", faded:"#6b7280", accent:"#D9603B", accent2:"#D9603B", cardBg:"#fdf6f2", border:"#eee", borderLight:"#f2e4de" },
+};
+
+// Foglio di stile condiviso da ogni export PDF (singola ricetta, intero
+// libro/selezione, pagine di copertina/indice/sezione, nutrizione, ricordi).
+const pdfCss = (t) => `
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: ${t.bodyFont}; color: ${t.ink}; max-width: 700px; margin: 0 auto; }
+  .single { padding: 40px; }
+  .page { page-break-before: always; page-break-after: always; break-before: page; break-after: page; padding: 40px; }
+  /* Copertina/sezione — pagina intera, contenuto centrato verticalmente. Le
+     proprietà di interruzione pagina sono ripetute (non solo ereditate da
+     .page): alcuni motori di stampa (es. il servizio di stampa di sistema
+     Android) le rispettano meno quando derivano da una combinazione di classi. */
+  .cover, .secpage {
+    page-break-before: always; page-break-after: always; break-before: page; break-after: page;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; text-align:center;
+  }
+  .cover .small { font-family: ${t.uiFont}; font-size: 12px; letter-spacing: 4px; color: ${t.accent2}; text-transform: uppercase; }
+  .cover h1 { font-size: 44px; font-style: italic; margin: 10px 0 6px; }
+  .cover .sub { font-size: 15px; color: ${t.faded}; font-style: italic; }
+  .cover .orn, .secpage .orn { color: ${t.accent2}; font-size: 18px; margin: 26px 0; }
+  .index h1 { font-size: 26px; font-style: italic; text-align: center; margin-bottom: 24px; }
+  .index .sec { font-family: ${t.uiFont}; font-size: 13px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; color: ${t.accent}; margin: 20px 0 8px; border-bottom: 1.5px solid ${t.borderLight}; padding-bottom: 4px; }
+  .index .row { display:flex; align-items:baseline; font-size: 13px; padding: 4px 0; }
+  .index .row .dots { flex:1; border-bottom: 1px dotted ${t.border}; margin: 0 8px; }
+  .index .row .c { font-family: ${t.uiFont}; font-size: 11px; color: ${t.faded}; }
+  .secpage .emoji { font-size: 80px; }
+  .secpage h1 { font-size: 34px; font-style: italic; margin: 18px 0 8px; }
+  .secpage .desc { font-size: 14px; color: ${t.faded}; font-style: italic; }
+  .recipe { page-break-before: always; page-break-after: always; break-before: page; break-after: page; padding: 40px; }
+  .recipe h1, .single h1 { font-size: 26px; font-style: italic; text-align: center; margin-bottom: 4px; }
+  .source { text-align: center; font-size: 13px; color: ${t.faded}; margin-bottom: 12px; }
+  .dish-photo { width: 170px; height: 128px; margin: 0 auto 14px; border: 1px solid ${t.border}; border-radius: 8px; overflow: hidden; background: ${t.cardBg}; }
+  .dish-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .meta { display: flex; justify-content: center; gap: 20px; font-size: 12px; color: ${t.faded}; border-top: 1px solid ${t.border}; border-bottom: 1px solid ${t.border}; padding: 7px 0; margin-bottom: 14px; }
+  .note { border: 1px solid ${t.border}; padding: 9px 13px; font-style: italic; font-size: 12.5px; color: ${t.faded}; margin-bottom: 14px; background: ${t.cardBg}; }
+  h2 { font-family: ${t.uiFont}; font-size: 14px; text-align: center; letter-spacing: 2px; text-transform: uppercase; margin: 16px 0 9px; color: ${t.ink}; }
+  .ing { font-size: 12.5px; line-height: 1.85; border-bottom: 1px solid ${t.borderLight}; padding: 2px 0; }
+  .section-label { font-family: ${t.uiFont}; font-size: 10.5px; font-weight: bold; text-transform: uppercase; letter-spacing: 1.5px; color: ${t.accent}; margin: 9px 0 4px; }
+  .step { display: flex; gap: 11px; margin-bottom: 11px; }
+  .step-n { width: 22px; height: 22px; border-radius: 50%; background: ${t.accent}; color: #fff; display: flex; align-items: center; justify-content: center; font-family: ${t.uiFont}; font-size: 10.5px; font-weight: bold; flex-shrink: 0; margin-top: 2px; }
+  .step-content { flex: 1; }
+  .step-t { font-size: 12.5px; line-height: 1.6; }
+  .step-photos { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 7px; }
+  .step-photo { width: 100%; height: 140px; object-fit: cover; border-radius: 7px; border: 1px solid ${t.border}; }
+  .divider { text-align: center; color: ${t.accent2}; margin: 16px 0; font-size: 15px; }
+  .nutri-row { display:flex; justify-content:space-between; font-size:12.5px; padding:3px 0; border-bottom:1px solid ${t.borderLight}; }
+  .nutri-row.sub { padding-left:16px; font-size:11.5px; color:${t.faded}; }
+  .memory { display:flex; gap:12px; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid ${t.borderLight}; }
+  .memory-photo { width:90px; height:70px; object-fit:cover; border-radius:8px; border:1px solid ${t.border}; flex-shrink:0; }
+  .memory-caption { font-size:12.5px; font-style:italic; margin-bottom:3px; }
+  .memory-story { font-size:11.5px; color:${t.faded}; line-height:1.5; margin-bottom:3px; }
+  .memory-date { font-family: ${t.uiFont}; font-size:10px; color:${t.faded}; }
+  @media print { .page, .recipe, .single { padding: 24px; } }
+`;
+
+// Sezione "Valori nutrizionali" (per porzione) — opzionale, riusa lo stesso
+// motore di calcolo della scheda ricetta in app (computeRecipeNutrition,
+// esportata da NutritionCard.jsx: un'unica implementazione, mai duplicata).
+const nutritionPdfHtml = (recipe, ctx) => {
+  if (!ctx) return "";
+  const n = computeRecipeNutrition(recipe, ctx.nutritionMap, ctx.equivalences, ctx.customFoods, ctx.ingredientDict, ctx.aggregates, ctx.sourceByIngredient, ctx.customUnits);
+  if (!n || n.covered === 0) return "";
+  const fmt = (v, dec) => v >= 100 ? String(Math.round(v)) : String(Math.round(v * 10**dec) / 10**dec).replace(".", ",");
+  return `
+    <div class="divider">✦</div>
+    <h2>Valori nutrizionali (per porzione)</h2>
+    ${NUTRIENT_LABELS.map(({ key, label, unit, dec, sub }) => `<div class="nutri-row${sub?" sub":""}"><span>${label}</span><span>${fmt(n.perServing[key], dec)} ${unit}</span></div>`).join("")}
+  `;
+};
+
+// Sezione "Ricordi" — opzionale, stessa struttura foto/didascalia/data della vista in app.
+const memoriesPdfHtml = (recipe) => {
+  const mems = recipe.memories || [];
+  if (mems.length === 0) return "";
+  return `
+    <div class="divider">✦</div>
+    <h2>Ricordi</h2>
+    ${mems.map(m => `
+      <div class="memory">
+        ${m.photoIsImage && m.photo ? `<img class="memory-photo" src="${m.photo}" alt="">` : ""}
+        <div>
+          ${m.caption ? `<div class="memory-caption">"${m.caption}"</div>` : ""}
+          ${m.story ? `<div class="memory-story">${m.story}</div>` : ""}
+          <div class="memory-date">📅 ${m.date || ""}</div>
+        </div>
+      </div>`).join("")}
+  `;
+};
+
+// Corpo HTML di una singola ricetta — condiviso da export singolo ed export
+// libro/selezione. opts governa cosa includere (vedi exportRecipesPDF).
+const recipeBodyPdfHtml = (recipe, opts, nutritionCtx) => {
   const isSec = (arr) => Array.isArray(arr) && arr.length > 0 && typeof arr[0] === "object" && "section" in arr[0];
 
   const flatIng = isSec(recipe.ingredients)
-    ? recipe.ingredients.flatMap(s => s.section ? [`── ${s.section} ──`, ...s.items.map(ingredientToText)] : s.items.map(ingredientToText))
+    ? recipe.ingredients.flatMap(s => s.section
+        ? [opts.includeSubsectionNames ? `── ${s.section} ──` : null, ...s.items.map(ingredientToText)].filter(x => x !== null)
+        : s.items.map(ingredientToText))
     : recipe.ingredients.map(ingredientToText);
 
   // Steps carry {text, photos}; section markers use {section:true}
   const flatSteps = isSec(recipe.steps)
     ? recipe.steps.flatMap(s => {
-        const items = s.items.map(st => ({ text: typeof st === "string" ? st : st.text, photos: stepPhotosOf(st) }));
-        return s.section ? [{ sectionLabel: s.section }, ...items] : items;
+        const items = s.items.map(st => ({ text: typeof st === "string" ? st : st.text, photos: opts.includeStepPhotos ? stepPhotosOf(st) : [] }));
+        return s.section && opts.includeSubsectionNames ? [{ sectionLabel: s.section }, ...items] : items;
       })
-    : recipe.steps.map(st => ({ text: typeof st === "string" ? st : st.text, photos: stepPhotosOf(st) }));
+    : recipe.steps.map(st => ({ text: typeof st === "string" ? st : st.text, photos: opts.includeStepPhotos ? stepPhotosOf(st) : [] }));
 
-  const html = `<!DOCTYPE html>
-<html lang="it">
-<head>
-<meta charset="UTF-8">
-<title>${recipe.title}</title>
-<style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: Georgia, serif; color: #1a1a1a; padding: 40px; max-width: 700px; margin: 0 auto; }
-  h1 { font-size: 28px; font-style: italic; text-align: center; margin-bottom: 4px; }
-  .source { text-align: center; font-size: 13px; color: #666; margin-bottom: 16px; }
-  .meta { display: flex; justify-content: center; gap: 24px; font-size: 12px; color: #555; border-top: 1px solid #ddd; border-bottom: 1px solid #ddd; padding: 8px 0; margin-bottom: 16px; }
-  .note { border: 1px solid #ccc; padding: 10px 14px; font-style: italic; font-size: 13px; color: #555; margin-bottom: 16px; background: #fafaf8; }
-  h2 { font-size: 15px; text-align: center; letter-spacing: 2px; text-transform: uppercase; margin: 20px 0 10px; color: #333; }
-  .ing { font-size: 13px; line-height: 1.9; border-bottom: 1px solid #eee; padding: 2px 0; }
-  .section-label { font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1.5px; color: #8B4520; margin: 10px 0 4px; }
-  .step { display: flex; gap: 12px; margin-bottom: 12px; }
-  .step-n { width: 24px; height: 24px; border-radius: 50%; background: #8B4520; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; flex-shrink: 0; margin-top: 2px; font-family: sans-serif; }
-  .step-content { flex: 1; }
-  .step-t { font-size: 13px; line-height: 1.65; }
-  .divider { text-align: center; color: #B8973A; margin: 20px 0; font-size: 16px; }
-  .dish-photo { width: 200px; height: 150px; margin: 0 auto 18px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: #fafaf8; }
-  .dish-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .step-photos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-  .step-photo { width: 100%; height: 160px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd; }
-  @media print { body { padding: 20px; } }
-</style>
-</head>
-<body>
-  <h1>${recipe.title}</h1>
-  ${recipe.source ? `<div class="source">Ricetta di ${recipe.source}</div>` : ""}
-  ${dishPhotoOf(recipe) ? `<div class="dish-photo"><img src="${dishPhotoOf(recipe)}" alt="${recipe.title}"></div>` : ""}
-  <div class="meta">
-    <span>Prep: ${recipe.prepTime} min</span>
-    <span>·</span>
-    <span>Cottura: ${recipe.cookTime} min</span>
-    <span>·</span>
-    <span>${recipe.servings} porzioni</span>
-  </div>
-  ${recipe.note ? `<div class="note">${recipe.note}</div>` : ""}
-
-  <h2>Ingredienti</h2>
-  ${flatIng.map(ing => ing.startsWith("──")
-    ? `<div class="section-label">${ing.replace(/── | ──/g,"")}</div>`
-    : `<div class="ing">${ing}</div>`
-  ).join("")}
-
-  <div class="divider">✦</div>
-
-  <h2>Preparazione</h2>
-  ${(() => {
-    let n = 0;
-    return flatSteps.map(step => step.sectionLabel
-      ? `<div class="section-label">${step.sectionLabel}</div>`
-      : `<div class="step"><div class="step-n">${++n}</div><div class="step-content"><div class="step-t">${step.text}</div>${step.photos && step.photos.length > 0 ? `<div class="step-photos">${step.photos.map(p => `<img class="step-photo" src="${p}" alt="">`).join("")}</div>` : ""}</div></div>`
-    ).join("");
-  })()}
-</body>
-</html>`;
-
-  printHtmlDocument(html);
-};
-
-// ══════════════════════════════════════════════════════════════
-// EXPORT: intero ricettario in PDF — indice + pagine sezione + ricette
-// ══════════════════════════════════════════════════════════════
-const exportBookPDF = (recipes, sections = MACRO_SECTIONS, bookName = "Il mio Ricettario") => {
-  const isSec = (arr) => Array.isArray(arr) && arr.length > 0 && typeof arr[0] === "object" && "section" in arr[0];
-
-  // Corpo di una singola ricetta (stesso layout dell'export singolo)
-  const recipeBody = (recipe) => {
-    const flatIng = isSec(recipe.ingredients)
-      ? recipe.ingredients.flatMap(s => s.section ? [`── ${s.section} ──`, ...s.items.map(ingredientToText)] : s.items.map(ingredientToText))
-      : recipe.ingredients.map(ingredientToText);
-    const flatSteps = isSec(recipe.steps)
-      ? recipe.steps.flatMap(s => {
-          const items = s.items.map(st => ({ text: typeof st === "string" ? st : st.text, photos: stepPhotosOf(st) }));
-          return s.section ? [{ sectionLabel: s.section }, ...items] : items;
-        })
-      : recipe.steps.map(st => ({ text: typeof st === "string" ? st : st.text, photos: stepPhotosOf(st) }));
-    let n = 0;
-    return `
-  <div class="recipe">
+  let n = 0;
+  return `
     <h1>${recipe.title}</h1>
     ${recipe.source ? `<div class="source">Ricetta di ${recipe.source}</div>` : ""}
-    ${dishPhotoOf(recipe) ? `<div class="dish-photo"><img src="${dishPhotoOf(recipe)}" alt="${recipe.title}"></div>` : ""}
+    ${opts.includeDishPhoto && dishPhotoOf(recipe) ? `<div class="dish-photo"><img src="${dishPhotoOf(recipe)}" alt="${recipe.title}"></div>` : ""}
     <div class="meta">
       <span>Prep: ${recipe.prepTime} min</span><span>·</span>
       <span>Cottura: ${recipe.cookTime} min</span><span>·</span>
@@ -391,15 +417,43 @@ const exportBookPDF = (recipes, sections = MACRO_SECTIONS, bookName = "Il mio Ri
       ? `<div class="section-label">${step.sectionLabel}</div>`
       : `<div class="step"><div class="step-n">${++n}</div><div class="step-content"><div class="step-t">${step.text}</div>${step.photos && step.photos.length > 0 ? `<div class="step-photos">${step.photos.map(p => `<img class="step-photo" src="${p}" alt="">`).join("")}</div>` : ""}</div></div>`
     ).join("")}
-  </div>`;
-  };
+    ${opts.includeNutrition ? nutritionPdfHtml(recipe, nutritionCtx) : ""}
+    ${opts.includeMemories ? memoriesPdfHtml(recipe) : ""}
+  `;
+};
+
+// Esporta PDF di una singola ricetta.
+const exportRecipePDF = (recipe, opts, nutritionCtx) => {
+  const t = PDF_STYLES[opts.style] || PDF_STYLES.classico;
+  const html = `<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>${recipe.title}</title>
+<style>${pdfCss(t)}</style>
+</head>
+<body>
+  <div class="single">${recipeBodyPdfHtml(recipe, opts, nutritionCtx)}</div>
+</body>
+</html>`;
+
+  printHtmlDocument(html);
+};
+
+// ══════════════════════════════════════════════════════════════
+// EXPORT: più ricette in PDF — copertina + indice (opzionale) + pagine
+// sezione + ricette. bookTitle riflette la selezione (nome del ricettario
+// se è tutto, altrimenti "N ricette da «Nome»") — vedi exportRecipesPDF.
+// ══════════════════════════════════════════════════════════════
+const exportBookPDF = (recipesList, sections = MACRO_SECTIONS, bookTitle = "Il mio Ricettario", opts, nutritionCtx) => {
+  const t = PDF_STYLES[opts.style] || PDF_STYLES.classico;
 
   // Sezioni con almeno una ricetta, nell'ordine di MACRO_SECTIONS, ricette
   // in ordine alfabetico dentro ciascuna sezione
   const sectionsWithRecipes = sortSectionsAltroLast(sections)
     .map(sec => ({
       ...sec,
-      recipes: recipes.filter(r => r.macroSection === sec.id)
+      recipes: recipesList.filter(r => r.macroSection === sec.id)
         .sort((a, b) => a.title.localeCompare(b.title, "it")),
     }))
     .filter(sec => sec.recipes.length > 0);
@@ -408,76 +462,20 @@ const exportBookPDF = (recipes, sections = MACRO_SECTIONS, bookName = "Il mio Ri
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<title>${bookName}</title>
-<style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: Georgia, serif; color: #1a1a1a; max-width: 700px; margin: 0 auto; }
-  .page { page-break-before: always; page-break-after: always; break-before: page; break-after: page; padding: 40px; }
-  /* Copertina — pagina intera, contenuto centrato verticalmente (non solo
-     text-align, anche allineato a metà altezza pagina). Le proprietà di
-     interruzione pagina sono ripetute qui invece di fare solo affidamento
-     sull'ereditarietà da .page: alcuni motori di stampa (es. il servizio di
-     stampa di sistema Android) le rispettano meno quando derivano da una
-     combinazione di classi. */
-  .cover {
-    page-break-before: always; page-break-after: always; break-before: page; break-after: page;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    min-height: 100vh; text-align:center;
-  }
-  .cover .small { font-size: 12px; letter-spacing: 4px; color: #8a7c66; text-transform: uppercase; font-family: sans-serif; }
-  .cover h1 { font-size: 44px; font-style: italic; margin: 10px 0 6px; }
-  .cover .sub { font-size: 15px; color: #7A6E5F; font-style: italic; }
-  .cover .orn { color: #B8973A; font-size: 18px; margin: 26px 0; }
-  /* Indice */
-  .index h1 { font-size: 26px; font-style: italic; text-align: center; margin-bottom: 24px; }
-  .index .sec { font-size: 13px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; color: #8B4520; margin: 20px 0 8px; border-bottom: 1.5px solid #EDE6D4; padding-bottom: 4px; }
-  .index .row { display:flex; align-items:baseline; font-size: 13px; padding: 4px 0; }
-  .index .row .t { }
-  .index .row .dots { flex:1; border-bottom: 1px dotted #c9bda5; margin: 0 8px; }
-  .index .row .c { font-size: 11px; color: #7A6E5F; font-family: sans-serif; }
-  /* Pagina sezione — stessa ragione di .cover per le proprietà ripetute:
-     deve sempre isolarsi dalla ricetta precedente, mai condividerne la
-     pagina. */
-  .secpage {
-    page-break-before: always; page-break-after: always; break-before: page; break-after: page;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    min-height: 100vh; text-align:center;
-  }
-  .secpage .emoji { font-size: 80px; }
-  .secpage h1 { font-size: 34px; font-style: italic; margin: 18px 0 8px; }
-  .secpage .desc { font-size: 14px; color: #7A6E5F; font-style: italic; }
-  .secpage .orn { color: #B8973A; font-size: 15px; margin-top: 24px; }
-  /* Ricetta */
-  .recipe { page-break-before: always; page-break-after: always; break-before: page; break-after: page; padding: 40px; }
-  .recipe h1 { font-size: 26px; font-style: italic; text-align: center; margin-bottom: 4px; }
-  .source { text-align: center; font-size: 13px; color: #666; margin-bottom: 12px; }
-  .dish-photo { width: 170px; height: 128px; margin: 0 auto 14px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: #fafaf8; }
-  .dish-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .meta { display: flex; justify-content: center; gap: 20px; font-size: 12px; color: #555; border-top: 1px solid #ddd; border-bottom: 1px solid #ddd; padding: 7px 0; margin-bottom: 14px; }
-  .note { border: 1px solid #ccc; padding: 9px 13px; font-style: italic; font-size: 12.5px; color: #555; margin-bottom: 14px; background: #fafaf8; }
-  h2 { font-size: 14px; text-align: center; letter-spacing: 2px; text-transform: uppercase; margin: 16px 0 9px; color: #333; }
-  .ing { font-size: 12.5px; line-height: 1.85; border-bottom: 1px solid #eee; padding: 2px 0; }
-  .section-label { font-size: 10.5px; font-weight: bold; text-transform: uppercase; letter-spacing: 1.5px; color: #8B4520; margin: 9px 0 4px; }
-  .step { display: flex; gap: 11px; margin-bottom: 11px; }
-  .step-n { width: 22px; height: 22px; border-radius: 50%; background: #8B4520; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: bold; flex-shrink: 0; margin-top: 2px; font-family: sans-serif; }
-  .step-content { flex: 1; }
-  .step-t { font-size: 12.5px; line-height: 1.6; }
-  .step-photos { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 7px; }
-  .step-photo { width: 100%; height: 140px; object-fit: cover; border-radius: 7px; border: 1px solid #ddd; }
-  .divider { text-align: center; color: #B8973A; margin: 16px 0; font-size: 15px; }
-  @media print { .page, .recipe { padding: 24px; } }
-</style>
+<title>${bookTitle}</title>
+<style>${pdfCss(t)}</style>
 </head>
 <body>
   <!-- Copertina -->
   <div class="page cover">
     <div class="small">Le nostre ricette, i nostri ricordi</div>
-    <h1>${bookName}</h1>
+    <h1>${bookTitle}</h1>
     <div class="orn">✦ ✦ ✦</div>
-    <div class="sub">${recipes.length} ricette</div>
+    <div class="sub">${recipesList.length} ricette</div>
   </div>
 
   <!-- Indice -->
+  ${opts.includeIndex ? `
   <div class="page index">
     <h1>Indice</h1>
     ${sectionsWithRecipes.map(sec => `
@@ -489,7 +487,7 @@ const exportBookPDF = (recipes, sections = MACRO_SECTIONS, bookName = "Il mio Ri
           <span class="c">${r.category}</span>
         </div>`).join("")}
     `).join("")}
-  </div>
+  </div>` : ""}
 
   <!-- Sezioni e ricette -->
   ${sectionsWithRecipes.map(sec => `
@@ -499,7 +497,7 @@ const exportBookPDF = (recipes, sections = MACRO_SECTIONS, bookName = "Il mio Ri
       <div class="desc">${sec.desc}</div>
       <div class="orn">✦ ✦ ✦</div>
     </div>
-    ${sec.recipes.map(recipeBody).join("")}
+    ${sec.recipes.map(r => `<div class="recipe">${recipeBodyPdfHtml(r, opts, nutritionCtx)}</div>`).join("")}
   `).join("")}
 </body>
 </html>`;
@@ -680,7 +678,13 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   const [pendingExtractions, setPendingExtractions] = useState(() => listPendingExtractions());
   const refreshPendingExtractions = () => setPendingExtractions(listPendingExtractions());
   const [pendingShopUpdate, setPendingShopUpdate] = useState(null); // {updated} ricetta modificata già in lista spesa
-  const [booksEntryPhase, setBooksEntryPhase] = useState("list"); // fase con cui BooksScreen si apre: "list" o "transfer" (export diretto dal banner)
+  // Popup di esportazione unificato (UnifiedExportFlow.jsx), montato una
+  // volta come overlay globale (vedi fondo del render) invece che annidato
+  // in ogni schermata che può aprirlo — scheda ricetta e libro ricette
+  // condividono lo stesso flusso a passi. preselectId precompila la
+  // selezione quando si apre dalla scheda di una ricetta specifica.
+  const [exportModal, setExportModal] = useState(null); // null | { preselectId: string|null }
+  const openExport = (recipeId = null) => setExportModal({ preselectId: recipeId });
   // Vuoto finché il caricamento iniziale da Firestore non li sostituisce
   // (vedi useEffect più sotto) — non più dati demo hardcoded.
   const [recipes, setRecipes] = useState([]);
@@ -1372,38 +1376,63 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
       : b));
   };
 
-  // Copia ricette (per id) dal libro ATTIVO verso un altro libro — copie
-  // indipendenti, scritte direttamente nella sotto-collezione recipes del
-  // libro di destinazione (non serve toccare meta/system di quel libro).
-  const copyRecipesToBook = async (targetId, recipeIds) => {
+  // Copia ricette (per id) dal libro ATTIVO verso uno o più altri propri
+  // libri — copie indipendenti per ciascun libro di destinazione, con le
+  // preferenze del flusso di esportazione unificato (vedi
+  // UnifiedExportFlow.jsx): foto piatto/preparazione (duplicate sullo
+  // storage del libro di destinazione, mai referenziate — altrimenti
+  // sparirebbero se la ricetta di origine viene poi eliminata, stesso
+  // principio di duplicateRecipePhotos usato per backup/condivisioni),
+  // ricordi, impostazioni di Organizza Ingredienti (solo se il libro di
+  // destinazione non ne ha già di proprie, stessa regola già usata
+  // dall'import e dall'aggiunta di una ricetta condivisa).
+  const copyRecipesToBooks = async (targetIds, recipeIds, opts = {}) => {
+    const { includePhotos = true, includeMemories = false, includeSystem = false } = opts;
     const sel = recipes.filter(r => recipeIds.includes(r.id));
-    if (sel.length === 0 || targetId === activeBookId) return;
-    const copies = sel.map((r) => ({ ...r, id: uid("r"), memories:[], comments:[], favorite:false }));
-    await Promise.all(copies.map((c) => saveRecipe(targetId, c)));
-  };
-
-  // ── Condivisione esterna: codice testuale copiabile (import/export reale) ──
-  // includeMemories: porta con sé anche i ricordi (che contengono le loro foto).
-  // includeSystem: aggiunge le impostazioni di "Organizza Ingredienti" del libro attivo.
-  const exportShareCode = (recipeIds, { includeMemories = false, includeSystem = false } = {}) => {
-    const sel = recipes.filter(r => recipeIds.includes(r.id))
-      .map(({ memories, comments, favorite, ...rest }) => includeMemories ? { ...rest, memories: memories || [] } : rest);
-    const payload = { v:3, recipes: sel };
-    if (includeSystem) {
-      payload.system = {
-        ingredientCategories, aggregates, equivalences, customUnits, nutritionMap,
-        customFoods, ingredientDict, sourceByIngredient, ignoredSimilarities,
-      };
+    if (sel.length === 0) return;
+    for (const targetId of targetIds) {
+      if (targetId === activeBookId) continue;
+      for (const r of sel) {
+        let copy = {
+          ...r, id: uid("r"), comments: [], favorite: false,
+          memories: includeMemories ? (r.memories || []) : [],
+        };
+        if (includePhotos) {
+          try {
+            const dup = await duplicateRecipePhotos(copy, {
+              dishPath: () => dishPhotoPath(targetId, copy.id),
+              stepPath: (i, p) => stepPhotoPath(targetId, copy.id, String(i), p),
+              memoryPath: (memId) => memoryPhotoPath(targetId, copy.id, memId),
+            });
+            copy = dup.recipe;
+          } catch (e) {
+            console.warn(`Duplicazione foto non riuscita per "${r.title}"`, e);
+          }
+        } else {
+          copy.dishPhoto = null;
+          copy.steps = stripStepsPhotos(copy.steps);
+          copy.memories = copy.memories.map(m => ({ ...m, photo: null, photoIsImage: false }));
+        }
+        await saveRecipe(targetId, copy);
+      }
+      if (includeSystem) {
+        const targetSystem = await loadBookSystem(targetId);
+        if (isSystemDataEmpty(targetSystem || {})) {
+          await saveBookSystem(targetId, {
+            ...(targetSystem || {}),
+            ingredientCategories, aggregates, equivalences, customUnits, nutritionMap,
+            customFoods, ingredientDict, sourceByIngredient, ignoredSimilarities,
+          });
+        }
+      }
     }
-    const json = JSON.stringify(payload);
-    return btoa(unescape(encodeURIComponent(json)));
   };
 
   // Condivisione di una singola ricetta via link (sharedRecipes) — vedi
-  // ExportFlow.jsx e sharedRecipesStore.js. Il filtro dei dati ingredienti
-  // resta scoped alla ricetta (mai il libro intero, a differenza
-  // dell'export a codice): vedi utils/shareIngredientData.js.
-  const shareRecipeViaLink = async (recipeId, { includeIngredients, includePhotos, visibility, allowedEmails }) => {
+  // UnifiedExportFlow.jsx e sharedRecipesStore.js. Il filtro dei dati
+  // ingredienti resta scoped alla ricetta (mai il libro intero): vedi
+  // utils/shareIngredientData.js.
+  const shareRecipeViaLink = async (recipeId, { includeIngredients, includePhotos, includeMemories, visibility, allowedEmails }) => {
     const recipe = recipes.find(r => r.id === recipeId);
     if (!recipe) throw new Error("Ricetta non trovata");
     const ingredientData = includeIngredients
@@ -1415,8 +1444,25 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     return createSharedRecipe({
       recipe, ingredientData, sharedBy: me, visibility, allowedEmails,
       sourceBookId: activeBookId, sourceRecipeId: recipeId,
-      includePhotos,
+      includePhotos, includeMemories,
     });
+  };
+
+  // Genera un link per ciascuna ricetta selezionata (batch) — il modello
+  // dati di sharedRecipes è 1 documento = 1 ricetta (vedi
+  // sharedRecipesStore.js), quindi condividere più ricette insieme
+  // significa generare più link, uno per ricetta, in sequenza (non in
+  // parallelo: ognuno duplica le proprie foto, non serve sommare quel
+  // carico su Storage/Firestore in un colpo solo). Ritorna la lista dei
+  // risultati, usata da UnifiedExportFlow per mostrarli tutti insieme.
+  const shareRecipesViaLinks = async (recipeIds, opts) => {
+    const out = [];
+    for (const recipeId of recipeIds) {
+      const recipe = recipes.find(r => r.id === recipeId);
+      const shareId = await shareRecipeViaLink(recipeId, opts);
+      out.push({ recipeId, recipeTitle: recipe?.title || "", shareId });
+    }
+    return out;
   };
 
   // Libri su cui l'utente ha permesso di scrittura (proprietario/
@@ -1429,10 +1475,11 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   });
 
   // Copia una ricetta condivisa (ricevuta via link) in un libro proprio —
-  // stesso schema di copyRecipesToBook, più l'applicazione dei dati
+  // stesso schema di copyRecipesToBooks, più l'applicazione dei dati
   // ingredienti (se inclusi) con la stessa regola "solo se il libro di
-  // destinazione è vuoto" usata dall'import a codice. Se il libro target
-  // non è quello attivo, il suo system/data non è in memoria: va letto e
+  // destinazione è vuoto" usata altrove per le impostazioni di sistema
+  // (vedi copyRecipesToBooks/restoreBackup). Se il libro target non è
+  // quello attivo, il suo system/data non è in memoria: va letto e
   // scritto direttamente su Firestore invece di passare dagli state setter
   // (che riflettono solo il libro attivo).
   const addSharedRecipeToBook = async (targetBookId, content, { applyIngredientData }) => {
@@ -1475,48 +1522,27 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     return newRecipe.id;
   };
 
-  // Esporta PDF di una o più ricette (per id)
-  const exportRecipesPDFByIds = (recipeIds) => {
+  // Esporta PDF di una o più ricette (per id), con le preferenze del flusso
+  // di esportazione unificato (vedi UnifiedExportFlow.jsx) — foto piatto/
+  // preparazione, valori nutrizionali, ricordi, indice, nomi sottosezioni,
+  // stile; il titolo di copertina riflette la selezione (non sempre il
+  // nome dell'intero ricettario: una sotto-selezione lo dice esplicitamente).
+  const exportRecipesPDF = (recipeIds, opts = {}) => {
     const sel = recipes.filter(r => recipeIds.includes(r.id));
-    if (sel.length === 1) { exportRecipePDF(sel[0]); }
-    else if (sel.length > 1) { exportBookPDF(sel, sectionList, activeBook?.name); }
-  };
-
-  const importShareCode = (code) => {
-    try {
-      const json = decodeURIComponent(escape(atob(code.trim())));
-      const parsed = JSON.parse(json);
-      if (!parsed || !Array.isArray(parsed.recipes)) return { ok:false };
-      // Conversione legacy v1: ingredienti stringa → oggetti {name, qty, unit}
-      const legacyToObj = (it) => {
-        if (typeof it !== "string") return it;
-        const d = decomposeIngredient(it);
-        const n = parseFloat((d.qty || "").replace(",", "."));
-        return { name: d.name.trim(), qty: isNaN(n) ? null : n, unit: (d.unit || "").trim() };
-      };
-      const convIngs = (ings) => !Array.isArray(ings) ? [] :
-        (ings.length > 0 && typeof ings[0] === "object" && "section" in ings[0])
-          ? ings.map(s => ({ ...s, items: (s.items || []).map(legacyToObj) }))
-          : ings.map(legacyToObj);
-      const copies = parsed.recipes.map((r, i) => ({
-        ...r, id: uid("r"), memories: Array.isArray(r.memories) ? r.memories : [], comments:[], favorite:false,
-        macroSection: r.macroSection || "altro",
-        ingredients: convIngs(r.ingredients),
-      }));
-      setRecipes(prev => [...prev, ...copies]);
-      // Le impostazioni di Organizza Ingredienti si applicano solo se il libro
-      // attivo non ne ha ancora di proprie — altrimenti rischierebbero di
-      // sovrascrivere in silenzio categorie/aggregati già configurati dall'utente.
-      let systemImported = false;
-      if (parsed.system && isSystemDataEmpty({ ingredientCategories, aggregates, nutritionMap, equivalences, customFoods, ingredientDict })) {
-        systemImported = applyImportedSystemData(parsed.system, {
-          setIngredientCategories, setAggregates, setEquivalences, setCustomUnits,
-          setNutritionMap, setCustomFoods, setIngredientDict, setSourceByIngredient, setIgnoredSimilarities,
-        });
-      }
-      return { ok:true, count: copies.length, systemImported };
-    } catch {
-      return { ok:false };
+    if (sel.length === 0) return;
+    const fullOpts = {
+      includeDishPhoto: true, includeStepPhotos: true, includeNutrition: false, includeMemories: false,
+      includeIndex: true, includeSubsectionNames: true, style: "classico",
+      ...opts,
+    };
+    const nutritionCtx = { nutritionMap, equivalences, customUnits, customFoods, ingredientDict, aggregates, sourceByIngredient };
+    if (sel.length === 1) {
+      exportRecipePDF(sel[0], fullOpts, nutritionCtx);
+    } else {
+      const title = opts.title || (sel.length === recipes.length
+        ? (activeBook?.name || "Il mio Ricettario")
+        : `${sel.length} ricette da «${activeBook?.name || "Ricettario"}»`);
+      exportBookPDF(sel, sectionList, title, fullOpts, nutritionCtx);
     }
   };
 
@@ -1525,7 +1551,6 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   // non serve più un singolo "screen precedente" tracciato a parte, vedi
   // deleteRecipe più sotto).
   const goTo = setScreen;
-  const openBookExport = () => { setBooksEntryPhase("transfer"); goTo("books"); };
   const openAddMemory = (recipeId = null) => { setMemoryPrefillRecipeId(recipeId); goTo("addMemory"); };
   const openOrganize = (recipeId = null, alertTypes = null, manageAggs = false, manageCats = false, aggScope = "all") => {
     // Ingresso "contestuale" (da un alert/link specifico) vs "generico" (icona
@@ -1776,7 +1801,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
           <LandingScreen
             recipes={recipes}
             bookName={activeBook?.name}
-            onBooks={() => { setBooksEntryPhase("list"); goTo("books"); }}
+            onBooks={() => goTo("books")}
             onOrganize={() => openOrganize()}
             onRecipes={() => setScreen("recipes")}
             onBook={() => setScreen("book")}
@@ -1865,7 +1890,6 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             books={books}
             activeBookId={activeBookId}
             me={me}
-            activeRecipes={recipes}
             onSwitch={async (id) => { await switchBook(id); setScreen("landing"); }}
             onCreate={createBook}
             onRename={renameBook}
@@ -1873,14 +1897,10 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             onAddMember={addMember}
             onRemoveMember={removeMember}
             onChangeMemberPermission={changeMemberPermission}
-            onCopyRecipes={copyRecipesToBook}
-            onExportCode={exportShareCode}
-            onExportPDF={(ids) => exportRecipesPDFByIds(ids)}
             onDownloadBackup={downloadLocalBackup}
             onRestoreBackup={restoreBackup}
             onTransferAll={(targetId) => transferBookDataToBook(activeBookId, targetId)}
             onTransferBookData={transferBookDataToBook}
-            initialPhase={booksEntryPhase}
             defaultBookId={defaultBookId}
             onSetDefault={(id) => { setDefaultBookId(id); setDefaultBook(me, id); }}
             onLanding={() => setScreen("landing")}
@@ -1957,7 +1977,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
             extraTagGroups={extraTagGroups}
-            onExport={openBookExport}
+            onExport={() => openExport(null)}
           />
         )}
         {screen==="book" && (
@@ -1972,7 +1992,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             onAdd={(type) => type==="memory" ? openAddMemory() : goTo("addRecipeHub")}
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
-            onExport={openBookExport}
+            onExport={() => openExport(null)}
           />
         )}
         {screen==="memories" && (
@@ -2010,7 +2030,6 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             pendingExtractions={pendingExtractions}
             onOpenPending={openPendingExtraction}
             onDiscardPending={discardPendingExtraction}
-            onImportCode={importShareCode}
           />
         )}
         {screen==="new" && (
@@ -2073,11 +2092,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             onManageIngredients={(recipeId) => openOrganize(recipeId, ["nutri"])}
             onManageEquivalences={(recipeId) => openOrganize(recipeId, ["eq"])}
             onAddToShoppingList={addToShoppingList}
-            allRecipes={recipes}
-            sectionList={sectionList}
-            onExportPDF={exportRecipesPDFByIds}
-            onExportCode={exportShareCode}
-            onShareLink={shareRecipeViaLink}
+            onOpenExport={openExport}
           />
         )}
         {screen==="edit" && currentRecipe && (
@@ -2162,6 +2177,22 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             </div>
           );
         })()}
+
+        {/* Popup di esportazione unificato — overlay globale, indipendente
+            dallo screen attivo: apribile sia dalla scheda ricetta (con
+            preselezione) sia da "Esporta ricettario" nella nav globale. */}
+        {exportModal && (
+          <UnifiedExportFlow
+            recipes={recipes}
+            preselectId={exportModal.preselectId}
+            sectionList={sectionList}
+            targetBooks={myEditableBooks.filter(b => b.id !== activeBookId && !b.isBackup)}
+            onCopyToBooks={copyRecipesToBooks}
+            onShareLinks={shareRecipesViaLinks}
+            onExportPDF={exportRecipesPDF}
+            onClose={() => setExportModal(null)}
+          />
+        )}
       </IPhone>
 
       <div className="iphone-desktop-hint" style={{ display:"flex", gap:16, color:bookTheme.appFaded, fontFamily:"sans-serif", fontSize:12, flexWrap:"wrap", justifyContent:"center" }}>

@@ -135,11 +135,13 @@ export default function SharedRecipeScreen({ shareId, me, editableBooks = [], on
         </div>
       </div>
 
-      {(status.includedData?.ingredients || status.includedData?.photos) && (
+      {(status.includedData?.ingredients || status.includedData?.photos || status.includedData?.memories) && (
         <div style={{ background:`${th.appAccent}10`, border:`1px dashed ${th.appAccent}55`, borderRadius:10, padding:"9px 12px", marginBottom:14, fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
-          💡 Questa condivisione include anche{status.includedData.ingredients ? " i dati ingredienti (categorie, nutrizione, equivalenze)" : ""}
-          {status.includedData.ingredients && status.includedData.photos ? " e" : ""}
-          {status.includedData.photos ? " foto e ricordi" : ""}.
+          💡 Questa condivisione include anche {[
+            status.includedData.ingredients && "i dati ingredienti (categorie, nutrizione, equivalenze)",
+            status.includedData.photos && "le foto",
+            status.includedData.memories && "i ricordi",
+          ].filter(Boolean).join(", ")}.
           {status.includedData.ingredients ? " I dati ingredienti verranno applicati solo se il libro scelto non ne ha già di propri." : ""}
         </div>
       )}

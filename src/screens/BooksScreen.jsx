@@ -24,15 +24,14 @@ const roleLabel = (r) => ROLE_LABELS[r] || r;
 const myRoleInBook = (b, me) => b.owner === me ? "proprietario" : normalizeRole((b.memberRoles || {})[me]);
 
 export default function BooksScreen({
-  books, activeBookId, me, activeRecipes,
+  books, activeBookId, me,
   onSwitch, onCreate, onRename, onDelete, onAddMember, onRemoveMember, onChangeMemberPermission,
-  onCopyRecipes, onExportCode, onExportPDF, initialPhase = "list",
   onDownloadBackup, onRestoreBackup, onTransferAll, onTransferBookData,
   defaultBookId, onSetDefault,
   onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping,
 }) {
   const th = useTheme();
-  const [phase, setPhase] = useState(initialPhase); // "list" | "transfer" | "sharedLinks"
+  const [phase, setPhase] = useState("list"); // "list" | "sharedLinks"
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmails, setNewEmails] = useState("");
@@ -46,12 +45,10 @@ export default function BooksScreen({
   const [memberBusy, setMemberBusy] = useState({}); // bookId → true mentre una chiamata è in corso
   const [roleFilter, setRoleFilter] = useState(null); // null = tutti i libri
   const [pendingDelete, setPendingDelete] = useState(null); // book id
-  // transfer phase
-  const [selIds, setSelIds] = useState([]);
-  const [shareCode, setShareCode] = useState(null);
-  const [copiedMsg, setCopiedMsg] = useState(null);
-  const [includeMemories, setIncludeMemories] = useState(false);
-  const [includeSystem, setIncludeSystem] = useState(false);
+  // trasferimento completo di un libro (tutte le ricette + Organizza
+  // Ingredienti) in un altro proprio libro — annidato nella scheda del
+  // libro attivo, non più una fase/schermata a sé (l'esportazione di una
+  // selezione di ricette passa ora da UnifiedExportFlow.jsx).
   const [pendingTransferTarget, setPendingTransferTarget] = useState(null); // bookId
   const [transferBusy, setTransferBusy] = useState(false);
   const [transferMsg, setTransferMsg] = useState(null);
@@ -67,7 +64,6 @@ export default function BooksScreen({
   const [backupCopyBusyId, setBackupCopyBusyId] = useState(null);
   const [backupCopyMsg, setBackupCopyMsg] = useState({}); // backup id → {ok, text}
 
-  const activeBook = books.find(b => b.id === activeBookId);
   const otherBooks = books.filter(b => b.id !== activeBookId);
   const ownedCount = books.filter(b => b.owner === me && b.id !== "b1").length;
   const atBookLimit = ownedCount >= 10;
@@ -174,176 +170,6 @@ export default function BooksScreen({
       infoContent={guideLibri}
     />
   );
-
-  // ══ FASE TRASFERIMENTO / CONDIVISIONE ══
-  if (phase === "transfer") {
-    const toggle = (id) => setSelIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-    return (
-      <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
-        {nav}
-        <div style={{ padding:"12px 20px 6px", display:"flex", alignItems:"center", gap:10 }}>
-          <button onClick={() => { setPhase("list"); setSelIds([]); setShareCode(null); }} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
-          <div style={{ flex:1 }}>
-            <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>Esporta ricette</div>
-            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>da: {activeBook?.name}</div>
-          </div>
-        </div>
-
-        {!shareCode && otherBooks.length > 0 && (
-          <div style={{ padding:"0 20px 10px" }}>
-            <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:6 }}>
-              Trasferisci tutto questo ricettario
-            </div>
-            <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginBottom:8, lineHeight:1.4 }}>
-              Copia tutte le ricette e le impostazioni di Organizza Ingredienti in un altro tuo ricettario, senza doverle selezionare una per una. Non elimina né sovrascrive nulla nel ricettario di destinazione.
-            </div>
-            <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-              {otherBooks.map(b => (
-                pendingTransferTarget === b.id ? (
-                  <div key={b.id} style={{ display:"flex", alignItems:"center", gap:6, background:th.appCard, border:`1.5px solid ${th.appAccent}`, borderRadius:11, padding:"6px 8px" }}>
-                    <span style={{ fontFamily:F.ui, fontSize:11, color:th.appInk }}>Confermi in "{b.name}"?</span>
-                    <button disabled={transferBusy} onClick={() => doTransferAll(b.id, b.name)} style={{ padding:"6px 10px", borderRadius:9, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer" }}>{transferBusy ? "…" : "✓ Conferma"}</button>
-                    <button disabled={transferBusy} onClick={() => setPendingTransferTarget(null)} style={{ padding:"6px 10px", borderRadius:9, border:`1px solid ${th.appBorder}`, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:11, cursor:"pointer" }}>Annulla</button>
-                  </div>
-                ) : (
-                  <button key={b.id} disabled={transferBusy} onClick={() => setPendingTransferTarget(b.id)} style={{
-                    padding:"9px 13px", borderRadius:11, border:`1.5px solid ${th.appBorder}`,
-                    background:"transparent", color:th.appInk,
-                    fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer",
-                  }}>🔀 {b.name}</button>
-                )
-              ))}
-            </div>
-            {transferMsg && <div style={{ fontFamily:F.ui, fontSize:11.5, color: transferMsg.startsWith("✓") ? "#6B8C6E" : DANGER, marginTop:8 }}>{transferMsg}</div>}
-          </div>
-        )}
-
-        {shareCode ? (
-          <div style={{ flex:1, overflowY:"auto", padding:"12px 20px 40px" }}>
-            <div style={{ fontFamily:F.ui, fontSize:12, color:th.appInk, marginBottom:10, lineHeight:1.5 }}>
-              🔗 <b>Codice di condivisione</b> per {selIds.length} ricett{selIds.length===1?"a":"e"}. Invialo a chi vuoi (WhatsApp, email…): dal suo ricettario potrà importarle con "Importa da codice".
-            </div>
-            <textarea
-              readOnly
-              value={shareCode}
-              onClick={e => e.target.select()}
-              style={{ width:"100%", height:140, padding:"10px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:12, background:th.appCard, fontFamily:"monospace", fontSize:10, color:th.appInk, boxSizing:"border-box", resize:"none" }}
-            />
-            <button onClick={() => {
-              if (navigator.clipboard?.writeText) navigator.clipboard.writeText(shareCode).catch(()=>{});
-              setCopiedMsg("✓ Codice copiato!");
-              setTimeout(() => setCopiedMsg(null), 2000);
-            }} style={{ width:"100%", marginTop:10, padding:"13px", border:"none", borderRadius:12, background: copiedMsg ? "#6B8C6E" : th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:13, fontWeight:700, cursor:"pointer" }}>
-              {copiedMsg || "📋 Copia codice"}
-            </button>
-            <button onClick={() => setShareCode(null)} style={{ width:"100%", marginTop:8, padding:"11px", border:`1.5px solid ${th.appBorder}`, borderRadius:12, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:12, cursor:"pointer" }}>‹ Torna alla selezione</button>
-          </div>
-        ) : (
-          <>
-            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, padding:"4px 20px 8px" }}>
-              Seleziona una o più ricette, poi scegli dove copiarle.
-            </div>
-            {activeRecipes.length > 0 && (
-              <div style={{ padding:"0 18px 8px" }}>
-                <button onClick={() => setSelIds(selIds.length === activeRecipes.length ? [] : activeRecipes.map(r => r.id))} style={{
-                  width:"100%", padding:"9px", borderRadius:10, border:`1.5px solid ${th.appAccent}`,
-                  background: selIds.length === activeRecipes.length ? th.appAccent : "transparent",
-                  color: selIds.length === activeRecipes.length ? "#fff" : th.appAccent,
-                  fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer",
-                }}>{selIds.length === activeRecipes.length ? "✓ Tutte selezionate" : "Seleziona tutto"}</button>
-              </div>
-            )}
-            <div style={{ flex:1, overflowY:"auto", padding:"0 18px 12px" }}>
-              {activeRecipes.map(r => {
-                const on = selIds.includes(r.id);
-                return (
-                  <button key={r.id} onClick={() => toggle(r.id)} style={{
-                    width:"100%", display:"flex", alignItems:"center", gap:10,
-                    background:th.appCard, border:`1.5px solid ${on ? th.appAccent : th.appBorder}`,
-                    borderRadius:12, padding:"10px 12px", marginBottom:7, cursor:"pointer", textAlign:"left",
-                  }}>
-                    <div style={{
-                      width:20, height:20, borderRadius:6, flexShrink:0,
-                      border:`1.5px solid ${on ? th.appAccent : th.appBorder}`,
-                      background: on ? th.appAccent : "transparent",
-                      display:"flex", alignItems:"center", justifyContent:"center",
-                      color:"#fff", fontSize:12,
-                    }}>{on && "✓"}</div>
-                    <div style={{ width:34, height:34, borderRadius:9, background:r.color, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", fontSize:17 }}>{r.emoji}</div>
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontFamily:F.display, fontSize:14, color:th.appInk, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.title}</div>
-                      <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded }}>{r.category}</div>
-                    </div>
-                  </button>
-                );
-              })}
-              {activeRecipes.length === 0 && (
-                <div style={{ textAlign:"center", padding:"30px 0", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>Nessuna ricetta in questo ricettario</div>
-              )}
-            </div>
-
-            {/* Azioni in basso — riga fissa nel flusso flex (non sovrapposta alla lista), mai sotto la lista qualunque sia la sua altezza */}
-            <div style={{ flexShrink:0, padding:"12px 18px 20px", background:th.appBg, borderTop:`1px solid ${th.appBorder}` }}>
-              {copiedMsg && (
-                <div style={{ textAlign:"center", fontFamily:F.ui, fontSize:12, color:"#6B8C6E", fontWeight:700, marginBottom:8 }}>{copiedMsg}</div>
-              )}
-              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:6 }}>
-                Copia in un altro tuo ricettario
-              </div>
-              <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:10 }}>
-                {otherBooks.map(b => (
-                  <button key={b.id} disabled={selIds.length===0} onClick={() => {
-                    onCopyRecipes(b.id, selIds);
-                    setCopiedMsg(`✓ ${selIds.length} ricett${selIds.length===1?"a copiata":"e copiate"} in "${b.name}"`);
-                    setSelIds([]);
-                    setTimeout(() => setCopiedMsg(null), 2500);
-                  }} style={{
-                    padding:"9px 13px", borderRadius:11, border:"none",
-                    background: selIds.length===0 ? th.appBorder : th.appAccent,
-                    color: selIds.length===0 ? th.appFaded : "#fff",
-                    fontFamily:F.ui, fontSize:12, fontWeight:700,
-                    cursor: selIds.length===0 ? "default" : "pointer",
-                  }}>📚 {b.name}</button>
-                ))}
-                {otherBooks.length === 0 && (
-                  <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>crea prima un altro ricettario</div>
-                )}
-              </div>
-              <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:10 }}>
-                <label style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", fontFamily:F.ui, fontSize:11.5, color:th.appFaded }}>
-                  <input type="checkbox" checked={includeMemories} onChange={e => setIncludeMemories(e.target.checked)} />
-                  Includi foto e ricordi delle ricette
-                </label>
-                <label style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", fontFamily:F.ui, fontSize:11.5, color:th.appFaded }}>
-                  <input type="checkbox" checked={includeSystem} onChange={e => setIncludeSystem(e.target.checked)} />
-                  Includi impostazioni di Organizza Ingredienti
-                </label>
-              </div>
-              <button disabled={selIds.length===0} onClick={() => setShareCode(onExportCode(selIds, { includeMemories, includeSystem }))} style={{
-                width:"100%", padding:"13px", borderRadius:12,
-                border:`1.5px solid ${selIds.length===0 ? th.appBorder : th.appInk}`,
-                background:"transparent",
-                color: selIds.length===0 ? th.appFaded : th.appInk,
-                fontFamily:F.ui, fontSize:13, fontWeight:700,
-                cursor: selIds.length===0 ? "default" : "pointer",
-                marginBottom: onExportPDF ? 8 : 0,
-              }}>🔗 Genera codice per esterni ({selIds.length})</button>
-              {onExportPDF && (
-                <button disabled={selIds.length===0} onClick={() => onExportPDF(selIds)} style={{
-                  width:"100%", padding:"13px", borderRadius:12,
-                  border:`1.5px solid ${selIds.length===0 ? th.appBorder : th.appInk}`,
-                  background:"transparent",
-                  color: selIds.length===0 ? th.appFaded : th.appInk,
-                  fontFamily:F.ui, fontSize:13, fontWeight:700,
-                  cursor: selIds.length===0 ? "default" : "pointer",
-                }}>📄 Esporta in PDF ({selIds.length})</button>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-    );
-  }
 
   // ══ FASE "I MIEI LINK CONDIVISI" ══
   if (phase === "sharedLinks") {
@@ -499,6 +325,32 @@ export default function BooksScreen({
               )}
               {restoreTargetId === b.id && restoreSuccess && (
                 <div style={{ fontFamily:F.ui, fontSize:10.5, color:"#6B8C6E", marginTop:5 }}>{restoreSuccess}</div>
+              )}
+
+              {/* Trasferisci tutto questo ricettario (solo libro attivo, non
+                  Beta): copia tutte le ricette e le impostazioni di Organizza
+                  Ingredienti in un altro proprio libro, senza doverle
+                  selezionare una per una — non elimina né sovrascrive nulla
+                  nel libro di destinazione. Diverso dall'esportazione di una
+                  selezione di ricette (vedi UnifiedExportFlow.jsx). */}
+              {active && !isBeta && otherBooks.length > 0 && (
+                <div style={{ marginTop:10, paddingTop:10, borderTop:`1px dashed ${th.appBorder}` }}>
+                  <div style={{ fontFamily:F.ui, fontSize:9, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:6 }}>🔀 Trasferisci tutto questo ricettario</div>
+                  <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                    {otherBooks.map(ob => (
+                      pendingTransferTarget === ob.id ? (
+                        <div key={ob.id} style={{ display:"flex", alignItems:"center", gap:6, background:th.appBg, border:`1.5px solid ${th.appAccent}`, borderRadius:11, padding:"6px 8px" }}>
+                          <span style={{ fontFamily:F.ui, fontSize:10.5, color:th.appInk }}>Confermi in "{ob.name}"?</span>
+                          <button disabled={transferBusy} onClick={() => doTransferAll(ob.id, ob.name)} style={{ padding:"5px 9px", borderRadius:8, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:10.5, fontWeight:700, cursor:"pointer" }}>{transferBusy ? "…" : "✓ Conferma"}</button>
+                          <button disabled={transferBusy} onClick={() => setPendingTransferTarget(null)} style={{ padding:"5px 9px", borderRadius:8, border:`1px solid ${th.appBorder}`, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:10.5, cursor:"pointer" }}>Annulla</button>
+                        </div>
+                      ) : (
+                        <button key={ob.id} disabled={transferBusy} onClick={() => setPendingTransferTarget(ob.id)} style={{ padding:"5px 9px", borderRadius:8, border:`1px solid ${th.appBorder}`, background:"transparent", color:th.appInk, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer" }}>{ob.name}</button>
+                      )
+                    ))}
+                  </div>
+                  {transferMsg && <div style={{ fontFamily:F.ui, fontSize:10.5, color: transferMsg.startsWith("✓") ? "#6B8C6E" : DANGER, marginTop:6 }}>{transferMsg}</div>}
+                </div>
               )}
 
               {/* Backup associati a questo ricettario (ripristinati da file) */}

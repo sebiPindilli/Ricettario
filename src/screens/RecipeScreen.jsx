@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { useTheme, useOnline } from "../context.js";
-import { F, MACRO_SECTIONS } from "../data/constants.js";
+import { F } from "../data/constants.js";
 import { NUTRITION_DB } from "../data/nutrition.js";
 import { uid, dishPhotoOf, readImageFile, normName, ingDictIndex, resolveIngId, flattenIngredients } from "../utils/helpers.js";
 import { effectiveNutritionKey } from "../utils/aggregates.js";
@@ -10,7 +10,6 @@ import PhotoLightbox from "../components/PhotoLightbox.jsx";
 import PhotoCropOverlay from "../components/PhotoCropOverlay.jsx";
 import Pill from "../components/Pill.jsx";
 import Divider from "../components/Divider.jsx";
-import ExportFlow from "../components/ExportFlow.jsx";
 import NutritionCard from "../components/NutritionCard.jsx";
 import MemoriesSection from "../components/MemoriesSection.jsx";
 import BookPageView from "../components/BookPageView.jsx";
@@ -22,13 +21,12 @@ import CookingMode from "./CookingMode.jsx";
 import InfoButton from "../components/InfoButton.jsx";
 import { guideDettaglioRicetta } from "../data/guideContent.jsx";
 
-export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemory, onAddMemory, onManageIngredients, onManageEquivalences, onAddToShoppingList, nutritionMap = {}, equivalences = {}, customUnits = {}, customFoods = [], ingredientDict = null, aggregates = [], sourceByIngredient = {}, allRecipes = [], sectionList = MACRO_SECTIONS, onExportPDF, onExportCode, onShareLink }) {
+export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemory, onAddMemory, onManageIngredients, onManageEquivalences, onAddToShoppingList, nutritionMap = {}, equivalences = {}, customUnits = {}, customFoods = [], ingredientDict = null, aggregates = [], sourceByIngredient = {}, onOpenExport }) {
   const th = useTheme();
   const isOnline = useOnline();
   const [tab, setTab] = useState("ingredienti");
   const [toast, setToast] = useState({ msg:"", visible:false });
   const [viewMode, setViewMode] = useState("app");
-  const [exportOpen, setExportOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showRemovePhotoConfirm, setShowRemovePhotoConfirm] = useState(false);
   // showAddMemory removed — use home screen
@@ -130,17 +128,6 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
 
   return (
     <div style={{ background: viewMode==="book" ? th.bookBg : th.appBg, minHeight:"100%" }}>
-      {exportOpen && (
-        <ExportFlow
-          current={recipe}
-          allRecipes={allRecipes}
-          sectionList={sectionList}
-          onExportPDF={(ids) => onExportPDF && onExportPDF(ids)}
-          onExportCode={(ids) => onExportCode && onExportCode(ids)}
-          onShareLink={onShareLink}
-          onClose={() => setExportOpen(false)}
-        />
-      )}
       <div style={{ padding:"8px 20px 0", display:"flex", justifyContent:"center", alignItems:"center", gap:8 }}>
         <div style={{ display:"flex", alignItems:"center", gap:6 }}>
           <span style={{ fontFamily:F.ui, fontSize:12, fontWeight:700, color: viewMode==="book" ? "#555" : "#7A6E5F" }}>Scheda Ricetta</span>
@@ -165,7 +152,7 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
           ))}
         </div>
         {/* Export button */}
-        <button onClick={() => setExportOpen(true)} style={{
+        <button onClick={() => onOpenExport(recipe.id)} style={{
           width:38, height:38, padding:0,
           border:"1.5px solid #3B6FD855",
           borderRadius:10, background:"#3B6FD81C",

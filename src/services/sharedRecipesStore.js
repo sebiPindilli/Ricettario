@@ -22,7 +22,7 @@ const contentRef = (shareId) => doc(db, "sharedRecipes", shareId, "content", "da
 // Rimuove foto/photos dagli step senza duplicarle (caso "non includere
 // foto"): converte l'item a stringa/{text,duration} pulito, mai lasciando
 // URL del libro di origine nella copia condivisa.
-const stripStepsPhotos = (steps) => {
+export const stripStepsPhotos = (steps) => {
   if (!Array.isArray(steps)) return steps;
   const strip = (it) => {
     if (typeof it === "string") return it;
@@ -105,12 +105,14 @@ export const duplicateRecipePhotos = async (recipe, { dishPath, stepPath, memory
 // contenuto (le regole richiedono che lo stato esista già, per verificare
 // che sharedBy corrisponda a chi scrive). Ritorna lo shareId, con cui si
 // costruisce il link (?shared={shareId}).
-// includePhotos governa insieme foto (piatto/step) E ricordi collegati —
-// nella richiesta originale sono un'unica voce di scelta ("Foto"), a
-// differenza dell'export a codice che li tiene distinti.
+// includePhotos (foto piatto/step) e includeMemories (ricordi) sono
+// indipendenti: un ricordo ha comunque la sua foto propria, quindi va
+// comunque duplicata quando includeMemories è vero, anche a includePhotos
+// false — per questo la duplicazione gira sempre che almeno uno dei due sia
+// vero, dopo aver già azzerato dishPhoto/step se includePhotos è falso.
 export const createSharedRecipe = async ({
   recipe, ingredientData, sharedBy, visibility, allowedEmails,
-  sourceBookId, sourceRecipeId, includePhotos,
+  sourceBookId, sourceRecipeId, includePhotos, includeMemories,
 }) => {
   const shareId = doc(collection(db, "sharedRecipes")).id;
   const now = Timestamp.now();
@@ -120,10 +122,14 @@ export const createSharedRecipe = async ({
   delete sharedRecipe.comments;
   delete sharedRecipe.favorite;
   delete sharedRecipe.id;
-  sharedRecipe.memories = includePhotos && Array.isArray(recipe.memories) ? recipe.memories : [];
+  sharedRecipe.memories = includeMemories && Array.isArray(recipe.memories) ? recipe.memories : [];
   let photoPaths = [];
 
-  if (includePhotos) {
+  if (!includePhotos) {
+    sharedRecipe.dishPhoto = null;
+    sharedRecipe.steps = stripStepsPhotos(sharedRecipe.steps);
+  }
+  if (includePhotos || includeMemories) {
     const dup = await duplicateRecipePhotos(sharedRecipe, {
       dishPath: () => sharedDishPhotoPath(shareId),
       stepPath: (i, p) => sharedStepPhotoPath(shareId, i, p),
@@ -131,10 +137,6 @@ export const createSharedRecipe = async ({
     });
     sharedRecipe = dup.recipe;
     photoPaths = dup.photoPaths;
-  } else {
-    // memories è già [] in questo ramo (vedi sopra) — niente da ripulire.
-    sharedRecipe.dishPhoto = null;
-    sharedRecipe.steps = stripStepsPhotos(sharedRecipe.steps);
   }
 
   // includedData vive nello stato (non nel contenuto): serve alla
@@ -145,7 +147,7 @@ export const createSharedRecipe = async ({
     sharedBy, sharedAt: now, expiresAt, revoked: false,
     visibility, allowedEmails: allowedEmails || [],
     sourceBookId, sourceRecipeId,
-    includedData: { ingredients: !!ingredientData, photos: !!includePhotos },
+    includedData: { ingredients: !!ingredientData, photos: !!includePhotos, memories: !!includeMemories },
   });
   // equivalences può usare la chiave "" (unità implicita, es. "1 uovo" ≈
   // 60g) — Firestore rifiuta le chiavi di mappa vuote, va codificata prima

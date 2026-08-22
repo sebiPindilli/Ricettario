@@ -144,10 +144,10 @@ export default function MySharedLinksScreen({ me, nav, onBack }) {
                 {item.visibility === "anyone"
                   ? "🔓 Chiunque abbia il link"
                   : `🔒 Solo: ${(item.allowedEmails || []).join(", ") || "nessuno (non apribile da nessuno)"}`}
-                {(item.includedData?.ingredients || item.includedData?.photos) && (
+                {(item.includedData?.ingredients || item.includedData?.photos || item.includedData?.memories) && (
                   <>
                     <br/>
-                    {[item.includedData?.ingredients && "🧪 dati ingredienti", item.includedData?.photos && "📷 foto e ricordi"].filter(Boolean).join(" · ")}
+                    {[item.includedData?.ingredients && "🧪 dati ingredienti", item.includedData?.photos && "📷 foto", item.includedData?.memories && "🖼️ ricordi"].filter(Boolean).join(" · ")}
                   </>
                 )}
               </div>
