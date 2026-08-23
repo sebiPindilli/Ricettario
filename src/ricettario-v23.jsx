@@ -868,8 +868,21 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   // conflitto si ripresenterà da solo al prossimo giro di flush; per
   // un'eliminazione, la ricetta è già stata rimessa nello stato locale al
   // momento del conflitto, quindi restare inerti equivale a "l'eliminazione
-  // non è avvenuta" — mai una perdita silenziosa in nessuno dei due casi.
+  // non è avvenuta". L'unico modo per perdere davvero quella modifica è
+  // chiudere la scheda del browser prima di risolvere il conflitto — da lì
+  // l'avviso subito sotto.
   const [recipeConflicts, setRecipeConflicts] = useState([]);
+  // Avviso prima di chiudere/uscire con un conflitto ricetta non risolto:
+  // senza, la modifica in sospeso sparirebbe senza che l'utente se ne
+  // accorga (vedi commento sopra). I browser moderni ignorano un messaggio
+  // personalizzato e mostrano sempre il proprio avviso generico — preventDefault
+  // + returnValue è il modo standard per farlo comparire.
+  useEffect(() => {
+    if (recipeConflicts.length === 0) return;
+    const onBeforeUnload = (e) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [recipeConflicts.length]);
   const [memoryPrefillRecipeId, setMemoryPrefillRecipeId] = useState(null);
   const [organizeFilter, setOrganizeFilter] = useState({ recipeId:null, alertTypes:null, manageAggs:false, manageCats:false, aggScope:"all" });
   // Schermata da cui si è entrati in Organizza Ingredienti (qualunque punto
