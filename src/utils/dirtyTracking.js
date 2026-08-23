@@ -33,6 +33,14 @@ export const diffRecipes = (lastSynced, currentRecipes) => {
 // prossimo diff, dopo un caricamento o un salvataggio riuscito.
 export const recipesToMap = (recipes) => new Map(recipes.map((r) => [r.id, r]));
 
+// Alias — stessa identica forma di dato (array di oggetti con id, diff per
+// riferimento) e stessa identica logica: le voci della lista spesa (Fase C,
+// vedi flushShoppingListNow in ricettario-v23.jsx) sono strutturalmente
+// indistinguibili dalle ricette per questo scopo. Nessuna nuova
+// implementazione: sarebbe una copia letterale di diffRecipes/recipesToMap.
+export const diffShoppingEntries = diffRecipes;
+export const shoppingEntriesToMap = recipesToMap;
+
 // ── Diff del documento "system" (Organizza Ingredienti) — gestione
 // conflitti multi-utente, documento unico per 12 proprietà (vedi
 // saveBookSystem in src/services/bookStore.js). Stessa idea di diffRecipes:

@@ -25,11 +25,13 @@ import {
   loadFullBook, saveRecipe, deleteRecipe as deleteRecipeDoc,
   saveBookSystem, saveBookMeta, saveShoppingList, loadBookSystem,
   saveSystemEntriesOnline, saveSystemEntriesOffline, subscribeToBookSystem,
+  saveShoppingEntriesOnline, saveShoppingEntriesOffline, subscribeToShoppingList, sortEntriesById,
   createBookInFirestore, deleteBookInFirestore, listMyBooks,
   addBookMember as addBookMemberFs, removeBookMember as removeBookMemberFs, setBookMemberPermission as setBookMemberPermissionFs,
 } from "./services/bookStore.js";
 import {
   diffRecipes, recipesToMap, diffSystemFields,
+  diffShoppingEntries, shoppingEntriesToMap,
   MAP_SYSTEM_FIELDS, ARRAY_SYSTEM_FIELDS, deepEqual,
 } from "./utils/dirtyTracking.js";
 import { setDefaultBook } from "./services/authStore.js";
@@ -892,6 +894,10 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   // usato da flushRecipesNow per salvare/eliminare solo ciò che è cambiato
   // invece di riscrivere tutte le ricette ad ogni modifica (vedi dirtyTracking.js).
   const lastSyncedRecipesRef = useRef(new Map());
+  // Stesso ruolo di lastSyncedRecipesRef, per le voci della lista spesa
+  // (Fase C) — stessa forma (Map<id, voce>), stessa logica di diff
+  // (diffShoppingEntries, alias di diffRecipes), vedi flushShoppingListNow.
+  const lastSyncedShoppingListRef = useRef(new Map());
   // Ultimo stato del documento "system" effettivamente confermato su
   // Firestore (le 12 proprietà, stessa forma di snapshotData() meno
   // recipes/shoppingList) — usato da flushSystemNow (diffSystemFields) per
@@ -1181,6 +1187,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
       ignoredSimilarities: d.ignoredSimilarities || [],
     };
     lastSyncedRecipesRef.current = recipesToMap(d.recipes || []);
+    lastSyncedShoppingListRef.current = shoppingEntriesToMap(d.shoppingList || []);
   };
 
   // Backup locale: scarica un file JSON con tutti i dati del libro attivo
@@ -1616,10 +1623,68 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   // l'altro (e viceversa), incluso il percorso updateRecipe → resolveShopUpdate
   // (R6), che tocca shoppingList da solo, in reazione a una modifica ricetta
   // già gestita dal proprio effetto.
+  // Gestione conflitti multi-utente (Fase C, stesso disegno della Fase B
+  // per il documento system): diff per voce (diffShoppingEntries, alias di
+  // diffRecipes) contro lastSyncedShoppingListRef, poi online (transazione
+  // con rilevamento conflitti per voce, e completa la migrazione
+  // array→mappa se il documento è ancora nel formato storico) oppure
+  // offline (scrittura semplice mirata, nessun conflitto rilevabile — o
+  // nessuna scrittura se il documento non è ancora stato migrato: quella
+  // richiede una transazione, che non funziona offline).
   const flushShoppingListNow = async () => {
+    const { changed, removedIds } = diffShoppingEntries(lastSyncedShoppingListRef.current, shoppingList);
+    if (changed.length === 0 && removedIds.length === 0) return;
+
     try {
-      await saveShoppingList(activeBookId, shoppingList);
+      if (navigator.onLine) {
+        const { conflicts } = await saveShoppingEntriesOnline(activeBookId, lastSyncedShoppingListRef.current, changed, removedIds);
+        let conflictApplied = false;
+
+        changed.forEach((entry) => {
+          if (entry.id in conflicts) {
+            conflictApplied = true;
+            const serverValue = conflicts[entry.id];
+            lastSyncedShoppingListRef.current.set(entry.id, serverValue);
+            setShoppingList(prev => serverValue === undefined
+              ? prev.filter(e => e.id !== entry.id)
+              : prev.map(e => e.id === entry.id ? serverValue : e));
+          } else {
+            lastSyncedShoppingListRef.current.set(entry.id, entry);
+          }
+        });
+        removedIds.forEach((id) => {
+          if (id in conflicts) {
+            conflictApplied = true;
+            const serverValue = conflicts[id];
+            if (serverValue === undefined) {
+              lastSyncedShoppingListRef.current.delete(id); // rimossa anche sul server: coerente
+            } else {
+              lastSyncedShoppingListRef.current.set(id, serverValue);
+              setShoppingList(prev => prev.some(e => e.id === id) ? prev : [...prev, serverValue]);
+            }
+          } else {
+            lastSyncedShoppingListRef.current.delete(id);
+          }
+        });
+        if (conflictApplied) {
+          // Il prossimo giro del debounce vedrà lo stato React aggiornato e
+          // riproverà solo ciò che resta davvero dirty — nessuna azione qui.
+        }
+      } else {
+        const { skipped } = await saveShoppingEntriesOffline(activeBookId, changed, removedIds);
+        if (!skipped) {
+          changed.forEach((entry) => lastSyncedShoppingListRef.current.set(entry.id, entry));
+          removedIds.forEach((id) => lastSyncedShoppingListRef.current.delete(id));
+        }
+        // skipped: documento non ancora migrato a mappa — nessuna scrittura
+        // tentata, la baseline non avanza, tutto resta dirty per il
+        // prossimo giro (quando si torna online la migrazione può avvenire
+        // in sicurezza dentro una transazione).
+      }
     } catch (e) {
+      // Un fallimento qui non deve mai propagarsi — stesso principio degli
+      // altri flush: il prossimo cambiamento, o il retry alla riconnessione,
+      // ritenterà.
       console.warn("Salvataggio lista spesa non riuscito, verrà ritentato", e);
     }
   };
@@ -1629,6 +1694,53 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookLoaded, activeBookId, shoppingList]);
+
+  // Ascolto in tempo reale della lista spesa — stesso principio di
+  // applyRemoteSystemUpdate: adotta una voce dal server solo se non ho una
+  // modifica locale in sospeso su quella stessa voce (valore attuale ancora
+  // uguale a lastSyncedShoppingListRef) — altrimenti la lascio decidere
+  // alla prossima scrittura. È il caso reale di collaborazione più comune
+  // dell'app (due persone che aggiornano la lista mentre sono al
+  // supermercato): qui il tempo reale non è solo prevenzione, è l'esperienza
+  // stessa che serve.
+  const applyRemoteShoppingListUpdate = (remoteEntries) => {
+    const baseline = lastSyncedShoppingListRef.current;
+    const remoteMap = new Map(remoteEntries.map(e => [e.id, e]));
+    const currentMap = new Map(shoppingList.map(e => [e.id, e]));
+    let listChanged = false;
+    const nextList = [...shoppingList];
+    const indexOf = (id) => nextList.findIndex(e => e.id === id);
+
+    remoteMap.forEach((remoteEntry, id) => {
+      if (deepEqual(remoteEntry, baseline.get(id))) return; // niente di nuovo
+      if (deepEqual(currentMap.get(id), baseline.get(id))) {
+        const i = indexOf(id);
+        if (i === -1) nextList.push(remoteEntry); else nextList[i] = remoteEntry;
+        baseline.set(id, remoteEntry);
+        listChanged = true;
+      } // else: modifica locale pendente su questa voce, non la tocco
+    });
+    baseline.forEach((_, id) => {
+      if (remoteMap.has(id)) return; // ancora presente sul server
+      if (deepEqual(currentMap.get(id), baseline.get(id))) {
+        const i = indexOf(id);
+        if (i !== -1) nextList.splice(i, 1);
+        baseline.delete(id);
+        listChanged = true;
+      }
+    });
+
+    if (listChanged) setShoppingList(sortEntriesById(nextList));
+  };
+  const applyRemoteShoppingListUpdateRef = useRef(() => {});
+  useEffect(() => {
+    applyRemoteShoppingListUpdateRef.current = applyRemoteShoppingListUpdate;
+  });
+  useEffect(() => {
+    if (!bookLoaded || !activeBook) return;
+    const unsubscribe = subscribeToShoppingList(activeBookId, (remote) => applyRemoteShoppingListUpdateRef.current(remote));
+    return () => unsubscribe();
+  }, [bookLoaded, activeBookId]);
 
   // Salvataggio mirato di meta/tema — cambia raramente (nome libro, tema),
   // un piccolo documento a sé.

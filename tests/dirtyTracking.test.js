@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { diffRecipes, recipesToMap, diffSystemFields, deepEqual } from "../src/utils/dirtyTracking.js";
+import {
+  diffRecipes, recipesToMap, diffSystemFields, deepEqual,
+  diffShoppingEntries, shoppingEntriesToMap,
+} from "../src/utils/dirtyTracking.js";
 
 const recipe = (id, extra = {}) => ({ id, title: `Ricetta ${id}`, ingredients: [], steps: [], ...extra });
 
@@ -193,6 +196,39 @@ describe("diffSystemFields — scenario deleteIngredients (azione multi-campo at
     expect(changedArrayFields).not.toContain("sectionList");
     expect(changedArrayFields).not.toContain("extraTagGroups");
     expect(changedArrayFields).not.toContain("customFoods");
+  });
+});
+
+// diffShoppingEntries/shoppingEntriesToMap sono alias diretti di
+// diffRecipes/recipesToMap (Fase C, lista spesa) — questi test esistono per
+// documentare il riuso con dati a forma di voce-lista-spesa, non per
+// ritestare una logica già coperta sopra.
+const entry = (id, extra = {}) => ({ id, recipeId: `r-${id}`, items: [], selectedNames: [], ...extra });
+
+describe("diffShoppingEntries — riuso di diffRecipes per le voci della lista spesa", () => {
+  it("nessuna modifica → diff vuoto", () => {
+    const entries = [entry(1), entry(2)];
+    const lastSynced = shoppingEntriesToMap(entries);
+    const { changed, removedIds } = diffShoppingEntries(lastSynced, entries);
+    expect(changed).toEqual([]);
+    expect(removedIds).toEqual([]);
+  });
+
+  it("una voce modificata (es. spuntato un articolo) → solo quella in changed", () => {
+    const e1 = entry(1), e2 = entry(2);
+    const lastSynced = shoppingEntriesToMap([e1, e2]);
+    const e1Updated = { ...e1, selectedNames: ["farina"] };
+    const { changed, removedIds } = diffShoppingEntries(lastSynced, [e1Updated, e2]);
+    expect(changed).toEqual([e1Updated]);
+    expect(removedIds).toEqual([]);
+  });
+
+  it("una voce rimossa (es. eliminata dalla lista) → compare in removedIds", () => {
+    const e1 = entry(1), e2 = entry(2);
+    const lastSynced = shoppingEntriesToMap([e1, e2]);
+    const { changed, removedIds } = diffShoppingEntries(lastSynced, [e1]);
+    expect(changed).toEqual([]);
+    expect(removedIds).toEqual([2]);
   });
 });
 

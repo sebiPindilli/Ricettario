@@ -251,12 +251,114 @@ export const saveSystemEntriesOnline = async (bookId, baseline, current, mapChan
   return { conflicts };
 };
 
+// Scrittura totale — solo per libri nuovi/isolati (creazione, backup,
+// round-trip di test): nessun rischio di concorrenza, non passa mai dal
+// flusso di modifica dal vivo (vedi flushShoppingListNow in
+// ricettario-v23.jsx, che usa saveShoppingEntriesOnline/Offline sotto).
 export const saveShoppingList = (bookId, entries) =>
   setDoc(shoppingListRef(bookId), { entries });
 
+// entries in Firestore può essere ancora un array (formato storico, prima
+// della Fase C) o già una mappa {id: voce} (formato nuovo, per conflitti
+// multi-utente a grana di singola voce — vedi saveShoppingEntriesOnline).
+// Qui normalizziamo sempre ad array per il resto dell'app, che non deve
+// accorgersi della differenza. Ordine: per id, non per posizione — uid()
+// incorpora un timestamp in base36 ed è quindi già ordinabile
+// cronologicamente come stringa, stabile anche sotto inserimento
+// concorrente (l'ordine finale non dipende da chi scrive per primo su
+// Firestore, solo da quando l'id è stato generato).
+export const sortEntriesById = (entries) => [...entries].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+
 export const loadShoppingList = async (bookId) => {
   const snap = await getDocOfflineFirst(shoppingListRef(bookId));
-  return snap.exists() ? (snap.data().entries || []) : [];
+  if (!snap.exists()) return [];
+  const raw = snap.data().entries;
+  if (Array.isArray(raw)) return raw; // formato storico, ordine già quello dell'array
+  return sortEntriesById(Object.values(raw || {}));
+};
+
+// Ascolto in tempo reale — stesso ruolo/motivazione di subscribeToBookSystem
+// sopra (prevenzione, non difesa). onChange riceve un array normalizzato
+// (mai la forma grezza di Firestore) solo per gli snapshot confermati dal
+// server.
+export const subscribeToShoppingList = (bookId, onChange) =>
+  onSnapshot(shoppingListRef(bookId), (snap) => {
+    if (snap.metadata.hasPendingWrites || !snap.exists()) return;
+    const raw = snap.data().entries;
+    onChange(Array.isArray(raw) ? raw : sortEntriesById(Object.values(raw || {})));
+  });
+
+// Percorso offline: scrittura semplice mirata, nessun rilevamento
+// conflitti (le transazioni non funzionano offline). Se il documento è
+// ancora in formato array (non ancora migrato a mappa, vedi
+// saveShoppingEntriesOnline), NON scriviamo: una scrittura in merge contro
+// un campo che sul server è ancora un array lo sostituirebbe per intero,
+// cancellando tutte le voci esistenti — Firestore non fa merge tra tipi
+// diversi. La modifica resta nello stato locale, verrà ritentata alla
+// riconnessione, quando la migrazione può avvenire in sicurezza dentro una
+// transazione (che legge il documento fresco prima di scriverci sopra).
+// Caso limite, praticamente mai reale: basta che l'app sia stata online
+// una sola volta dopo l'introduzione di questo formato.
+export const saveShoppingEntriesOffline = async (bookId, changed, removedIds) => {
+  const ref = shoppingListRef(bookId);
+  const snap = await getDocOfflineFirst(ref);
+  const raw = snap.exists() ? snap.data().entries : {};
+  if (Array.isArray(raw)) return { skipped: true };
+
+  const payload = {};
+  changed.forEach((entry) => { payload[entry.id] = entry; });
+  removedIds.forEach((id) => { payload[id] = deleteField(); });
+  await setDoc(ref, { entries: payload }, { merge: true });
+  return { skipped: false };
+};
+
+// Percorso online: transazione, confronto per valore (deepEqual) contro
+// baseline (Map<id, voce> — stessa forma di lastSyncedRecipesRef) per ogni
+// voce toccata. Se il documento è ancora in formato array, questa stessa
+// scrittura lo completa in mappa, usando i dati FRESCHI appena letti dalla
+// transazione (mai uno stantio) — atomica con le modifiche vere e proprie,
+// nessuna voce scritta da altri nel frattempo può andare persa.
+// → { conflicts: { [id]: voce fresca dal server (o undefined: rimossa da
+//     qualcun altro) } } — una voce NON presente in conflicts è stata
+// scritta con successo.
+export const saveShoppingEntriesOnline = async (bookId, baseline, changed, removedIds) => {
+  const ref = shoppingListRef(bookId);
+  const conflicts = {};
+
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(ref);
+    const raw = snap.exists() ? snap.data().entries : {};
+    const needsMigration = Array.isArray(raw);
+    const serverMap = needsMigration ? Object.fromEntries(raw.map((e) => [e.id, e])) : (raw || {});
+
+    const toWrite = {}; // id → voce, o null se da rimuovere
+    changed.forEach((entry) => {
+      if (deepEqual(serverMap[entry.id], baseline?.get?.(entry.id))) toWrite[entry.id] = entry;
+      else conflicts[entry.id] = serverMap[entry.id];
+    });
+    removedIds.forEach((id) => {
+      if (deepEqual(serverMap[id], baseline?.get?.(id))) toWrite[id] = null;
+      else conflicts[id] = serverMap[id];
+    });
+
+    if (needsMigration) {
+      // Forniamo l'intera mappa finale (server + modifiche approvate): un
+      // merge su un campo che è ancora un array lo sostituirebbe comunque
+      // per intero, quindi tanto vale scrivere lo stato corretto completo
+      // in un solo colpo, invece di lasciarlo a metà migrato.
+      const finalEntries = { ...serverMap };
+      Object.entries(toWrite).forEach(([id, val]) => {
+        if (val === null) delete finalEntries[id]; else finalEntries[id] = val;
+      });
+      transaction.set(ref, { entries: finalEntries }, { merge: true });
+    } else if (Object.keys(toWrite).length > 0) {
+      const payload = {};
+      Object.entries(toWrite).forEach(([id, val]) => { payload[id] = val === null ? deleteField() : val; });
+      transaction.set(ref, { entries: payload }, { merge: true });
+    }
+  });
+
+  return { conflicts };
 };
 
 // Crea un libro nuovo — passa da /api/create-book (Admin SDK) invece di
