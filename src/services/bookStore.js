@@ -537,6 +537,10 @@ const uploadRecipePhotos = async (bookId, recipe, previous) => {
   return out;
 };
 
+// Scrittura totale — solo per copie verso libri nuovi/isolati (backup,
+// trasferimento, ricetta condivisa accettata): id sempre nuovo in quel
+// libro, nessun rischio di concorrenza. Il flusso di modifica dal vivo
+// usa saveRecipeOnline/Offline sotto (vedi flushRecipesNow).
 export const saveRecipe = async (bookId, recipe, previous) => {
   const withUploadedPhotos = await uploadRecipePhotos(bookId, recipe, previous);
   return setDoc(recipeRef(bookId, withUploadedPhotos.id), withUploadedPhotos);
@@ -544,6 +548,92 @@ export const saveRecipe = async (bookId, recipe, previous) => {
 
 export const deleteRecipe = (bookId, recipeId) =>
   deleteDoc(recipeRef(bookId, recipeId));
+
+// lastEditedBy/lastEditedAt sono bookkeeping puro (per la finestra di
+// conflitto: "modificata da chi, quando") — mai parte del confronto che
+// decide se c'è un conflitto vero, altrimenti ogni salvataggio
+// "conflittuerebbe" con se stesso solo perché il timestamp è cambiato.
+// Esportata: ricettario-v23.jsx la riusa per lo stesso motivo — capire se
+// due versioni di una ricetta sono "la stessa cosa" (es. per decidere se
+// ho una modifica locale in sospeso, vedi applyRemoteRecipeUpdate) deve
+// ignorare chi/quando allo stesso modo, o ogni confronto fallirebbe non
+// appena una delle due versioni porta lo stampiglio e l'altra no.
+export const omitRecipeMeta = (recipe) => {
+  if (!recipe) return recipe;
+  return Object.fromEntries(Object.entries(recipe).filter(([k]) => k !== "lastEditedBy" && k !== "lastEditedAt"));
+};
+
+// Percorso offline: come saveRecipe, ma stampiglia comunque chi/quando
+// (per coerenza: una volta tornati online, il dato è già lì) — nessun
+// rilevamento conflitti (le transazioni non funzionano offline, stessa
+// scelta già fatta per system e lista spesa). baseline serve solo come
+// fallback per le foto non caricabili ora (vedi uploadRecipePhotos).
+export const saveRecipeOffline = async (bookId, recipe, baseline, editedBy) => {
+  const withUploadedPhotos = await uploadRecipePhotos(bookId, recipe, baseline);
+  const stamped = { ...withUploadedPhotos, lastEditedBy: editedBy, lastEditedAt: Date.now() };
+  await setDoc(recipeRef(bookId, stamped.id), stamped);
+  return stamped;
+};
+
+// Percorso online: transazione, confronto per valore (deepEqual, sul
+// contenuto — vedi omitRecipeMeta) contro baseline (l'ultima versione che
+// il chiamante sa per certo sincronizzata, vedi lastSyncedRecipesRef — usata
+// anche come fallback foto, stesso ruolo di "previous" in saveRecipe). Se
+// il server è cambiato rispetto alla baseline, NON si scrive: si
+// restituisce la versione fresca del server (con lastEditedBy/At) perché
+// il chiamante mostri la scelta esplicita all'utente — mai una
+// sovrascrittura silenziosa, mai uno scarto silenzioso.
+// → { conflict: voce fresca dal server (o null: nessun conflitto), saved:
+//     esattamente ciò che è stato scritto (con lo stampiglio), da usare
+//     come nuova baseline — mai un valore diverso da quello reale sul server }
+export const saveRecipeOnline = async (bookId, recipe, baseline, editedBy) => {
+  const withUploadedPhotos = await uploadRecipePhotos(bookId, recipe, baseline);
+  const stamped = { ...withUploadedPhotos, lastEditedBy: editedBy, lastEditedAt: Date.now() };
+  const ref = recipeRef(bookId, recipe.id);
+  let conflict = null;
+
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(ref);
+    const server = snap.exists() ? snap.data() : null;
+    if (server && baseline && !deepEqual(omitRecipeMeta(server), omitRecipeMeta(baseline))) {
+      conflict = server;
+      return;
+    }
+    transaction.set(ref, stamped);
+  });
+
+  return { conflict, saved: conflict ? null : stamped };
+};
+
+// Eliminazione online: stessa idea, ma qui non c'è "voce mia da scrivere"
+// — se qualcuno ha modificato la ricetta nel frattempo, l'eliminazione
+// viene annullata (mai un'eliminazione a sorpresa di modifiche altrui) e
+// si restituisce la versione fresca perché il chiamante decida.
+export const deleteRecipeOnline = async (bookId, recipeId, baseline) => {
+  const ref = recipeRef(bookId, recipeId);
+  let conflict = null;
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(ref);
+    const server = snap.exists() ? snap.data() : null;
+    if (server && baseline && !deepEqual(omitRecipeMeta(server), omitRecipeMeta(baseline))) {
+      conflict = server;
+      return;
+    }
+    if (server) transaction.delete(ref);
+  });
+  return { conflict };
+};
+
+// Ascolto in tempo reale di UNA sola ricetta — solo quella aperta in quel
+// momento (scheda ricetta o modifica), non l'intera collezione: costo
+// trascurabile, e riduce quanto spesso il conflitto si manifesta davvero
+// (stessa idea di prevenzione già usata per system/lista spesa, qui
+// scoperta apposta invece che sull'intero libro).
+export const subscribeToRecipe = (bookId, recipeId, onChange) =>
+  onSnapshot(recipeRef(bookId, recipeId), (snap) => {
+    if (snap.metadata.hasPendingWrites || !snap.exists()) return;
+    onChange({ ...snap.data(), id: snap.id });
+  });
 
 export const loadAllRecipes = async (bookId) => {
   const snap = await getDocsOfflineFirst(recipesCol(bookId));

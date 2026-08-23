@@ -487,6 +487,23 @@ export const memoryPeriodLabel = (dateISO) => {
   // L'inverno di dicembre appartiene "all'anno successivo" nel linguaggio comune, ma teniamolo semplice: stagione + anno
   return `${season} ${y}`;
 };
+// Tempo relativo da un timestamp (ms) — "5 minuti fa", "2 ore fa"... Usato
+// nella finestra di conflitto ricetta ("modificata da X 5 minuti fa": vedi
+// RecipeConflictModal.jsx) — non un calendario completo, solo abbastanza
+// per capire "è successo poco fa" vs "ieri".
+export const relativeTimeLabel = (ms) => {
+  if (!ms) return "poco fa";
+  const diffSec = Math.max(0, Math.round((Date.now() - ms) / 1000));
+  if (diffSec < 60) return "poco fa";
+  const diffMin = Math.round(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} minut${diffMin === 1 ? "o" : "i"} fa`;
+  const diffH = Math.round(diffMin / 60);
+  if (diffH < 24) return `${diffH} or${diffH === 1 ? "a" : "e"} fa`;
+  const diffD = Math.round(diffH / 24);
+  if (diffD < 7) return `${diffD} giorn${diffD === 1 ? "o" : "i"} fa`;
+  return new Date(ms).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
+};
+
 // Ordinamento cronologico (dal più recente): usa dateISO se c'è, altrimenti prova a interpretare date
 export const memorySortKey = (mem) => {
   if (mem.dateISO) return mem.dateISO;

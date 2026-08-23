@@ -26,9 +26,11 @@ import {
   saveBookSystem, saveBookMeta, saveShoppingList, loadBookSystem,
   saveSystemEntriesOnline, saveSystemEntriesOffline, subscribeToBookSystem,
   saveShoppingEntriesOnline, saveShoppingEntriesOffline, subscribeToShoppingList, sortEntriesById,
+  saveRecipeOnline, saveRecipeOffline, deleteRecipeOnline, subscribeToRecipe, omitRecipeMeta,
   createBookInFirestore, deleteBookInFirestore, listMyBooks,
   addBookMember as addBookMemberFs, removeBookMember as removeBookMemberFs, setBookMemberPermission as setBookMemberPermissionFs,
 } from "./services/bookStore.js";
+import RecipeConflictModal from "./components/RecipeConflictModal.jsx";
 import {
   diffRecipes, recipesToMap, diffSystemFields,
   diffShoppingEntries, shoppingEntriesToMap,
@@ -859,6 +861,15 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   const setScreen = (s) => nav.navigate({ screen: s });
   const [scanMode, setScanMode] = useState("camera"); // "camera" | "gallery" — vedi AddRecipeHubScreen
   const [selected, setSelected] = useState(null);
+  // Conflitti di modifica ricetta in sospeso (Fase D) — coda, se ne mostra
+  // uno alla volta (vedi RecipeConflictModal). Chiudere senza scegliere
+  // (onClose) non tocca lo stato locale: per una modifica, la ricetta resta
+  // "dirty" (lastSyncedRecipesRef non è mai stato avanzato per lei) e il
+  // conflitto si ripresenterà da solo al prossimo giro di flush; per
+  // un'eliminazione, la ricetta è già stata rimessa nello stato locale al
+  // momento del conflitto, quindi restare inerti equivale a "l'eliminazione
+  // non è avvenuta" — mai una perdita silenziosa in nessuno dei due casi.
+  const [recipeConflicts, setRecipeConflicts] = useState([]);
   const [memoryPrefillRecipeId, setMemoryPrefillRecipeId] = useState(null);
   const [organizeFilter, setOrganizeFilter] = useState({ recipeId:null, alertTypes:null, manageAggs:false, manageCats:false, aggScope:"all" });
   // Schermata da cui si è entrati in Organizza Ingredienti (qualunque punto
@@ -1330,28 +1341,102 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     await Promise.all(copies.map((c) => saveRecipe(targetId, c)));
   };
 
-  // Salvataggio mirato delle ricette: confronta lo stato attuale con l'ultimo
-  // sincronizzato (per riferimento, vedi dirtyTracking.js) e scrive solo le
-  // ricette create/modificate (saveRecipe) ed elimina solo quelle rimosse
-  // (deleteRecipe) — mai l'intero libro. Richiamabile sia dal debounce sotto
-  // sia — await-ata — da switchBook, per non perdere modifiche pendenti al
-  // cambio libro.
+  // Salvataggio mirato delle ricette — gestione conflitti multi-utente
+  // (Fase D). Confronta lo stato attuale con l'ultimo sincronizzato (per
+  // riferimento, vedi dirtyTracking.js) e scrive/elimina solo ciò che è
+  // cambiato — mai l'intero libro. Online: transazione con confronto per
+  // valore contro la baseline di ciascuna ricetta (saveRecipeOnline/
+  // deleteRecipeOnline) — un conflitto NON scrive né elimina, finisce in
+  // coda per una scelta esplicita dell'utente (vedi RecipeConflictModal).
+  // Offline: scrittura semplice, nessun rilevamento conflitti (le
+  // transazioni non funzionano offline, stessa scelta di system/lista
+  // spesa). Richiamabile sia dal debounce sotto sia — await-ata — da
+  // switchBook, per non perdere modifiche pendenti al cambio libro.
   const flushRecipesNow = async () => {
     const { changed, removedIds } = diffRecipes(lastSyncedRecipesRef.current, recipes);
     if (changed.length === 0 && removedIds.length === 0) return;
+    const newConflicts = [];
     try {
-      await Promise.all([
-        ...changed.map(r => saveRecipe(activeBookId, r, lastSyncedRecipesRef.current.get(r.id))),
-        ...removedIds.map(id => deleteRecipeDoc(activeBookId, id)),
-      ]);
-      lastSyncedRecipesRef.current = recipesToMap(recipes);
+      if (navigator.onLine) {
+        await Promise.all([
+          ...changed.map(async (r) => {
+            const baseline = lastSyncedRecipesRef.current.get(r.id);
+            const { conflict, saved } = await saveRecipeOnline(activeBookId, r, baseline, me);
+            if (conflict) {
+              newConflicts.push({ recipeId: r.id, recipeTitle: r.title, intent: "edit", localValue: r, serverValue: conflict });
+            } else {
+              lastSyncedRecipesRef.current.set(r.id, saved);
+            }
+          }),
+          ...removedIds.map(async (id) => {
+            const baseline = lastSyncedRecipesRef.current.get(id);
+            const { conflict } = await deleteRecipeOnline(activeBookId, id, baseline);
+            if (conflict) {
+              // Non è stata davvero eliminata: la rimettiamo nello stato
+              // locale (altrimenti lo schermo mentirebbe su cosa esiste
+              // davvero) e in coda per la scelta dell'utente.
+              newConflicts.push({ recipeId: id, recipeTitle: conflict.title, intent: "delete", localValue: null, serverValue: conflict });
+              lastSyncedRecipesRef.current.set(id, conflict);
+              setRecipes(prev => prev.some(r => r.id === id) ? prev : [...prev, conflict]);
+            } else {
+              lastSyncedRecipesRef.current.delete(id);
+            }
+          }),
+        ]);
+      } else {
+        await Promise.all([
+          ...changed.map(async (r) => {
+            const saved = await saveRecipeOffline(activeBookId, r, lastSyncedRecipesRef.current.get(r.id), me);
+            lastSyncedRecipesRef.current.set(r.id, saved);
+          }),
+          ...removedIds.map(async (id) => {
+            await deleteRecipeDoc(activeBookId, id);
+            lastSyncedRecipesRef.current.delete(id);
+          }),
+        ]);
+      }
+      if (newConflicts.length > 0) setRecipeConflicts(prev => [...prev, ...newConflicts]);
     } catch (e) {
-      // Non aggiorna lastSyncedRecipesRef: le ricette rimaste diverse dal
-      // sincronizzato risulteranno di nuovo dirty al prossimo giro (vedi
-      // dirtyTracking.js) — stesso principio del retry alla riconnessione
-      // (evento "online" più sotto). Un fallimento qui non deve mai
-      // propagarsi: bloccherebbe switchBook a metà (vedi Promise.allSettled).
+      // Le ricette rimaste diverse dal sincronizzato risulteranno di nuovo
+      // dirty al prossimo giro (vedi dirtyTracking.js) — stesso principio
+      // del retry alla riconnessione (evento "online" più sotto). Un
+      // fallimento qui non deve mai propagarsi: bloccherebbe switchBook a
+      // metà (vedi Promise.allSettled).
       console.warn("Salvataggio ricette non riuscito, verrà ritentato", e);
+    }
+  };
+
+  // Applica la scelta dell'utente su un conflitto di ricetta (vedi
+  // RecipeConflictModal). Rimossa SEMPRE dalla coda qui: la scelta è stata
+  // fatta, un eventuale errore nella scrittura di conferma sotto verrà
+  // ritentato dal normale ciclo di flush, non blocca l'interfaccia.
+  const resolveRecipeConflict = async (conflict, action) => {
+    setRecipeConflicts(prev => prev.filter(c => c.recipeId !== conflict.recipeId));
+    try {
+      if (action === "keepMine") {
+        if (conflict.intent === "delete") {
+          await deleteRecipeDoc(activeBookId, conflict.recipeId);
+          lastSyncedRecipesRef.current.delete(conflict.recipeId);
+          setRecipes(prev => prev.filter(r => r.id !== conflict.recipeId));
+        } else {
+          // Scrittura semplice, forzata: l'utente ha scelto esplicitamente
+          // di sovrascrivere — nessun nuovo controllo di conflitto, sarebbe
+          // proprio ciò che ha appena deciso di ignorare.
+          const saved = await saveRecipeOffline(activeBookId, conflict.localValue, conflict.serverValue, me);
+          lastSyncedRecipesRef.current.set(conflict.recipeId, saved);
+        }
+      } else { // discardMine
+        lastSyncedRecipesRef.current.set(conflict.recipeId, conflict.serverValue);
+        if (conflict.intent === "delete") {
+          // "Annulla l'eliminazione": la ricetta resta con la versione del
+          // server (già rimessa nello stato locale al momento del conflitto).
+        } else {
+          setRecipes(prev => prev.map(r => r.id === conflict.recipeId ? conflict.serverValue : r));
+          if (selected?.id === conflict.recipeId) setSelected(conflict.serverValue);
+        }
+      }
+    } catch (e) {
+      console.warn("Risoluzione conflitto ricetta non riuscita", e);
     }
   };
 
@@ -1416,6 +1501,33 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookLoaded, activeBookId, recipes]);
+
+  // Ascolto in tempo reale — SOLO della ricetta aperta in quel momento
+  // (scheda ricetta o modifica, vedi "selected"), non l'intera collezione:
+  // costo trascurabile (un documento), e riduce quanto spesso il
+  // conflitto si manifesta davvero — stessa prevenzione già usata per
+  // system/lista spesa, qui mirata invece che sull'intero libro.
+  // Confronto sul contenuto (omitRecipeMeta: ignora chi/quando ha
+  // scritto), stessa regola delle altre fasi: adotto la versione remota
+  // solo se non ho una modifica locale in sospeso su questa ricetta.
+  const applyRemoteRecipeUpdate = (remote) => {
+    const baseline = lastSyncedRecipesRef.current.get(remote.id);
+    if (baseline && deepEqual(omitRecipeMeta(remote), omitRecipeMeta(baseline))) return; // niente di nuovo
+    const current = recipes.find(r => r.id === remote.id);
+    if (current && baseline && !deepEqual(omitRecipeMeta(current), omitRecipeMeta(baseline))) return; // modifica locale in sospeso, non la tocco
+    lastSyncedRecipesRef.current.set(remote.id, remote);
+    setRecipes(prev => prev.map(r => r.id === remote.id ? remote : r));
+    if (selected?.id === remote.id) setSelected(remote);
+  };
+  const applyRemoteRecipeUpdateRef = useRef(() => {});
+  useEffect(() => {
+    applyRemoteRecipeUpdateRef.current = applyRemoteRecipeUpdate;
+  });
+  useEffect(() => {
+    if (!bookLoaded || !activeBook || !selected?.id) return;
+    const unsubscribe = subscribeToRecipe(activeBookId, selected.id, (remote) => applyRemoteRecipeUpdateRef.current(remote));
+    return () => unsubscribe();
+  }, [bookLoaded, activeBookId, selected?.id]);
 
   // Salvataggio mirato del documento system — gestione conflitti
   // multi-utente (Fase B). Diff per voce (diffSystemFields, vedi
@@ -2686,6 +2798,20 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             </div>
           );
         })()}
+
+        {/* Conflitto di modifica ricetta (Fase D) — overlay globale, come
+            il dialogo R6 sopra: un conflitto può emergere dal salvataggio
+            in sottofondo mentre l'utente è già altrove nell'app. Uno alla
+            volta dalla coda; chiudere (onClose) non rimuove nulla dalla
+            coda, il conflitto resta lì. */}
+        {recipeConflicts.length > 0 && (
+          <RecipeConflictModal
+            conflict={recipeConflicts[0]}
+            onKeepMine={() => resolveRecipeConflict(recipeConflicts[0], "keepMine")}
+            onDiscardMine={() => resolveRecipeConflict(recipeConflicts[0], "discardMine")}
+            onClose={() => setRecipeConflicts(prev => prev.filter(c => c.recipeId !== recipeConflicts[0].recipeId))}
+          />
+        )}
 
         {/* Popup di esportazione unificato — overlay globale, indipendente
             dallo screen attivo: apribile sia dalla scheda ricetta (con
