@@ -12,6 +12,41 @@ const PDF_STYLE_OPTIONS = [
   { id: "moderno", label: "Moderno", desc: "Sans-serif con accento colore, foto più grandi" },
 ];
 
+// Componenti di layout a livello di modulo, non dentro UnifiedExportFlow:
+// definirli nel corpo del componente li ricrea come una nuova identità di
+// componente a ogni render (ogni tasto premuto in un campo testo, es.
+// "Titolo di copertina", causava un re-render → React vedeva un tipo di
+// componente diverso in quella posizione → smontava e rimontava tutto il
+// sottoalbero, perdendo il focus dell'input a ogni carattere). Da qui in
+// poi, unica identità stabile per tutta la vita del componente: `th` va
+// passato esplicitamente come prop invece che catturato per closure.
+const Panel = ({ th, children }) => (
+  <div style={{ position: "absolute", inset: 0, zIndex: 600, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
+    <div style={{ width: "100%", maxHeight: "88%", background: th.appBg, borderRadius: 20, padding: "20px 18px", display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
+      <InfoButton triggerStyle={{ position: "absolute", top: 14, right: 14 }}>{guideEsporta}</InfoButton>
+      {children}
+    </div>
+  </div>
+);
+const Title = ({ th, children }) => (
+  <div style={{ fontFamily: F.display, fontSize: 18, color: th.appInk, textAlign: "center", marginBottom: 4 }}>{children}</div>
+);
+const Sub = ({ th, children }) => (
+  <div style={{ fontFamily: F.ui, fontSize: 12, color: th.appFaded, textAlign: "center", marginBottom: 16, lineHeight: 1.5 }}>{children}</div>
+);
+const Primary = ({ th, ...props }) => (
+  <button {...props} style={{ padding: "13px", borderRadius: 12, border: "none", background: th.appAccent, color: "#fff", fontFamily: F.ui, fontSize: 13, fontWeight: 700, cursor: "pointer", ...(props.disabled ? { opacity: 0.55, cursor: "default" } : {}), ...(props.style || {}) }} />
+);
+const Ghost = ({ th, ...props }) => (
+  <button {...props} style={{ padding: "13px", borderRadius: 12, border: `1.5px solid ${th.appBorder}`, background: "transparent", color: th.appInk, fontFamily: F.ui, fontSize: 13, fontWeight: 600, cursor: "pointer", ...(props.style || {}) }} />
+);
+const Check = ({ th, checked, onChange, label, sub }) => (
+  <label style={{ display: "flex", alignItems: "flex-start", gap: 8, cursor: "pointer", fontFamily: F.ui, fontSize: 12, color: th.appInk, marginBottom: 10 }}>
+    <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} style={{ marginTop: 2 }} />
+    <span>{label}{sub && <span style={{ display: "block", fontSize: 10.5, color: th.appFaded, marginTop: 2 }}>{sub}</span>}</span>
+  </label>
+);
+
 // ══════════════════════════════════════════════════════════════
 // COMPONENT: UnifiedExportFlow — popup a passi condiviso da scheda
 // ricetta e libro ricette (sostituisce ExportFlow.jsx e la fase
@@ -114,39 +149,12 @@ export default function UnifiedExportFlow({
     onDone();
   };
 
-  const Panel = ({ children }) => (
-    <div style={{ position: "absolute", inset: 0, zIndex: 600, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
-      <div style={{ width: "100%", maxHeight: "88%", background: th.appBg, borderRadius: 20, padding: "20px 18px", display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
-        <InfoButton triggerStyle={{ position: "absolute", top: 14, right: 14 }}>{guideEsporta}</InfoButton>
-        {children}
-      </div>
-    </div>
-  );
-  const Title = ({ children }) => (
-    <div style={{ fontFamily: F.display, fontSize: 18, color: th.appInk, textAlign: "center", marginBottom: 4 }}>{children}</div>
-  );
-  const Sub = ({ children }) => (
-    <div style={{ fontFamily: F.ui, fontSize: 12, color: th.appFaded, textAlign: "center", marginBottom: 16, lineHeight: 1.5 }}>{children}</div>
-  );
-  const Primary = (props) => (
-    <button {...props} style={{ padding: "13px", borderRadius: 12, border: "none", background: th.appAccent, color: "#fff", fontFamily: F.ui, fontSize: 13, fontWeight: 700, cursor: "pointer", ...(props.disabled ? { opacity: 0.55, cursor: "default" } : {}), ...(props.style || {}) }} />
-  );
-  const Ghost = (props) => (
-    <button {...props} style={{ padding: "13px", borderRadius: 12, border: `1.5px solid ${th.appBorder}`, background: "transparent", color: th.appInk, fontFamily: F.ui, fontSize: 13, fontWeight: 600, cursor: "pointer", ...(props.style || {}) }} />
-  );
-  const Check = ({ checked, onChange, label, sub }) => (
-    <label style={{ display: "flex", alignItems: "flex-start", gap: 8, cursor: "pointer", fontFamily: F.ui, fontSize: 12, color: th.appInk, marginBottom: 10 }}>
-      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} style={{ marginTop: 2 }} />
-      <span>{label}{sub && <span style={{ display: "block", fontSize: 10.5, color: th.appFaded, marginTop: 2 }}>{sub}</span>}</span>
-    </label>
-  );
-
   // ── Passo: selezione ricette ──
   if (step === "select") {
     return (
-      <Panel>
-        <Title>📤 Esporta</Title>
-        <Sub>{selected.length} ricett{selected.length === 1 ? "a" : "e"} selezionat{selected.length === 1 ? "a" : "e"}</Sub>
+      <Panel th={th}>
+        <Title th={th}>📤 Esporta</Title>
+        <Sub th={th}>{selected.length} ricett{selected.length === 1 ? "a" : "e"} selezionat{selected.length === 1 ? "a" : "e"}</Sub>
         <button onClick={toggleAll} style={{
           padding: "9px", borderRadius: 10, border: `1.5px solid ${th.appAccent}`,
           background: allSelected ? th.appAccent : "transparent",
@@ -184,8 +192,8 @@ export default function UnifiedExportFlow({
           })}
         </div>
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-          <Ghost onClick={onClose} style={{ flex: 1 }}>Annulla</Ghost>
-          <Primary onClick={goDest} disabled={selected.length === 0} style={{ flex: 2 }}>Continua →</Primary>
+          <Ghost th={th} onClick={onClose} style={{ flex: 1 }}>Annulla</Ghost>
+          <Primary th={th} onClick={goDest} disabled={selected.length === 0} style={{ flex: 2 }}>Continua →</Primary>
         </div>
       </Panel>
     );
@@ -194,13 +202,13 @@ export default function UnifiedExportFlow({
   // ── Passo: destinazione ──
   if (step === "dest") {
     return (
-      <Panel>
-        <Title>Dove vuoi esportare?</Title>
-        <Sub>{selected.length} ricett{selected.length === 1 ? "a" : "e"}</Sub>
+      <Panel th={th}>
+        <Title th={th}>Dove vuoi esportare?</Title>
+        <Sub th={th}>{selected.length} ricett{selected.length === 1 ? "a" : "e"}</Sub>
         <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-          <Primary onClick={() => { setDest("books"); setStep("books"); }}>📚 Un mio altro ricettario</Primary>
-          <Primary onClick={() => { setDest("person"); setStep("format"); }}>🧑‍🤝‍🧑 Un'altra persona</Primary>
-          <Ghost onClick={() => setStep("select")} style={{ border: "none", color: th.appFaded }}>‹ Indietro</Ghost>
+          <Primary th={th} onClick={() => { setDest("books"); setStep("books"); }}>📚 Un mio altro ricettario</Primary>
+          <Primary th={th} onClick={() => { setDest("person"); setStep("format"); }}>🧑‍🤝‍🧑 Un'altra persona</Primary>
+          <Ghost th={th} onClick={() => setStep("select")} style={{ border: "none", color: th.appFaded }}>‹ Indietro</Ghost>
         </div>
       </Panel>
     );
@@ -209,9 +217,9 @@ export default function UnifiedExportFlow({
   // ── Passo: scelta libri destinazione (mio ricettario) ──
   if (step === "books") {
     return (
-      <Panel>
-        <Title>In quali ricettari?</Title>
-        <Sub>Puoi sceglierne più di uno</Sub>
+      <Panel th={th}>
+        <Title th={th}>In quali ricettari?</Title>
+        <Sub th={th}>Puoi sceglierne più di uno</Sub>
         {targetBooks.length === 0 ? (
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", color: th.appFaded, fontFamily: F.display, fontStyle: "italic", padding: 20 }}>
             Non hai altri ricettari su cui puoi scrivere.
@@ -241,8 +249,8 @@ export default function UnifiedExportFlow({
           </div>
         )}
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-          <Ghost onClick={() => setStep("dest")} style={{ flex: 1 }}>‹ Indietro</Ghost>
-          <Primary onClick={goPrefs} disabled={targetBookIds.length === 0} style={{ flex: 2 }}>Continua →</Primary>
+          <Ghost th={th} onClick={() => setStep("dest")} style={{ flex: 1 }}>‹ Indietro</Ghost>
+          <Primary th={th} onClick={goPrefs} disabled={targetBookIds.length === 0} style={{ flex: 2 }}>Continua →</Primary>
         </div>
       </Panel>
     );
@@ -251,13 +259,13 @@ export default function UnifiedExportFlow({
   // ── Passo: link o PDF (altra persona) ──
   if (step === "format") {
     return (
-      <Panel>
-        <Title>Come vuoi condividerle?</Title>
-        <Sub>{selected.length} ricett{selected.length === 1 ? "a" : "e"}</Sub>
+      <Panel th={th}>
+        <Title th={th}>Come vuoi condividerle?</Title>
+        <Sub th={th}>{selected.length} ricett{selected.length === 1 ? "a" : "e"}</Sub>
         <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-          <Primary onClick={() => { setFormat("link"); goPrefs(); }}>🔗 Link URL <span style={{ fontWeight: 400 }}>— consigliato per chi ha l'app</span></Primary>
-          <Primary onClick={() => { setFormat("pdf"); goPrefs(); }}>📄 PDF <span style={{ fontWeight: 400 }}>— consigliato per persone esterne</span></Primary>
-          <Ghost onClick={() => setStep("dest")} style={{ border: "none", color: th.appFaded }}>‹ Indietro</Ghost>
+          <Primary th={th} onClick={() => { setFormat("link"); goPrefs(); }}>🔗 Link URL <span style={{ fontWeight: 400 }}>— consigliato per chi ha l'app</span></Primary>
+          <Primary th={th} onClick={() => { setFormat("pdf"); goPrefs(); }}>📄 PDF <span style={{ fontWeight: 400 }}>— consigliato per persone esterne</span></Primary>
+          <Ghost th={th} onClick={() => setStep("dest")} style={{ border: "none", color: th.appFaded }}>‹ Indietro</Ghost>
         </div>
       </Panel>
     );
@@ -270,21 +278,21 @@ export default function UnifiedExportFlow({
 
     if (dest === "books") {
       return (
-        <Panel>
-          <Title>Preferenze</Title>
-          <Sub>Copia in {targetBookIds.length} ricettari{targetBookIds.length === 1 ? "o" : ""}</Sub>
+        <Panel th={th}>
+          <Title th={th}>Preferenze</Title>
+          <Sub th={th}>Copia in {targetBookIds.length} ricettari{targetBookIds.length === 1 ? "o" : ""}</Sub>
           <div style={{ flex: 1, overflowY: "auto", marginBottom: 12 }}>
-            <Check checked={booksPrefs.includePhotos} onChange={v => setBooksPrefs(p => ({ ...p, includePhotos: v }))}
+            <Check th={th} checked={booksPrefs.includePhotos} onChange={v => setBooksPrefs(p => ({ ...p, includePhotos: v }))}
               label="Foto piatto e preparazione" sub="Vengono duplicate: restano valide anche se poi cancelli la ricetta originale." />
-            <Check checked={booksPrefs.includeMemories} onChange={v => setBooksPrefs(p => ({ ...p, includeMemories: v }))}
+            <Check th={th} checked={booksPrefs.includeMemories} onChange={v => setBooksPrefs(p => ({ ...p, includeMemories: v }))}
               label="Ricordi collegati" />
-            <Check checked={booksPrefs.includeSystem} onChange={v => setBooksPrefs(p => ({ ...p, includeSystem: v }))}
+            <Check th={th} checked={booksPrefs.includeSystem} onChange={v => setBooksPrefs(p => ({ ...p, includeSystem: v }))}
               label="Impostazioni di Organizza Ingredienti" sub="Applicate solo se il ricettario di destinazione non ne ha già di proprie." />
           </div>
           {error && <div style={{ fontFamily: F.ui, fontSize: 11.5, color: "#C4593A", marginBottom: 8, textAlign: "center" }}>{error}</div>}
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-            <Ghost onClick={() => setStep("books")} style={{ flex: 1 }} disabled={busy}>‹ Indietro</Ghost>
-            <Primary onClick={submitBooks} disabled={busy} style={{ flex: 2 }}>{busy ? "Copia…" : "✓ Copia ricette"}</Primary>
+            <Ghost th={th} onClick={() => setStep("books")} style={{ flex: 1 }} disabled={busy}>‹ Indietro</Ghost>
+            <Primary th={th} onClick={submitBooks} disabled={busy} style={{ flex: 2 }}>{busy ? "Copia…" : "✓ Copia ricette"}</Primary>
           </div>
         </Panel>
       );
@@ -292,16 +300,16 @@ export default function UnifiedExportFlow({
 
     if (format === "link") {
       return (
-        <Panel>
-          <Title>Preferenze link</Title>
-          <Sub>{sel.length} link{sel.length === 1 ? "" : " (uno per ricetta)"}</Sub>
+        <Panel th={th}>
+          <Title th={th}>Preferenze link</Title>
+          <Sub th={th}>{sel.length} link{sel.length === 1 ? "" : " (uno per ricetta)"}</Sub>
           <div style={{ flex: 1, overflowY: "auto", marginBottom: 12 }}>
             <div style={{ fontFamily: F.ui, fontSize: 10, letterSpacing: 1, color: th.appFaded, textTransform: "uppercase", margin: "4px 0 8px" }}>Cosa includere</div>
-            <Check checked={linkPrefs.includeIngredients} onChange={v => setLinkPrefs(p => ({ ...p, includeIngredients: v }))}
+            <Check th={th} checked={linkPrefs.includeIngredients} onChange={v => setLinkPrefs(p => ({ ...p, includeIngredients: v }))}
               label="Dati ingredienti" sub="Valori nutrizionali, categorie ed equivalenze di queste ricette." />
-            <Check checked={linkPrefs.includePhotos} onChange={v => setLinkPrefs(p => ({ ...p, includePhotos: v }))}
+            <Check th={th} checked={linkPrefs.includePhotos} onChange={v => setLinkPrefs(p => ({ ...p, includePhotos: v }))}
               label="Foto piatto e preparazione" />
-            <Check checked={linkPrefs.includeMemories} onChange={v => setLinkPrefs(p => ({ ...p, includeMemories: v }))}
+            <Check th={th} checked={linkPrefs.includeMemories} onChange={v => setLinkPrefs(p => ({ ...p, includeMemories: v }))}
               label="Ricordi collegati" />
 
             <div style={{ fontFamily: F.ui, fontSize: 10, letterSpacing: 1, color: th.appFaded, textTransform: "uppercase", margin: "10px 0 8px" }}>Chi può aprirli</div>
@@ -329,8 +337,8 @@ export default function UnifiedExportFlow({
           </div>
           {error && <div style={{ fontFamily: F.ui, fontSize: 11.5, color: "#C4593A", marginBottom: 8, textAlign: "center" }}>{error}</div>}
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-            <Ghost onClick={() => setStep("format")} style={{ flex: 1 }} disabled={busy}>‹ Indietro</Ghost>
-            <Primary onClick={submitLink} disabled={busy || !linkCanSubmit} style={{ flex: 2 }}>{busy ? "Creazione…" : `🔗 Genera ${sel.length > 1 ? `${sel.length} link` : "link"}`}</Primary>
+            <Ghost th={th} onClick={() => setStep("format")} style={{ flex: 1 }} disabled={busy}>‹ Indietro</Ghost>
+            <Primary th={th} onClick={submitLink} disabled={busy || !linkCanSubmit} style={{ flex: 2 }}>{busy ? "Creazione…" : `🔗 Genera ${sel.length > 1 ? `${sel.length} link` : "link"}`}</Primary>
           </div>
         </Panel>
       );
@@ -338,18 +346,18 @@ export default function UnifiedExportFlow({
 
     // format === "pdf"
     return (
-      <Panel>
-        <Title>Preferenze PDF</Title>
-        <Sub>{sel.length} ricett{sel.length === 1 ? "a" : "e"}</Sub>
+      <Panel th={th}>
+        <Title th={th}>Preferenze PDF</Title>
+        <Sub th={th}>{sel.length} ricett{sel.length === 1 ? "a" : "e"}</Sub>
         <div style={{ flex: 1, overflowY: "auto", marginBottom: 12 }}>
-          <Check checked={pdfPrefs.includeDishPhoto} onChange={v => setPdfPrefs(p => ({ ...p, includeDishPhoto: v }))} label="Foto piatto" />
-          <Check checked={pdfPrefs.includeStepPhotos} onChange={v => setPdfPrefs(p => ({ ...p, includeStepPhotos: v }))} label="Foto preparazione" />
-          <Check checked={pdfPrefs.includeNutrition} onChange={v => setPdfPrefs(p => ({ ...p, includeNutrition: v }))} label="Valori nutrizionali" />
-          <Check checked={pdfPrefs.includeMemories} onChange={v => setPdfPrefs(p => ({ ...p, includeMemories: v }))} label="Ricordi collegati" />
-          <Check checked={pdfPrefs.includeSubsectionNames} onChange={v => setPdfPrefs(p => ({ ...p, includeSubsectionNames: v }))} label="Nomi delle sottosezioni" sub="Es. «Per l'impasto», «Per la farcitura»." />
+          <Check th={th} checked={pdfPrefs.includeDishPhoto} onChange={v => setPdfPrefs(p => ({ ...p, includeDishPhoto: v }))} label="Foto piatto" />
+          <Check th={th} checked={pdfPrefs.includeStepPhotos} onChange={v => setPdfPrefs(p => ({ ...p, includeStepPhotos: v }))} label="Foto preparazione" />
+          <Check th={th} checked={pdfPrefs.includeNutrition} onChange={v => setPdfPrefs(p => ({ ...p, includeNutrition: v }))} label="Valori nutrizionali" />
+          <Check th={th} checked={pdfPrefs.includeMemories} onChange={v => setPdfPrefs(p => ({ ...p, includeMemories: v }))} label="Ricordi collegati" />
+          <Check th={th} checked={pdfPrefs.includeSubsectionNames} onChange={v => setPdfPrefs(p => ({ ...p, includeSubsectionNames: v }))} label="Nomi delle sottosezioni" sub="Es. «Per l'impasto», «Per la farcitura»." />
           {multi && (
             <>
-              <Check checked={pdfPrefs.includeIndex} onChange={v => setPdfPrefs(p => ({ ...p, includeIndex: v }))} label="Indice" />
+              <Check th={th} checked={pdfPrefs.includeIndex} onChange={v => setPdfPrefs(p => ({ ...p, includeIndex: v }))} label="Indice" />
               <div style={{ fontFamily: F.ui, fontSize: 10, letterSpacing: 1, color: th.appFaded, textTransform: "uppercase", margin: "10px 0 6px" }}>Titolo di copertina</div>
               <input
                 value={pdfPrefs.title}
@@ -392,8 +400,8 @@ export default function UnifiedExportFlow({
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-          <Ghost onClick={() => setStep("format")} style={{ flex: 1 }}>‹ Indietro</Ghost>
-          <Primary onClick={submitPDF} style={{ flex: 2 }}>📄 Genera PDF</Primary>
+          <Ghost th={th} onClick={() => setStep("format")} style={{ flex: 1 }}>‹ Indietro</Ghost>
+          <Primary th={th} onClick={submitPDF} style={{ flex: 2 }}>📄 Genera PDF</Primary>
         </div>
       </Panel>
     );
@@ -402,18 +410,18 @@ export default function UnifiedExportFlow({
   // ── Passo: risultato ──
   if (result?.kind === "books") {
     return (
-      <Panel>
-        <Title>✓ Fatto</Title>
-        <Sub>{selected.length} ricett{selected.length === 1 ? "a copiata" : "e copiate"} in {result.names.map(n => `«${n}»`).join(", ")}.</Sub>
-        <Ghost onClick={onClose}>Chiudi</Ghost>
+      <Panel th={th}>
+        <Title th={th}>✓ Fatto</Title>
+        <Sub th={th}>{selected.length} ricett{selected.length === 1 ? "a copiata" : "e copiate"} in {result.names.map(n => `«${n}»`).join(", ")}.</Sub>
+        <Ghost th={th} onClick={onClose}>Chiudi</Ghost>
       </Panel>
     );
   }
   if (result?.kind === "link") {
     return (
-      <Panel>
-        <Title>🔗 {result.links.length > 1 ? "Link creati" : "Link creato"}</Title>
-        <Sub>Validi 30 giorni, revocabili in ogni momento da "I miei link condivisi".</Sub>
+      <Panel th={th}>
+        <Title th={th}>🔗 {result.links.length > 1 ? "Link creati" : "Link creato"}</Title>
+        <Sub th={th}>Validi 30 giorni, revocabili in ogni momento da "I miei link condivisi".</Sub>
         {result.links.some(l => l.photosDegraded) && (
           <div style={{ fontFamily: F.ui, fontSize: 11, color: "#C4593A", background: "#C4593A18", border: "1px solid #C4593A40", borderRadius: 10, padding: "8px 10px", marginBottom: 10 }}>
             ⚠️ {result.links.filter(l => l.photosDegraded).length === result.links.length ? "Foto/ricordi non inclusi" : "Foto/ricordi non inclusi in alcuni link"}: duplicazione non riuscita, il link è stato creato comunque senza.
@@ -439,21 +447,21 @@ export default function UnifiedExportFlow({
           })}
         </div>
         {result.links.length > 1 && (
-          <Primary onClick={() => copyToClipboard(
+          <Primary th={th} onClick={() => copyToClipboard(
             result.links.map(l => `${l.recipeTitle}: ${window.location.origin}/?shared=${l.shareId}`).join("\n"),
             () => { setAllCopied(true); setTimeout(() => setAllCopied(false), 1500); }
           )} style={{ marginBottom: 8 }}>{allCopied ? "✓ Copiati" : "📋 Copia tutti i link"}</Primary>
         )}
-        <Ghost onClick={onClose}>Chiudi</Ghost>
+        <Ghost th={th} onClick={onClose}>Chiudi</Ghost>
       </Panel>
     );
   }
   if (result?.kind === "pdf") {
     return (
-      <Panel>
-        <Title>📄 PDF generato</Title>
-        <Sub>Si è aperta una nuova scheda: da lì puoi stampare o salvare come PDF.</Sub>
-        <Ghost onClick={onClose}>Chiudi</Ghost>
+      <Panel th={th}>
+        <Title th={th}>📄 PDF generato</Title>
+        <Sub th={th}>Si è aperta una nuova scheda: da lì puoi stampare o salvare come PDF.</Sub>
+        <Ghost th={th} onClick={onClose}>Chiudi</Ghost>
       </Panel>
     );
   }

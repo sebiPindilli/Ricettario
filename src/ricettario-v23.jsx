@@ -1,4 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
+// Codice sorgente del polyfill paged.js incorporato come stringa a build
+// time (import "?raw" di Vite) e iniettato nell'HTML del PDF generato — mai
+// una <script src> esterna: l'export PDF deve restare utilizzabile offline
+// come il resto dell'app, non dipendere da una CDN a runtime. Usato solo
+// quando l'indice è incluso (vedi exportBookPDF): serve a impaginare
+// davvero il contenuto per calcolare i numeri di pagina reali con
+// target-counter(), non ottenibili lasciando la paginazione al motore di
+// stampa del browser (che gira DOPO, fuori dal nostro controllo).
 import {
   sortSectionsAltroLast, sortCategoriesBaseFirst,
   isSectioned, toSectioned, fromSectioned, stepPhotosOf,
@@ -250,7 +258,13 @@ const IPhone = ({ children }) => {
 // diversi minuti, non un errore rapido. Un Blob URL è una navigazione vera:
 // l'evento "load" della scheda garantisce che TUTTE le immagini abbiano
 // finito di caricare (con successo o in errore) prima di stampare.
-function printHtmlDocument(html) {
+// autoPrint=false: usato quando l'HTML generato impagina da sé con paged.js
+// (vedi exportBookPDF/indice con numeri di pagina) — lì stampare all'evento
+// "load" della scheda sarebbe troppo presto, PRIMA che la paginazione vera
+// sia calcolata: il documento stesso chiama window.print() a impaginazione
+// completata (PagedConfig.after), qui ci si limita a schedulare comunque il
+// rilascio (chiusura scheda/revoca Blob) dopo lo stesso margine di sicurezza.
+function printHtmlDocument(html, { autoPrint = true } = {}) {
   const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
   const printWin = window.open(url, "_blank");
   if (!printWin) { URL.revokeObjectURL(url); return; } // popup bloccato dal browser — nulla da fare lato codice
@@ -272,7 +286,7 @@ function printHtmlDocument(html) {
   };
   printWin.addEventListener("load", () => {
     printWin.focus();
-    printWin.print();
+    if (autoPrint) printWin.print();
     setTimeout(release, 120000);
   });
 }
@@ -440,8 +454,21 @@ const exportRecipePDF = (recipe, opts, nutritionCtx) => {
 // sezione + ricette. bookTitle riflette la selezione (nome del ricettario
 // se è tutto, altrimenti "N ricette da «Nome»") — vedi exportRecipesPDF.
 // ══════════════════════════════════════════════════════════════
-const exportBookPDF = (recipesList, sections = MACRO_SECTIONS, bookTitle = "Il mio Ricettario", opts, nutritionCtx) => {
+const exportBookPDF = async (recipesList, sections = MACRO_SECTIONS, bookTitle = "Il mio Ricettario", opts, nutritionCtx) => {
   const t = PDF_STYLES[opts.style] || PDF_STYLES.classico;
+
+  // Caricato solo quando serve (indice con numeri di pagina reali) e come
+  // chunk separato (import dinamico, non in cima al file): senza questo, il
+  // polyfill da ~500KB finirebbe nel bundle principale dell'app, scaricato
+  // da OGNI utente a ogni avvio anche se non esporta mai un PDF con indice.
+  // Percorso relativo diretto (non "pagedjs/...") perché il package.json di
+  // pagedjs espone solo condizioni root nel campo "exports" (import/
+  // require/browser/polyfill), nessun subpath — un import bare-specifier
+  // verso "pagedjs/dist/..." verrebbe rifiutato dal resolver; un percorso
+  // relativo bypassa del tutto la mappa "exports", leggendo il file diretto.
+  const pagedPolyfillJs = opts.includeIndex
+    ? (await import("../node_modules/pagedjs/dist/paged.polyfill.min.js?raw")).default
+    : null;
 
   // Sezioni con almeno una ricetta, nell'ordine di MACRO_SECTIONS, ricette
   // in ordine alfabetico dentro ciascuna sezione
@@ -453,12 +480,28 @@ const exportBookPDF = (recipesList, sections = MACRO_SECTIONS, bookTitle = "Il m
     }))
     .filter(sec => sec.recipes.length > 0);
 
+  // Stili legati a paged.js (numeri di pagina reali + barra di stato) DEVONO
+  // stare nel <head>, non dentro <body>: paged.js sposta tutto il contenuto
+  // di <body> in un <template> inerte PRIMA di estrarre i fogli di stile
+  // (querySelectorAll non vede dentro un <template>), quindi qualunque
+  // <style> lasciato tra i contenuti del body verrebbe semplicemente
+  // ignorato — target-counter() resterebbe testo letterale, mai calcolato.
+  // Verificato con una riproduzione minima isolata prima di questo fix.
+  const pagedjsHeadCss = opts.includeIndex ? `
+    .pagenum { font-family: ${t.uiFont}; font-size: 11px; color: ${t.faded}; text-decoration: none; }
+    .pagenum::after { content: target-counter(attr(href), page); }
+    @page { size: A4; margin: 18mm 16mm; }
+    #pagedjs-status { position: fixed; top: 0; left: 0; right: 0; z-index: 9999; background: ${t.ink}; color: #fff; padding: 14px; text-align: center; font-family: ${t.uiFont}; font-size: 13px; }
+    #pagedjs-print-btn { padding: 9px 18px; border: none; border-radius: 8px; background: ${t.accent}; color: #fff; font-family: ${t.uiFont}; font-size: 13px; font-weight: 700; cursor: pointer; }
+    @media print { #pagedjs-status { display: none !important; } }
+  ` : "";
+
   const html = `<!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="UTF-8">
 <title>${bookTitle}</title>
-<style>${pdfCss(t)}</style>
+<style>${pdfCss(t)}${pagedjsHeadCss}</style>
 </head>
 <body>
   <!-- Copertina -->
@@ -469,7 +512,8 @@ const exportBookPDF = (recipesList, sections = MACRO_SECTIONS, bookTitle = "Il m
     <div class="sub">${recipesList.length} ricette</div>
   </div>
 
-  <!-- Indice -->
+  <!-- Indice — i numeri di pagina (.pagenum) sono vuoti qui: li calcola
+       paged.js dopo l'impaginazione vera, vedi target-counter() nel head. -->
   ${opts.includeIndex ? `
   <div class="page index">
     <h1>Indice</h1>
@@ -479,7 +523,7 @@ const exportBookPDF = (recipesList, sections = MACRO_SECTIONS, bookTitle = "Il m
         <div class="row">
           <span class="t">${r.title}</span>
           <span class="dots"></span>
-          <span class="c">${r.category}</span>
+          <a class="pagenum" href="#recipe-${r.id}"></a>
         </div>`).join("")}
     `).join("")}
   </div>` : ""}
@@ -492,12 +536,46 @@ const exportBookPDF = (recipesList, sections = MACRO_SECTIONS, bookTitle = "Il m
       <div class="desc">${sec.desc}</div>
       <div class="orn">✦ ✦ ✦</div>
     </div>
-    ${sec.recipes.map(r => `<div class="recipe">${recipeBodyPdfHtml(r, opts, nutritionCtx)}</div>`).join("")}
+    ${sec.recipes.map(r => `<div class="recipe" id="recipe-${r.id}">${recipeBodyPdfHtml(r, opts, nutritionCtx)}</div>`).join("")}
   `).join("")}
+
+  ${opts.includeIndex ? `
+  <!-- Barra di stato impaginazione — MAI stampa automatica: un
+       window.print() scattato da solo (in precedenza dentro
+       PagedConfig.after) ha bloccato un'intera sessione del browser in
+       test reali quando l'impaginazione di paged.js è stata più lenta del
+       previsto (foto ricette ancora in caricamento). Ora l'utente vede lo
+       stato e stampa quando decide lui/lei — mai a sorpresa. Nascosta in
+       stampa (@media print) così non compare nel PDF vero.
+  -->
+  <div id="pagedjs-status">⏳ Sto impaginando il PDF, un momento…</div>
+  <script>
+    window.PagedConfig = { after: function () {
+      var el = document.getElementById("pagedjs-status");
+      if (!el) return;
+      el.innerHTML = "";
+      var btn = document.createElement("button");
+      btn.id = "pagedjs-print-btn";
+      btn.textContent = "🖨️ Stampa / Salva come PDF";
+      btn.onclick = function () { window.print(); };
+      el.appendChild(btn);
+    } };
+    // Rete di sicurezza: se l'impaginazione non finisce entro un tempo
+    // ragionevole (contenuto molto pesante, foto che non caricano), un
+    // messaggio esplicito batte un'attesa muta indefinita.
+    setTimeout(function () {
+      var el = document.getElementById("pagedjs-status");
+      if (el && el.textContent.indexOf("impaginando") !== -1) {
+        el.textContent = "⚠️ L'impaginazione sta impiegando più del previsto — controlla la connessione (le foto potrebbero non essere ancora caricate) o riprova con meno ricette.";
+      }
+    }, 45000);
+  </script>
+  <script>${pagedPolyfillJs}</script>
+  ` : ""}
 </body>
 </html>`;
 
-  printHtmlDocument(html);
+  printHtmlDocument(html, { autoPrint: !opts.includeIndex });
 };
 
 // ══════════════════════════════════════════════════════════════
