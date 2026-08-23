@@ -89,12 +89,18 @@ export const decodeEquivalences = (eq) => mapFactorKeys(eq, EMPTY_UNIT_KEY, "");
 const encodeIgnoredSimilarities = (pairs) => (pairs || []).map(([a, b]) => ({ a, b }));
 const decodeIgnoredSimilarities = (pairs) => (pairs || []).map((p) => Array.isArray(p) ? p : [p.a, p.b]);
 
+// merge:true — mai una sovrascrittura totale del documento: un chiamante
+// che passasse un system incompleto (bug, dati letti solo in parte) può al
+// più riscrivere i campi che include, mai cancellare quelli che omette.
+// Non basta da solo contro due schede/dispositivi aperti sullo stesso
+// libro (quella richiede sync in tempo reale, non ancora implementato) ma
+// riduce un'intera classe di perdita-dati silenziosa a un rischio locale.
 export const saveBookSystem = (bookId, system) =>
   setDoc(systemRef(bookId), {
     ...system,
     equivalences: encodeEquivalences(system.equivalences),
     ignoredSimilarities: encodeIgnoredSimilarities(system.ignoredSimilarities),
-  });
+  }, { merge: true });
 
 export const loadBookSystem = async (bookId) => {
   const snap = await getDocOfflineFirst(systemRef(bookId));
