@@ -44,7 +44,14 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
   // stripPhotolessStep, senza filtrare step/sezioni vuote come invece
   // faceva già la creazione di una ricetta nuova: bug corretto qui.
   const handleSave = () => {
-    onSave({ ...draft, steps: normalizeSteps(draft.steps) });
+    onSave({
+      ...draft, steps: normalizeSteps(draft.steps),
+      // Campi tempo lasciati vuoti in fase di modifica (es. cancellati per
+      // riscriverli): si popolano a 0 solo qui, al salvataggio, mai durante
+      // la digitazione (altrimenti l'input "combatterebbe" con l'utente).
+      prepTime: draft.prepTime === "" ? 0 : draft.prepTime,
+      cookTime: draft.cookTime === "" ? 0 : draft.cookTime,
+    });
   };
 
 
@@ -102,7 +109,7 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
             opacity: draft.title ? 1 : 0.4,
           }}>{draft.title || "Nome ricetta…"}</div>
           <div style={{ fontFamily:F.ui, fontSize:11, color:"rgba(255,255,255,0.65)", marginTop:3 }}>
-            {draft.prepTime+draft.cookTime > 0 ? `${draft.prepTime+draft.cookTime} min · ` : ""}{draft.servings} porzioni
+            {(() => { const tot = (Number(draft.prepTime)||0) + (Number(draft.cookTime)||0); return tot > 0 ? `${tot} min · ` : ""; })()}{draft.servings} porzioni
           </div>
         </div>
       </div>
@@ -154,11 +161,11 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
             <div style={{ display:"flex", gap:10 }}>
               <div style={{ flex:1 }}>
                 <EditLabel text="Prep (min)"/>
-                <EditNumberInput value={draft.prepTime} onChange={v => set("prepTime", Number(v))}/>
+                <EditNumberInput value={draft.prepTime} onChange={v => set("prepTime", v===""?"":Number(v))}/>
               </div>
               <div style={{ flex:1 }}>
                 <EditLabel text="Cottura (min)"/>
-                <EditNumberInput value={draft.cookTime} onChange={v => set("cookTime", Number(v))}/>
+                <EditNumberInput value={draft.cookTime} onChange={v => set("cookTime", v===""?"":Number(v))}/>
               </div>
               <div style={{ flex:1 }}>
                 <EditLabel text="Porzioni"/>

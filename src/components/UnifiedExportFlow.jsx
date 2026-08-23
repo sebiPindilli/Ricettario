@@ -4,6 +4,7 @@ import { F, MACRO_SECTIONS } from "../data/constants.js";
 import { sortSectionsAltroLast } from "../utils/helpers.js";
 import InfoButton from "./InfoButton.jsx";
 import { guideEsporta } from "../data/guideContent.jsx";
+import { PDF_STYLES } from "../utils/pdfStyles.js";
 
 const PDF_STYLE_OPTIONS = [
   { id: "classico", label: "Classico", desc: "Serif, accenti caldi — lo stile originale" },
@@ -360,16 +361,34 @@ export default function UnifiedExportFlow({
           )}
           <div style={{ fontFamily: F.ui, fontSize: 10, letterSpacing: 1, color: th.appFaded, textTransform: "uppercase", margin: "10px 0 8px" }}>Stile</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {PDF_STYLE_OPTIONS.map(s => (
-              <button key={s.id} onClick={() => setPdfPrefs(p => ({ ...p, style: s.id }))} style={{
-                textAlign: "left", padding: "9px 12px", borderRadius: 10, cursor: "pointer",
-                border: `1.5px solid ${pdfPrefs.style === s.id ? th.appAccent : th.appBorder}`,
-                background: pdfPrefs.style === s.id ? `${th.appAccent}18` : th.appCard,
-              }}>
-                <div style={{ fontFamily: F.ui, fontSize: 12.5, fontWeight: 700, color: th.appInk }}>{s.label}</div>
-                <div style={{ fontFamily: F.ui, fontSize: 10.5, color: th.appFaded, marginTop: 2 }}>{s.desc}</div>
-              </button>
-            ))}
+            {PDF_STYLE_OPTIONS.map(s => {
+              const t = PDF_STYLES[s.id];
+              return (
+                <button key={s.id} onClick={() => setPdfPrefs(p => ({ ...p, style: s.id }))} style={{
+                  textAlign: "left", padding: "9px 12px", borderRadius: 10, cursor: "pointer",
+                  display: "flex", alignItems: "center", gap: 10,
+                  border: `1.5px solid ${pdfPrefs.style === s.id ? th.appAccent : th.appBorder}`,
+                  background: pdfPrefs.style === s.id ? `${th.appAccent}18` : th.appCard,
+                }}>
+                  {/* Anteprima — approssima colori/font veri dello stile PDF (stessi token di pdfCss in ricettario-v23.jsx) */}
+                  <div style={{
+                    width: 52, height: 40, borderRadius: 8, flexShrink: 0,
+                    background: t.cardBg, border: `1px solid ${t.border}`,
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4,
+                  }}>
+                    <div style={{ fontFamily: t.bodyFont, fontStyle: "italic", fontSize: 12, color: t.ink }}>Aa</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                      <span style={{ width: 9, height: 9, borderRadius: "50%", background: t.accent, flexShrink: 0 }} />
+                      <span style={{ width: 16, height: 3, borderRadius: 2, background: t.accent2 }} />
+                    </div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: F.ui, fontSize: 12.5, fontWeight: 700, color: th.appInk }}>{s.label}</div>
+                    <div style={{ fontFamily: F.ui, fontSize: 10.5, color: th.appFaded, marginTop: 2 }}>{s.desc}</div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>

@@ -20,7 +20,7 @@ import { guideNuovaModificaRicetta } from "../data/guideContent.jsx";
 export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping, extraTagGroups=[], onAddGroup, onAddTagToGroup, sectionList=MACRO_SECTIONS, onAddSection, onUpdateSection, onDeleteSection, allRecipes=[], initialDraft=null }) {
   const th = useTheme();
   const [draft, setDraft] = useState(initialDraft || {
-    title:"", source:"", prepTime:0, cookTime:0, servings:4,
+    title:"", source:"", prepTime:"", cookTime:"", servings:4,
     note:"", ingredients:[{ name:"", qty:"", unit:"" }], steps:[""],
     tags:[], color:"#C4593A", emoji:"🍝",
     dishPhoto:null, macroSection:"altro",
@@ -104,7 +104,7 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
             opacity: draft.title ? 1 : 0.4,
           }}>{draft.title || "Nome ricetta…"}</div>
           <div style={{ fontFamily:F.ui, fontSize:11, color:"rgba(255,255,255,0.65)", marginTop:3 }}>
-            {draft.prepTime+draft.cookTime > 0 ? `${draft.prepTime+draft.cookTime} min · ` : ""}{draft.servings} porzioni
+            {(() => { const tot = (Number(draft.prepTime)||0) + (Number(draft.cookTime)||0); return tot > 0 ? `${tot} min · ` : ""; })()}{draft.servings} porzioni
           </div>
         </div>
       </div>
@@ -170,8 +170,8 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
             <EditField label="Fonte / Autore" value={draft.source} onChange={v=>set("source",v)} placeholder="es. Nonna Maria"/>
             <EditField label="Link fonte (URL)" value={draft.sourceUrl||""} onChange={v=>set("sourceUrl",v)} placeholder="es. https://www.sito.it/ricetta"/>
             <div style={{ display:"flex", gap:10 }}>
-              <div style={{ flex:1 }}><EditLabel text="Prep (min)"/><EditNumberInput value={draft.prepTime} onChange={v=>set("prepTime",Number(v))}/></div>
-              <div style={{ flex:1 }}><EditLabel text="Cottura (min)"/><EditNumberInput value={draft.cookTime} onChange={v=>set("cookTime",Number(v))}/></div>
+              <div style={{ flex:1 }}><EditLabel text="Prep (min)"/><EditNumberInput value={draft.prepTime} onChange={v=>set("prepTime", v===""?"":Number(v))}/></div>
+              <div style={{ flex:1 }}><EditLabel text="Cottura (min)"/><EditNumberInput value={draft.cookTime} onChange={v=>set("cookTime", v===""?"":Number(v))}/></div>
               <div style={{ flex:1 }}><EditLabel text="Porzioni"/><EditNumberInput value={draft.servings} onChange={v=>set("servings",Number(v))}/></div>
             </div>
             {/* Tags */}

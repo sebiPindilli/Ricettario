@@ -19,11 +19,13 @@ export const sortSectionsAltroLast = (list) => [
   ...list.filter(s => s.id === "altro"),
 ];
 
-// "Ingredienti base" resta sempre in cima; per il resto (Altro compreso,
-// è una categoria come le altre) l'ordine della lista non viene alterato.
+// "Ingredienti base" resta sempre in cima e "Altro" sempre in fondo (stesso
+// principio di sortSectionsAltroLast per le sezioni ricetta); per il resto
+// l'ordine della lista non viene alterato.
 export const sortCategoriesBaseFirst = (list) => [
   ...list.filter(c => c.id === "base"),
-  ...list.filter(c => c.id !== "base"),
+  ...list.filter(c => c.id !== "base" && c.id !== "altro"),
+  ...list.filter(c => c.id === "altro"),
 ];
 
 // ── Subsection data helpers ────────────────────────────────────

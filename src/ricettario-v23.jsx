@@ -86,6 +86,7 @@ import AddFromLinkScreen from "./screens/AddFromLinkScreen.jsx";
 import EditScreen from "./screens/EditScreen.jsx";
 import NutritionCard from "./components/NutritionCard.jsx";
 import { computeRecipeNutrition } from "./utils/recipeNutrition.js";
+import { PDF_STYLES } from "./utils/pdfStyles.js";
 import UnifiedExportFlow from "./components/UnifiedExportFlow.jsx";
 import MemoriesSection from "./components/MemoriesSection.jsx";
 import BookPageView from "./components/BookPageView.jsx";
@@ -277,18 +278,12 @@ function printHtmlDocument(html) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// EXPORT PDF: stili — token di colore/font per ciascuno stile, usati per
-// parametrizzare un'unica struttura CSS condivisa (pdfCss sotto) invece di
-// triplicare l'intero foglio di stile per ogni variante grafica.
+// EXPORT PDF: foglio di stile condiviso da ogni export (singola ricetta,
+// intero libro/selezione, pagine di copertina/indice/sezione, nutrizione,
+// ricordi), parametrizzato sui token colore/font di PDF_STYLES
+// (src/utils/pdfStyles.js — condiviso con l'anteprima in UnifiedExportFlow.jsx)
+// invece di triplicare l'intero foglio di stile per ogni variante grafica.
 // ══════════════════════════════════════════════════════════════
-const PDF_STYLES = {
-  classico: { label:"Classico", bodyFont:"Georgia, serif", uiFont:"sans-serif", ink:"#1a1a1a", faded:"#666", accent:"#8B4520", accent2:"#B8973A", cardBg:"#fafaf8", border:"#ddd", borderLight:"#eee" },
-  minimal:  { label:"Minimal",  bodyFont:"'Helvetica Neue', Arial, sans-serif", uiFont:"'Helvetica Neue', Arial, sans-serif", ink:"#111111", faded:"#666666", accent:"#111111", accent2:"#999999", cardBg:"#f7f7f7", border:"#ddd", borderLight:"#eee" },
-  moderno:  { label:"Moderno",  bodyFont:"'Segoe UI', system-ui, sans-serif", uiFont:"'Segoe UI', system-ui, sans-serif", ink:"#20232a", faded:"#6b7280", accent:"#D9603B", accent2:"#D9603B", cardBg:"#fdf6f2", border:"#eee", borderLight:"#f2e4de" },
-};
-
-// Foglio di stile condiviso da ogni export PDF (singola ricetta, intero
-// libro/selezione, pagine di copertina/indice/sezione, nutrizione, ricordi).
 const pdfCss = (t) => `
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family: ${t.bodyFont}; color: ${t.ink}; max-width: 700px; margin: 0 auto; }
@@ -1616,6 +1611,11 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
       ...draft,
       id: uid("r"),
       macroSection: draft.macroSection || "altro",
+      // Campi tempo vuoti in fase di compilazione (vedi NewRecipeScreen.jsx):
+      // si popolano a 0 solo qui, al salvataggio, non durante la digitazione
+      // (altrimenti l'input "combatterebbe" con chi cancella per riscrivere).
+      prepTime: draft.prepTime === "" ? 0 : draft.prepTime,
+      cookTime: draft.cookTime === "" ? 0 : draft.cookTime,
       favorite: false,
       sourceUrl: draft.sourceUrl || "",
       category: draft.tags[0] || "Altro",

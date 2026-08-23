@@ -67,6 +67,7 @@ export default function OrganizeIngredientsScreen({
     "🍞","🥖","🍝","🍚","🥔","🍅","🥦","🥬","🍎","🍋","🍇","🍓",
     "🥚","🐟","🦐","🍗","🥓","🥛","🧈","🍯","🍬","🍰","☕","🍵",
     "🥜","🌰","🧄","🧅","🌶","🥫","🍄","🫙","🧊","🍾","🥤","🍪",
+    "🥐","🥧","🍩","🥯","🫓","🦀","🦑","🌱",
   ];
   const [search, setSearch] = useState("");
   const [filterRecipeId, setFilterRecipeId] = useState(initialFilterRecipeId != null ? String(initialFilterRecipeId) : "");
