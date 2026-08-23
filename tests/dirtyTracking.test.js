@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { diffRecipes, recipesToMap } from "../src/utils/dirtyTracking.js";
+import { diffRecipes, recipesToMap, diffSystemFields, deepEqual } from "../src/utils/dirtyTracking.js";
 
 const recipe = (id, extra = {}) => ({ id, title: `Ricetta ${id}`, ingredients: [], steps: [], ...extra });
 
@@ -83,5 +83,157 @@ describe("diffRecipes — scenario deleteSection", () => {
     const { changed, removedIds } = diffRecipes(lastSynced, next);
     expect(changed).toEqual([reassigned]);
     expect(removedIds).toEqual([]);
+  });
+});
+
+// ── diffSystemFields — vedi Fase B del piano conflitti multi-utente (12
+// proprietà del documento system, granularità per voce sui campi-mappa,
+// per intero campo sui campi-lista, vedi il commento in dirtyTracking.js).
+const baseSystem = () => ({
+  extraTagGroups: [],
+  sectionList: [{ id: "dolci", label: "Dolci" }],
+  categoryList: [{ id: "base", label: "Ingredienti base" }],
+  ingredientCategories: { zucchero: ["base"], farina: ["base"] },
+  aggregates: [{ id: "agg1", name: "Zuccheri", members: ["zucchero", "farina"], categories: [] }],
+  equivalences: { zucchero: { factors: { cucchiaio: 10 } } },
+  customUnits: {},
+  nutritionMap: { zucchero: { foodId: "f1" } },
+  customFoods: [],
+  ingredientDict: { zucchero: "Zucchero", farina: "Farina" },
+  sourceByIngredient: { zucchero: ["ingredient"] },
+  ignoredSimilarities: [["zucchero", "farina"]],
+});
+
+describe("diffSystemFields — nessuna modifica", () => {
+  it("stessi riferimenti → nessun campo-mappa e nessun campo-lista", () => {
+    const system = baseSystem();
+    const { mapChanges, changedArrayFields } = diffSystemFields(system, system);
+    expect(mapChanges).toEqual({});
+    expect(changedArrayFields).toEqual([]);
+  });
+});
+
+describe("diffSystemFields — campo-mappa, voce modificata", () => {
+  it("solo la chiave cambiata compare, in un solo campo", () => {
+    const before = baseSystem();
+    const after = { ...before, nutritionMap: { ...before.nutritionMap, zucchero: { foodId: "f2" } } };
+    const { mapChanges, changedArrayFields } = diffSystemFields(before, after);
+    expect(mapChanges).toEqual({ nutritionMap: { changed: { zucchero: { foodId: "f2" } }, removedKeys: [] } });
+    expect(changedArrayFields).toEqual([]);
+  });
+});
+
+describe("diffSystemFields — campo-mappa, voce aggiunta", () => {
+  it("la nuova chiave compare in changed", () => {
+    const before = baseSystem();
+    const after = { ...before, ingredientDict: { ...before.ingredientDict, pomodoro: "Pomodoro" } };
+    const { mapChanges } = diffSystemFields(before, after);
+    expect(mapChanges.ingredientDict).toEqual({ changed: { pomodoro: "Pomodoro" }, removedKeys: [] });
+  });
+});
+
+describe("diffSystemFields — campo-mappa, voce rimossa", () => {
+  it("la chiave sparita compare in removedKeys, changed vuoto", () => {
+    const before = baseSystem();
+    const rest = Object.fromEntries(Object.entries(before.ingredientDict).filter(([k]) => k !== "farina"));
+    const after = { ...before, ingredientDict: rest };
+    const { mapChanges } = diffSystemFields(before, after);
+    expect(mapChanges.ingredientDict).toEqual({ changed: {}, removedKeys: ["farina"] });
+  });
+});
+
+describe("diffSystemFields — campo-lista", () => {
+  it("nuovo riferimento → il campo compare in changedArrayFields", () => {
+    const before = baseSystem();
+    const after = { ...before, categoryList: [...before.categoryList, { id: "dolci2", label: "Altri dolci" }] };
+    const { mapChanges, changedArrayFields } = diffSystemFields(before, after);
+    expect(changedArrayFields).toEqual(["categoryList"]);
+    expect(mapChanges).toEqual({});
+  });
+
+  it("stesso riferimento, anche se il contenuto sarebbe uguale se ricreato → nessun cambiamento", () => {
+    const before = baseSystem();
+    const after = { ...before }; // categoryList non toccato, stesso riferimento
+    const { changedArrayFields } = diffSystemFields(before, after);
+    expect(changedArrayFields).toEqual([]);
+  });
+});
+
+describe("diffSystemFields — scenario deleteIngredients (azione multi-campo atomica)", () => {
+  it("tutti i campi toccati dall'eliminazione di un ingrediente compaiono in un solo diff", () => {
+    const before = baseSystem();
+    const idSet = new Set(["zucchero"]);
+    const stripKeys = (obj) => Object.fromEntries(Object.entries(obj).filter(([k]) => !idSet.has(k)));
+    const after = {
+      ...before,
+      ingredientDict: stripKeys(before.ingredientDict),
+      ingredientCategories: stripKeys(before.ingredientCategories),
+      sourceByIngredient: stripKeys(before.sourceByIngredient),
+      equivalences: stripKeys(before.equivalences),
+      nutritionMap: stripKeys(before.nutritionMap),
+      aggregates: before.aggregates.map((a) => ({ ...a, members: a.members.filter((m) => !idSet.has(m)) })),
+      ignoredSimilarities: before.ignoredSimilarities.filter(([a, b]) => !idSet.has(a) && !idSet.has(b)),
+    };
+
+    const { mapChanges, changedArrayFields } = diffSystemFields(before, after);
+
+    // 5 campi-mappa toccati, ognuno con "zucchero" rimosso, nient'altro cambiato
+    expect(Object.keys(mapChanges).sort()).toEqual(
+      ["equivalences", "ingredientCategories", "ingredientDict", "nutritionMap", "sourceByIngredient"].sort()
+    );
+    Object.values(mapChanges).forEach((c) => {
+      expect(c.removedKeys).toEqual(["zucchero"]);
+      expect(c.changed).toEqual({});
+    });
+    // 2 campi-lista toccati (nuovo riferimento per entrambi)
+    expect(changedArrayFields.sort()).toEqual(["aggregates", "ignoredSimilarities"].sort());
+    // I campi non toccati dall'azione non compaiono affatto
+    expect(mapChanges.customUnits).toBeUndefined();
+    expect(changedArrayFields).not.toContain("categoryList");
+    expect(changedArrayFields).not.toContain("sectionList");
+    expect(changedArrayFields).not.toContain("extraTagGroups");
+    expect(changedArrayFields).not.toContain("customFoods");
+  });
+});
+
+describe("deepEqual", () => {
+  it("primitivi uguali → true, diversi → false", () => {
+    expect(deepEqual(1, 1)).toBe(true);
+    expect(deepEqual("a", "a")).toBe(true);
+    expect(deepEqual(1, 2)).toBe(false);
+    expect(deepEqual("a", "b")).toBe(false);
+    expect(deepEqual(null, null)).toBe(true);
+    expect(deepEqual(null, undefined)).toBe(false);
+    expect(deepEqual(undefined, undefined)).toBe(true);
+  });
+
+  it("oggetti con stesse chiavi/valori ma riferimenti diversi → true", () => {
+    expect(deepEqual({ foodId: "f1" }, { foodId: "f1" })).toBe(true);
+    expect(deepEqual({ factors: { cucchiaio: 10 } }, { factors: { cucchiaio: 10 } })).toBe(true);
+  });
+
+  it("oggetti con un valore diverso → false", () => {
+    expect(deepEqual({ foodId: "f1" }, { foodId: "f2" })).toBe(false);
+  });
+
+  it("oggetti con chiavi diverse (stessa lunghezza) → false", () => {
+    expect(deepEqual({ a: 1 }, { b: 1 })).toBe(false);
+  });
+
+  it("array uguali per valore → true, ordine diverso → false", () => {
+    expect(deepEqual(["base", "dolci"], ["base", "dolci"])).toBe(true);
+    expect(deepEqual(["base", "dolci"], ["dolci", "base"])).toBe(false);
+  });
+
+  it("array vs oggetto → false anche a contenuto apparentemente simile", () => {
+    expect(deepEqual([], {})).toBe(false);
+  });
+
+  it("nidificato (equivalences-like) → confronta in profondità", () => {
+    const a = { factors: { "": 60, cucchiaio: 10 } };
+    const b = { factors: { "": 60, cucchiaio: 10 } };
+    const c = { factors: { "": 60, cucchiaio: 12 } };
+    expect(deepEqual(a, b)).toBe(true);
+    expect(deepEqual(a, c)).toBe(false);
   });
 });

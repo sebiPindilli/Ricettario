@@ -6,12 +6,13 @@
 //   books/{bookId}/recipes/{recipeId} → sotto-collezione (vedi Fase 1.2)
 import { db } from "../firebase.js";
 import {
-  doc, setDoc, deleteDoc, collection,
-  query, where,
+  doc, setDoc, deleteDoc, deleteField, collection,
+  query, where, runTransaction, onSnapshot,
 } from "firebase/firestore";
 import { MACRO_SECTIONS, INGREDIENT_CATEGORIES } from "../data/constants.js";
 import { uploadPhoto, dishPhotoPath, stepPhotoPath, memoryPhotoPath } from "./photoStore.js";
 import { getDocOfflineFirst, getDocsOfflineFirst } from "./offlineFirst.js";
+import { deepEqual } from "../utils/dirtyTracking.js";
 
 // Le funzioni /api/* rispondono sempre in JSON quando servite da Vercel
 // (produzione o `vercel dev`) — ma il semplice `npm run dev` (Vite puro,
@@ -65,22 +66,28 @@ export const loadBookMeta = async (bookId) => {
 // ne accorge mai.
 const EMPTY_UNIT_KEY = "senzaunita"; // niente "__" iniziale/finale: Firestore lo rifiuta (riservato)
 
-const mapFactorKeys = (equivalences, fromKey, toKey) => {
-  const out = {};
-  for (const [name, eq] of Object.entries(equivalences || {})) {
-    const factors = {};
-    for (const [unit, grams] of Object.entries(eq?.factors || {})) {
-      factors[unit === fromKey ? toKey : unit] = grams;
-    }
-    out[name] = { ...eq, factors };
+// Stessa codifica applicata a UNA sola voce (un ingrediente) — base delle
+// versioni "intera mappa" sotto, e riusata dalla scrittura a grana fine
+// (saveSystemEntriesOnline/Offline), che tocca una voce di equivalences
+// alla volta, mai l'intera mappa.
+const mapFactorKeysEntry = (eq, fromKey, toKey) => {
+  if (!eq) return eq;
+  const factors = {};
+  for (const [unit, grams] of Object.entries(eq.factors || {})) {
+    factors[unit === fromKey ? toKey : unit] = grams;
   }
-  return out;
+  return { ...eq, factors };
 };
+const encodeEquivalenceEntry = (eq) => mapFactorKeysEntry(eq, "", EMPTY_UNIT_KEY);
+const decodeEquivalenceEntry = (eq) => mapFactorKeysEntry(eq, EMPTY_UNIT_KEY, "");
+
 // Esportate (non solo uso interno): sharedRecipesStore.js le riusa per lo
 // stesso motivo alla condivisione di una ricetta via link — mai una
 // seconda implementazione della stessa codifica.
-export const encodeEquivalences = (eq) => mapFactorKeys(eq, "", EMPTY_UNIT_KEY);
-export const decodeEquivalences = (eq) => mapFactorKeys(eq, EMPTY_UNIT_KEY, "");
+export const encodeEquivalences = (eq) =>
+  Object.fromEntries(Object.entries(eq || {}).map(([name, e]) => [name, encodeEquivalenceEntry(e)]));
+export const decodeEquivalences = (eq) =>
+  Object.fromEntries(Object.entries(eq || {}).map(([name, e]) => [name, decodeEquivalenceEntry(e)]));
 
 // Firestore rifiuta gli array annidati: ignoredSimilarities è
 // [[idA,idB], ...] in memoria — codificato come array di oggetti {a,b}
@@ -111,6 +118,137 @@ export const loadBookSystem = async (bookId) => {
     equivalences: decodeEquivalences(data.equivalences),
     ignoredSimilarities: decodeIgnoredSimilarities(data.ignoredSimilarities),
   };
+};
+
+// Ascolto in tempo reale del documento system — prevenzione, non difesa: se
+// una scheda/dispositivo vede subito le modifiche fatte altrove, il
+// conflitto spesso non nasce nemmeno (non si lavora su una base vecchia
+// senza saperlo). onChange riceve i dati decodificati (stessa forma di
+// loadBookSystem) SOLO per gli snapshot confermati dal server
+// (hasPendingWrites:false) — quelli in sospeso sono l'eco della scrittura
+// di questa stessa scheda, riapplicarli sarebbe un no-op rumoroso.
+// → funzione di cancellazione dell'ascolto.
+export const subscribeToBookSystem = (bookId, onChange) =>
+  onSnapshot(systemRef(bookId), (snap) => {
+    if (snap.metadata.hasPendingWrites || !snap.exists()) return;
+    const data = snap.data();
+    onChange({
+      ...data,
+      equivalences: decodeEquivalences(data.equivalences),
+      ignoredSimilarities: decodeIgnoredSimilarities(data.ignoredSimilarities),
+    });
+  });
+
+// ── Scrittura a grana fine del documento system — gestione conflitti
+// multi-utente (Fase B, vedi diffSystemFields in utils/dirtyTracking.js).
+// Due percorsi, non uno: le transazioni Firestore non funzionano offline
+// (non si accodano come le scritture semplici, falliscono e basta), quindi
+// il rilevamento conflitti esiste solo per chi è online in quel momento.
+// current/mapChanges/changedArrayFields hanno la stessa forma restituita da
+// diffSystemFields(baseline, current) — current è lo stato completo, serve
+// per leggere i VALORI dei campi-lista cambiati (diffSystemFields restituisce
+// solo i loro nomi, non i valori, essendo un confronto per riferimento).
+const buildSystemEntriesPayload = (current, mapChanges, changedArrayFields) => {
+  const payload = {};
+  Object.entries(mapChanges).forEach(([field, { changed, removedKeys }]) => {
+    const nested = {};
+    Object.entries(changed).forEach(([key, value]) => {
+      nested[key] = field === "equivalences" ? encodeEquivalenceEntry(value) : value;
+    });
+    removedKeys.forEach((key) => { nested[key] = deleteField(); });
+    payload[field] = nested;
+  });
+  changedArrayFields.forEach((field) => {
+    payload[field] = field === "ignoredSimilarities"
+      ? encodeIgnoredSimilarities(current[field])
+      : current[field];
+  });
+  return payload;
+};
+
+// Percorso offline: scrittura semplice (non transazionale) ma comunque
+// mirata alle sole voci/campi cambiati — nessun controllo di conflitto (le
+// transazioni non funzionano offline), ma Firestore accoda questa scrittura
+// in modo durevole e la invia da sola al ritorno della rete, anche se nel
+// frattempo l'app è stata chiusa. Stesso principio del merge:true su
+// saveBookSystem, solo più mirato.
+export const saveSystemEntriesOffline = (bookId, current, mapChanges, changedArrayFields) =>
+  setDoc(systemRef(bookId), buildSystemEntriesPayload(current, mapChanges, changedArrayFields), { merge: true });
+
+// Percorso online: una transazione legge il documento, e per OGNI voce
+// toccata confronta il valore attuale sul server con "baseline" (l'ultimo
+// valore che il chiamante sa per certo sincronizzato) — per valore
+// (deepEqual), non per riferimento: il valore "atteso" è locale, quello
+// "attuale" arriva da una lettura Firestore appena decodificata, riferimenti
+// sempre diversi anche a contenuto identico.
+//
+// Se combaciano, la voce entra nella scrittura; se no, viene esclusa ed
+// entra invece nell'esito come conflitto (col valore fresco del server, che
+// il chiamante userà per aggiornare lo stato locale — mai il contrario).
+// Tutte le voci senza conflitto si scrivono insieme in un'unica transazione
+// atomica: un'azione che tocca più campi insieme (es. eliminare un
+// ingrediente, che tocca 7 campi) non viene mai applicata a metà per un
+// conflitto isolato su un campo estraneo.
+//
+// → { conflicts: {
+//       mapEntries: { [campo]: { [chiave]: valoreServerDecodificato } },
+//       arrayFields: [{ field, serverValue }],
+//     } }
+// Una voce/campo NON presente in conflicts è stata scritta con successo —
+// il chiamante può avanzare la propria baseline per quella con tranquillità.
+export const saveSystemEntriesOnline = async (bookId, baseline, current, mapChanges, changedArrayFields) => {
+  const ref = systemRef(bookId);
+  const conflicts = { mapEntries: {}, arrayFields: [] };
+
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(ref);
+    const server = snap.exists() ? snap.data() : {};
+    const payload = {};
+
+    Object.entries(mapChanges).forEach(([field, { changed, removedKeys }]) => {
+      const serverField = server[field] || {};
+      const decodeEntry = (v) => (field === "equivalences" ? decodeEquivalenceEntry(v) : v);
+      const nested = {};
+      const conflictedKeys = {};
+
+      Object.entries(changed).forEach(([key, value]) => {
+        const serverValue = decodeEntry(serverField[key]);
+        if (deepEqual(serverValue, baseline?.[field]?.[key])) {
+          nested[key] = field === "equivalences" ? encodeEquivalenceEntry(value) : value;
+        } else {
+          conflictedKeys[key] = serverValue;
+        }
+      });
+      removedKeys.forEach((key) => {
+        const serverValue = decodeEntry(serverField[key]);
+        if (deepEqual(serverValue, baseline?.[field]?.[key])) {
+          nested[key] = deleteField();
+        } else {
+          conflictedKeys[key] = serverValue; // può essere undefined: già rimossa da qualcun altro
+        }
+      });
+
+      if (Object.keys(nested).length > 0) payload[field] = nested;
+      if (Object.keys(conflictedKeys).length > 0) conflicts.mapEntries[field] = conflictedKeys;
+    });
+
+    changedArrayFields.forEach((field) => {
+      const serverValue = field === "ignoredSimilarities"
+        ? decodeIgnoredSimilarities(server[field])
+        : (server[field] || []);
+      if (deepEqual(serverValue, baseline?.[field])) {
+        payload[field] = field === "ignoredSimilarities" ? encodeIgnoredSimilarities(current[field]) : current[field];
+      } else {
+        conflicts.arrayFields.push({ field, serverValue });
+      }
+    });
+
+    if (Object.keys(payload).length > 0) {
+      transaction.set(ref, payload, { merge: true });
+    }
+  });
+
+  return { conflicts };
 };
 
 export const saveShoppingList = (bookId, entries) =>

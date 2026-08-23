@@ -24,10 +24,14 @@ import { effectiveNutritionKey, findSimilarIngredients } from "./utils/aggregate
 import {
   loadFullBook, saveRecipe, deleteRecipe as deleteRecipeDoc,
   saveBookSystem, saveBookMeta, saveShoppingList, loadBookSystem,
+  saveSystemEntriesOnline, saveSystemEntriesOffline, subscribeToBookSystem,
   createBookInFirestore, deleteBookInFirestore, listMyBooks,
   addBookMember as addBookMemberFs, removeBookMember as removeBookMemberFs, setBookMemberPermission as setBookMemberPermissionFs,
 } from "./services/bookStore.js";
-import { diffRecipes, recipesToMap } from "./utils/dirtyTracking.js";
+import {
+  diffRecipes, recipesToMap, diffSystemFields,
+  MAP_SYSTEM_FIELDS, ARRAY_SYSTEM_FIELDS, deepEqual,
+} from "./utils/dirtyTracking.js";
 import { setDefaultBook } from "./services/authStore.js";
 import { buildRecipeIngredientData } from "./utils/shareIngredientData.js";
 import {
@@ -888,6 +892,15 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   // usato da flushRecipesNow per salvare/eliminare solo ciò che è cambiato
   // invece di riscrivere tutte le ricette ad ogni modifica (vedi dirtyTracking.js).
   const lastSyncedRecipesRef = useRef(new Map());
+  // Ultimo stato del documento "system" effettivamente confermato su
+  // Firestore (le 12 proprietà, stessa forma di snapshotData() meno
+  // recipes/shoppingList) — usato da flushSystemNow (diffSystemFields) per
+  // scrivere solo le voci cambiate e per il confronto di conflitto nella
+  // scrittura online (vedi saveSystemEntriesOnline in bookStore.js). Una
+  // voce NON avanzata qui (perché in conflitto, o perché la scrittura è
+  // fallita) risulterà di nuovo dirty al prossimo giro — mai persa in
+  // silenzio, stesso principio di lastSyncedRecipesRef sopra.
+  const lastSyncedSystemRef = useRef({});
   const [bookTheme, setBookTheme] = useState(BOOK_THEMES[0]);
   // Custom tag groups added by user — shared across whole app
   const [extraTagGroups, setExtraTagGroups] = useState([]);
@@ -1157,6 +1170,16 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     if (d.meta?.bookTheme) {
       setBookTheme(BOOK_THEMES.find(t => t.id === d.meta.bookTheme) || BOOK_THEMES[0]);
     }
+    // Appena caricato da Firestore = per definizione sincronizzato: base di
+    // partenza per il prossimo diffSystemFields (vedi flushSystemNow).
+    lastSyncedSystemRef.current = {
+      extraTagGroups: d.extraTagGroups, sectionList: d.sectionList, categoryList: d.categoryList,
+      ingredientCategories: d.ingredientCategories, aggregates: d.aggregates,
+      equivalences: d.equivalences || {}, customUnits: d.customUnits || {},
+      nutritionMap: d.nutritionMap || {}, customFoods: d.customFoods || [],
+      ingredientDict: d.ingredientDict || {}, sourceByIngredient: d.sourceByIngredient || {},
+      ignoredSimilarities: d.ignoredSimilarities || [],
+    };
     lastSyncedRecipesRef.current = recipesToMap(d.recipes || []);
   };
 
@@ -1387,15 +1410,103 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookLoaded, activeBookId, recipes]);
 
-  // Salvataggio mirato del documento system: un solo documento per le sue 12
-  // proprietà, quindi "una qualunque è cambiata" è già la granularità
-  // giusta — a differenza delle ricette non serve un diff, solo osservare
-  // il gruppo intero. Prima viveva nel salvataggio "tutto insieme": ogni
-  // modifica a una ricetta o alla lista spesa lo riscriveva inutilmente.
+  // Salvataggio mirato del documento system — gestione conflitti
+  // multi-utente (Fase B). Diff per voce (diffSystemFields, vedi
+  // dirtyTracking.js) contro l'ultimo stato confermato (lastSyncedSystemRef),
+  // poi due percorsi:
+  // - online: transazione con rilevamento conflitti per voce
+  //   (saveSystemEntriesOnline) — una voce in conflitto NON si scrive, lo
+  //   stato locale si allinea invece al valore fresco del server (mai il
+  //   contrario: il server vince sempre su un vero conflitto).
+  // - offline: scrittura semplice mirata (saveSystemEntriesOffline), niente
+  //   rilevamento conflitti (le transazioni non funzionano offline), ma
+  //   Firestore la accoda e la invia da sola al ritorno della rete.
+  // Una voce non avanzata in lastSyncedSystemRef (conflitto o errore)
+  // risulterà di nuovo dirty al prossimo giro — mai persa in silenzio,
+  // stesso principio di flushRecipesNow sopra.
+  //
+  // systemFieldSetters è condiviso con applyRemoteSystemUpdate sotto (stesso
+  // bisogno: applicare un valore, per campo, allo stato React giusto).
+  const systemFieldSetters = {
+    extraTagGroups: setExtraTagGroups, sectionList: setSectionList, categoryList: setCategoryList,
+    ingredientCategories: setIngredientCategories, aggregates: setAggregates,
+    equivalences: setEquivalences, customUnits: setCustomUnits, nutritionMap: setNutritionMap,
+    customFoods: setCustomFoods, ingredientDict: setIngredientDict, sourceByIngredient: setSourceByIngredient,
+    ignoredSimilarities: setIgnoredSimilarities,
+  };
   const flushSystemNow = async () => {
-    const { recipes: _recipes, shoppingList: _shoppingList, ...system } = snapshotData();
+    const current = {
+      extraTagGroups, sectionList, categoryList, ingredientCategories, aggregates,
+      equivalences, customUnits, nutritionMap, customFoods, ingredientDict,
+      sourceByIngredient, ignoredSimilarities,
+    };
+    const { mapChanges, changedArrayFields } = diffSystemFields(lastSyncedSystemRef.current, current);
+    if (Object.keys(mapChanges).length === 0 && changedArrayFields.length === 0) return;
+
+    const setters = systemFieldSetters;
+    // Avanza SOLO la baseline (lo stato React è già quello giusto: è da lì
+    // che viene il valore appena confermato scritto).
+    const advanceMapKey = (field, key, value) => {
+      const prevField = lastSyncedSystemRef.current[field] || {};
+      const nextField = value === undefined
+        ? Object.fromEntries(Object.entries(prevField).filter(([k]) => k !== key))
+        : { ...prevField, [key]: value };
+      lastSyncedSystemRef.current = { ...lastSyncedSystemRef.current, [field]: nextField };
+    };
+    // Conflitto vero: il server vince, allinea sia lo stato React (la voce
+    // in schermo torna quella corretta) sia la baseline.
+    const resolveMapConflict = (field, key, serverValue) => {
+      setters[field](prev => {
+        if (serverValue === undefined) {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        }
+        return { ...prev, [key]: serverValue };
+      });
+      advanceMapKey(field, key, serverValue);
+    };
+
     try {
-      await saveBookSystem(activeBookId, system);
+      if (navigator.onLine) {
+        const { conflicts } = await saveSystemEntriesOnline(activeBookId, lastSyncedSystemRef.current, current, mapChanges, changedArrayFields);
+
+        Object.entries(mapChanges).forEach(([field, { changed, removedKeys }]) => {
+          const conflictedKeys = conflicts.mapEntries[field] || {};
+          Object.keys(changed).forEach((key) => {
+            if (key in conflictedKeys) resolveMapConflict(field, key, conflictedKeys[key]);
+            else advanceMapKey(field, key, changed[key]);
+          });
+          removedKeys.forEach((key) => {
+            if (key in conflictedKeys) resolveMapConflict(field, key, conflictedKeys[key]);
+            else advanceMapKey(field, key, undefined);
+          });
+        });
+
+        changedArrayFields.forEach((field) => {
+          const conflict = conflicts.arrayFields.find(c => c.field === field);
+          if (conflict) {
+            setters[field](conflict.serverValue);
+            lastSyncedSystemRef.current = { ...lastSyncedSystemRef.current, [field]: conflict.serverValue };
+          } else {
+            lastSyncedSystemRef.current = { ...lastSyncedSystemRef.current, [field]: current[field] };
+          }
+        });
+      } else {
+        await saveSystemEntriesOffline(activeBookId, current, mapChanges, changedArrayFields);
+        // Offline: nessun conflitto rilevabile (le transazioni non
+        // funzionano offline) — la scrittura va comunque in coda su
+        // Firestore e parte da sola al ritorno della rete, anche a app
+        // chiusa. Avanziamo la baseline con la stessa fiducia già riposta
+        // nella scrittura semplice prima di questa fase.
+        Object.entries(mapChanges).forEach(([field, { changed, removedKeys }]) => {
+          Object.entries(changed).forEach(([key, value]) => advanceMapKey(field, key, value));
+          removedKeys.forEach((key) => advanceMapKey(field, key, undefined));
+        });
+        changedArrayFields.forEach((field) => {
+          lastSyncedSystemRef.current = { ...lastSyncedSystemRef.current, [field]: current[field] };
+        });
+      }
     } catch (e) {
       // Un fallimento qui non deve mai propagarsi (bloccherebbe switchBook a
       // metà, vedi Promise.allSettled) — il prossimo cambiamento di un campo
@@ -1414,6 +1525,91 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     equivalences, customUnits, nutritionMap, customFoods, ingredientDict,
     sourceByIngredient, ignoredSimilarities,
   ]);
+
+  // Ascolto in tempo reale del documento system — prevenzione, non difesa
+  // (vedi flushSystemNow sopra per la difesa vera, il rilevamento
+  // conflitti): tenere lo stato locale aggiornato mentre il libro è aperto
+  // rende raro che una modifica remota resti "invisibile" fino al prossimo
+  // salvataggio.
+  //
+  // Per ogni voce arrivata dal server: la adotto SOLO se non ho una
+  // modifica locale in sospeso su quella stessa voce (valore attuale ancora
+  // uguale a lastSyncedSystemRef) — se invece ho già toccato quella voce e
+  // non ho ancora salvato, non la sovrascrivo: la lascio decidere alla
+  // prossima scrittura (stesso confronto, stessa baseline, un solo
+  // meccanismo per lettura e scrittura — vedi saveSystemEntriesOnline).
+  // Nessuna modifica va mai persa: nel caso peggiore arriva con un giro di
+  // ritardo (il prossimo salvataggio), mai sovrascritta in silenzio.
+  const applyRemoteSystemUpdate = (remote) => {
+    const current = {
+      extraTagGroups, sectionList, categoryList, ingredientCategories, aggregates,
+      equivalences, customUnits, nutritionMap, customFoods, ingredientDict,
+      sourceByIngredient, ignoredSimilarities,
+    };
+
+    MAP_SYSTEM_FIELDS.forEach((field) => {
+      const remoteField = remote[field] || {};
+      const baselineField = lastSyncedSystemRef.current[field] || {};
+      const currentField = current[field] || {};
+      const nextBaselineField = { ...baselineField };
+      let baselineChanged = false;
+      const setterUpdates = {};
+
+      Object.keys(remoteField).forEach((key) => {
+        if (deepEqual(remoteField[key], baselineField[key])) return; // niente di nuovo
+        if (deepEqual(currentField[key], baselineField[key])) {
+          setterUpdates[key] = remoteField[key];
+          nextBaselineField[key] = remoteField[key];
+          baselineChanged = true;
+        } // else: modifica locale pendente su questa voce, non la tocco
+      });
+      Object.keys(baselineField).forEach((key) => {
+        if (key in remoteField) return; // ancora presente sul server
+        if (deepEqual(currentField[key], baselineField[key])) {
+          setterUpdates[key] = undefined; // rimossa da remoto, nessuna modifica locale pendente
+          delete nextBaselineField[key];
+          baselineChanged = true;
+        }
+      });
+
+      if (Object.keys(setterUpdates).length > 0) {
+        systemFieldSetters[field](prev => {
+          const next = { ...prev };
+          Object.entries(setterUpdates).forEach(([key, value]) => {
+            if (value === undefined) delete next[key]; else next[key] = value;
+          });
+          return next;
+        });
+      }
+      if (baselineChanged) {
+        lastSyncedSystemRef.current = { ...lastSyncedSystemRef.current, [field]: nextBaselineField };
+      }
+    });
+
+    ARRAY_SYSTEM_FIELDS.forEach((field) => {
+      const remoteValue = remote[field] || [];
+      const baselineValue = lastSyncedSystemRef.current[field];
+      if (deepEqual(remoteValue, baselineValue)) return; // niente di nuovo
+      if (deepEqual(current[field], baselineValue)) {
+        systemFieldSetters[field](remoteValue);
+        lastSyncedSystemRef.current = { ...lastSyncedSystemRef.current, [field]: remoteValue };
+      } // else: modifica locale pendente su questo campo, non la tocco
+    });
+  };
+  // Stessa indirezione di flushAllRef sopra: la sottoscrizione si registra
+  // una sola volta per "libro aperto" (altrimenti si disconnetterebbe e
+  // riconnetterebbe ad ogni modifica di stato), ma il callback deve sempre
+  // vedere lo stato più recente — riassegnato ad ogni render, nessuna
+  // dipendenza.
+  const applyRemoteSystemUpdateRef = useRef(() => {});
+  useEffect(() => {
+    applyRemoteSystemUpdateRef.current = applyRemoteSystemUpdate;
+  });
+  useEffect(() => {
+    if (!bookLoaded || !activeBook) return;
+    const unsubscribe = subscribeToBookSystem(activeBookId, (remote) => applyRemoteSystemUpdateRef.current(remote));
+    return () => unsubscribe();
+  }, [bookLoaded, activeBookId]);
 
   // Salvataggio mirato della lista spesa: un documento a sé, indipendente
   // da ricette e system — così una modifica alla spesa non tocca l'uno né
