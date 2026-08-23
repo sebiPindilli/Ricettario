@@ -300,7 +300,9 @@ function printHtmlDocument(html, { autoPrint = true } = {}) {
 // ══════════════════════════════════════════════════════════════
 const pdfCss = (t) => `
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: ${t.bodyFont}; color: ${t.ink}; max-width: 700px; margin: 0 auto; }
+  body { font-family: ${t.bodyFont}; color: ${t.ink}; background: ${t.paper || "#fff"};
+         max-width: 700px; margin: 0 auto;
+         -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .single { padding: 40px; }
   .page { page-break-before: always; page-break-after: always; break-before: page; break-after: page; padding: 40px; }
   /* Copertina/sezione — pagina intera, contenuto centrato verticalmente. Le
@@ -349,6 +351,43 @@ const pdfCss = (t) => `
   .memory-story { font-size:11.5px; color:${t.faded}; line-height:1.5; margin-bottom:3px; }
   .memory-date { font-family: ${t.uiFont}; font-size:10px; color:${t.faded}; }
   @media print { .page, .recipe, .single { padding: 24px; } }
+
+  /* ── Layout "Quaderno" (recipeBodyQuadernoHtml) — usa gli stessi token
+     dello stile attivo, così funziona con Classico/Minimal/Moderno. ── */
+  .q-head { display:flex; justify-content:space-between; align-items:baseline;
+    font-family:${t.uiFont}; font-size:10.5px; letter-spacing:2.5px; text-transform:uppercase;
+    color:${t.faded}; border-bottom:1px solid ${t.border}; padding-bottom:10px; margin-bottom:34px; }
+  .q-top { display:flex; align-items:flex-start; gap:28px; }
+  .q-kicker { font-family:${t.uiFont}; font-size:10.5px; letter-spacing:3px; text-transform:uppercase; color:${t.accent}; }
+  .q-title { font-size:42px; font-style:italic; line-height:1.08; margin:10px 0 8px; font-weight:400; }
+  .q-source { font-size:14px; font-style:italic; color:${t.faded}; }
+  .q-photo { width:250px; height:188px; flex-shrink:0; background:${t.cardBg}; overflow:hidden; }
+  .q-photo img { width:100%; height:100%; object-fit:cover; display:block; }
+  .q-meta { display:flex; gap:26px; margin-top:26px; padding:12px 0;
+    border-top:1px solid ${t.border}; border-bottom:1px solid ${t.border};
+    font-family:${t.uiFont}; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:${t.faded}; }
+  .q-cols { display:grid; grid-template-columns:246px 1fr; gap:40px; margin-top:32px; }
+  .q-h { font-family:${t.uiFont}; font-size:11px; letter-spacing:3px; text-transform:uppercase;
+    color:${t.accent}; margin-bottom:14px; }
+  .q-sub { font-family:${t.uiFont}; font-size:10px; font-weight:bold; letter-spacing:1.5px;
+    text-transform:uppercase; color:${t.faded}; margin:14px 0 4px; }
+  .q-ing { display:flex; justify-content:space-between; gap:10px; font-size:13px; line-height:1.5;
+    padding:7px 0; border-bottom:1px solid ${t.borderLight}; }
+  .q-ing .qty { color:${t.faded}; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .q-ing .n { font-style:italic; color:${t.faded}; }
+  .q-note { margin-top:20px; padding:14px 16px; background:${t.cardBg}; border-left:2px solid ${t.accent2};
+    font-size:12px; font-style:italic; line-height:1.6; }
+  .q-step { display:flex; gap:14px; margin-bottom:15px; break-inside:avoid; page-break-inside:avoid; }
+  .q-step-n { font-size:26px; font-style:italic; color:${t.border}; line-height:1;
+    width:34px; flex-shrink:0; text-align:right; }
+  .q-step-t { font-size:13.5px; line-height:1.72; }
+  .q-step-photos { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:9px; }
+  .q-step-photos img { width:100%; height:104px; object-fit:cover; display:block; }
+  .q-nutri { margin-top:14px; padding-top:14px; border-top:1px solid ${t.border}; }
+  .q-nutri .row { display:flex; flex-wrap:wrap; gap:6px 18px; font-size:12px; }
+  .q-foot { display:flex; justify-content:space-between; margin-top:22px; padding-top:12px;
+    border-top:1px solid ${t.border}; font-family:${t.uiFont}; font-size:10px;
+    letter-spacing:2px; text-transform:uppercase; color:${t.faded}; }
 `;
 
 // Sezione "Valori nutrizionali" (per porzione) — opzionale, riusa lo stesso
@@ -431,9 +470,92 @@ const recipeBodyPdfHtml = (recipe, opts, nutritionCtx) => {
   `;
 };
 
+// Corpo ricetta per il layout "Quaderno" (opts.layout === "quaderno"):
+// testatina, titolo+foto affiancati, ingredienti e passi su due colonne.
+// Stessi opts/nutritionCtx di recipeBodyPdfHtml — indipendente dallo stile
+// (colore/font), che resta quello scelto in opts.style.
+const recipeBodyQuadernoHtml = (recipe, opts, nutritionCtx, sectionLabel = "") => {
+  const isSec = (arr) => Array.isArray(arr) && arr.length > 0 && typeof arr[0] === "object" && "section" in arr[0];
+
+  // Nome a sinistra, quantità a destra (non ingredientToText, che le unisce
+  // in una sola stringa). Gestisce anche ingredienti salvati come semplice
+  // stringa (dati legacy), come fa già ingredientToText altrove.
+  const ingRow = (ing) => {
+    if (!ing || typeof ing === "string") return `<div class="q-ing"><span>${ing || ""}</span></div>`;
+    const qty = [ing.qty != null ? fmtQty(ing.qty) : "", ing.unit || ""].filter(Boolean).join(" ").trim();
+    return `<div class="q-ing"><span>${ing.name}${ing.note ? ` <span class="n">${ing.note}</span>` : ""}</span>` +
+           `<span class="qty">${qty || "q.b."}</span></div>`;
+  };
+  const ingHtml = isSec(recipe.ingredients)
+    ? recipe.ingredients.map(s =>
+        (s.section && opts.includeSubsectionNames ? `<div class="q-sub">${s.section}</div>` : "") +
+        s.items.map(ingRow).join("")).join("")
+    : recipe.ingredients.map(ingRow).join("");
+
+  let n = 0;
+  const stepRow = (st) => {
+    const text = typeof st === "string" ? st : st.text;
+    const photos = opts.includeStepPhotos ? stepPhotosOf(st) : [];
+    return `<div class="q-step"><div class="q-step-n">${++n}</div><div>` +
+      `<div class="q-step-t">${text}</div>` +
+      (photos.length ? `<div class="q-step-photos">${photos.map(p => `<img src="${p}" alt="">`).join("")}</div>` : "") +
+      `</div></div>`;
+  };
+  const stepsHtml = isSec(recipe.steps)
+    ? recipe.steps.map(s =>
+        (s.section && opts.includeSubsectionNames ? `<div class="q-sub">${s.section}</div>` : "") +
+        s.items.map(stepRow).join("")).join("")
+    : recipe.steps.map(stepRow).join("");
+
+  // Nutrizione: riga compatta in fondo alla colonna dei passi
+  let nutriHtml = "";
+  if (opts.includeNutrition && nutritionCtx) {
+    const c = nutritionCtx;
+    const nut = computeRecipeNutrition(recipe, c.nutritionMap, c.equivalences, c.customFoods,
+      c.ingredientDict, c.aggregates, c.sourceByIngredient, c.customUnits);
+    if (nut && nut.covered > 0) {
+      const fmt = (v, dec) => v >= 100 ? String(Math.round(v)) : String(Math.round(v * 10 ** dec) / 10 ** dec).replace(".", ",");
+      nutriHtml = `<div class="q-nutri"><div class="q-sub">Per porzione</div><div class="row">` +
+        NUTRIENT_LABELS.filter(l => !l.sub)
+          .map(l => `<span>${l.label} <b>${fmt(nut.perServing[l.key], l.dec)} ${l.unit}</b></span>`).join("") +
+        `</div></div>`;
+    }
+  }
+
+  const dish = opts.includeDishPhoto && dishPhotoOf(recipe);
+  return `
+    <div class="q-head"><span>${sectionLabel}</span><span>${recipe.category || ""}</span></div>
+    <div class="q-top">
+      <div style="flex:1;min-width:0">
+        <div class="q-kicker">${[recipe.category, ...(recipe.tags || []).slice(0, 1)].filter(Boolean).join(" · ")}</div>
+        <h1 class="q-title">${recipe.title}</h1>
+        ${recipe.source ? `<div class="q-source">Ricetta di ${recipe.source}</div>` : ""}
+      </div>
+      ${dish ? `<div class="q-photo"><img src="${dish}" alt="${recipe.title}"></div>` : ""}
+    </div>
+    <div class="q-meta">
+      <span>Prep ${recipe.prepTime} min</span><span>Cottura ${recipe.cookTime} min</span><span>${recipe.servings} porzioni</span>
+    </div>
+    <div class="q-cols">
+      <div>
+        <div class="q-h">Ingredienti</div>
+        ${ingHtml}
+        ${recipe.note ? `<div class="q-note">${recipe.note}</div>` : ""}
+      </div>
+      <div>
+        <div class="q-h">Preparazione</div>
+        ${stepsHtml}
+        ${nutriHtml}
+      </div>
+    </div>
+    ${opts.includeMemories ? memoriesPdfHtml(recipe) : ""}
+  `;
+};
+
 // Esporta PDF di una singola ricetta.
 const exportRecipePDF = (recipe, opts, nutritionCtx) => {
   const t = PDF_STYLES[opts.style] || PDF_STYLES.classico;
+  const body = opts.layout === "quaderno" ? recipeBodyQuadernoHtml : recipeBodyPdfHtml;
   const html = `<!DOCTYPE html>
 <html lang="it">
 <head>
@@ -442,7 +564,7 @@ const exportRecipePDF = (recipe, opts, nutritionCtx) => {
 <style>${pdfCss(t)}</style>
 </head>
 <body>
-  <div class="single">${recipeBodyPdfHtml(recipe, opts, nutritionCtx)}</div>
+  <div class="single">${body(recipe, opts, nutritionCtx)}</div>
 </body>
 </html>`;
 
@@ -456,6 +578,7 @@ const exportRecipePDF = (recipe, opts, nutritionCtx) => {
 // ══════════════════════════════════════════════════════════════
 const exportBookPDF = async (recipesList, sections = MACRO_SECTIONS, bookTitle = "Il mio Ricettario", opts, nutritionCtx) => {
   const t = PDF_STYLES[opts.style] || PDF_STYLES.classico;
+  const body = opts.layout === "quaderno" ? recipeBodyQuadernoHtml : recipeBodyPdfHtml;
 
   // Caricato solo quando serve (indice con numeri di pagina reali) e come
   // chunk separato (import dinamico, non in cima al file): senza questo, il
@@ -536,7 +659,7 @@ const exportBookPDF = async (recipesList, sections = MACRO_SECTIONS, bookTitle =
       <div class="desc">${sec.desc}</div>
       <div class="orn">✦ ✦ ✦</div>
     </div>
-    ${sec.recipes.map(r => `<div class="recipe" id="recipe-${r.id}">${recipeBodyPdfHtml(r, opts, nutritionCtx)}</div>`).join("")}
+    ${sec.recipes.map(r => `<div class="recipe" id="recipe-${r.id}">${body(r, opts, nutritionCtx, sec.label)}</div>`).join("")}
   `).join("")}
 
   ${opts.includeIndex ? `
@@ -1605,7 +1728,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     if (sel.length === 0) return;
     const fullOpts = {
       includeDishPhoto: true, includeStepPhotos: true, includeNutrition: false, includeMemories: false,
-      includeIndex: true, includeSubsectionNames: true, style: "classico",
+      includeIndex: true, includeSubsectionNames: true, style: "classico", layout: "classico",
       ...opts,
     };
     const nutritionCtx = { nutritionMap, equivalences, customUnits, customFoods, ingredientDict, aggregates, sourceByIngredient };

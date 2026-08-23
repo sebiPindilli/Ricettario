@@ -4,12 +4,19 @@ import { F, MACRO_SECTIONS } from "../data/constants.js";
 import { sortSectionsAltroLast } from "../utils/helpers.js";
 import InfoButton from "./InfoButton.jsx";
 import { guideEsporta } from "../data/guideContent.jsx";
-import { PDF_STYLES } from "../utils/pdfStyles.js";
+import { PDF_STYLES, PDF_LAYOUTS } from "../utils/pdfStyles.js";
 
 const PDF_STYLE_OPTIONS = [
   { id: "classico", label: "Classico", desc: "Serif, accenti caldi — lo stile originale" },
   { id: "minimal", label: "Minimal", desc: "Sans-serif in bianco e nero, compatto" },
   { id: "moderno", label: "Moderno", desc: "Sans-serif con accento colore, foto più grandi" },
+];
+
+// Layout: indipendente dallo stile (vedi PDF_LAYOUTS in pdfStyles.js) — le
+// due scelte si combinano liberamente, non sono legate come nel mockup originale.
+const PDF_LAYOUT_OPTIONS = [
+  { id: "classico", ...PDF_LAYOUTS.classico },
+  { id: "quaderno", ...PDF_LAYOUTS.quaderno },
 ];
 
 // Componenti di layout a livello di modulo, non dentro UnifiedExportFlow:
@@ -75,7 +82,7 @@ export default function UnifiedExportFlow({
   const [linkPrefs, setLinkPrefs] = useState({ includeIngredients: false, includePhotos: false, includeMemories: false, visibility: "anyone", allowedEmailsText: "" });
   const [pdfPrefs, setPdfPrefs] = useState({
     includeDishPhoto: true, includeStepPhotos: true, includeNutrition: false, includeMemories: false,
-    includeIndex: true, includeSubsectionNames: true, style: "classico", title: "",
+    includeIndex: true, includeSubsectionNames: true, style: "classico", layout: "classico", title: "",
   });
   const [linkCopiedId, setLinkCopiedId] = useState(null);
   const [allCopied, setAllCopied] = useState(false);
@@ -138,6 +145,7 @@ export default function UnifiedExportFlow({
       includeIndex: sel.length > 1 ? pdfPrefs.includeIndex : false,
       includeSubsectionNames: pdfPrefs.includeSubsectionNames,
       style: pdfPrefs.style,
+      layout: pdfPrefs.layout,
       title: sel.length > 1 ? (pdfPrefs.title.trim() || undefined) : undefined,
     });
     setResult({ kind: "pdf" });
@@ -397,6 +405,61 @@ export default function UnifiedExportFlow({
                 </button>
               );
             })}
+          </div>
+
+          <div style={{ fontFamily: F.ui, fontSize: 10, letterSpacing: 1, color: th.appFaded, textTransform: "uppercase", margin: "14px 0 8px" }}>Layout</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {PDF_LAYOUT_OPTIONS.map(l => (
+              <button key={l.id} onClick={() => setPdfPrefs(p => ({ ...p, layout: l.id }))} style={{
+                textAlign: "left", padding: "9px 12px", borderRadius: 10, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 10,
+                border: `1.5px solid ${pdfPrefs.layout === l.id ? th.appAccent : th.appBorder}`,
+                background: pdfPrefs.layout === l.id ? `${th.appAccent}18` : th.appCard,
+              }}>
+                {/* Anteprima schematica della disposizione — non dei colori
+                    (quelli sono lo Stile sopra): stessa forma per qualunque stile scelto. */}
+                <div style={{
+                  width: 52, height: 40, borderRadius: 8, flexShrink: 0, padding: 5,
+                  background: th.appBg, border: `1px solid ${th.appBorder}`,
+                  display: "flex", flexDirection: "column", gap: 3,
+                }}>
+                  {l.id === "quaderno" ? (
+                    <>
+                      <div style={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
+                        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, marginTop: 2 }}>
+                          <div style={{ width: "70%", height: 3, borderRadius: 1, background: th.appAccent }} />
+                          <div style={{ width: "90%", height: 3, borderRadius: 1, background: th.appFaded }} />
+                        </div>
+                        <div style={{ width: 14, height: 14, borderRadius: 2, background: th.appBorder, flexShrink: 0 }} />
+                      </div>
+                      <div style={{ display: "flex", gap: 3, flex: 1 }}>
+                        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+                          <div style={{ width: "100%", height: 2, background: th.appBorder }} />
+                          <div style={{ width: "80%", height: 2, background: th.appBorder }} />
+                        </div>
+                        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+                          <div style={{ width: "100%", height: 2, background: th.appBorder }} />
+                          <div style={{ width: "80%", height: 2, background: th.appBorder }} />
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ width: "60%", height: 3, borderRadius: 1, background: th.appAccent, margin: "0 auto" }} />
+                      <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1, marginTop: 3 }}>
+                        <div style={{ width: "100%", height: 2, background: th.appBorder }} />
+                        <div style={{ width: "100%", height: 2, background: th.appBorder }} />
+                        <div style={{ width: "70%", height: 2, background: th.appBorder }} />
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: F.ui, fontSize: 12.5, fontWeight: 700, color: th.appInk }}>{l.label}</div>
+                  <div style={{ fontFamily: F.ui, fontSize: 10.5, color: th.appFaded, marginTop: 2 }}>{l.desc}</div>
+                </div>
+              </button>
+            ))}
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
