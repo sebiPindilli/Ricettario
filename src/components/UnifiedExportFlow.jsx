@@ -397,6 +397,13 @@ export default function UnifiedExportFlow({
       );
     }
 
+    // Condiviso da editingTemplate e dalla vista prefs sotto — dichiarato
+    // qui, prima di entrambi: editingTemplate ritorna dentro il blocco
+    // "if" sotto, che precede (nell'ordine di esecuzione) l'altra
+    // dichiarazione della vista prefs — riferirlo da lì sarebbe stato un
+    // ReferenceError da temporal dead zone (const non ancora inizializzata).
+    const sectionLabelStyle = { fontFamily: F.ui, fontSize: 10, letterSpacing: 1, color: th.appFaded, textTransform: "uppercase", margin: "10px 0 8px" };
+
     // format === "pdf" — creazione/modifica di un template personalizzato:
     // un pannello a sé, non annidato nell'accordion sotto (troppi controlli
     // per stare in una sezione collassabile su schermo piccolo).
@@ -526,7 +533,6 @@ export default function UnifiedExportFlow({
     }
 
     // format === "pdf"
-    const sectionLabelStyle = { fontFamily: F.ui, fontSize: 10, letterSpacing: 1, color: th.appFaded, textTransform: "uppercase", margin: "10px 0 8px" };
     const sectionToggle = (id, label, badge) => (
       <button onClick={() => setPdfSection(id)} style={{
         width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
