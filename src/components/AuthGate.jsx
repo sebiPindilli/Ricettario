@@ -1,8 +1,8 @@
 // Fase C — gate di autenticazione: nessun dato dell'app viene caricato
 // finché l'utente non è loggato con Google E presente in allowlist.
 // children è una render-prop: children(user, role, defaultBookId,
-// betaEnabled, timerAlerts) viene chiamata solo quando lo stato è
-// "authorized".
+// betaEnabled, timerAlerts, pdfTemplates, defaultPdfTemplateId) viene
+// chiamata solo quando lo stato è "authorized".
 import { useState, useEffect, useCallback } from "react";
 import { auth } from "../firebase.js";
 import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
@@ -31,6 +31,8 @@ export default function AuthGate({ children }) {
   const [defaultBookId, setDefaultBookId] = useState(null);
   const [betaEnabled, setBetaEnabled] = useState(true);
   const [timerAlerts, setTimerAlerts] = useState(DEFAULT_TIMER_ALERTS);
+  const [pdfTemplates, setPdfTemplates] = useState({});
+  const [defaultPdfTemplateId, setDefaultPdfTemplateId] = useState(null);
   const [error, setError] = useState("");
 
   // Percorso post-autenticazione (whitelist + config beta): isolato in una
@@ -43,13 +45,13 @@ export default function AuthGate({ children }) {
     const offline = !navigator.onLine;
     const timeoutMs = offline ? BOOT_TIMEOUT_MS_OFFLINE : BOOT_TIMEOUT_MS;
     try {
-      const { authorized, role: r, defaultBookId: d, timerAlerts: ta } =
+      const { authorized, role: r, defaultBookId: d, timerAlerts: ta, pdfTemplates: pt, defaultPdfTemplateId: dpt } =
         await withTimeout(checkWhitelist(u.email), timeoutMs);
       if (!authorized) {
         setRole(null); setDefaultBookId(null); setStatus("unauthorized");
         return;
       }
-      setRole(r); setDefaultBookId(d); setTimerAlerts(ta);
+      setRole(r); setDefaultBookId(d); setTimerAlerts(ta); setPdfTemplates(pt); setDefaultPdfTemplateId(dpt);
       // Serve solo ad admin/tester (vedi BetaButton.jsx) — non blocca
       // l'accesso di chi ha ruolo base. Non fatale: se non disponibile
       // offline non deve impedire l'ingresso nell'app.
@@ -154,5 +156,5 @@ export default function AuthGate({ children }) {
     );
   }
 
-  return children(user, role, defaultBookId, betaEnabled, timerAlerts);
+  return children(user, role, defaultBookId, betaEnabled, timerAlerts, pdfTemplates, defaultPdfTemplateId);
 }

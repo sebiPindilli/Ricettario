@@ -33,6 +33,16 @@ export default defineConfig({
       // solo online (irrilevante per l'installazione, ma non per l'uso
       // offline della scheda/icona già installata).
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      workbox: {
+        // Esclude i .woff2 dei font per l'export PDF (src/data/pdfFonts.js)
+        // dal precache: il glob di default li includerebbe, scaricandoli
+        // per ogni installazione della PWA anche se l'utente non esporta
+        // mai un PDF con un font personalizzato — vanificherebbe il
+        // caricamento pigro (solo al momento dell'export) di quei font.
+        // Restano scaricabili al bisogno, via richiesta normale, solo mai
+        // precaricati in anticipo.
+        globPatterns: ['**/*.{js,css,html}'],
+      },
       manifest: {
         name: 'Ricettario',
         short_name: 'Ricettario',

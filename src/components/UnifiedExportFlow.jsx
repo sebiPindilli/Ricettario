@@ -1,23 +1,56 @@
 import { useState } from "react";
 import { useTheme } from "../context.js";
 import { F, MACRO_SECTIONS } from "../data/constants.js";
-import { sortSectionsAltroLast } from "../utils/helpers.js";
+import { sortSectionsAltroLast, uid } from "../utils/helpers.js";
 import InfoButton from "./InfoButton.jsx";
 import { guideEsporta } from "../data/guideContent.jsx";
-import { PDF_STYLES, PDF_LAYOUTS } from "../utils/pdfStyles.js";
+import {
+  PDF_STYLES, PDF_LAYOUTS, DEFAULT_PDF_CONTENT, PDF_ALWAYS_INCLUDED,
+  PDF_PALETTES, PDF_TEXT_SIZES, PDF_MARGIN_SIZES, PDF_PHOTO_SIZES,
+} from "../utils/pdfStyles.js";
+import { PDF_FONTS, pdfFontStack } from "../data/pdfFonts.js";
+import { deriveColorTokens } from "../utils/colorDerive.js";
 
 const PDF_STYLE_OPTIONS = [
   { id: "classico", label: "Classico", desc: "Serif, accenti caldi — lo stile originale" },
   { id: "minimal", label: "Minimal", desc: "Sans-serif in bianco e nero, compatto" },
   { id: "moderno", label: "Moderno", desc: "Sans-serif con accento colore, foto più grandi" },
 ];
+const BUILT_IN_STYLE_IDS = PDF_STYLE_OPTIONS.map(s => s.id);
 
-// Layout: indipendente dallo stile (vedi PDF_LAYOUTS in pdfStyles.js) — le
-// due scelte si combinano liberamente, non sono legate come nel mockup originale.
+// Layout: indipendente da stile/template (vedi PDF_LAYOUTS in pdfStyles.js)
+// — le scelte si combinano liberamente, non sono legate come nel mockup originale.
 const PDF_LAYOUT_OPTIONS = [
   { id: "classico", ...PDF_LAYOUTS.classico },
   { id: "quaderno", ...PDF_LAYOUTS.quaderno },
 ];
+
+// Etichette dei toggle di contenuto — un solo posto che elenca ogni campo
+// disattivabile, riusato sia per il rendering sia per calcolare fullOpts.
+// Titolo/ingredienti/passi non compaiono qui: sono sempre inclusi (vedi
+// PDF_ALWAYS_INCLUDED), mostrati a parte come promemoria, non come toggle.
+const PDF_CONTENT_FIELDS = [
+  { key: "includeDishPhoto", label: "Foto piatto" },
+  { key: "includeStepPhotos", label: "Foto preparazione" },
+  { key: "includeNote", label: "Nota" },
+  { key: "includeTimes", label: "Tempi (prep./cottura)" },
+  { key: "includeServings", label: "Porzioni" },
+  { key: "includeSource", label: "Fonte/autore" },
+  { key: "includeTags", label: "Tag" },
+  { key: "includeNutrition", label: "Valori nutrizionali" },
+  { key: "includeMemories", label: "Ricordi collegati" },
+  { key: "includeComments", label: "Commenti" },
+  { key: "includeSubsectionNames", label: "Nomi delle sottosezioni", sub: "Es. «Per l'impasto», «Per la farcitura»." },
+];
+
+const emptyDraftTemplate = (fromColors) => ({
+  id: uid("pdft"), name: "Nuovo template", builtIn: false,
+  colors: fromColors || deriveColorTokens("#8B4520", "#1a1a1a", "#ffffff"),
+  fonts: { heading: pdfFontStack("georgia"), body: pdfFontStack("georgia"), ui: pdfFontStack("helvetica") },
+  fontIds: { heading: "georgia", body: "georgia" },
+  layoutId: "classico", onePerPage: true,
+  textSize: "normale", margins: "normale", photoSize: "normale",
+});
 
 // Componenti di layout a livello di modulo, non dentro UnifiedExportFlow:
 // definirli nel corpo del componente li ricrea come una nuova identità di
@@ -66,6 +99,8 @@ const Check = ({ th, checked, onChange, label, sub }) => (
 export default function UnifiedExportFlow({
   recipes = [], preselectId = null, sectionList = MACRO_SECTIONS,
   targetBooks = [], onCopyToBooks, onShareLinks, onExportPDF, onClose,
+  userTemplates = {}, defaultTemplateId = null,
+  onSaveTemplate, onDeleteTemplate, onSetDefaultTemplate,
 }) {
   const th = useTheme();
   const [step, setStep] = useState("select"); // select | dest | books | format | prefs | result
@@ -80,10 +115,17 @@ export default function UnifiedExportFlow({
   // Preferenze — un solo oggetto per ramo, letto solo quando serve
   const [booksPrefs, setBooksPrefs] = useState({ includePhotos: true, includeMemories: false, includeSystem: false });
   const [linkPrefs, setLinkPrefs] = useState({ includeIngredients: false, includePhotos: false, includeMemories: false, visibility: "anyone", allowedEmailsText: "" });
-  const [pdfPrefs, setPdfPrefs] = useState({
-    includeDishPhoto: true, includeStepPhotos: true, includeNutrition: false, includeMemories: false,
-    includeIndex: true, includeSubsectionNames: true, style: "classico", layout: "classico", title: "",
+  const [pdfPrefs, setPdfPrefs] = useState(() => {
+    const dtid = defaultTemplateId && (BUILT_IN_STYLE_IDS.includes(defaultTemplateId) || userTemplates[defaultTemplateId])
+      ? defaultTemplateId : "classico";
+    const customTpl = !BUILT_IN_STYLE_IDS.includes(dtid) ? userTemplates[dtid] : null;
+    return {
+      ...DEFAULT_PDF_CONTENT,
+      templateId: dtid, layout: customTpl?.layoutId || "classico", title: "",
+    };
   });
+  const [pdfSection, setPdfSection] = useState("content"); // content | appearance | layout
+  const [editingTemplate, setEditingTemplate] = useState(null); // null | draft PdfTemplateConfig
   const [linkCopiedId, setLinkCopiedId] = useState(null);
   const [allCopied, setAllCopied] = useState(false);
 
@@ -135,16 +177,19 @@ export default function UnifiedExportFlow({
     }
   };
 
+  // Un template personalizzato (vedi userTemplates) porta con sé colori/
+  // font/dimensioni; uno stile predefinito usa ancora style+layout come
+  // prima. Il layout resta sempre una scelta a parte (pdfPrefs.layout),
+  // anche con un template personalizzato — vedi resolveTemplateConfig.
+  const customTemplate = !BUILT_IN_STYLE_IDS.includes(pdfPrefs.templateId) ? userTemplates[pdfPrefs.templateId] : null;
+
   const submitPDF = () => {
     const sel = recipes.filter(r => selected.includes(r.id));
+    const contentOpts = Object.fromEntries(PDF_CONTENT_FIELDS.map(f => [f.key, pdfPrefs[f.key]]));
     onExportPDF(selected, {
-      includeDishPhoto: pdfPrefs.includeDishPhoto,
-      includeStepPhotos: pdfPrefs.includeStepPhotos,
-      includeNutrition: pdfPrefs.includeNutrition,
-      includeMemories: pdfPrefs.includeMemories,
+      ...contentOpts,
       includeIndex: sel.length > 1 ? pdfPrefs.includeIndex : false,
-      includeSubsectionNames: pdfPrefs.includeSubsectionNames,
-      style: pdfPrefs.style,
+      ...(customTemplate ? { template: customTemplate } : { style: pdfPrefs.templateId }),
       layout: pdfPrefs.layout,
       title: sel.length > 1 ? (pdfPrefs.title.trim() || undefined) : undefined,
     });
@@ -352,115 +397,307 @@ export default function UnifiedExportFlow({
       );
     }
 
+    // format === "pdf" — creazione/modifica di un template personalizzato:
+    // un pannello a sé, non annidato nell'accordion sotto (troppi controlli
+    // per stare in una sezione collassabile su schermo piccolo).
+    if (editingTemplate) {
+      const draft = editingTemplate;
+      const isExisting = userTemplates[draft.id] != null;
+      const setColor = (key, value) => {
+        const colors = { ...draft.colors, [key]: value };
+        setEditingTemplate(prev => ({ ...prev, colors: deriveColorTokens(colors.accent, colors.ink, colors.paper) }));
+      };
+      const setFont = (role, fontId) => setEditingTemplate(prev => ({
+        ...prev,
+        fonts: { ...prev.fonts, [role]: pdfFontStack(fontId) },
+        fontIds: { ...prev.fontIds, [role]: fontId },
+      }));
+      const paletteActive = (p) => draft.colors.accent === p.accent && draft.colors.ink === p.ink && draft.colors.paper === p.paper;
+      const sizeRow = (labelText, table, key) => (
+        <div style={{ marginBottom: 14 }}>
+          <div style={sectionLabelStyle}>{labelText}</div>
+          <div style={{ display: "flex", gap: 6 }}>
+            {Object.entries(table).map(([id, opt]) => (
+              <button key={id} onClick={() => setEditingTemplate(prev => ({ ...prev, [key]: id }))} style={{
+                flex: 1, padding: "8px 4px", borderRadius: 8, cursor: "pointer", fontFamily: F.ui, fontSize: 11.5, fontWeight: 700,
+                border: `1.5px solid ${draft[key] === id ? th.appAccent : th.appBorder}`,
+                background: draft[key] === id ? `${th.appAccent}18` : th.appCard, color: th.appInk,
+              }}>{opt.label}</button>
+            ))}
+          </div>
+        </div>
+      );
+      // L'anteprima usa lo stack della famiglia scelta (fallback compreso):
+      // se il font Google non è presente sul dispositivo di chi visualizza
+      // l'anteprima, il testo ricade sul font di sistema — nessun
+      // caricamento anticipato solo per mostrare l'elenco, coerente con
+      // "font caricati solo al momento dell'export".
+      const fontRow = (labelText, role) => (
+        <div style={{ marginBottom: 14 }}>
+          <div style={sectionLabelStyle}>{labelText}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            {PDF_FONTS.map(f => (
+              <button key={f.id} onClick={() => setFont(role, f.id)} style={{
+                textAlign: "left", padding: "8px 12px", borderRadius: 8, cursor: "pointer",
+                border: `1.5px solid ${draft.fontIds?.[role] === f.id ? th.appAccent : th.appBorder}`,
+                background: draft.fontIds?.[role] === f.id ? `${th.appAccent}18` : th.appCard,
+                fontFamily: f.stack, fontSize: 14, color: th.appInk,
+              }}>{f.label}</button>
+            ))}
+          </div>
+        </div>
+      );
+
+      return (
+        <Panel th={th}>
+          <Title th={th}>{isExisting ? "Modifica template" : "Nuovo template"}</Title>
+          <div style={{ flex: 1, overflowY: "auto", marginBottom: 12 }}>
+            <input
+              value={draft.name}
+              onChange={e => setEditingTemplate(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="Nome del template"
+              style={{ width: "100%", padding: "9px 11px", border: `1.5px solid ${th.appBorder}`, borderRadius: 10, background: th.appBg, fontFamily: F.body, fontSize: 13, color: th.appInk, outline: "none", boxSizing: "border-box", marginBottom: 14 }}
+            />
+
+            <div style={sectionLabelStyle}>Palette</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+              {PDF_PALETTES.map(p => (
+                <button key={p.id} onClick={() => setEditingTemplate(prev => ({ ...prev, colors: deriveColorTokens(p.accent, p.ink, p.paper) }))}
+                  title={p.label} style={{
+                    width: 34, height: 34, borderRadius: "50%", cursor: "pointer", flexShrink: 0,
+                    background: p.accent, border: `2.5px solid ${paletteActive(p) ? th.appInk : "transparent"}`,
+                    boxShadow: `0 0 0 1px ${th.appBorder}`,
+                  }} />
+              ))}
+            </div>
+
+            <div style={sectionLabelStyle}>Colori personalizzati</div>
+            <div style={{ display: "flex", gap: 16, marginBottom: 14 }}>
+              {[["accent", "Principale"], ["ink", "Testo"], ["paper", "Sfondo"]].map(([key, lbl]) => (
+                <label key={key} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, fontFamily: F.ui, fontSize: 10.5, color: th.appFaded, cursor: "pointer" }}>
+                  <input type="color" value={draft.colors[key]} onChange={e => setColor(key, e.target.value)} style={{ width: 40, height: 40, border: "none", borderRadius: 8, cursor: "pointer", background: "none" }} />
+                  {lbl}
+                </label>
+              ))}
+            </div>
+
+            {fontRow("Font dei titoli", "heading")}
+            {fontRow("Font del testo", "body")}
+
+            <div style={sectionLabelStyle}>Layout</div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+              {PDF_LAYOUT_OPTIONS.map(l => (
+                <button key={l.id} onClick={() => setEditingTemplate(prev => ({ ...prev, layoutId: l.id }))} style={{
+                  flex: 1, padding: "8px 6px", borderRadius: 8, cursor: "pointer", fontFamily: F.ui, fontSize: 11.5, fontWeight: 700,
+                  border: `1.5px solid ${draft.layoutId === l.id ? th.appAccent : th.appBorder}`,
+                  background: draft.layoutId === l.id ? `${th.appAccent}18` : th.appCard, color: th.appInk,
+                }}>{l.label}</button>
+              ))}
+            </div>
+
+            {sizeRow("Dimensione testo", PDF_TEXT_SIZES, "textSize")}
+            {sizeRow("Margini", PDF_MARGIN_SIZES, "margins")}
+            {sizeRow("Dimensione foto", PDF_PHOTO_SIZES, "photoSize")}
+
+            <Check th={th} checked={draft.onePerPage} onChange={v => setEditingTemplate(prev => ({ ...prev, onePerPage: v }))}
+              label="Una ricetta per pagina" sub="Se disattivato, le ricette si susseguono senza andare sempre a nuova pagina." />
+          </div>
+          {isExisting && (
+            <button onClick={() => {
+              if (!window.confirm(`Eliminare il template "${draft.name}"?`)) return;
+              onDeleteTemplate(draft.id);
+              if (pdfPrefs.templateId === draft.id) setPdfPrefs(p => ({ ...p, templateId: "classico" }));
+              setEditingTemplate(null);
+            }} style={{ background: "transparent", border: "none", color: "#C4593A", fontFamily: F.ui, fontSize: 12, cursor: "pointer", padding: "6px 0", marginBottom: 6 }}>
+              🗑️ Elimina template
+            </button>
+          )}
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <Ghost th={th} onClick={() => setEditingTemplate(null)} style={{ flex: 1 }}>Annulla</Ghost>
+            <Primary th={th} onClick={() => {
+              const saved = { ...draft, name: draft.name.trim() || "Template senza nome" };
+              onSaveTemplate(saved);
+              setPdfPrefs(p => ({ ...p, templateId: saved.id, layout: saved.layoutId }));
+              setEditingTemplate(null);
+            }} style={{ flex: 2 }}>✓ Salva template</Primary>
+          </div>
+        </Panel>
+      );
+    }
+
     // format === "pdf"
+    const sectionLabelStyle = { fontFamily: F.ui, fontSize: 10, letterSpacing: 1, color: th.appFaded, textTransform: "uppercase", margin: "10px 0 8px" };
+    const sectionToggle = (id, label, badge) => (
+      <button onClick={() => setPdfSection(id)} style={{
+        width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "11px 2px", background: "transparent", border: "none", borderBottom: `1px solid ${th.appBorder}`,
+        cursor: "pointer",
+      }}>
+        <span style={{ fontFamily: F.ui, fontSize: 13, fontWeight: 700, color: th.appInk }}>{label}</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {badge && <span style={{ fontFamily: F.ui, fontSize: 10.5, color: th.appFaded }}>{badge}</span>}
+          <span style={{ color: th.appFaded, fontSize: 11 }}>{pdfSection === id ? "▾" : "▸"}</span>
+        </span>
+      </button>
+    );
+
+    const selectedLabel = customTemplate ? customTemplate.name : PDF_STYLE_OPTIONS.find(s => s.id === pdfPrefs.templateId)?.label;
+    const activeContentCount = PDF_CONTENT_FIELDS.filter(f => pdfPrefs[f.key]).length;
+
     return (
       <Panel th={th}>
         <Title th={th}>Preferenze PDF</Title>
         <Sub th={th}>{sel.length} ricett{sel.length === 1 ? "a" : "e"}</Sub>
         <div style={{ flex: 1, overflowY: "auto", marginBottom: 12 }}>
-          <Check th={th} checked={pdfPrefs.includeDishPhoto} onChange={v => setPdfPrefs(p => ({ ...p, includeDishPhoto: v }))} label="Foto piatto" />
-          <Check th={th} checked={pdfPrefs.includeStepPhotos} onChange={v => setPdfPrefs(p => ({ ...p, includeStepPhotos: v }))} label="Foto preparazione" />
-          <Check th={th} checked={pdfPrefs.includeNutrition} onChange={v => setPdfPrefs(p => ({ ...p, includeNutrition: v }))} label="Valori nutrizionali" />
-          <Check th={th} checked={pdfPrefs.includeMemories} onChange={v => setPdfPrefs(p => ({ ...p, includeMemories: v }))} label="Ricordi collegati" />
-          <Check th={th} checked={pdfPrefs.includeSubsectionNames} onChange={v => setPdfPrefs(p => ({ ...p, includeSubsectionNames: v }))} label="Nomi delle sottosezioni" sub="Es. «Per l'impasto», «Per la farcitura»." />
-          {multi && (
-            <>
-              <Check th={th} checked={pdfPrefs.includeIndex} onChange={v => setPdfPrefs(p => ({ ...p, includeIndex: v }))} label="Indice" />
-              <div style={{ fontFamily: F.ui, fontSize: 10, letterSpacing: 1, color: th.appFaded, textTransform: "uppercase", margin: "10px 0 6px" }}>Titolo di copertina</div>
-              <input
-                value={pdfPrefs.title}
-                onChange={e => setPdfPrefs(p => ({ ...p, title: e.target.value }))}
-                placeholder={`${sel.length} ricette`}
-                style={{ width: "100%", padding: "9px 11px", border: `1.5px solid ${th.appBorder}`, borderRadius: 10, background: th.appBg, fontFamily: F.body, fontSize: 13, color: th.appInk, outline: "none", boxSizing: "border-box", marginBottom: 12 }}
-              />
-            </>
+
+          {sectionToggle("content", "Contenuto", `${activeContentCount}/${PDF_CONTENT_FIELDS.length}`)}
+          {pdfSection === "content" && (
+            <div style={{ padding: "12px 2px 4px" }}>
+              <div style={{ fontFamily: F.ui, fontSize: 10.5, color: th.appFaded, marginBottom: 10, lineHeight: 1.5 }}>
+                Sempre inclusi: {PDF_ALWAYS_INCLUDED.map(k => ({ title: "titolo", ingredients: "ingredienti", steps: "passi" }[k])).join(", ")}.
+              </div>
+              {PDF_CONTENT_FIELDS.map(f => (
+                <Check key={f.key} th={th} checked={pdfPrefs[f.key]} onChange={v => setPdfPrefs(p => ({ ...p, [f.key]: v }))} label={f.label} sub={f.sub} />
+              ))}
+              {multi && (
+                <>
+                  <Check th={th} checked={pdfPrefs.includeIndex} onChange={v => setPdfPrefs(p => ({ ...p, includeIndex: v }))} label="Indice" />
+                  <div style={sectionLabelStyle}>Titolo di copertina</div>
+                  <input
+                    value={pdfPrefs.title}
+                    onChange={e => setPdfPrefs(p => ({ ...p, title: e.target.value }))}
+                    placeholder={`${sel.length} ricette`}
+                    style={{ width: "100%", padding: "9px 11px", border: `1.5px solid ${th.appBorder}`, borderRadius: 10, background: th.appBg, fontFamily: F.body, fontSize: 13, color: th.appInk, outline: "none", boxSizing: "border-box" }}
+                  />
+                </>
+              )}
+            </div>
           )}
-          <div style={{ fontFamily: F.ui, fontSize: 10, letterSpacing: 1, color: th.appFaded, textTransform: "uppercase", margin: "10px 0 8px" }}>Stile</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {PDF_STYLE_OPTIONS.map(s => {
-              const t = PDF_STYLES[s.id];
-              return (
-                <button key={s.id} onClick={() => setPdfPrefs(p => ({ ...p, style: s.id }))} style={{
+
+          {sectionToggle("appearance", "Aspetto", selectedLabel)}
+          {pdfSection === "appearance" && (
+            <div style={{ padding: "12px 2px 4px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {PDF_STYLE_OPTIONS.map(s => {
+                  const t = PDF_STYLES[s.id];
+                  return (
+                    <button key={s.id} onClick={() => setPdfPrefs(p => ({ ...p, templateId: s.id }))} style={{
+                      textAlign: "left", padding: "9px 12px", borderRadius: 10, cursor: "pointer",
+                      display: "flex", alignItems: "center", gap: 10,
+                      border: `1.5px solid ${pdfPrefs.templateId === s.id ? th.appAccent : th.appBorder}`,
+                      background: pdfPrefs.templateId === s.id ? `${th.appAccent}18` : th.appCard,
+                    }}>
+                      <div style={{
+                        width: 44, height: 34, borderRadius: 8, flexShrink: 0,
+                        background: t.cardBg, border: `1px solid ${t.border}`,
+                        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3,
+                      }}>
+                        <div style={{ fontFamily: t.bodyFont, fontStyle: "italic", fontSize: 11, color: t.ink }}>Aa</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: "50%", background: t.accent, flexShrink: 0 }} />
+                          <span style={{ width: 14, height: 3, borderRadius: 2, background: t.accent2 }} />
+                        </div>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontFamily: F.ui, fontSize: 12.5, fontWeight: 700, color: th.appInk }}>{s.label}</div>
+                        <div style={{ fontFamily: F.ui, fontSize: 10, color: th.appFaded, marginTop: 1 }}>{s.desc}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+                {Object.values(userTemplates).sort((a, b) => a.name.localeCompare(b.name, "it")).map(tpl => (
+                  <button key={tpl.id} onClick={() => setPdfPrefs(p => ({ ...p, templateId: tpl.id, layout: tpl.layoutId }))} style={{
+                    textAlign: "left", padding: "9px 12px", borderRadius: 10, cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: 10,
+                    border: `1.5px solid ${pdfPrefs.templateId === tpl.id ? th.appAccent : th.appBorder}`,
+                    background: pdfPrefs.templateId === tpl.id ? `${th.appAccent}18` : th.appCard,
+                  }}>
+                    <div style={{
+                      width: 44, height: 34, borderRadius: 8, flexShrink: 0,
+                      background: tpl.colors.cardBg, border: `1px solid ${tpl.colors.border}`,
+                      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3,
+                    }}>
+                      <div style={{ fontFamily: tpl.fonts.heading, fontStyle: "italic", fontSize: 11, color: tpl.colors.ink }}>Aa</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: tpl.colors.accent, flexShrink: 0 }} />
+                        <span style={{ width: 14, height: 3, borderRadius: 2, background: tpl.colors.accent2 }} />
+                      </div>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: F.ui, fontSize: 12.5, fontWeight: 700, color: th.appInk }}>{tpl.name}</div>
+                      {defaultTemplateId === tpl.id && <div style={{ fontFamily: F.ui, fontSize: 10, color: th.appFaded, marginTop: 1 }}>Predefinito</div>}
+                    </div>
+                    <span onClick={e => { e.stopPropagation(); setEditingTemplate(tpl); }} style={{ fontSize: 15, padding: 4, cursor: "pointer" }} title="Modifica">✏️</span>
+                    {defaultTemplateId !== tpl.id && (
+                      <span onClick={e => { e.stopPropagation(); onSetDefaultTemplate(tpl.id); }} style={{ fontSize: 15, padding: 4, cursor: "pointer" }} title="Imposta come predefinito">☆</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              <Ghost th={th} onClick={() => {
+                const base = PDF_STYLES[BUILT_IN_STYLE_IDS.includes(pdfPrefs.templateId) ? pdfPrefs.templateId : "classico"];
+                const baseColors = { accent: base.accent, ink: base.ink, paper: base.paper, accent2: base.accent2, faded: base.faded, cardBg: base.cardBg, border: base.border, borderLight: base.borderLight };
+                setEditingTemplate(emptyDraftTemplate(baseColors));
+              }} style={{ marginTop: 10, width: "100%" }}>
+                + Nuovo template personalizzato
+              </Ghost>
+            </div>
+          )}
+
+          {sectionToggle("layout", "Layout", PDF_LAYOUT_OPTIONS.find(l => l.id === pdfPrefs.layout)?.label)}
+          {pdfSection === "layout" && (
+            <div style={{ padding: "12px 2px 4px", display: "flex", flexDirection: "column", gap: 6 }}>
+              {PDF_LAYOUT_OPTIONS.map(l => (
+                <button key={l.id} onClick={() => setPdfPrefs(p => ({ ...p, layout: l.id }))} style={{
                   textAlign: "left", padding: "9px 12px", borderRadius: 10, cursor: "pointer",
                   display: "flex", alignItems: "center", gap: 10,
-                  border: `1.5px solid ${pdfPrefs.style === s.id ? th.appAccent : th.appBorder}`,
-                  background: pdfPrefs.style === s.id ? `${th.appAccent}18` : th.appCard,
+                  border: `1.5px solid ${pdfPrefs.layout === l.id ? th.appAccent : th.appBorder}`,
+                  background: pdfPrefs.layout === l.id ? `${th.appAccent}18` : th.appCard,
                 }}>
-                  {/* Anteprima — approssima colori/font veri dello stile PDF (stessi token di pdfCss in ricettario-v23.jsx) */}
                   <div style={{
-                    width: 52, height: 40, borderRadius: 8, flexShrink: 0,
-                    background: t.cardBg, border: `1px solid ${t.border}`,
-                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4,
+                    width: 52, height: 40, borderRadius: 8, flexShrink: 0, padding: 5,
+                    background: th.appBg, border: `1px solid ${th.appBorder}`,
+                    display: "flex", flexDirection: "column", gap: 3,
                   }}>
-                    <div style={{ fontFamily: t.bodyFont, fontStyle: "italic", fontSize: 12, color: t.ink }}>Aa</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                      <span style={{ width: 9, height: 9, borderRadius: "50%", background: t.accent, flexShrink: 0 }} />
-                      <span style={{ width: 16, height: 3, borderRadius: 2, background: t.accent2 }} />
-                    </div>
+                    {l.id === "quaderno" ? (
+                      <>
+                        <div style={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
+                          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, marginTop: 2 }}>
+                            <div style={{ width: "70%", height: 3, borderRadius: 1, background: th.appAccent }} />
+                            <div style={{ width: "90%", height: 3, borderRadius: 1, background: th.appFaded }} />
+                          </div>
+                          <div style={{ width: 14, height: 14, borderRadius: 2, background: th.appBorder, flexShrink: 0 }} />
+                        </div>
+                        <div style={{ display: "flex", gap: 3, flex: 1 }}>
+                          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+                            <div style={{ width: "100%", height: 2, background: th.appBorder }} />
+                            <div style={{ width: "80%", height: 2, background: th.appBorder }} />
+                          </div>
+                          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+                            <div style={{ width: "100%", height: 2, background: th.appBorder }} />
+                            <div style={{ width: "80%", height: 2, background: th.appBorder }} />
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ width: "60%", height: 3, borderRadius: 1, background: th.appAccent, margin: "0 auto" }} />
+                        <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1, marginTop: 3 }}>
+                          <div style={{ width: "100%", height: 2, background: th.appBorder }} />
+                          <div style={{ width: "100%", height: 2, background: th.appBorder }} />
+                          <div style={{ width: "70%", height: 2, background: th.appBorder }} />
+                        </div>
+                      </>
+                    )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: F.ui, fontSize: 12.5, fontWeight: 700, color: th.appInk }}>{s.label}</div>
-                    <div style={{ fontFamily: F.ui, fontSize: 10.5, color: th.appFaded, marginTop: 2 }}>{s.desc}</div>
+                    <div style={{ fontFamily: F.ui, fontSize: 12.5, fontWeight: 700, color: th.appInk }}>{l.label}</div>
+                    <div style={{ fontFamily: F.ui, fontSize: 10.5, color: th.appFaded, marginTop: 2 }}>{l.desc}</div>
                   </div>
                 </button>
-              );
-            })}
-          </div>
-
-          <div style={{ fontFamily: F.ui, fontSize: 10, letterSpacing: 1, color: th.appFaded, textTransform: "uppercase", margin: "14px 0 8px" }}>Layout</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {PDF_LAYOUT_OPTIONS.map(l => (
-              <button key={l.id} onClick={() => setPdfPrefs(p => ({ ...p, layout: l.id }))} style={{
-                textAlign: "left", padding: "9px 12px", borderRadius: 10, cursor: "pointer",
-                display: "flex", alignItems: "center", gap: 10,
-                border: `1.5px solid ${pdfPrefs.layout === l.id ? th.appAccent : th.appBorder}`,
-                background: pdfPrefs.layout === l.id ? `${th.appAccent}18` : th.appCard,
-              }}>
-                {/* Anteprima schematica della disposizione — non dei colori
-                    (quelli sono lo Stile sopra): stessa forma per qualunque stile scelto. */}
-                <div style={{
-                  width: 52, height: 40, borderRadius: 8, flexShrink: 0, padding: 5,
-                  background: th.appBg, border: `1px solid ${th.appBorder}`,
-                  display: "flex", flexDirection: "column", gap: 3,
-                }}>
-                  {l.id === "quaderno" ? (
-                    <>
-                      <div style={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
-                        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, marginTop: 2 }}>
-                          <div style={{ width: "70%", height: 3, borderRadius: 1, background: th.appAccent }} />
-                          <div style={{ width: "90%", height: 3, borderRadius: 1, background: th.appFaded }} />
-                        </div>
-                        <div style={{ width: 14, height: 14, borderRadius: 2, background: th.appBorder, flexShrink: 0 }} />
-                      </div>
-                      <div style={{ display: "flex", gap: 3, flex: 1 }}>
-                        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
-                          <div style={{ width: "100%", height: 2, background: th.appBorder }} />
-                          <div style={{ width: "80%", height: 2, background: th.appBorder }} />
-                        </div>
-                        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
-                          <div style={{ width: "100%", height: 2, background: th.appBorder }} />
-                          <div style={{ width: "80%", height: 2, background: th.appBorder }} />
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div style={{ width: "60%", height: 3, borderRadius: 1, background: th.appAccent, margin: "0 auto" }} />
-                      <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1, marginTop: 3 }}>
-                        <div style={{ width: "100%", height: 2, background: th.appBorder }} />
-                        <div style={{ width: "100%", height: 2, background: th.appBorder }} />
-                        <div style={{ width: "70%", height: 2, background: th.appBorder }} />
-                      </div>
-                    </>
-                  )}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: F.ui, fontSize: 12.5, fontWeight: 700, color: th.appInk }}>{l.label}</div>
-                  <div style={{ fontFamily: F.ui, fontSize: 10.5, color: th.appFaded, marginTop: 2 }}>{l.desc}</div>
-                </div>
-              </button>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
           <Ghost th={th} onClick={() => setStep("format")} style={{ flex: 1 }}>‹ Indietro</Ghost>

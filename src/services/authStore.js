@@ -3,7 +3,7 @@
 // determina i permessi lato regole di sicurezza (firestore.rules).
 // Il ruolo "admin" non è mai gestibile da qui: solo a mano da Console.
 import { db } from "../firebase.js";
-import { collection, doc, getDocs, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, doc, getDocs, setDoc, updateDoc, deleteDoc, deleteField } from "firebase/firestore";
 import { getDocOfflineFirst } from "./offlineFirst.js";
 
 const normalizeEmail = (email) => (email || "").trim().toLowerCase();
@@ -25,6 +25,8 @@ export const checkWhitelist = async (email) => {
     role: data.role || "base",
     defaultBookId: data.defaultBookId || null,
     timerAlerts: { ...DEFAULT_TIMER_ALERTS, ...(data.timerAlerts || {}) },
+    pdfTemplates: data.pdfTemplates || {},
+    defaultPdfTemplateId: data.defaultPdfTemplateId || null,
   };
 };
 
@@ -54,6 +56,24 @@ export const setDefaultBook = (email, bookId) =>
 // solo il proprio campo.
 export const setTimerAlertPrefs = (email, prefs) =>
   updateDoc(doc(db, "allowlist", email), { timerAlerts: prefs });
+
+// Template PDF personalizzati (mappa id -> PdfTemplateConfig, vedi
+// PdfTemplateConfig in utils/pdfStyles.js) — salvati sul profilo utente,
+// non sul ricettario: stesso template disponibile in ogni ricettario a cui
+// si ha accesso. Notazione a punti (pdfTemplates.<id>) così ogni scrittura
+// tocca un solo template, mai l'intera mappa — due tab che modificano
+// template diversi in parallelo non si sovrascrivono a vicenda.
+export const savePdfTemplate = (email, template) =>
+  updateDoc(doc(db, "allowlist", email), { [`pdfTemplates.${template.id}`]: template });
+
+export const deletePdfTemplate = (email, templateId) =>
+  updateDoc(doc(db, "allowlist", email), { [`pdfTemplates.${templateId}`]: deleteField() });
+
+// Preferenza personale "template PDF predefinito" — stesso schema di
+// setDefaultBook. null è una scelta valida (nessun default, si sceglie
+// ogni volta): per azzerarlo esplicitamente passare null, non deleteField.
+export const setDefaultPdfTemplateId = (email, templateId) =>
+  updateDoc(doc(db, "allowlist", email), { defaultPdfTemplateId: templateId });
 
 // Interruttore globale del pulsante β di segnalazione bug (non riguarda il
 // Ricettario Beta books/b1, sempre accessibile per ruolo). Se il documento

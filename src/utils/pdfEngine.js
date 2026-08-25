@@ -2,38 +2,55 @@
 // MOTORE DI GENERAZIONE PDF — funzioni pure: (config, dati ricetta/e) → HTML.
 // Nessuno stato React, nessuna lettura del DOM, nessuna chiamata a
 // printHtmlDocument (quella resta in ricettario-v23.jsx: è meccanica di
-// finestra/Blob, non generazione di contenuto). Separazione deliberata
-// (Fase 1 del piano "personalizzazione export PDF", vedi conversazione):
-// è la base sia per evitare regressioni durante quel lavoro sia perché
-// una futura anteprima dal vivo potrà chiamare le stesse funzioni invece
-// di aprire una scheda.
+// finestra/Blob, non generazione di contenuto). Separazione deliberata —
+// base sia per evitare regressioni durante la personalizzazione dell'export
+// sia perché una futura anteprima dal vivo potrà chiamare le stesse
+// funzioni invece di aprire una scheda.
 //
-// Questa Fase 1 è un trasferimento a parità, non una riscrittura: il
-// contenuto delle funzioni è quello già in uso, spostato qui verbatim
-// (stessa logica, stessi risultati) — verificato con generazioni reali
-// prima/dopo lo spostamento, non solo a occhio.
+// Guidato da un PdfTemplateConfig (vedi pdfStyles.js): i 3 stili storici
+// restano riprodotti byte-per-byte (resolveTemplateConfig non ri-deriva i
+// loro token, li passa esatti) — verificato con confronto diretto
+// dell'HTML generato prima/dopo l'introduzione della config.
 // ══════════════════════════════════════════════════════════════
 import { MACRO_SECTIONS } from "../data/constants.js";
 import { NUTRIENT_LABELS } from "../data/nutrition.js";
 import { computeRecipeNutrition } from "./recipeNutrition.js";
+import { PDF_TEXT_SIZES, PDF_MARGIN_SIZES, PDF_PHOTO_SIZES } from "./pdfStyles.js";
+import { embedPdfFontFaces } from "../data/pdfFonts.js";
 import {
   sortSectionsAltroLast, stepPhotosOf, dishPhotoOf, fmtQty, ingredientToText,
 } from "./helpers.js";
 
+// Arrotonda a 2 decimali — con scale=1 (i 3 stili storici, vedi
+// resolveTemplateConfig) restituisce n identico all'originale, anche per i
+// valori con virgola (es. 12.5): n*1*100/100 === n esattamente in virgola
+// mobile per questi valori, nessuna deriva rispetto all'HTML pre-esistente.
+const px = (n, scale) => Math.round(n * scale * 100) / 100;
+
 // ══════════════════════════════════════════════════════════════
 // EXPORT PDF: foglio di stile condiviso da ogni export (singola ricetta,
 // intero libro/selezione, pagine di copertina/indice/sezione, nutrizione,
-// ricordi), parametrizzato sui token colore/font di PDF_STYLES
-// (src/utils/pdfStyles.js — condiviso con l'anteprima in UnifiedExportFlow.jsx)
-// invece di triplicare l'intero foglio di stile per ogni variante grafica.
+// ricordi, tag, commenti), parametrizzato sui colori/font del template e
+// sulle 3 taglie testo/margini/foto — invece di triplicare l'intero foglio
+// di stile per ogni combinazione.
 // ══════════════════════════════════════════════════════════════
-export const pdfCss = (t) => `
+export const pdfCss = (template) => {
+  const t = template.colors;
+  const f = template.fonts;
+  const ts = PDF_TEXT_SIZES[template.textSize]?.scale ?? 1;
+  const ms = PDF_MARGIN_SIZES[template.margins]?.scale ?? 1;
+  const ps = PDF_PHOTO_SIZES[template.photoSize]?.scale ?? 1;
+  const recipeBreak = template.onePerPage === false ? "" :
+    "page-break-before: always; page-break-after: always; break-before: page; break-after: page;";
+
+  return `
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: ${t.bodyFont}; color: ${t.ink}; background: ${t.paper || "#fff"};
+  body { font-family: ${f.body}; color: ${t.ink}; background: ${t.paper || "#fff"};
          max-width: 700px; margin: 0 auto;
          -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .single { padding: 40px; }
-  .page { page-break-before: always; page-break-after: always; break-before: page; break-after: page; padding: 40px; }
+  h1, .q-title { font-family: ${f.heading}; }
+  .single { padding: ${px(40, ms)}px; }
+  .page { page-break-before: always; page-break-after: always; break-before: page; break-after: page; padding: ${px(40, ms)}px; }
   /* Copertina/sezione — pagina intera, contenuto centrato verticalmente. Le
      proprietà di interruzione pagina sono ripetute (non solo ereditate da
      .page): alcuni motori di stampa (es. il servizio di stampa di sistema
@@ -43,81 +60,87 @@ export const pdfCss = (t) => `
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     min-height: 100vh; text-align:center;
   }
-  .cover .small { font-family: ${t.uiFont}; font-size: 12px; letter-spacing: 4px; color: ${t.accent2}; text-transform: uppercase; }
-  .cover h1 { font-size: 44px; font-style: italic; margin: 10px 0 6px; }
-  .cover .sub { font-size: 15px; color: ${t.faded}; font-style: italic; }
-  .cover .orn, .secpage .orn { color: ${t.accent2}; font-size: 18px; margin: 26px 0; }
-  .index h1 { font-size: 26px; font-style: italic; text-align: center; margin-bottom: 24px; }
-  .index .sec { font-family: ${t.uiFont}; font-size: 13px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; color: ${t.accent}; margin: 20px 0 8px; border-bottom: 1.5px solid ${t.borderLight}; padding-bottom: 4px; }
-  .index .row { display:flex; align-items:baseline; font-size: 13px; padding: 4px 0; }
+  .cover .small { font-family: ${f.ui}; font-size: ${px(12, ts)}px; letter-spacing: 4px; color: ${t.accent2}; text-transform: uppercase; }
+  .cover h1 { font-size: ${px(44, ts)}px; font-style: italic; margin: 10px 0 6px; }
+  .cover .sub { font-size: ${px(15, ts)}px; color: ${t.faded}; font-style: italic; }
+  .cover .orn, .secpage .orn { color: ${t.accent2}; font-size: ${px(18, ts)}px; margin: 26px 0; }
+  .index h1 { font-size: ${px(26, ts)}px; font-style: italic; text-align: center; margin-bottom: 24px; }
+  .index .sec { font-family: ${f.ui}; font-size: ${px(13, ts)}px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; color: ${t.accent}; margin: 20px 0 8px; border-bottom: 1.5px solid ${t.borderLight}; padding-bottom: 4px; }
+  .index .row { display:flex; align-items:baseline; font-size: ${px(13, ts)}px; padding: 4px 0; }
   .index .row .dots { flex:1; border-bottom: 1px dotted ${t.border}; margin: 0 8px; }
-  .index .row .c { font-family: ${t.uiFont}; font-size: 11px; color: ${t.faded}; }
-  .secpage .emoji { font-size: 80px; }
-  .secpage h1 { font-size: 34px; font-style: italic; margin: 18px 0 8px; }
-  .secpage .desc { font-size: 14px; color: ${t.faded}; font-style: italic; }
-  .recipe { page-break-before: always; page-break-after: always; break-before: page; break-after: page; padding: 40px; }
-  .recipe h1, .single h1 { font-size: 26px; font-style: italic; text-align: center; margin-bottom: 4px; }
-  .source { text-align: center; font-size: 13px; color: ${t.faded}; margin-bottom: 12px; }
-  .dish-photo { width: 170px; height: 128px; margin: 0 auto 14px; border: 1px solid ${t.border}; border-radius: 8px; overflow: hidden; background: ${t.cardBg}; }
+  .index .row .c { font-family: ${f.ui}; font-size: ${px(11, ts)}px; color: ${t.faded}; }
+  .secpage .emoji { font-size: ${px(80, ts)}px; }
+  .secpage h1 { font-size: ${px(34, ts)}px; font-style: italic; margin: 18px 0 8px; }
+  .secpage .desc { font-size: ${px(14, ts)}px; color: ${t.faded}; font-style: italic; }
+  .recipe { ${recipeBreak} padding: ${px(40, ms)}px; }
+  .recipe h1, .single h1 { font-size: ${px(26, ts)}px; font-style: italic; text-align: center; margin-bottom: 4px; }
+  .source { text-align: center; font-size: ${px(13, ts)}px; color: ${t.faded}; margin-bottom: 12px; }
+  .dish-photo { width: ${px(170, ps)}px; height: ${px(128, ps)}px; margin: 0 auto 14px; border: 1px solid ${t.border}; border-radius: 8px; overflow: hidden; background: ${t.cardBg}; }
   .dish-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .meta { display: flex; justify-content: center; gap: 20px; font-size: 12px; color: ${t.faded}; border-top: 1px solid ${t.border}; border-bottom: 1px solid ${t.border}; padding: 7px 0; margin-bottom: 14px; }
-  .note { border: 1px solid ${t.border}; padding: 9px 13px; font-style: italic; font-size: 12.5px; color: ${t.faded}; margin-bottom: 14px; background: ${t.cardBg}; }
-  h2 { font-family: ${t.uiFont}; font-size: 14px; text-align: center; letter-spacing: 2px; text-transform: uppercase; margin: 16px 0 9px; color: ${t.ink}; }
-  .ing { font-size: 12.5px; line-height: 1.85; border-bottom: 1px solid ${t.borderLight}; padding: 2px 0; }
-  .section-label { font-family: ${t.uiFont}; font-size: 10.5px; font-weight: bold; text-transform: uppercase; letter-spacing: 1.5px; color: ${t.accent}; margin: 9px 0 4px; }
+  .meta { display: flex; justify-content: center; gap: 20px; font-size: ${px(12, ts)}px; color: ${t.faded}; border-top: 1px solid ${t.border}; border-bottom: 1px solid ${t.border}; padding: 7px 0; margin-bottom: 14px; }
+  .note { border: 1px solid ${t.border}; padding: 9px 13px; font-style: italic; font-size: ${px(12.5, ts)}px; color: ${t.faded}; margin-bottom: 14px; background: ${t.cardBg}; }
+  h2 { font-family: ${f.ui}; font-size: ${px(14, ts)}px; text-align: center; letter-spacing: 2px; text-transform: uppercase; margin: 16px 0 9px; color: ${t.ink}; }
+  .ing { font-size: ${px(12.5, ts)}px; line-height: 1.85; border-bottom: 1px solid ${t.borderLight}; padding: 2px 0; }
+  .section-label { font-family: ${f.ui}; font-size: ${px(10.5, ts)}px; font-weight: bold; text-transform: uppercase; letter-spacing: 1.5px; color: ${t.accent}; margin: 9px 0 4px; }
   .step { display: flex; gap: 11px; margin-bottom: 11px; }
-  .step-n { width: 22px; height: 22px; border-radius: 50%; background: ${t.accent}; color: #fff; display: flex; align-items: center; justify-content: center; font-family: ${t.uiFont}; font-size: 10.5px; font-weight: bold; flex-shrink: 0; margin-top: 2px; }
+  .step-n { width: 22px; height: 22px; border-radius: 50%; background: ${t.accent}; color: #fff; display: flex; align-items: center; justify-content: center; font-family: ${f.ui}; font-size: ${px(10.5, ts)}px; font-weight: bold; flex-shrink: 0; margin-top: 2px; }
   .step-content { flex: 1; }
-  .step-t { font-size: 12.5px; line-height: 1.6; }
+  .step-t { font-size: ${px(12.5, ts)}px; line-height: 1.6; }
   .step-photos { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 7px; }
-  .step-photo { width: 100%; height: 140px; object-fit: cover; border-radius: 7px; border: 1px solid ${t.border}; }
-  .divider { text-align: center; color: ${t.accent2}; margin: 16px 0; font-size: 15px; }
-  .nutri-row { display:flex; justify-content:space-between; font-size:12.5px; padding:3px 0; border-bottom:1px solid ${t.borderLight}; }
-  .nutri-row.sub { padding-left:16px; font-size:11.5px; color:${t.faded}; }
+  .step-photo { width: 100%; height: ${px(140, ps)}px; object-fit: cover; border-radius: 7px; border: 1px solid ${t.border}; }
+  .divider { text-align: center; color: ${t.accent2}; margin: 16px 0; font-size: ${px(15, ts)}px; }
+  .nutri-row { display:flex; justify-content:space-between; font-size:${px(12.5, ts)}px; padding:3px 0; border-bottom:1px solid ${t.borderLight}; }
+  .nutri-row.sub { padding-left:16px; font-size:${px(11.5, ts)}px; color:${t.faded}; }
   .memory { display:flex; gap:12px; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid ${t.borderLight}; }
-  .memory-photo { width:90px; height:70px; object-fit:cover; border-radius:8px; border:1px solid ${t.border}; flex-shrink:0; }
-  .memory-caption { font-size:12.5px; font-style:italic; margin-bottom:3px; }
-  .memory-story { font-size:11.5px; color:${t.faded}; line-height:1.5; margin-bottom:3px; }
-  .memory-date { font-family: ${t.uiFont}; font-size:10px; color:${t.faded}; }
-  @media print { .page, .recipe, .single { padding: 24px; } }
+  .memory-photo { width:${px(90, ps)}px; height:${px(70, ps)}px; object-fit:cover; border-radius:8px; border:1px solid ${t.border}; flex-shrink:0; }
+  .memory-caption { font-size:${px(12.5, ts)}px; font-style:italic; margin-bottom:3px; }
+  .memory-story { font-size:${px(11.5, ts)}px; color:${t.faded}; line-height:1.5; margin-bottom:3px; }
+  .memory-date { font-family: ${f.ui}; font-size:${px(10, ts)}px; color:${t.faded}; }
+  .tags-row { display:flex; flex-wrap:wrap; gap:6px; }
+  .tag-pill { font-family: ${f.ui}; font-size:${px(10.5, ts)}px; padding:4px 10px; border-radius:12px; background:${t.cardBg}; border:1px solid ${t.border}; color:${t.faded}; }
+  .comment { margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid ${t.borderLight}; }
+  .comment-text { font-size:${px(12.5, ts)}px; line-height:1.6; }
+  .comment-date { font-family: ${f.ui}; font-size:${px(10, ts)}px; color:${t.faded}; margin-top:3px; }
+  @media print { .page, .recipe, .single { padding: ${px(24, ms)}px; } }
 
   /* ── Layout "Quaderno" (recipeBodyQuadernoHtml) — usa gli stessi token
-     dello stile attivo, così funziona con Classico/Minimal/Moderno. ── */
+     del template attivo. ── */
   .q-head { display:flex; justify-content:space-between; align-items:baseline;
-    font-family:${t.uiFont}; font-size:10.5px; letter-spacing:2.5px; text-transform:uppercase;
+    font-family:${f.ui}; font-size:${px(10.5, ts)}px; letter-spacing:2.5px; text-transform:uppercase;
     color:${t.faded}; border-bottom:1px solid ${t.border}; padding-bottom:10px; margin-bottom:34px; }
   .q-top { display:flex; align-items:flex-start; gap:28px; }
-  .q-kicker { font-family:${t.uiFont}; font-size:10.5px; letter-spacing:3px; text-transform:uppercase; color:${t.accent}; }
-  .q-title { font-size:42px; font-style:italic; line-height:1.08; margin:10px 0 8px; font-weight:400; }
-  .q-source { font-size:14px; font-style:italic; color:${t.faded}; }
-  .q-photo { width:250px; height:188px; flex-shrink:0; background:${t.cardBg}; overflow:hidden; }
+  .q-kicker { font-family:${f.ui}; font-size:${px(10.5, ts)}px; letter-spacing:3px; text-transform:uppercase; color:${t.accent}; }
+  .q-title { font-size:${px(42, ts)}px; font-style:italic; line-height:1.08; margin:10px 0 8px; font-weight:400; }
+  .q-source { font-size:${px(14, ts)}px; font-style:italic; color:${t.faded}; }
+  .q-photo { width:${px(250, ps)}px; height:${px(188, ps)}px; flex-shrink:0; background:${t.cardBg}; overflow:hidden; }
   .q-photo img { width:100%; height:100%; object-fit:cover; display:block; }
   .q-meta { display:flex; gap:26px; margin-top:26px; padding:12px 0;
     border-top:1px solid ${t.border}; border-bottom:1px solid ${t.border};
-    font-family:${t.uiFont}; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:${t.faded}; }
+    font-family:${f.ui}; font-size:${px(11, ts)}px; letter-spacing:1.5px; text-transform:uppercase; color:${t.faded}; }
   .q-cols { display:grid; grid-template-columns:246px 1fr; gap:40px; margin-top:32px; }
-  .q-h { font-family:${t.uiFont}; font-size:11px; letter-spacing:3px; text-transform:uppercase;
+  .q-h { font-family:${f.ui}; font-size:${px(11, ts)}px; letter-spacing:3px; text-transform:uppercase;
     color:${t.accent}; margin-bottom:14px; }
-  .q-sub { font-family:${t.uiFont}; font-size:10px; font-weight:bold; letter-spacing:1.5px;
+  .q-sub { font-family:${f.ui}; font-size:${px(10, ts)}px; font-weight:bold; letter-spacing:1.5px;
     text-transform:uppercase; color:${t.faded}; margin:14px 0 4px; }
-  .q-ing { display:flex; justify-content:space-between; gap:10px; font-size:13px; line-height:1.5;
+  .q-ing { display:flex; justify-content:space-between; gap:10px; font-size:${px(13, ts)}px; line-height:1.5;
     padding:7px 0; border-bottom:1px solid ${t.borderLight}; }
   .q-ing .qty { color:${t.faded}; font-variant-numeric:tabular-nums; white-space:nowrap; }
   .q-ing .n { font-style:italic; color:${t.faded}; }
   .q-note { margin-top:20px; padding:14px 16px; background:${t.cardBg}; border-left:2px solid ${t.accent2};
-    font-size:12px; font-style:italic; line-height:1.6; }
+    font-size:${px(12, ts)}px; font-style:italic; line-height:1.6; }
   .q-step { display:flex; gap:14px; margin-bottom:15px; break-inside:avoid; page-break-inside:avoid; }
-  .q-step-n { font-size:26px; font-style:italic; color:${t.border}; line-height:1;
+  .q-step-n { font-size:${px(26, ts)}px; font-style:italic; color:${t.border}; line-height:1;
     width:34px; flex-shrink:0; text-align:right; }
-  .q-step-t { font-size:13.5px; line-height:1.72; }
+  .q-step-t { font-size:${px(13.5, ts)}px; line-height:1.72; }
   .q-step-photos { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:9px; }
-  .q-step-photos img { width:100%; height:104px; object-fit:cover; display:block; }
+  .q-step-photos img { width:100%; height:${px(104, ps)}px; object-fit:cover; display:block; }
   .q-nutri { margin-top:14px; padding-top:14px; border-top:1px solid ${t.border}; }
-  .q-nutri .row { display:flex; flex-wrap:wrap; gap:6px 18px; font-size:12px; }
+  .q-nutri .row { display:flex; flex-wrap:wrap; gap:6px 18px; font-size:${px(12, ts)}px; }
   .q-foot { display:flex; justify-content:space-between; margin-top:22px; padding-top:12px;
-    border-top:1px solid ${t.border}; font-family:${t.uiFont}; font-size:10px;
+    border-top:1px solid ${t.border}; font-family:${f.ui}; font-size:${px(10, ts)}px;
     letter-spacing:2px; text-transform:uppercase; color:${t.faded}; }
 `;
+};
 
 // Sezione "Valori nutrizionali" (per porzione) — opzionale, riusa lo stesso
 // motore di calcolo della scheda ricetta in app (computeRecipeNutrition,
@@ -153,8 +176,36 @@ export const memoriesPdfHtml = (recipe) => {
   `;
 };
 
+// Sezione "Tag" — opzionale, non mostrata nel PDF prima di questa fase.
+export const tagsPdfHtml = (recipe) => {
+  const tags = recipe.tags || [];
+  if (tags.length === 0) return "";
+  return `
+    <div class="divider">✦</div>
+    <h2>Tag</h2>
+    <div class="tags-row">${tags.map(t => `<span class="tag-pill">${t}</span>`).join("")}</div>
+  `;
+};
+
+// Sezione "Commenti" — opzionale, non mostrata nel PDF prima di questa fase.
+export const commentsPdfHtml = (recipe) => {
+  const comments = recipe.comments || [];
+  if (comments.length === 0) return "";
+  return `
+    <div class="divider">✦</div>
+    <h2>Commenti</h2>
+    ${comments.map(c => `
+      <div class="comment">
+        <div class="comment-text">${c.text}</div>
+        <div class="comment-date">${c.date}${c.edited ? ` (modificato ${c.edited})` : ""}</div>
+      </div>`).join("")}
+  `;
+};
+
 // Corpo HTML di una singola ricetta — condiviso da export singolo ed export
 // libro/selezione. opts governa cosa includere (vedi exportRecipesPDF).
+// Titolo, ingredienti e passi sono sempre inclusi (vedi PDF_ALWAYS_INCLUDED
+// in pdfStyles.js); tutto il resto è un toggle esplicito in opts.
 export const recipeBodyPdfHtml = (recipe, opts, nutritionCtx) => {
   const isSec = (arr) => Array.isArray(arr) && arr.length > 0 && typeof arr[0] === "object" && "section" in arr[0];
 
@@ -172,17 +223,17 @@ export const recipeBodyPdfHtml = (recipe, opts, nutritionCtx) => {
       })
     : recipe.steps.map(st => ({ text: typeof st === "string" ? st : st.text, photos: opts.includeStepPhotos ? stepPhotosOf(st) : [] }));
 
+  const metaParts = [];
+  if (opts.includeTimes) metaParts.push(`Prep: ${recipe.prepTime} min`, `Cottura: ${recipe.cookTime} min`);
+  if (opts.includeServings) metaParts.push(`${recipe.servings} porzioni`);
+
   let n = 0;
   return `
     <h1>${recipe.title}</h1>
-    ${recipe.source ? `<div class="source">Ricetta di ${recipe.source}</div>` : ""}
+    ${opts.includeSource && recipe.source ? `<div class="source">Ricetta di ${recipe.source}</div>` : ""}
     ${opts.includeDishPhoto && dishPhotoOf(recipe) ? `<div class="dish-photo"><img src="${dishPhotoOf(recipe)}" alt="${recipe.title}"></div>` : ""}
-    <div class="meta">
-      <span>Prep: ${recipe.prepTime} min</span><span>·</span>
-      <span>Cottura: ${recipe.cookTime} min</span><span>·</span>
-      <span>${recipe.servings} porzioni</span>
-    </div>
-    ${recipe.note ? `<div class="note">${recipe.note}</div>` : ""}
+    ${metaParts.length > 0 ? `<div class="meta">${metaParts.map(p => `<span>${p}</span>`).join(`<span>·</span>`)}</div>` : ""}
+    ${opts.includeNote && recipe.note ? `<div class="note">${recipe.note}</div>` : ""}
     <h2>Ingredienti</h2>
     ${flatIng.map(ing => ing.startsWith("──")
       ? `<div class="section-label">${ing.replace(/── | ──/g,"")}</div>`
@@ -196,13 +247,15 @@ export const recipeBodyPdfHtml = (recipe, opts, nutritionCtx) => {
     ).join("")}
     ${opts.includeNutrition ? nutritionPdfHtml(recipe, nutritionCtx) : ""}
     ${opts.includeMemories ? memoriesPdfHtml(recipe) : ""}
+    ${opts.includeTags ? tagsPdfHtml(recipe) : ""}
+    ${opts.includeComments ? commentsPdfHtml(recipe) : ""}
   `;
 };
 
 // Corpo ricetta per il layout "Quaderno" (opts.layout === "quaderno"):
 // testatina, titolo+foto affiancati, ingredienti e passi su due colonne.
-// Stessi opts/nutritionCtx di recipeBodyPdfHtml — indipendente dallo stile
-// (colore/font), che resta quello scelto in opts.style.
+// Stessi opts/nutritionCtx di recipeBodyPdfHtml — indipendente dal template
+// colore/font, che resta quello passato a buildRecipeDocumentHtml/buildBookDocumentHtml.
 export const recipeBodyQuadernoHtml = (recipe, opts, nutritionCtx, sectionLabel = "") => {
   const isSec = (arr) => Array.isArray(arr) && arr.length > 0 && typeof arr[0] === "object" && "section" in arr[0];
 
@@ -252,24 +305,26 @@ export const recipeBodyQuadernoHtml = (recipe, opts, nutritionCtx, sectionLabel 
   }
 
   const dish = opts.includeDishPhoto && dishPhotoOf(recipe);
+  const metaParts = [];
+  if (opts.includeTimes) metaParts.push(`Prep ${recipe.prepTime} min`, `Cottura ${recipe.cookTime} min`);
+  if (opts.includeServings) metaParts.push(`${recipe.servings} porzioni`);
+
   return `
     <div class="q-head"><span>${sectionLabel}</span><span>${recipe.category || ""}</span></div>
     <div class="q-top">
       <div style="flex:1;min-width:0">
         <div class="q-kicker">${[recipe.category, ...(recipe.tags || []).slice(0, 1)].filter(Boolean).join(" · ")}</div>
         <h1 class="q-title">${recipe.title}</h1>
-        ${recipe.source ? `<div class="q-source">Ricetta di ${recipe.source}</div>` : ""}
+        ${opts.includeSource && recipe.source ? `<div class="q-source">Ricetta di ${recipe.source}</div>` : ""}
       </div>
       ${dish ? `<div class="q-photo"><img src="${dish}" alt="${recipe.title}"></div>` : ""}
     </div>
-    <div class="q-meta">
-      <span>Prep ${recipe.prepTime} min</span><span>Cottura ${recipe.cookTime} min</span><span>${recipe.servings} porzioni</span>
-    </div>
+    ${metaParts.length > 0 ? `<div class="q-meta">${metaParts.map(p => `<span>${p}</span>`).join("")}</div>` : ""}
     <div class="q-cols">
       <div>
         <div class="q-h">Ingredienti</div>
         ${ingHtml}
-        ${recipe.note ? `<div class="q-note">${recipe.note}</div>` : ""}
+        ${opts.includeNote && recipe.note ? `<div class="q-note">${recipe.note}</div>` : ""}
       </div>
       <div>
         <div class="q-h">Preparazione</div>
@@ -278,25 +333,38 @@ export const recipeBodyQuadernoHtml = (recipe, opts, nutritionCtx, sectionLabel 
       </div>
     </div>
     ${opts.includeMemories ? memoriesPdfHtml(recipe) : ""}
+    ${opts.includeTags ? tagsPdfHtml(recipe) : ""}
+    ${opts.includeComments ? commentsPdfHtml(recipe) : ""}
   `;
 };
 
-// Sceglie il generatore di corpo ricetta in base a opts.layout — unico
-// punto che conosce questa scelta, riusato da entrambi i costruttori di
-// documento sotto (prima duplicato tra exportRecipePDF/exportBookPDF).
-const bodyRendererFor = (opts) => opts.layout === "quaderno" ? recipeBodyQuadernoHtml : recipeBodyPdfHtml;
+// Sceglie il generatore di corpo ricetta in base al layout del template —
+// unico punto che conosce questa scelta, riusato da entrambi i costruttori
+// di documento sotto.
+const bodyRendererFor = (template) => template.layoutId === "quaderno" ? recipeBodyQuadernoHtml : recipeBodyPdfHtml;
 
-// Documento HTML completo per l'export di una singola ricetta — stesso
-// contenuto prodotto oggi da exportRecipePDF, meno l'apertura della
-// finestra di stampa (resta lì: è meccanica di finestra, non di contenuto).
-export const buildRecipeDocumentHtml = (recipe, t, opts, nutritionCtx) => {
-  const body = bodyRendererFor(opts);
+// Incorpora (se il template ne specifica, vedi PdfTemplateConfig in
+// pdfStyles.js) le famiglie @fontsource selezionate come @font-face inline
+// — mai per i preset predefiniti (font di sistema, fontIds assente).
+const fontFacesFor = async (template) => {
+  if (!template.fontIds) return "";
+  const ids = Object.values(template.fontIds).filter(Boolean);
+  if (ids.length === 0) return "";
+  return embedPdfFontFaces(ids);
+};
+
+// Documento HTML completo per l'export di una singola ricetta — meno
+// l'apertura della finestra di stampa (resta in ricettario-v23.jsx: è
+// meccanica di finestra, non di contenuto).
+export const buildRecipeDocumentHtml = async (recipe, template, opts, nutritionCtx) => {
+  const body = bodyRendererFor(template);
+  const fontFaces = await fontFacesFor(template);
   return `<!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="UTF-8">
 <title>${recipe.title}</title>
-<style>${pdfCss(t)}</style>
+<style>${fontFaces}${pdfCss(template)}</style>
 </head>
 <body>
   <div class="single">${body(recipe, opts, nutritionCtx)}</div>
@@ -309,23 +377,28 @@ export const buildRecipeDocumentHtml = (recipe, t, opts, nutritionCtx) => {
 // sezione + ricette. bookTitle riflette la selezione (nome del ricettario
 // se è tutto, altrimenti "N ricette da «Nome»") — vedi exportRecipesPDF.
 // ══════════════════════════════════════════════════════════════
-export const buildBookDocumentHtml = async (recipesList, sections = MACRO_SECTIONS, bookTitle = "Il mio Ricettario", t, opts, nutritionCtx) => {
-  const body = bodyRendererFor(opts);
+export const buildBookDocumentHtml = async (recipesList, sections = MACRO_SECTIONS, bookTitle = "Il mio Ricettario", template, opts, nutritionCtx) => {
+  const body = bodyRendererFor(template);
+  const t = template.colors;
+  const f = template.fonts;
+  const ts = PDF_TEXT_SIZES[template.textSize]?.scale ?? 1;
 
-  // Caricato solo quando serve (indice con numeri di pagina reali) e come
-  // chunk separato (import dinamico, non in cima al file): senza questo, il
-  // polyfill da ~500KB finirebbe nel bundle principale dell'app, scaricato
-  // da OGNI utente a ogni avvio anche se non esporta mai un PDF con indice.
-  // Percorso relativo diretto (non "pagedjs/...") perché il package.json di
-  // pagedjs espone solo condizioni root nel campo "exports" (import/
-  // require/browser/polyfill), nessun subpath — un import bare-specifier
-  // verso "pagedjs/dist/..." verrebbe rifiutato dal resolver; un percorso
-  // relativo bypassa del tutto la mappa "exports", leggendo il file diretto.
-  // Due livelli sopra src/utils/ per arrivare alla radice del progetto
-  // (questo file vive in src/utils/, non nella radice di src/ come prima).
-  const pagedPolyfillJs = opts.includeIndex
-    ? (await import("../../node_modules/pagedjs/dist/paged.polyfill.min.js?raw")).default
-    : null;
+  const [fontFaces, pagedPolyfillJs] = await Promise.all([
+    fontFacesFor(template),
+    // Caricato solo quando serve (indice con numeri di pagina reali) e come
+    // chunk separato (import dinamico, non in cima al file): senza questo, il
+    // polyfill da ~500KB finirebbe nel bundle principale dell'app, scaricato
+    // da OGNI utente a ogni avvio anche se non esporta mai un PDF con indice.
+    // Percorso relativo diretto (non "pagedjs/...") perché il package.json di
+    // pagedjs espone solo condizioni root nel campo "exports" (import/
+    // require/browser/polyfill), nessun subpath — un import bare-specifier
+    // verso "pagedjs/dist/..." verrebbe rifiutato dal resolver; un percorso
+    // relativo bypassa del tutto la mappa "exports", leggendo il file diretto.
+    // Due livelli sopra src/utils/ per arrivare alla radice del progetto.
+    opts.includeIndex
+      ? import("../../node_modules/pagedjs/dist/paged.polyfill.min.js?raw").then(m => m.default)
+      : Promise.resolve(null),
+  ]);
 
   // Sezioni con almeno una ricetta, nell'ordine di MACRO_SECTIONS, ricette
   // in ordine alfabetico dentro ciascuna sezione
@@ -345,11 +418,11 @@ export const buildBookDocumentHtml = async (recipesList, sections = MACRO_SECTIO
   // ignorato — target-counter() resterebbe testo letterale, mai calcolato.
   // Verificato con una riproduzione minima isolata prima di questo fix.
   const pagedjsHeadCss = opts.includeIndex ? `
-    .pagenum { font-family: ${t.uiFont}; font-size: 11px; color: ${t.faded}; text-decoration: none; }
+    .pagenum { font-family: ${f.ui}; font-size: ${px(11, ts)}px; color: ${t.faded}; text-decoration: none; }
     .pagenum::after { content: target-counter(attr(href), page); }
     @page { size: A4; margin: 18mm 16mm; }
-    #pagedjs-status { position: fixed; top: 0; left: 0; right: 0; z-index: 9999; background: ${t.ink}; color: #fff; padding: 14px; text-align: center; font-family: ${t.uiFont}; font-size: 13px; }
-    #pagedjs-print-btn { padding: 9px 18px; border: none; border-radius: 8px; background: ${t.accent}; color: #fff; font-family: ${t.uiFont}; font-size: 13px; font-weight: 700; cursor: pointer; }
+    #pagedjs-status { position: fixed; top: 0; left: 0; right: 0; z-index: 9999; background: ${t.ink}; color: #fff; padding: 14px; text-align: center; font-family: ${f.ui}; font-size: 13px; }
+    #pagedjs-print-btn { padding: 9px 18px; border: none; border-radius: 8px; background: ${t.accent}; color: #fff; font-family: ${f.ui}; font-size: 13px; font-weight: 700; cursor: pointer; }
     @media print { #pagedjs-status { display: none !important; } }
   ` : "";
 
@@ -358,7 +431,7 @@ export const buildBookDocumentHtml = async (recipesList, sections = MACRO_SECTIO
 <head>
 <meta charset="UTF-8">
 <title>${bookTitle}</title>
-<style>${pdfCss(t)}${pagedjsHeadCss}</style>
+<style>${fontFaces}${pdfCss(template)}${pagedjsHeadCss}</style>
 </head>
 <body>
   <!-- Copertina -->

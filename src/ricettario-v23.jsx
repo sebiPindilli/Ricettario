@@ -36,7 +36,7 @@ import {
   diffShoppingEntries, shoppingEntriesToMap,
   MAP_SYSTEM_FIELDS, ARRAY_SYSTEM_FIELDS, deepEqual,
 } from "./utils/dirtyTracking.js";
-import { setDefaultBook } from "./services/authStore.js";
+import { setDefaultBook, savePdfTemplate, deletePdfTemplate, setDefaultPdfTemplateId } from "./services/authStore.js";
 import { buildRecipeIngredientData } from "./utils/shareIngredientData.js";
 import {
   createSharedRecipe, loadSharedStatus, loadSharedContent, duplicateRecipePhotos,
@@ -101,7 +101,7 @@ import ScanScreen from "./screens/ScanScreen.jsx";
 import AddFromLinkScreen from "./screens/AddFromLinkScreen.jsx";
 import EditScreen from "./screens/EditScreen.jsx";
 import NutritionCard from "./components/NutritionCard.jsx";
-import { PDF_STYLES } from "./utils/pdfStyles.js";
+import { DEFAULT_PDF_CONTENT, resolveTemplateConfig } from "./utils/pdfStyles.js";
 import { buildRecipeDocumentHtml, buildBookDocumentHtml } from "./utils/pdfEngine.js";
 import UnifiedExportFlow from "./components/UnifiedExportFlow.jsx";
 import MemoriesSection from "./components/MemoriesSection.jsx";
@@ -301,18 +301,19 @@ function printHtmlDocument(html, { autoPrint = true } = {}) {
 
 // Esporta PDF di una singola ricetta. Generazione HTML in src/utils/pdfEngine.js
 // (funzione pura, riusabile da una futura anteprima) — qui resta solo
-// l'apertura della finestra di stampa.
-const exportRecipePDF = (recipe, opts, nutritionCtx) => {
-  const t = PDF_STYLES[opts.style] || PDF_STYLES.classico;
-  const html = buildRecipeDocumentHtml(recipe, t, opts, nutritionCtx);
+// l'apertura della finestra di stampa. opts.template (Fase 5/6) ha sempre
+// la precedenza su opts.style/opts.layout, vedi resolveTemplateConfig.
+const exportRecipePDF = async (recipe, opts, nutritionCtx) => {
+  const template = resolveTemplateConfig(opts);
+  const html = await buildRecipeDocumentHtml(recipe, template, opts, nutritionCtx);
   printHtmlDocument(html);
 };
 
 // Esporta PDF di più ricette (copertina + indice opzionale + pagine sezione
 // + ricette). Generazione HTML in src/utils/pdfEngine.js.
 const exportBookPDF = async (recipesList, sections = MACRO_SECTIONS, bookTitle = "Il mio Ricettario", opts, nutritionCtx) => {
-  const t = PDF_STYLES[opts.style] || PDF_STYLES.classico;
-  const html = await buildBookDocumentHtml(recipesList, sections, bookTitle, t, opts, nutritionCtx);
+  const template = resolveTemplateConfig(opts);
+  const html = await buildBookDocumentHtml(recipesList, sections, bookTitle, template, opts, nutritionCtx);
   printHtmlDocument(html, { autoPrint: !opts.includeIndex });
 };
 
@@ -401,7 +402,7 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAlerts }) {
+function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAlerts, initialPdfTemplates, initialDefaultPdfTemplateId }) {
   // Solo per il banner "sei offline" — il salvataggio vero e proprio non
   // dipende da questo stato (si appoggia alla coda offline di Firestore,
   // vedi src/firebase.js, e al retry sull'evento "online" più sotto).
@@ -774,6 +775,24 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   // Ricettario predefinito: quello caricato all'avvio dell'app — persistito
   // su allowlist/{email}.defaultBookId (vedi services/authStore.js).
   const [defaultBookId, setDefaultBookId] = useState(null);
+  // Template PDF personalizzati dell'utente (mappa id -> PdfTemplateConfig)
+  // — persistiti su allowlist/{email}.pdfTemplates, indipendenti dal
+  // ricettario attivo (vedi services/authStore.js e UnifiedExportFlow.jsx).
+  const [pdfTemplates, setPdfTemplates] = useState(initialPdfTemplates || {});
+  const [defaultPdfTemplateId, setDefaultPdfTemplateIdState] = useState(initialDefaultPdfTemplateId || null);
+  const savePdfTemplateHandler = (template) => {
+    setPdfTemplates(prev => ({ ...prev, [template.id]: template }));
+    savePdfTemplate(me, template);
+  };
+  const deletePdfTemplateHandler = (templateId) => {
+    setPdfTemplates(prev => { const next = { ...prev }; delete next[templateId]; return next; });
+    if (defaultPdfTemplateId === templateId) { setDefaultPdfTemplateIdState(null); setDefaultPdfTemplateId(me, null); }
+    deletePdfTemplate(me, templateId);
+  };
+  const setDefaultPdfTemplateHandler = (templateId) => {
+    setDefaultPdfTemplateIdState(templateId);
+    setDefaultPdfTemplateId(me, templateId);
+  };
   const [activeBookId, setActiveBookId] = useState(null);
   const activeBook = books.find(b => b.id === activeBookId);
   // Diventa true solo dopo il primo caricamento riuscito da Firestore —
@@ -1768,8 +1787,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     const sel = recipes.filter(r => recipeIds.includes(r.id));
     if (sel.length === 0) return;
     const fullOpts = {
-      includeDishPhoto: true, includeStepPhotos: true, includeNutrition: false, includeMemories: false,
-      includeIndex: true, includeSubsectionNames: true, style: "classico", layout: "classico",
+      ...DEFAULT_PDF_CONTENT, style: "classico", layout: "classico",
       ...opts,
     };
     const nutritionCtx = { nutritionMap, equivalences, customUnits, customFoods, ingredientDict, aggregates, sourceByIngredient };
@@ -2446,6 +2464,11 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             onCopyToBooks={copyRecipesToBooks}
             onShareLinks={shareRecipesViaLinks}
             onExportPDF={exportRecipesPDF}
+            userTemplates={pdfTemplates}
+            defaultTemplateId={defaultPdfTemplateId}
+            onSaveTemplate={savePdfTemplateHandler}
+            onDeleteTemplate={deletePdfTemplateHandler}
+            onSetDefaultTemplate={setDefaultPdfTemplateHandler}
             onClose={() => setExportModal(null)}
           />
         )}
@@ -2475,7 +2498,7 @@ export default function App() {
           può riguardare anche la schermata di accesso stessa). */}
       <PwaBanners/>
       <AuthGate>
-        {(user, role, defaultBookId, betaEnabled, timerAlerts) => <AppInner me={user.email} role={role} initialDefaultBookId={defaultBookId} betaEnabled={betaEnabled} initialTimerAlerts={timerAlerts}/>}
+        {(user, role, defaultBookId, betaEnabled, timerAlerts, pdfTemplates, defaultPdfTemplateId) => <AppInner me={user.email} role={role} initialDefaultBookId={defaultBookId} betaEnabled={betaEnabled} initialTimerAlerts={timerAlerts} initialPdfTemplates={pdfTemplates} initialDefaultPdfTemplateId={defaultPdfTemplateId}/>}
       </AuthGate>
     </ErrorBoundary>
   );

@@ -4,7 +4,7 @@
 import { readFileSync } from "node:fs";
 import { beforeAll, beforeEach, afterAll, describe, it, expect } from "vitest";
 import { initializeTestEnvironment, assertSucceeds, assertFails } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, arrayUnion } from "firebase/firestore";
 
 let testEnv;
 
@@ -265,6 +265,61 @@ describe("firestore.rules — allowlist: preferenze personali (defaultBookId/tim
   it("scrivere timerAlerts insieme a role nello stesso update non è permesso (i campi devono restare separati)", async () => {
     await assertFails(updateDoc(doc(asUser("u@test.it"), "allowlist/u@test.it"), {
       timerAlerts: { sound: false, vibrate: true, visual: true },
+      role: "admin",
+    }));
+  });
+});
+
+describe("firestore.rules — allowlist: template PDF personalizzati (pdfTemplates/defaultPdfTemplateId)", () => {
+  beforeEach(() =>
+    seed(async (db) => {
+      await seedAllowlist(db, "u@test.it");
+    })
+  );
+
+  const template = { id: "t1", name: "Il mio stile", builtIn: false, colors: { accent: "#123456", ink: "#111111", paper: "#ffffff" } };
+
+  it("un utente può creare un proprio template via notazione a punti", async () => {
+    await assertSucceeds(updateDoc(doc(asUser("u@test.it"), "allowlist/u@test.it"), {
+      [`pdfTemplates.${template.id}`]: template,
+    }));
+  });
+
+  it("scrivere un secondo template non tocca il primo (aggiornamenti indipendenti)", async () => {
+    await updateDoc(doc(asUser("u@test.it"), "allowlist/u@test.it"), { [`pdfTemplates.${template.id}`]: template });
+    const template2 = { ...template, id: "t2", name: "Altro stile" };
+    await assertSucceeds(updateDoc(doc(asUser("u@test.it"), "allowlist/u@test.it"), {
+      [`pdfTemplates.${template2.id}`]: template2,
+    }));
+    const snap = await getDoc(doc(asUser("u@test.it"), "allowlist/u@test.it"));
+    expect(snap.data().pdfTemplates.t1.name).toBe("Il mio stile");
+    expect(snap.data().pdfTemplates.t2.name).toBe("Altro stile");
+  });
+
+  it("un utente può eliminare un proprio template (FieldValue.delete su percorso annidato)", async () => {
+    await updateDoc(doc(asUser("u@test.it"), "allowlist/u@test.it"), { [`pdfTemplates.${template.id}`]: template });
+    await assertSucceeds(updateDoc(doc(asUser("u@test.it"), "allowlist/u@test.it"), {
+      [`pdfTemplates.${template.id}`]: deleteField(),
+    }));
+    const snap = await getDoc(doc(asUser("u@test.it"), "allowlist/u@test.it"));
+    expect(snap.data().pdfTemplates).toEqual({});
+  });
+
+  it("un utente non può scrivere pdfTemplates sulla voce di un altro", async () => {
+    await assertFails(updateDoc(doc(asUser("u@test.it"), "allowlist/owner@test.it"), {
+      [`pdfTemplates.${template.id}`]: template,
+    }));
+  });
+
+  it("un utente può impostare il proprio template PDF predefinito", async () => {
+    await assertSucceeds(updateDoc(doc(asUser("u@test.it"), "allowlist/u@test.it"), {
+      defaultPdfTemplateId: template.id,
+    }));
+  });
+
+  it("scrivere pdfTemplates insieme a role nello stesso update non è permesso", async () => {
+    await assertFails(updateDoc(doc(asUser("u@test.it"), "allowlist/u@test.it"), {
+      [`pdfTemplates.${template.id}`]: template,
       role: "admin",
     }));
   });

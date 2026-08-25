@@ -12,6 +12,11 @@
     "test:rules": "firebase emulators:exec --only firestore \"vitest run tests/firestore.rules.test.js tests/manageBookMember.test.js tests/recipeFlush.test.js tests/recipeConflict.test.js tests/systemFlush.test.js tests/shoppingListFlush.test.js tests/sharedRecipes.rules.test.js\""
   },
   "dependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/lora": "^5.3.0",
+    "@fontsource/playfair-display": "^5.3.0",
+    "@fontsource/poppins": "^5.3.0",
     "firebase": "^12.17.1",
     "firebase-admin": "^14.2.0",
     "html2canvas": "^1.4.1",

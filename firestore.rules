@@ -49,6 +49,22 @@ service cloud.firestore {
       // (suono/vibrazione/visivo): stesso schema di defaultBookId sopra.
       allow update: if isSignedIn() && request.auth.token.email == email &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['timerAlerts']);
+
+      // Template PDF personalizzati (mappa id -> PdfTemplateConfig, vedi
+      // src/utils/pdfStyles.js e services/authStore.js): stesso schema di
+      // defaultBookId sopra. Le scritture usano notazione a punti
+      // (pdfTemplates.<id>) per creare/rinominare/eliminare un singolo
+      // template senza toccare gli altri — affectedKeys() vede comunque
+      // solo la chiave di primo livello "pdfTemplates", quindi la stessa
+      // regola copre sia l'aggiunta/modifica sia l'eliminazione di un
+      // singolo template (FieldValue.delete() su un percorso annidato).
+      allow update: if isSignedIn() && request.auth.token.email == email &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pdfTemplates']);
+
+      // Preferenza personale "template PDF predefinito": stesso schema di
+      // defaultBookId sopra.
+      allow update: if isSignedIn() && request.auth.token.email == email &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['defaultPdfTemplateId']);
     }
 
     // Interruttore globale per il pulsante β di segnalazione bug (non
