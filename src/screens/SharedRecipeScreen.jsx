@@ -3,6 +3,7 @@ import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 import { isSectioned, ingredientToText, stepPhotosOf, dishPhotoOf } from "../utils/helpers.js";
 import { loadSharedStatus, loadSharedContent } from "../services/sharedRecipesStore.js";
+import ChosenIcon from "../components/ChosenIcon.jsx";
 
 // ══════════════════════════════════════════════════════════════
 // SCREEN: SharedRecipeScreen — apertura di un link di condivisione
@@ -123,8 +124,8 @@ export default function SharedRecipeScreen({ shareId, me, editableBooks = [], on
   return (
     <Shell th={th} onClose={onClose}>
       <div style={{ textAlign:"center", marginBottom:14 }}>
-        <div style={{ width:64, height:64, borderRadius:16, background:recipe.color || th.appAccent, margin:"0 auto 10px", display:"flex", alignItems:"center", justifyContent:"center", fontSize:30, overflow:"hidden" }}>
-          {dishPhotoOf(recipe) ? <img src={dishPhotoOf(recipe)} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }}/> : (recipe.emoji || "🍽️")}
+        <div style={{ width:64, height:64, borderRadius:16, background:recipe.color || th.appAccent, color:"#fff", margin:"0 auto 10px", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden" }}>
+          {dishPhotoOf(recipe) ? <img src={dishPhotoOf(recipe)} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }}/> : <ChosenIcon emoji={recipe.emoji || "🍽️"} icon={recipe.icon} size={30} />}
         </div>
         <div style={{ fontFamily:F.display, fontSize:22, fontStyle:"italic", color:th.appInk }}>{recipe.title}</div>
         <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginTop:4 }}>

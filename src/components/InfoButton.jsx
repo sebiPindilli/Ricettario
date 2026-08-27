@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
+import AppIcon from "./AppIcon.jsx";
 
 const SIZE = 22;
 
@@ -29,12 +30,12 @@ export default function InfoButton({ children, dark = false, triggerStyle = null
           border:`1.5px solid ${triggerBorder}`,
           background: dark ? "rgba(255,255,255,0.12)" : th.appCard,
           color:triggerFaded,
-          fontFamily:F.ui, fontSize:SIZE*0.55, fontWeight:700, fontStyle:"italic",
+          fontFamily:F.ui, fontWeight:700, fontStyle:"italic",
           display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer",
           lineHeight:1,
           ...triggerStyle,
         }}
-      >i</button>
+      ><AppIcon emoji="i" icon="info" size={SIZE*0.55} /></button>
 
       {open && (
         <div onClick={() => setOpen(false)} style={{

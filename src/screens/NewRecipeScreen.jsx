@@ -8,6 +8,7 @@ import EditField from "../components/EditField.jsx";
 import EditNumberInput from "../components/EditNumberInput.jsx";
 import TagPicker from "../components/TagPicker.jsx";
 import EmojiColorPicker from "../components/EmojiColorPicker.jsx";
+import ChosenIcon from "../components/ChosenIcon.jsx";
 import SectionPicker from "../components/SectionPicker.jsx";
 import EditSectionedList from "../components/EditSectionedList.jsx";
 import EditSectionedSteps from "../components/EditSectionedSteps.jsx";
@@ -28,6 +29,11 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
   const [activeSection, setActiveSection] = useState("info");
 
   const set = (key, val) => setDraft(d => ({ ...d, [key]: val }));
+  // Rimuove del tutto la chiave invece di scriverci undefined: Firestore
+  // rifiuta i campi undefined nei documenti (vedi onIcon in EmojiColorPicker).
+  const setIcon = (i) => setDraft(d => i === undefined
+    ? Object.fromEntries(Object.entries(d).filter(([k]) => k !== "icon"))
+    : { ...d, icon: i });
 
   const updateIngredient = (i, val) => {
     const arr = [...draft.ingredients]; arr[i] = val; set("ingredients", arr);
@@ -93,10 +99,10 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
         <div style={{ position:"relative" }}>
           <div style={{
             width:52, height:52, borderRadius:12,
-            background:"rgba(255,255,255,0.2)",
+            background:"rgba(255,255,255,0.2)", color:"#fff",
             display:"flex", alignItems:"center", justifyContent:"center",
-            fontSize:26, cursor:"pointer",
-          }}>{draft.emoji}</div>
+            cursor:"pointer",
+          }}><ChosenIcon emoji={draft.emoji} icon={draft.icon} size={26} /></div>
         </div>
         <div>
           <div style={{
@@ -114,8 +120,10 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
         <EmojiColorPicker
           emoji={draft.emoji}
           color={draft.color}
+          icon={draft.icon}
           onEmoji={e => set("emoji", e)}
           onColor={c => set("color", c)}
+          onIcon={setIcon}
         />
       </div>
 

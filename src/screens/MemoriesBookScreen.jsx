@@ -6,6 +6,7 @@ import MemoryPhoto from "../components/MemoryPhoto.jsx";
 import PhotoLightbox from "../components/PhotoLightbox.jsx";
 import GlobalNav from "../components/GlobalNav.jsx";
 import { guideRicordi } from "../data/guideContent.jsx";
+import ChosenIcon from "../components/ChosenIcon.jsx";
 
 // ══════════════════════════════════════════════════════════════
 // SCREEN: MEMORIES BOOK — all photos, each linked to recipes
@@ -63,7 +64,7 @@ const MemoryOpenPage = ({ mems, linkedFor, onRecipe, th, confirmDeleteId, onRequ
                   background:`${r.color}18`, border:`1px solid ${r.color}30`,
                   borderRadius:9, padding:"5px 10px", cursor:"pointer",
                 }}>
-                  <span style={{ fontSize:13 }}>{r.emoji}</span>
+                  <ChosenIcon emoji={r.emoji} icon={r.icon} size={13} />
                   <span style={{ fontFamily:F.ui, fontSize:11, color:r.color, fontWeight:600 }}>{r.title}</span>
                 </button>
               ))}
@@ -215,7 +216,7 @@ export default function MemoriesBookScreen({ recipes, onBack, onRecipe, onRecipe
                             background:`${r.color}18`, border:`1px solid ${r.color}30`,
                             borderRadius:8, padding:"3px 8px", cursor:"pointer",
                           }}>
-                            <span style={{ fontSize:12 }}>{r.emoji}</span>
+                            <ChosenIcon emoji={r.emoji} icon={r.icon} size={12} />
                             <span style={{ fontFamily:F.ui, fontSize:10, color:r.color, fontWeight:600 }}>{r.title}</span>
                           </button>
                         ))}

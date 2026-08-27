@@ -3,6 +3,7 @@ import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 import { isSectioned, ingredientToText, stepPhotosOf, dishPhotoOf } from "../utils/helpers.js";
 import PhotoLightbox from "./PhotoLightbox.jsx";
+import ChosenIcon from "./ChosenIcon.jsx";
 
 export default function RecipeCardBook({ recipe }) {
   const th = useTheme();
@@ -74,10 +75,10 @@ export default function RecipeCardBook({ recipe }) {
                 <div style={{
                   position:"absolute", top:6, left:6, width:28, height:28, borderRadius:"50%",
                   background:"rgba(0,0,0,0.35)", backdropFilter:"blur(4px)", border:"1px solid rgba(255,255,255,0.25)",
-                  display:"flex", alignItems:"center", justifyContent:"center", fontSize:15,
-                }}>{recipe.emoji}</div>
+                  display:"flex", alignItems:"center", justifyContent:"center", color:"#fff",
+                }}><ChosenIcon emoji={recipe.emoji} icon={recipe.icon} size={15} /></div>
               </>
-            : <span style={{ opacity:0.35 }}>{recipe.emoji}</span>
+            : <span style={{ opacity:0.35 }}><ChosenIcon emoji={recipe.emoji} icon={recipe.icon} size={44} /></span>
           }
         </div>
 

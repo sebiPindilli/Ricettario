@@ -1,6 +1,10 @@
 import React, { useState } from "react";
 import { useTheme } from "../context.js";
 import { F, INGREDIENT_CATEGORIES } from "../data/constants.js";
+import AppIcon from "../components/AppIcon.jsx";
+import SectionCategoryIcon from "../components/SectionCategoryIcon.jsx";
+import ChosenIcon from "../components/ChosenIcon.jsx";
+import FoodIconGrid from "../components/FoodIconGrid.jsx";
 import { NUTRITION_DB } from "../data/nutrition.js";
 import {
   buildIngredientDict, ingDictIndex, sortCategoriesBaseFirst,
@@ -55,7 +59,8 @@ export default function OrganizeIngredientsScreen({
   const [catDraft, setCatDraft] = useState({});     // key → string[] (categorie scelte)
   const [nutriDraft, setNutriDraft] = useState({}); // key → {foodId}|{custom}|null (bozza collegamento) — assente = usa il valore salvato
   const [eqDraft, setEqDraft] = useState({});       // key → { unità: grammi }
-  const [newCat, setNewCat] = useState({ emoji:"", label:"" });
+  const [newCat, setNewCat] = useState({ emoji:"", label:"", icon:undefined });
+  const [iconPickerMode, setIconPickerMode] = useState("emoji"); // "emoji" | "svg", per il popup icona categoria
   const [renameDraft, setRenameDraft] = useState({});   // ingId → testo in modifica (stato nel parent: ItemCard viene rimontata)
   const [renameErr, setRenameErr] = useState(null);     // ingId con nome rifiutato
   const [emojiPickerFor, setEmojiPickerFor] = useState(null); // cat.id | "new" | null
@@ -602,8 +607,8 @@ export default function OrganizeIngredientsScreen({
       const label = newCat.label.trim();
       if (!label) return;
       const id = uid("cat");
-      onSaveCategory({ id, label, emoji: newCat.emoji.trim() || "🏷️" });
-      setNewCat({ emoji:"", label:"" });
+      onSaveCategory({ id, label, emoji: newCat.emoji.trim() || "🏷️", ...(newCat.icon ? { icon: newCat.icon } : {}) });
+      setNewCat({ emoji:"", label:"", icon:undefined });
     };
 
     return (
@@ -634,10 +639,10 @@ export default function OrganizeIngredientsScreen({
               }}>
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                   <button
-                    onClick={() => !isFixed && setEmojiPickerFor(cat.id)}
+                    onClick={() => { if (!isFixed) { setEmojiPickerFor(cat.id); setIconPickerMode("emoji"); } }}
                     disabled={isFixed}
-                    style={{ width:44, padding:"8px 4px", textAlign:"center", border:`1.5px solid ${emojiPickerFor===cat.id ? th.appAccent : th.appBorder}`, borderRadius:10, background:th.appBg, fontSize:16, cursor: isFixed ? "default" : "pointer", flexShrink:0 }}
-                  >{cat.emoji}</button>
+                    style={{ width:44, padding:"8px 4px", textAlign:"center", border:`1.5px solid ${emojiPickerFor===cat.id ? th.appAccent : th.appBorder}`, borderRadius:10, background:th.appBg, cursor: isFixed ? "default" : "pointer", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}
+                  ><SectionCategoryIcon item={cat} size={16} /></button>
                   <input
                     value={cat.label}
                     onChange={e => !isFixed && onSaveCategory({ ...cat, label: e.target.value })}
@@ -676,9 +681,9 @@ export default function OrganizeIngredientsScreen({
             <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:8 }}>Nuova categoria</div>
             <div style={{ display:"flex", gap:8 }}>
               <button
-                onClick={() => setEmojiPickerFor("new")}
-                style={{ width:44, padding:"8px 4px", textAlign:"center", border:`1.5px solid ${emojiPickerFor==="new" ? th.appAccent : th.appBorder}`, borderRadius:10, background:th.appCard, fontSize:16, cursor:"pointer", flexShrink:0 }}
-              >{newCat.emoji || "🏷️"}</button>
+                onClick={() => { setEmojiPickerFor("new"); setIconPickerMode("emoji"); }}
+                style={{ width:44, padding:"8px 4px", textAlign:"center", border:`1.5px solid ${emojiPickerFor==="new" ? th.appAccent : th.appBorder}`, borderRadius:10, background:th.appCard, cursor:"pointer", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}
+              ><ChosenIcon emoji={newCat.emoji || "🏷️"} icon={newCat.icon} size={16} /></button>
               <input
                 value={newCat.label}
                 onChange={e => setNewCat(p => ({ ...p, label: e.target.value }))}
@@ -710,22 +715,51 @@ export default function OrganizeIngredientsScreen({
               <div style={{ fontFamily:F.ui, fontSize:11, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:10, textAlign:"center" }}>
                 Scegli un'icona
               </div>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(6, 1fr)", gap:6 }}>
-                {CATEGORY_EMOJIS.map(e => (
-                  <button key={e} onClick={() => {
-                    if (emojiPickerFor === "new") setNewCat(p => ({ ...p, emoji: e }));
-                    else {
-                      const cat = categoryList.find(c => c.id === emojiPickerFor);
-                      if (cat) onSaveCategory({ ...cat, emoji: e });
-                    }
-                    setEmojiPickerFor(null);
-                  }} style={{
-                    aspectRatio:"1", borderRadius:10, border:`1px solid ${th.appBorder}`,
-                    background:th.appCard, fontSize:20, cursor:"pointer",
-                    display:"flex", alignItems:"center", justifyContent:"center",
-                  }}>{e}</button>
+              <div style={{ display:"flex", borderRadius:20, overflow:"hidden", border:`1.5px solid ${th.appBorder}`, marginBottom:10, width:"fit-content" }}>
+                {[["emoji","Emoji"],["svg","SVG"]].map(([id,label]) => (
+                  <button key={id} onClick={() => setIconPickerMode(id)} style={{
+                    padding:"6px 16px", border:"none", cursor:"pointer",
+                    background: iconPickerMode===id ? th.appInk : "transparent",
+                    color: iconPickerMode===id ? "#fff" : th.appFaded,
+                    fontFamily:F.ui, fontSize:11, fontWeight:700,
+                  }}>{label}</button>
                 ))}
               </div>
+              {iconPickerMode === "emoji" ? (
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(6, 1fr)", gap:6 }}>
+                  {CATEGORY_EMOJIS.map(e => (
+                    <button key={e} onClick={() => {
+                      if (emojiPickerFor === "new") setNewCat(p => ({ ...p, emoji: e, icon: undefined }));
+                      else {
+                        const cat = categoryList.find(c => c.id === emojiPickerFor);
+                        // icon rimosso del tutto (non messo a undefined:
+                        // Firestore rifiuta i campi undefined) — un'emoji
+                        // scelta qui sostituisce del tutto un'eventuale
+                        // icona SVG fissa della categoria predefinita.
+                        if (cat) onSaveCategory(Object.fromEntries(Object.entries({ ...cat, emoji: e }).filter(([k]) => k !== "icon")));
+                      }
+                      setEmojiPickerFor(null);
+                    }} style={{
+                      aspectRatio:"1", borderRadius:10, border:`1px solid ${th.appBorder}`,
+                      background:th.appCard, fontSize:20, cursor:"pointer",
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                    }}>{e}</button>
+                  ))}
+                </div>
+              ) : (
+                <FoodIconGrid
+                  value={emojiPickerFor === "new" ? newCat.icon : categoryList.find(c => c.id === emojiPickerFor)?.icon}
+                  onSelect={name => {
+                    if (emojiPickerFor === "new") setNewCat(p => ({ ...p, icon: name }));
+                    else {
+                      const cat = categoryList.find(c => c.id === emojiPickerFor);
+                      if (cat) onSaveCategory({ ...cat, icon: name });
+                    }
+                    setEmojiPickerFor(null);
+                  }}
+                  accent={th.appAccent} inkColor={th.appInk} fadedColor={th.appFaded} borderColor={th.appBorder} bgColor={th.appCard}
+                />
+              )}
               <button onClick={() => setEmojiPickerFor(null)} style={{
                 width:"100%", marginTop:12, padding:"11px",
                 border:`1.5px solid ${th.appBorder}`, borderRadius:12,
@@ -829,7 +863,8 @@ export default function OrganizeIngredientsScreen({
                       background: sel ? th.appAccent : "transparent",
                       color: sel ? "#fff" : th.appFaded,
                       fontFamily:F.ui, fontSize:11, cursor:"pointer",
-                    }}>{cat.emoji} {cat.label}</button>
+                      display:"flex", alignItems:"center", gap:4,
+                    }}><SectionCategoryIcon item={cat} size={11} /> {cat.label}</button>
                   );
                 })}
               </div>
@@ -988,7 +1023,8 @@ export default function OrganizeIngredientsScreen({
                 background: on ? th.appAccent : "transparent",
                 color: on ? "#fff" : th.appFaded,
                 fontFamily:F.ui, fontSize:10.5, cursor:"pointer",
-              }}>{c.emoji} {c.label}</button>
+                display:"flex", alignItems:"center", gap:4,
+              }}><SectionCategoryIcon item={c} size={10.5} /> {c.label}</button>
             );
           })}
         </div>
@@ -1257,8 +1293,16 @@ export default function OrganizeIngredientsScreen({
         {/* Attributi */}
         <div style={{ marginTop:7, display:"flex", flexDirection:"column", gap:3 }}>
           <div style={{ fontFamily:F.ui, fontSize:10.5, color: issueNoCat ? RED : th.appFaded, fontWeight: issueNoCat ? 600 : 400 }}>
-            🏷️ {cats.length > 0 ? (
-              <>{catsInheritedFrom && <>eredita da «{catsInheritedFrom.name}» · </>}{cats.map(c => { const cc = catOf(c); return cc ? `${cc.emoji} ${cc.label}` : c; }).join(" · ")}</>
+            <AppIcon emoji="🏷️" icon="tag" size={10.5} /> {cats.length > 0 ? (
+              <>{catsInheritedFrom && <>eredita da «{catsInheritedFrom.name}» · </>}{cats.map((c, i) => {
+                const cc = catOf(c);
+                return (
+                  <span key={c}>
+                    {i > 0 && " · "}
+                    {cc ? <span style={{ display:"inline-flex", alignItems:"center", gap:3 }}><SectionCategoryIcon item={cc} size={10.5} />{cc.label}</span> : c}
+                  </span>
+                );
+              })}</>
             ) : "senza categoria — assegnane una"}
           </div>
           <div style={{ fontFamily:F.ui, fontSize:10.5, color: nutri.ok ? th.appFaded : RED, fontWeight: nutri.ok ? 400 : 600 }}>

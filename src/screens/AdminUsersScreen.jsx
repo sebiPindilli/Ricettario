@@ -6,6 +6,7 @@ import Toast from "../components/Toast.jsx";
 import {
   loadAllowlist, addAllowlistEntry, setAllowlistRole, removeAllowlistEntry,
   loadBetaConfig, setBetaEnabled as setBetaEnabledRemote,
+  loadIconStyleConfig, setIconStyle as setIconStyleRemote,
 } from "../services/authStore.js";
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
@@ -37,12 +38,15 @@ export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemor
   const [lastAdded, setLastAdded] = useState(null);
   const [betaEnabled, setBetaEnabled] = useState(true);
   const [betaBusy, setBetaBusy] = useState(false);
+  const [iconStyle, setIconStyleState] = useState("emoji");
+  const [iconStyleBusy, setIconStyleBusy] = useState(false);
 
   useEffect(() => {
     loadAllowlist()
       .then((list) => { setUsers(list); setLoading(false); })
       .catch(() => { setLoadError(true); setLoading(false); });
     loadBetaConfig().then(({ enabled }) => setBetaEnabled(enabled));
+    loadIconStyleConfig().then(({ style }) => setIconStyleState(style));
   }, []);
 
   const toggleBeta = async () => {
@@ -56,6 +60,23 @@ export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemor
       showToast("⚠️ Cambio stato beta non riuscito");
     } finally {
       setBetaBusy(false);
+    }
+  };
+
+  // Vale per l'interfaccia fissa di TUTTI gli utenti (non una preferenza
+  // personale) — icone scelte liberamente su ricette/sezioni/categorie
+  // personalizzate non sono toccate da questo interruttore.
+  const changeIconStyle = async (next) => {
+    if (next === iconStyle || iconStyleBusy) return;
+    setIconStyleBusy(true);
+    try {
+      await setIconStyleRemote(next);
+      setIconStyleState(next);
+      showToast(next === "svg" ? "🎨 Icone SVG attivate per tutti" : "🎨 Emoji ripristinate per tutti");
+    } catch {
+      showToast("⚠️ Cambio stile icone non riuscito");
+    } finally {
+      setIconStyleBusy(false);
     }
   };
 
@@ -148,6 +169,25 @@ export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemor
           fontFamily: F.ui, fontSize: 11.5, fontWeight: 700,
           cursor: betaBusy ? "default" : "pointer", opacity: betaBusy ? 0.7 : 1,
         }}>{betaEnabled ? "Disattiva" : "Attiva"}</button>
+      </div>
+
+      <div style={{ margin: "8px 20px 0", background: th.appCard, border: `1.5px solid ${th.appBorder}`, borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: F.ui, fontSize: 12.5, fontWeight: 700, color: th.appInk }}>🎨 Stile icone</div>
+          <div style={{ fontFamily: F.ui, fontSize: 10, color: th.appFaded, marginTop: 2 }}>
+            Vale per l'interfaccia di tutti gli utenti
+          </div>
+        </div>
+        <div style={{ display: "flex", borderRadius: 20, overflow: "hidden", border: `1.5px solid ${th.appBorder}`, flexShrink: 0 }}>
+          {[["emoji", "Emoji"], ["svg", "SVG"]].map(([id, label]) => (
+            <button key={id} disabled={iconStyleBusy} onClick={() => changeIconStyle(id)} style={{
+              padding: "7px 14px", border: "none", cursor: iconStyleBusy ? "default" : "pointer",
+              background: iconStyle === id ? th.appAccent : "transparent",
+              color: iconStyle === id ? "#fff" : th.appFaded,
+              fontFamily: F.ui, fontSize: 11.5, fontWeight: 700, opacity: iconStyleBusy ? 0.7 : 1,
+            }}>{label}</button>
+          ))}
+        </div>
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: "10px 18px 40px" }}>

@@ -8,6 +8,8 @@ import {
 import GlobalNav from "../components/GlobalNav.jsx";
 import RecipeFilterBar from "../components/RecipeFilterBar.jsx";
 import SuggestionHint from "../components/SuggestionHint.jsx";
+import SectionCategoryIcon from "../components/SectionCategoryIcon.jsx";
+import ChosenIcon from "../components/ChosenIcon.jsx";
 import ServingsDialog from "../components/ServingsDialog.jsx";
 import ShoppingMode from "../components/ShoppingMode.jsx";
 import CookingMode from "./CookingMode.jsx";
@@ -276,8 +278,8 @@ export default function EmptyFridgeScreen({
             <>
               {byCategory.map(cat => (
                 <div key={cat.id} style={{ marginBottom:16 }}>
-                  <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appAccent, textTransform:"uppercase", margin:"4px 0 8px", fontWeight:700 }}>
-                    {cat.emoji} {cat.label}
+                  <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appAccent, textTransform:"uppercase", margin:"4px 0 8px", fontWeight:700, display:"flex", alignItems:"center", gap:5 }}>
+                    <SectionCategoryIcon item={cat} size={10} /> {cat.label}
                   </div>
                   <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
                     {cat.items.map(renderItemBtn)}
@@ -384,7 +386,7 @@ export default function EmptyFridgeScreen({
                   borderRadius:16, overflow:"hidden",
                 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px" }}>
-                    <div style={{ width:44, height:44, borderRadius:12, background:recipe.color, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>{recipe.dishPhoto ? "📸" : recipe.emoji}</div>
+                    <div style={{ width:44, height:44, borderRadius:12, background:recipe.color, color:"#fff", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>{recipe.dishPhoto ? <span style={{ fontSize:22 }}>📸</span> : <ChosenIcon emoji={recipe.emoji} icon={recipe.icon} size={22} />}</div>
                     <div style={{ flex:1 }}>
                       <div style={{ fontFamily:F.display, fontSize:16, color:th.appInk }}>{recipe.title}</div>
                       <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>{recipe.category} · {recipe.prepTime+recipe.cookTime} min</div>

@@ -9,6 +9,7 @@ import Toast from "../components/Toast.jsx";
 import PhotoLightbox from "../components/PhotoLightbox.jsx";
 import PhotoCropOverlay from "../components/PhotoCropOverlay.jsx";
 import Pill from "../components/Pill.jsx";
+import AppIcon from "../components/AppIcon.jsx";
 import Divider from "../components/Divider.jsx";
 import NutritionCard from "../components/NutritionCard.jsx";
 import MemoriesSection from "../components/MemoriesSection.jsx";
@@ -157,8 +158,8 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
           border:"1.5px solid #3B6FD855",
           borderRadius:10, background:"#3B6FD81C",
           display:"flex", alignItems:"center", justifyContent:"center",
-          fontSize:17, cursor:"pointer", lineHeight:1,
-        }} title="Esporta / condividi">📤</button>
+          cursor:"pointer", lineHeight:1,
+        }} title="Esporta / condividi"><AppIcon emoji="📤" icon="esporta" size={17} /></button>
         {/* Favorite button */}
         <button onClick={() => onUpdate({ ...recipe, favorite: !recipe.favorite })} style={{
           width:38, height:38, padding:0,
@@ -334,9 +335,9 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
                 </div>
               )}
               <div style={{ display:"flex", gap:10, marginTop:12, flexWrap:"wrap" }}>
-                <Pill icon="🔪" label={`Prep: ${recipe.prepTime} min`}/>
-                <Pill icon="🔥" label={`Cottura: ${recipe.cookTime} min`}/>
-                <Pill icon="👤" label={`${recipe.servings} porzioni`}/>
+                <Pill icon={<AppIcon emoji="🔪" icon="preparazione" size={12} />} label={`Prep: ${recipe.prepTime} min`}/>
+                <Pill icon={<AppIcon emoji="🔥" icon="cottura" size={12} />} label={`Cottura: ${recipe.cookTime} min`}/>
+                <Pill icon={<AppIcon emoji="👤" icon="porzioni" size={12} />} label={`${recipe.servings} porzioni`}/>
               </div>
             </div>
 

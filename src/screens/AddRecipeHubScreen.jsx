@@ -2,6 +2,7 @@ import React from "react";
 import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 import BackBtn from "../components/BackBtn.jsx";
+import ChosenIcon from "../components/ChosenIcon.jsx";
 
 // Età della bozza in una didascalia breve, in italiano.
 function ageLabel(createdAt) {
@@ -45,9 +46,9 @@ export default function AddRecipeHubScreen({ onBack, onManual, onScan, onLink, o
                     background:"none", border:"none", cursor:"pointer", textAlign:"left", padding:0,
                   }}>
                     <div style={{
-                      width:38, height:38, borderRadius:10, background:p.draft.color || th.appAccent,
-                      display:"flex", alignItems:"center", justifyContent:"center", fontSize:19, flexShrink:0,
-                    }}>{p.draft.emoji || "🍝"}</div>
+                      width:38, height:38, borderRadius:10, background:p.draft.color || th.appAccent, color:"#fff",
+                      display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0,
+                    }}><ChosenIcon emoji={p.draft.emoji || "🍝"} icon={p.draft.icon} size={19} /></div>
                     <div style={{ minWidth:0 }}>
                       <div style={{ fontFamily:F.display, fontSize:14, color:th.appInk, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
                         {p.draft.title?.trim() || "Ricetta senza titolo"}

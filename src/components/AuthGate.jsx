@@ -1,12 +1,12 @@
 // Fase C — gate di autenticazione: nessun dato dell'app viene caricato
 // finché l'utente non è loggato con Google E presente in allowlist.
 // children è una render-prop: children(user, role, defaultBookId,
-// betaEnabled, timerAlerts, pdfTemplates, defaultPdfTemplateId) viene
-// chiamata solo quando lo stato è "authorized".
+// betaEnabled, timerAlerts, pdfTemplates, defaultPdfTemplateId, iconStyle)
+// viene chiamata solo quando lo stato è "authorized".
 import { useState, useEffect, useCallback } from "react";
 import { auth } from "../firebase.js";
 import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
-import { checkWhitelist, loadBetaConfig, DEFAULT_TIMER_ALERTS } from "../services/authStore.js";
+import { checkWhitelist, loadBetaConfig, loadIconStyleConfig, DEFAULT_TIMER_ALERTS } from "../services/authStore.js";
 import { OfflineNoCacheError } from "../services/offlineFirst.js";
 import { withTimeout } from "../utils/helpers.js";
 
@@ -33,6 +33,7 @@ export default function AuthGate({ children }) {
   const [timerAlerts, setTimerAlerts] = useState(DEFAULT_TIMER_ALERTS);
   const [pdfTemplates, setPdfTemplates] = useState({});
   const [defaultPdfTemplateId, setDefaultPdfTemplateId] = useState(null);
+  const [iconStyle, setIconStyle] = useState("emoji");
   const [error, setError] = useState("");
 
   // Percorso post-autenticazione (whitelist + config beta): isolato in una
@@ -60,6 +61,15 @@ export default function AuthGate({ children }) {
         setBetaEnabled(enabled);
       } catch (e) {
         console.warn("Config beta non disponibile", e);
+      }
+      // Interruttore globale emoji/SVG (vedi context.js IconStyleCtx) — non
+      // fatale: se non disponibile offline, l'app entra comunque con
+      // "emoji" (default sicuro, comportamento identico a prima).
+      try {
+        const { style } = await withTimeout(loadIconStyleConfig(), timeoutMs);
+        setIconStyle(style);
+      } catch (e) {
+        console.warn("Config stile icone non disponibile", e);
       }
       setStatus("authorized");
     } catch (e) {
@@ -156,5 +166,5 @@ export default function AuthGate({ children }) {
     );
   }
 
-  return children(user, role, defaultBookId, betaEnabled, timerAlerts, pdfTemplates, defaultPdfTemplateId);
+  return children(user, role, defaultBookId, betaEnabled, timerAlerts, pdfTemplates, defaultPdfTemplateId, iconStyle);
 }

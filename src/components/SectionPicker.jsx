@@ -1,6 +1,24 @@
 import React, { useState } from "react";
 import { F, MACRO_SECTIONS, PICKER_EMOJIS } from "../data/constants.js";
 import { uid, sortSectionsAltroLast } from "../utils/helpers.js";
+import SectionCategoryIcon from "./SectionCategoryIcon.jsx";
+import ChosenIcon from "./ChosenIcon.jsx";
+import FoodIconGrid from "./FoodIconGrid.jsx";
+
+// Primo livello Emoji/SVG condiviso dai due popup sotto (nuova sezione,
+// modifica icona di una sezione esistente).
+const ModeToggle = ({ mode, onChange }) => (
+  <div style={{ display:"flex", borderRadius:20, overflow:"hidden", border:"1.5px solid #EDE6D4", marginBottom:10, width:"fit-content" }}>
+    {[["emoji","Emoji"],["svg","SVG"]].map(([id,label]) => (
+      <button key={id} onClick={() => onChange(id)} style={{
+        padding:"6px 16px", border:"none", cursor:"pointer",
+        background: mode===id ? "#2C2416" : "transparent",
+        color: mode===id ? "#fff" : "#7A6E5F",
+        fontFamily:F.ui, fontSize:11, fontWeight:700,
+      }}>{label}</button>
+    ))}
+  </div>
+);
 
 // ══════════════════════════════════════════════════════════════
 // SECTION PICKER — selettore sezione ricettario con aggiunta custom
@@ -9,9 +27,12 @@ export default function SectionPicker({ value, onChange, sections = MACRO_SECTIO
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmoji, setNewEmoji] = useState("📁");
+  const [newIcon, setNewIcon] = useState(undefined);
   const [pickEmoji, setPickEmoji] = useState(false);
+  const [newMode, setNewMode] = useState("emoji"); // "emoji" | "svg", per il popup icona qui sotto
   const [managing, setManaging] = useState(false);       // popup modifica sezioni
   const [editEmojiFor, setEditEmojiFor] = useState(null); // id sezione di cui cambiare icona
+  const [editMode, setEditMode] = useState("emoji");      // idem, per il popup di modifica
   const [confirmDelId, setConfirmDelId] = useState(null);  // id sezione in attesa di conferma eliminazione
 
   const ordered = sortSectionsAltroLast(sections);
@@ -20,9 +41,9 @@ export default function SectionPicker({ value, onChange, sections = MACRO_SECTIO
     const label = newName.trim();
     if (!label || !onAddSection) return;
     const id = uid("sec");
-    onAddSection({ id, label, emoji: newEmoji, desc: "" });
+    onAddSection({ id, label, emoji: newEmoji, desc: "", ...(newIcon ? { icon: newIcon } : {}) });
     onChange(id);
-    setAdding(false); setNewName(""); setNewEmoji("📁");
+    setAdding(false); setNewName(""); setNewEmoji("📁"); setNewIcon(undefined); setNewMode("emoji");
   };
 
   return (
@@ -37,7 +58,7 @@ export default function SectionPicker({ value, onChange, sections = MACRO_SECTIO
               background: on ? "#C4593A15" : "#F7F2E8",
               display:"flex", flexDirection:"column", alignItems:"center", gap:3,
             }}>
-              <span style={{ fontSize:18 }}>{sec.emoji}</span>
+              <SectionCategoryIcon item={sec} size={18} />
               <span style={{ fontFamily:F.ui, fontSize:10, fontWeight:700, color: on ? "#C4593A" : "#7A6E5F", textAlign:"center" }}>{sec.label}</span>
             </button>
           );
@@ -69,7 +90,7 @@ export default function SectionPicker({ value, onChange, sections = MACRO_SECTIO
             {!pickEmoji ? (
               <>
                 <div style={{ display:"flex", gap:8, marginBottom:12 }}>
-                  <button onClick={() => setPickEmoji(true)} style={{ width:48, padding:"8px 4px", textAlign:"center", border:"1.5px solid #EDE6D4", borderRadius:10, background:"#F7F2E8", fontSize:18, cursor:"pointer", flexShrink:0 }}>{newEmoji}</button>
+                  <button onClick={() => setPickEmoji(true)} style={{ width:48, padding:"8px 4px", textAlign:"center", border:"1.5px solid #EDE6D4", borderRadius:10, background:"#F7F2E8", cursor:"pointer", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}><ChosenIcon emoji={newEmoji} icon={newIcon} size={18} /></button>
                   <input
                     value={newName}
                     onChange={e => setNewName(e.target.value)}
@@ -86,15 +107,20 @@ export default function SectionPicker({ value, onChange, sections = MACRO_SECTIO
               </>
             ) : (
               <>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(6, 1fr)", gap:6 }}>
-                  {PICKER_EMOJIS.map(e => (
-                    <button key={e} onClick={() => { setNewEmoji(e); setPickEmoji(false); }} style={{
-                      aspectRatio:"1", borderRadius:10, border:"1px solid #EDE6D4",
-                      background:"#F7F2E8", fontSize:20, cursor:"pointer",
-                      display:"flex", alignItems:"center", justifyContent:"center",
-                    }}>{e}</button>
-                  ))}
-                </div>
+                <ModeToggle mode={newMode} onChange={setNewMode} />
+                {newMode === "emoji" ? (
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(6, 1fr)", gap:6 }}>
+                    {PICKER_EMOJIS.map(e => (
+                      <button key={e} onClick={() => { setNewEmoji(e); setNewIcon(undefined); setPickEmoji(false); }} style={{
+                        aspectRatio:"1", borderRadius:10, border:"1px solid #EDE6D4",
+                        background:"#F7F2E8", fontSize:20, cursor:"pointer",
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                      }}>{e}</button>
+                    ))}
+                  </div>
+                ) : (
+                  <FoodIconGrid value={newIcon} onSelect={name => { setNewIcon(name); setPickEmoji(false); }} />
+                )}
                 <button onClick={() => setPickEmoji(false)} style={{ width:"100%", marginTop:12, padding:"11px", border:"1.5px solid #EDE6D4", borderRadius:12, background:"transparent", color:"#7A6E5F", fontFamily:F.ui, fontSize:12, cursor:"pointer" }}>‹ Indietro</button>
               </>
             )}
@@ -111,20 +137,33 @@ export default function SectionPicker({ value, onChange, sections = MACRO_SECTIO
 
             {editEmojiFor ? (
               <>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(6, 1fr)", gap:6 }}>
-                  {PICKER_EMOJIS.map(e => (
-                    <button key={e} onClick={() => {
-                      const sec = sections.find(s => s.id === editEmojiFor);
-                      if (sec) onUpdateSection({ ...sec, emoji: e });
-                      setEditEmojiFor(null);
-                    }} style={{
-                      aspectRatio:"1", borderRadius:10, border:"1px solid #EDE6D4",
-                      background:"#F7F2E8", fontSize:20, cursor:"pointer",
-                      display:"flex", alignItems:"center", justifyContent:"center",
-                    }}>{e}</button>
-                  ))}
-                </div>
-                <button onClick={() => setEditEmojiFor(null)} style={{ width:"100%", marginTop:12, padding:"11px", border:"1.5px solid #EDE6D4", borderRadius:12, background:"transparent", color:"#7A6E5F", fontFamily:F.ui, fontSize:12, cursor:"pointer" }}>‹ Indietro</button>
+                <ModeToggle mode={editMode} onChange={setEditMode} />
+                {editMode === "emoji" ? (
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(6, 1fr)", gap:6 }}>
+                    {PICKER_EMOJIS.map(e => (
+                      <button key={e} onClick={() => {
+                        const sec = sections.find(s => s.id === editEmojiFor);
+                        // icon rimosso del tutto (non messo a undefined:
+                        // Firestore rifiuta i campi undefined) — se aveva
+                        // un'icona SVG fissa (sezione predefinita), scegliere
+                        // qui una propria emoji la sostituisce del tutto.
+                        if (sec) onUpdateSection(Object.fromEntries(Object.entries({ ...sec, emoji: e }).filter(([k]) => k !== "icon")));
+                        setEditEmojiFor(null); setEditMode("emoji");
+                      }} style={{
+                        aspectRatio:"1", borderRadius:10, border:"1px solid #EDE6D4",
+                        background:"#F7F2E8", fontSize:20, cursor:"pointer",
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                      }}>{e}</button>
+                    ))}
+                  </div>
+                ) : (
+                  <FoodIconGrid onSelect={name => {
+                    const sec = sections.find(s => s.id === editEmojiFor);
+                    if (sec) onUpdateSection({ ...sec, icon: name });
+                    setEditEmojiFor(null); setEditMode("emoji");
+                  }} />
+                )}
+                <button onClick={() => { setEditEmojiFor(null); setEditMode("emoji"); }} style={{ width:"100%", marginTop:12, padding:"11px", border:"1.5px solid #EDE6D4", borderRadius:12, background:"transparent", color:"#7A6E5F", fontFamily:F.ui, fontSize:12, cursor:"pointer" }}>‹ Indietro</button>
               </>
             ) : (
               <>
@@ -138,8 +177,8 @@ export default function SectionPicker({ value, onChange, sections = MACRO_SECTIO
                       <button
                         onClick={() => !isFixed && setEditEmojiFor(sec.id)}
                         disabled={isFixed}
-                        style={{ width:44, padding:"8px 4px", textAlign:"center", border:"1.5px solid #EDE6D4", borderRadius:10, background:"#F7F2E8", fontSize:16, cursor: isFixed ? "default" : "pointer", flexShrink:0 }}
-                      >{sec.emoji}</button>
+                        style={{ width:44, padding:"8px 4px", textAlign:"center", border:"1.5px solid #EDE6D4", borderRadius:10, background:"#F7F2E8", cursor: isFixed ? "default" : "pointer", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}
+                      ><SectionCategoryIcon item={sec} size={16} /></button>
                       <input
                         value={sec.label}
                         onChange={e => !isFixed && onUpdateSection({ ...sec, label: e.target.value })}

@@ -61,7 +61,7 @@ import {
   MOBILE_BREAKPOINT_CSS,
 } from "./data/constants.js";
 import { NUTRITION_DB } from "./data/nutrition.js";
-import { ThemeCtx, useTheme, NavCtx, useNavActions, RoleCtx, BetaEnabledCtx, OnlineCtx } from "./context.js";
+import { ThemeCtx, useTheme, NavCtx, useNavActions, RoleCtx, BetaEnabledCtx, IconStyleCtx, OnlineCtx } from "./context.js";
 import OrganizeIcon from "./components/OrganizeIcon.jsx";
 import BackBtn from "./components/BackBtn.jsx";
 import Divider from "./components/Divider.jsx";
@@ -402,7 +402,7 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAlerts, initialPdfTemplates, initialDefaultPdfTemplateId }) {
+function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAlerts, initialPdfTemplates, initialDefaultPdfTemplateId, iconStyle }) {
   // Solo per il banner "sei offline" — il salvataggio vero e proprio non
   // dipende da questo stato (si appoggia alla coda offline di Firestore,
   // vedi src/firebase.js, e al retry sull'evento "online" più sotto).
@@ -2019,6 +2019,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     <ScanExtractionProvider>
     <RoleCtx.Provider value={role}>
     <BetaEnabledCtx.Provider value={betaEnabled}>
+    <IconStyleCtx.Provider value={iconStyle}>
     <OnlineCtx.Provider value={isOnline}>
     <ThemeCtx.Provider value={bookTheme}>
     <NavCtx.Provider value={{ onOrganize: () => openOrganize() }}>
@@ -2483,6 +2484,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     </NavCtx.Provider>
     </ThemeCtx.Provider>
     </OnlineCtx.Provider>
+    </IconStyleCtx.Provider>
     </BetaEnabledCtx.Provider>
     </RoleCtx.Provider>
     </ScanExtractionProvider>
@@ -2498,7 +2500,7 @@ export default function App() {
           può riguardare anche la schermata di accesso stessa). */}
       <PwaBanners/>
       <AuthGate>
-        {(user, role, defaultBookId, betaEnabled, timerAlerts, pdfTemplates, defaultPdfTemplateId) => <AppInner me={user.email} role={role} initialDefaultBookId={defaultBookId} betaEnabled={betaEnabled} initialTimerAlerts={timerAlerts} initialPdfTemplates={pdfTemplates} initialDefaultPdfTemplateId={defaultPdfTemplateId}/>}
+        {(user, role, defaultBookId, betaEnabled, timerAlerts, pdfTemplates, defaultPdfTemplateId, iconStyle) => <AppInner me={user.email} role={role} initialDefaultBookId={defaultBookId} betaEnabled={betaEnabled} initialTimerAlerts={timerAlerts} initialPdfTemplates={pdfTemplates} initialDefaultPdfTemplateId={defaultPdfTemplateId} iconStyle={iconStyle}/>}
       </AuthGate>
     </ErrorBoundary>
   );

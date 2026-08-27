@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useTheme } from "../context.js";
 import { sortSectionsAltroLast } from "../utils/helpers.js";
 import { F, MACRO_SECTIONS, TAG_GROUPS } from "../data/constants.js";
+import AppIcon from "./AppIcon.jsx";
+import SectionCategoryIcon from "./SectionCategoryIcon.jsx";
 
 // COMPONENT: RecipeFilterBar — barra filtri condivisa (schede + libro)
 // Gestisce ricerca, sezioni, tag, preferiti; espone la lista filtrata
@@ -68,7 +70,7 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
       {/* Ricerca */}
       <div style={{ padding:"8px 16px 4px" }}>
         <div style={{ display:"flex", gap:8, alignItems:"center", background:th.appCard, border:`1.5px solid ${searchQuery ? th.appAccent : th.appBorder}`, borderRadius:12, padding:"9px 14px" }}>
-          <span style={{ fontSize:15 }}>🔍</span>
+          <span style={{ color:th.appFaded }}><AppIcon emoji="🔍" icon="cerca" size={15} /></span>
           <input
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
@@ -99,7 +101,7 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
               fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
               display:"flex", alignItems:"center", gap:4, transition:"all 0.2s",
             }}>
-              <span>{sec.emoji}</span>
+              <SectionCategoryIcon item={sec} size={13} />
               <span>{sec.label.split(" ").slice(-1)[0]}</span>
               <span style={{ fontSize:10, background: active ? "rgba(255,255,255,0.25)" : th.appBorder, borderRadius:10, padding:"1px 5px", color: active ? "#fff" : th.appFaded }}>{count}</span>
             </button>
@@ -111,7 +113,8 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
           background: showFavorites ? th.appAccent : "transparent",
           color: showFavorites ? "#fff" : th.appFaded,
           fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
-        }}>⭐ Preferiti</button>
+          display:"flex", alignItems:"center", gap:4,
+        }}><AppIcon emoji="⭐" icon="preferito" size={12} /> Preferiti</button>
       </div>
 
       {/* Tag (accordion) */}
@@ -125,7 +128,7 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
             fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
             display:"flex", alignItems:"center", gap:5,
           }}>
-            🏷️ Filtra per tag
+            <AppIcon emoji="🏷️" icon="tag" size={11} /> Filtra per tag
             {activeTags.length > 0 && (
               <span style={{ background:th.appAccent, color:"#fff", borderRadius:10, padding:"1px 6px", fontSize:10 }}>{activeTags.length}</span>
             )}
@@ -206,13 +209,13 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
             fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
             display:"flex", alignItems:"center", gap:5,
           }}>
-            ⏱️ Tempo
+            <AppIcon emoji="⏱️" icon="tempo" size={11} /> Tempo
             {timeActive && (
-              <span style={{ background:th.appAccent, color:"#fff", borderRadius:10, padding:"1px 7px", fontSize:9.5, fontWeight:700 }}>
+              <span style={{ background:th.appAccent, color:"#fff", borderRadius:10, padding:"1px 7px", fontSize:9.5, fontWeight:700, display:"inline-flex", alignItems:"center", gap:5 }}>
                 {[
-                  prepActive && `🍳 ${prepRange[0]}–${prepRange[1] >= prepBound ? prepBound+"+" : prepRange[1]}`,
-                  cookActive && `🔥 ${cookRange[0]}–${cookRange[1] >= cookBound ? cookBound+"+" : cookRange[1]}`,
-                ].filter(Boolean).join(" · ")}
+                  prepActive && <span key="prep" style={{ display:"inline-flex", alignItems:"center", gap:2 }}><AppIcon emoji="🍳" icon="preparazione" size={9.5} />{prepRange[0]}–{prepRange[1] >= prepBound ? prepBound+"+" : prepRange[1]}</span>,
+                  cookActive && <span key="cook" style={{ display:"inline-flex", alignItems:"center", gap:2 }}><AppIcon emoji="🔥" icon="cottura" size={9.5} />{cookRange[0]}–{cookRange[1] >= cookBound ? cookBound+"+" : cookRange[1]}</span>,
+                ].filter(Boolean)}
               </span>
             )}
             <span style={{ fontSize:10, opacity:0.6 }}>{timeOpen ? "▲" : "▼"}</span>
@@ -228,12 +231,12 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
         {timeOpen && (
           <div style={{ padding:"2px 16px 12px", display:"flex", flexDirection:"column", gap:12 }}>
             {[
-              { label:"🍳 Preparazione", range:draftPrepRange, setRange:setDraftPrepRange, bound:prepBound },
-              { label:"🔥 Cottura", range:draftCookRange, setRange:setDraftCookRange, bound:cookBound },
-            ].map(({ label, range, setRange, bound }) => (
+              { emoji:"🍳", icon:"preparazione", label:"Preparazione", range:draftPrepRange, setRange:setDraftPrepRange, bound:prepBound },
+              { emoji:"🔥", icon:"cottura", label:"Cottura", range:draftCookRange, setRange:setDraftCookRange, bound:cookBound },
+            ].map(({ emoji, icon, label, range, setRange, bound }) => (
               <div key={label}>
                 <div style={{ display:"flex", justifyContent:"space-between", fontFamily:F.ui, fontSize:11, color:th.appFaded, marginBottom:4 }}>
-                  <span>{label}</span>
+                  <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><AppIcon emoji={emoji} icon={icon} size={11} />{label}</span>
                   <span>{range[0]}–{range[1] >= bound ? `${bound}+` : range[1]} min</span>
                 </div>
                 <div style={{ display:"flex", gap:10, alignItems:"center" }}>

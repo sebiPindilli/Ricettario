@@ -10,6 +10,7 @@ import {
 } from "../utils/pdfStyles.js";
 import { PDF_FONTS, pdfFontStack } from "../data/pdfFonts.js";
 import { deriveColorTokens } from "../utils/colorDerive.js";
+import SectionCategoryIcon from "./SectionCategoryIcon.jsx";
 
 const PDF_STYLE_OPTIONS = [
   { id: "classico", label: "Classico", desc: "Serif, accenti caldi — lo stile originale" },
@@ -220,7 +221,7 @@ export default function UnifiedExportFlow({
             if (inSec.length === 0) return null;
             return (
               <div key={sec.id} style={{ marginBottom: 8 }}>
-                <div style={{ fontFamily: F.ui, fontSize: 10, color: th.appFaded, textTransform: "uppercase", letterSpacing: 0.5, margin: "4px 2px" }}>{sec.emoji} {sec.label}</div>
+                <div style={{ fontFamily: F.ui, fontSize: 10, color: th.appFaded, textTransform: "uppercase", letterSpacing: 0.5, margin: "4px 2px", display: "flex", alignItems: "center", gap: 4 }}><SectionCategoryIcon item={sec} size={10} /> {sec.label}</div>
                 {inSec.map(r => {
                   const sel = selected.includes(r.id);
                   return (

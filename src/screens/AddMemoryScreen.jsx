@@ -5,6 +5,7 @@ import GlobalNav from "../components/GlobalNav.jsx";
 import BackBtn from "../components/BackBtn.jsx";
 import EditLabel from "../components/EditLabel.jsx";
 import Toast from "../components/Toast.jsx";
+import ChosenIcon from "../components/ChosenIcon.jsx";
 import { guideNuovoRicordo } from "../data/guideContent.jsx";
 
 export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBack, onSave, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping }) {
@@ -207,7 +208,7 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
                   borderRadius:12, cursor:"pointer", textAlign:"left",
                   transition:"all 0.15s",
                 }}>
-                  <div style={{ width:32, height:32, borderRadius:8, background:r.color, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, flexShrink:0 }}>{r.emoji}</div>
+                  <div style={{ width:32, height:32, borderRadius:8, background:r.color, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><ChosenIcon emoji={r.emoji} icon={r.icon} size={16} /></div>
                   <div style={{ flex:1, fontFamily:F.ui, fontSize:13, color: sel ? r.color : th.appInk, fontWeight: sel ? 600 : 400 }}>{r.title}</div>
                   <div style={{
                     width:22, height:22, borderRadius:"50%",

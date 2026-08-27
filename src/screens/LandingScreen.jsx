@@ -2,17 +2,18 @@ import React from "react";
 import { useTheme, useRole } from "../context.js";
 import { F } from "../data/constants.js";
 import OrganizeIcon from "../components/OrganizeIcon.jsx";
+import AppIcon from "../components/AppIcon.jsx";
 
 export default function LandingScreen({ recipes = [], bookName = "Il mio Ricettario", onBooks, onRecipes, onBook, onMemories, onAdd, onAddMemory, onFridge, onShopping, onOrganize, onTheme, onCover, onGuide, onAdminUsers }) {
   const th = useTheme();
   const role = useRole();
 
   const mainItems = [
-    { emoji:"🍽️", label:"Libro Ricette",         desc:"Sfoglia, cerca e aggiungi",   fn:onRecipes, color:th.appAccent },
-    { emoji:"📒", label:"Libro dei Ricordi",     desc:"Tutte le fotografie",         fn:onMemories,color:"#6B8C6E" },
-    { emoji:"🧊", label:"Svuota Frigo",          desc:"Cosa cucino con ciò che ho",  fn:onFridge,  color:"#5B7FA6" },
-    { emoji:"🛒", label:"Lista Spesa",           desc:"Gli ingredienti da comprare", fn:onShopping,color:"#8C6E4A" },
-    { emoji:<OrganizeIcon/>, label:"Organizza Ingredienti", desc:"Aggregati, categorie, nutrizione", fn:onOrganize, color:"#7A5EA6" },
+    { emoji:"🍽️", icon:"ricette",   label:"Libro Ricette",         desc:"Sfoglia, cerca e aggiungi",   fn:onRecipes, color:th.appAccent },
+    { emoji:"📒", icon:"ricordi",   label:"Libro dei Ricordi",     desc:"Tutte le fotografie",         fn:onMemories,color:"#6B8C6E" },
+    { emoji:"🧊", icon:"frigo",     label:"Svuota Frigo",          desc:"Cosa cucino con ciò che ho",  fn:onFridge,  color:"#5B7FA6" },
+    { emoji:"🛒", icon:"spesa",     label:"Lista Spesa",           desc:"Gli ingredienti da comprare", fn:onShopping,color:"#8C6E4A" },
+    { emoji:<OrganizeIcon/>, icon:"organizza", label:"Organizza Ingredienti", desc:"Aggregati, categorie, nutrizione", fn:onOrganize, color:"#7A5EA6" },
     ...(role === "admin" ? [
       { emoji:"🔑", label:"Gestione utenti", desc:"Whitelist e ruoli", fn:onAdminUsers, color:"#555F6B" },
     ] : []),
@@ -29,7 +30,7 @@ export default function LandingScreen({ recipes = [], bookName = "Il mio Ricetta
         </button>
         <div style={{ display:"flex", gap:10 }}>
           <button onClick={onGuide} style={{ background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:2, padding:0, width:44 }}>
-            <span style={{ width:26, height:26, borderRadius:7, background:th.appCard, border:`1.5px solid ${th.appBorder}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:15, boxSizing:"border-box" }}>ℹ️</span>
+            <span style={{ width:26, height:26, borderRadius:7, background:th.appCard, border:`1.5px solid ${th.appBorder}`, display:"flex", alignItems:"center", justifyContent:"center", color:th.appFaded, boxSizing:"border-box" }}><AppIcon emoji="ℹ️" icon="info" size={15} /></span>
             <span style={{ fontFamily:F.ui, fontSize:8, color:th.appFaded }}>info</span>
           </button>
           <button onClick={onTheme} style={{ background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:2, padding:0, width:44 }}>
@@ -75,7 +76,9 @@ export default function LandingScreen({ recipes = [], bookName = "Il mio Ricetta
             display:"flex", alignItems:"center", gap:14,
             boxShadow:`0 2px 12px rgba(0,0,0,0.05)`,
           }}>
-            <div style={{ width:48, height:48, borderRadius:13, background:item.color, display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, flexShrink:0 }}>{item.emoji}</div>
+            <div style={{ width:48, height:48, borderRadius:13, background:item.color, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <AppIcon emoji={item.emoji} icon={item.icon} size={24} />
+            </div>
             <div>
               <div style={{ fontFamily:F.display, fontSize:16, color:th.appInk, marginBottom:2 }}>{item.label}</div>
               <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>{item.desc}</div>

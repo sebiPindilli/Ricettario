@@ -87,3 +87,16 @@ export const loadBetaConfig = async () => {
 
 export const setBetaEnabled = (enabled) =>
   setDoc(doc(db, "config", "beta"), { enabled });
+
+// Interruttore globale (per tutti gli utenti, non una preferenza personale)
+// tra le emoji storiche e il nuovo set di icone SVG per l'interfaccia fissa
+// (nav, barra azioni, sezioni/categorie predefinite) — vedi IconStyleCtx in
+// context.js e AppIcon.jsx. Se il documento non esiste, "emoji": stesso
+// comportamento di sempre finché nessun admin passa esplicitamente a "svg".
+export const loadIconStyleConfig = async () => {
+  const snap = await getDocOfflineFirst(doc(db, "config", "icons"));
+  return { style: snap.exists() && snap.data().style === "svg" ? "svg" : "emoji" };
+};
+
+export const setIconStyle = (style) =>
+  setDoc(doc(db, "config", "icons"), { style });

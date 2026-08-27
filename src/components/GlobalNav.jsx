@@ -3,13 +3,14 @@ import { useTheme, useNavActions, useCookingTimers } from "../context.js";
 import { F, MOBILE_BREAKPOINT_CSS } from "../data/constants.js";
 import OrganizeIcon from "./OrganizeIcon.jsx";
 import InfoButton from "./InfoButton.jsx";
+import AppIcon from "./AppIcon.jsx";
 
 const NAV_ITEMS = [
-  { id:"recipes",   icon:"🍽️", label:"Ricette" },
-  { id:"memories",  icon:"📒", label:"Ricordi" },
-  { id:"fridge",    icon:"🧊", label:"Frigo" },
-  { id:"shopping",  icon:"🛒", label:"Spesa" },
-  { id:"organize",  icon:<OrganizeIcon/>, label:"Organizza" },
+  { id:"recipes",   emoji:"🍽️", icon:"ricette",   label:"Ricette" },
+  { id:"memories",  emoji:"📒", icon:"ricordi",   label:"Ricordi" },
+  { id:"fridge",    emoji:"🧊", icon:"frigo",     label:"Frigo" },
+  { id:"shopping",  emoji:"🛒", icon:"spesa",     label:"Spesa" },
+  { id:"organize",  emoji:<OrganizeIcon/>, icon:"organizza", label:"Organizza" },
 ];
 
 export default function GlobalNav({
@@ -96,7 +97,11 @@ export default function GlobalNav({
                 transition:"all 0.2s",
               }}
             >
-              <span style={{ fontSize:item.id==="add" ? 24 : 18, background: item.id==="add" && !active ? `${th.appAccent}55` : "none", borderRadius: item.id==="add" ? "50%" : 0, width: item.id==="add" ? 32 : "auto", height: item.id==="add" ? 32 : "auto", display:"flex", alignItems:"center", justifyContent:"center" }}>{item.icon}</span>
+              {/* color: solo per l'icona SVG (currentColor) — un'emoji lo ignora,
+                  è sempre a colore pieno, quindi non cambia nulla in quel caso. */}
+              <span style={{ color: active ? th.appAccent2 : "rgba(255,255,255,0.55)", background: item.id==="add" && !active ? `${th.appAccent}55` : "none", borderRadius: item.id==="add" ? "50%" : 0, width: item.id==="add" ? 32 : "auto", height: item.id==="add" ? 32 : "auto", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <AppIcon emoji={item.emoji} icon={item.icon} size={item.id==="add" ? 24 : 18} />
+              </span>
               <span style={{
                 fontFamily:F.ui, fontSize:9, fontWeight:600,
                 color: active ? th.appAccent2 : "rgba(255,255,255,0.5)",
@@ -116,8 +121,8 @@ export default function GlobalNav({
         <button onClick={onLanding} style={{
           background:"rgba(255,255,255,0.1)", border:"none",
           borderRadius:8, padding:"5px 8px", cursor:"pointer",
-          color:"rgba(255,255,255,0.85)", fontSize:14, flexShrink:0,
-        }}>🏠</button>
+          color:"rgba(255,255,255,0.85)", flexShrink:0,
+        }}><AppIcon emoji="🏠" icon="home" size={14} /></button>
 
         {/* Spaziatore sinistro: 🏠(≈34) + questo ≈ larghezza interruttore/export a destra, così il titolo è centrato */}
         {showViewToggle && <div style={{ width: 28 + (showExport ? 30 : 0), flexShrink:0 }}/>}
@@ -141,20 +146,20 @@ export default function GlobalNav({
               <button onClick={onExport} title="Esporta ricettario" style={{
                 background:"rgba(255,255,255,0.1)", border:"none",
                 borderRadius:8, padding:"5px 8px", cursor:"pointer",
-                color:"rgba(255,255,255,0.85)", fontSize:14, flexShrink:0,
-              }}>📤</button>
+                color:"rgba(255,255,255,0.85)", flexShrink:0,
+              }}><AppIcon emoji="📤" icon="esporta" size={14} /></button>
             )}
             <div style={{ display:"flex", borderRadius:8, overflow:"hidden", border:"1px solid rgba(255,255,255,0.2)", flexShrink:0 }}>
               <button onClick={viewToggle ? viewToggle.onCards : onRecipes} title="Vista schede" style={{
-                padding:"5px 9px", border:"none", cursor:"pointer", fontSize:13,
+                padding:"5px 9px", border:"none", cursor:"pointer",
                 background: (viewToggle ? !viewToggle.isBook : !bookView) ? th.appAccent : "rgba(255,255,255,0.08)",
                 color: (viewToggle ? !viewToggle.isBook : !bookView) ? "#fff" : "rgba(255,255,255,0.7)",
-              }}>▦</button>
+              }}><AppIcon emoji="▦" icon="schede" size={13} /></button>
               <button onClick={viewToggle ? viewToggle.onBook : onBook} title="Sfoglia come libro" style={{
-                padding:"5px 9px", border:"none", cursor:"pointer", fontSize:13,
+                padding:"5px 9px", border:"none", cursor:"pointer",
                 background: (viewToggle ? viewToggle.isBook : bookView) ? th.appAccent : "rgba(255,255,255,0.08)",
                 color: (viewToggle ? viewToggle.isBook : bookView) ? "#fff" : "rgba(255,255,255,0.7)",
-              }}>📖</button>
+              }}><AppIcon emoji="📖" icon="libro" size={13} /></button>
             </div>
           </div>
         ) : (

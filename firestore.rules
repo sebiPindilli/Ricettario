@@ -78,6 +78,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Interruttore globale (per tutti gli utenti) tra emoji storiche e il
+    // nuovo set di icone SVG per l'interfaccia fissa — vedi
+    // services/authStore.js. Stesso schema di config/beta sopra.
+    match /config/icons {
+      allow read: if isWhitelisted();
+      allow write: if isAdmin();
+    }
+
     // Ricettario Beta — libro condiviso di test, accesso per RUOLO (non
     // membership): chiunque sia tester o admin, oggi e in futuro, senza
     // bisogno di inviti — stesso meccanismo già usato per reports/.

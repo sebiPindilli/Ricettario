@@ -44,11 +44,15 @@ export const MOBILE_BREAKPOINT_CSS = "(max-width: 480px), (max-height: 480px) an
 export const DISH_PHOTO_ASPECT = 4 / 3;
 
 // ── Macro sections ────────────────────────────────────────────
+// icon: nome nel set SVG (public/app-icons.svg) usato quando l'admin attiva
+// lo stile "svg" (vedi IconStyleCtx/AppIcon.jsx) — solo per queste 4 voci
+// predefinite. Una sezione aggiunta dall'utente (vedi SectionPicker.jsx)
+// non ha un campo icon: resta sempre l'emoji scelta liberamente.
 export const MACRO_SECTIONS = [
-  { id:"basi",   label:"Preparazioni Base", emoji:"🧱", desc:"Salse, brodi, impasti e tecniche fondamentali" },
-  { id:"salati", label:"Salati",            emoji:"🍝", desc:"Primi, secondi, contorni e antipasti" },
-  { id:"dolci",  label:"Dolci",             emoji:"🍰", desc:"Torte, biscotti, dessert e lievitati" },
-  { id:"altro",  label:"Altro",             emoji:"📦", desc:"Ricette senza sezione specifica" },
+  { id:"basi",   label:"Preparazioni Base", emoji:"🧱", icon:"basi",   desc:"Salse, brodi, impasti e tecniche fondamentali" },
+  { id:"salati", label:"Salati",            emoji:"🍝", icon:"salati", desc:"Primi, secondi, contorni e antipasti" },
+  { id:"dolci",  label:"Dolci",             emoji:"🍰", icon:"dolci",  desc:"Torte, biscotti, dessert e lievitati" },
+  { id:"altro",  label:"Altro",             emoji:"📦", icon:"altro",  desc:"Ricette senza sezione specifica" },
 ];
 
 // Icone per sezioni e categorie personalizzate
@@ -60,18 +64,19 @@ export const PICKER_EMOJIS = [
 
 // ── Categorie ingredienti (per Svuota Frigo) ───────────────────
 // Ogni ingrediente può appartenere a più categorie.
+// icon: come in MACRO_SECTIONS sopra — solo per le voci predefinite.
 export const INGREDIENT_CATEGORIES = [
-  { id:"base",      label:"Ingredienti base",              emoji:"🧂" },
-  { id:"cereali",   label:"Cereali e tuberi",              emoji:"🌾" },
-  { id:"ortofrutta",label:"Frutta e ortaggi",              emoji:"🥕" },
-  { id:"proteine",  label:"Carne, pesce, uova",            emoji:"🥩" },
-  { id:"latticini", label:"Latte e derivati",              emoji:"🧀" },
-  { id:"legumi",    label:"Legumi",                        emoji:"🫘" },
-  { id:"grassi",    label:"Grassi e oli",                  emoji:"🫒" },
-  { id:"spezie",    label:"Spezie, erbe aromatiche e aromi",emoji:"🌿" },
-  { id:"alcolici",  label:"Alcolici",                      emoji:"🍷" },
-  { id:"cacao",     label:"Cacao e cioccolato",            emoji:"🍫" },
-  { id:"altro",     label:"Altro",                         emoji:"📦" },
+  { id:"base",      label:"Ingredienti base",              emoji:"🧂", icon:"sale" },
+  { id:"cereali",   label:"Cereali e tuberi",              emoji:"🌾", icon:"cereali" },
+  { id:"ortofrutta",label:"Frutta e ortaggi",              emoji:"🥕", icon:"ortofrutta" },
+  { id:"proteine",  label:"Carne, pesce, uova",            emoji:"🥩", icon:"proteine" },
+  { id:"latticini", label:"Latte e derivati",              emoji:"🧀", icon:"latticini" },
+  { id:"legumi",    label:"Legumi",                        emoji:"🫘", icon:"legumi" },
+  { id:"grassi",    label:"Grassi e oli",                  emoji:"🫒", icon:"grassi" },
+  { id:"spezie",    label:"Spezie, erbe aromatiche e aromi",emoji:"🌿", icon:"spezie" },
+  { id:"alcolici",  label:"Alcolici",                      emoji:"🍷", icon:"alcolici" },
+  { id:"cacao",     label:"Cacao e cioccolato",            emoji:"🍫", icon:"cacao" },
+  { id:"altro",     label:"Altro",                         emoji:"📦", icon:"altro" },
 ];
 
 // ── Structured tag system ──────────────────────────────────────

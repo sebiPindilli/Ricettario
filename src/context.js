@@ -17,6 +17,15 @@ export const useRole = () => React.useContext(RoleCtx);
 export const BetaEnabledCtx = React.createContext(true);
 export const useBetaEnabled = () => React.useContext(BetaEnabledCtx);
 
+// ── Icon style context — "emoji" o "svg" per le icone di interfaccia
+// fisse (nav, barra azioni, sezioni/categorie predefinite), interruttore
+// globale gestito da un admin (config/icons). Le icone scelte liberamente
+// dall'utente su ricette/sezioni/categorie personalizzate non dipendono da
+// questo valore — vedi AppIcon.jsx. Default "emoji": comportamento
+// identico a prima finché nessun admin lo cambia esplicitamente.
+export const IconStyleCtx = React.createContext("emoji");
+export const useIconStyle = () => React.useContext(IconStyleCtx);
+
 // ── Online context — navigator.onLine, per bloccare azioni che richiedono
 // rete (es. upload foto: Storage non ha una coda offline) ovunque nella UI
 // senza prop-drilling ──
