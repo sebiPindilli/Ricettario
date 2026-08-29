@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useTheme } from "../context.js";
+import { useTheme, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import { flattenIngredients, scaleIngredient, normName, fmtQty } from "../utils/helpers.js";
 import InfoButton from "./InfoButton.jsx";
@@ -10,6 +10,11 @@ import { guideModalitaSpesa } from "../data/guideContent.jsx";
 // ══════════════════════════════════════════════════════════════
 export default function ShoppingMode({ recipe, scale, onClose, onAddToList, preselectClean = null }) {
   const th = useTheme();
+  const ui = useUiStyle();
+  // "stesse spunte e stessa barra di completamento della Lista Spesa,
+  // niente stile proprio" (DECISIONI.md, vale solo per quaderno/schedario:
+  // il resto del componente/classico restano come prima).
+  const isNew = ui.id !== "classico";
   const factor = scale?.factor ?? 1;
   const items = flattenIngredients(recipe.ingredients).map((ing, i) => {
     const scaled = scaleIngredient(ing, factor);
@@ -54,9 +59,16 @@ export default function ShoppingMode({ recipe, scale, onClose, onAddToList, pres
             <div style={{ fontFamily:F.display, fontSize:15, color:"#fff", fontStyle:"italic" }}>🛒 Modalità Spesa</div>
             <div style={{ fontFamily:F.ui, fontSize:10, color:"rgba(255,255,255,0.55)" }}>{recipe.title} · {scale?.label || "dosi originali"}</div>
           </div>
-          <div style={{ fontFamily:F.ui, fontSize:11, color:"rgba(255,255,255,0.7)" }}>{checked.length}/{items.length}</div>
+          <div style={{ fontFamily: isNew ? F.mono : F.ui, fontSize:11, color:"rgba(255,255,255,0.7)" }}>{checked.length}/{items.length}</div>
           <InfoButton dark>{guideModalitaSpesa}</InfoButton>
         </div>
+
+        {/* Barra di completamento — stessa di ShoppingListScreen (Fase 5) */}
+        {isNew && items.length > 0 && (
+          <div style={{ height:3, background:th.appBorder, flexShrink:0 }}>
+            <div style={{ height:"100%", width:`${(checked.length/items.length)*100}%`, background:"#6B8C6E", transition:"width 0.2s" }}/>
+          </div>
+        )}
 
         {/* List — scrolla solo se non ci sta nello spazio rimasto sotto il tetto massimo della scheda */}
         <div style={{ flex:"1 1 auto", minHeight:0, overflowY:"auto", padding:"12px 18px" }}>
@@ -84,11 +96,17 @@ export default function ShoppingMode({ recipe, scale, onClose, onAddToList, pres
                   border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
                   borderRadius:12, cursor:"pointer", textAlign:"left",
                 }}>
-                  <div style={{ width:22, height:22, borderRadius:6, flexShrink:0, border:`2px solid ${sel ? th.appAccent : th.appBorder}`, background: sel ? th.appAccent : "transparent", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:13 }}>{sel ? "✓" : ""}</div>
+                  <div style={{
+                    width:22, height:22, flexShrink:0,
+                    borderRadius: isNew && ui.id==="schedario" ? 6 : "50%",
+                    border:`2px solid ${sel ? th.appAccent : th.appBorder}`,
+                    background: sel ? th.appAccent : "transparent",
+                    display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:13,
+                  }}>{sel && !isNew ? "✓" : ""}</div>
                   <div style={{ flex:1, display:"flex", alignItems:"baseline", gap:8, minWidth:0 }}>
                     <span style={{ flex:1, fontFamily:F.body, fontSize:14, color: sel ? th.appInk : th.appFaded, textDecoration: sel ? "none" : "line-through", lineHeight:1.4 }}>{it.nameText}</span>
                     {it.qtyText && (
-                      <span style={{ flexShrink:0, fontFamily:F.ui, fontSize:12.5, fontWeight:700, color: sel ? th.appAccent : th.appFaded, textDecoration: sel ? "none" : "line-through" }}>{it.qtyText}</span>
+                      <span style={{ flexShrink:0, fontFamily: isNew ? F.mono : F.ui, fontSize:12.5, fontWeight:700, color: sel ? th.appAccent : th.appFaded, textDecoration: sel ? "none" : "line-through" }}>{it.qtyText}</span>
                     )}
                   </div>
                 </button>
