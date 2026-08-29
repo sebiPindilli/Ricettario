@@ -109,7 +109,7 @@ export default function UnifiedExportFlow({
   // dichiarata a ogni scelta e' un'aggiunta di testo, non un cambio di
   // struttura — ma "classico byte-per-byte identico" vale anche per il
   // testo visibile, quindi resta comunque dietro questo controllo.
-  const isNew = ui.id !== "classico";
+  const isNew = ui.exportFlow === "guided";
   const [step, setStep] = useState("select"); // select | dest | books | format | prefs | result
   const [selected, setSelected] = useState(preselectId ? [preselectId] : []);
   const [dest, setDest] = useState(null); // "books" | "person"
