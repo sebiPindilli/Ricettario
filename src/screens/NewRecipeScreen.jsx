@@ -124,6 +124,7 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
           onEmoji={e => set("emoji", e)}
           onColor={c => set("color", c)}
           onIcon={setIcon}
+          title={draft.title}
         />
       </div>
 

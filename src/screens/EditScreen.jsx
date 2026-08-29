@@ -129,6 +129,7 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
           onEmoji={e => set("emoji", e)}
           onColor={c => set("color", c)}
           onIcon={setIcon}
+          title={draft.title}
         />
       </div>
 
