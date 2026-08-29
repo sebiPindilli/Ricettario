@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useTheme } from "../context.js";
+import { useTheme, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import SuggestionHint from "./SuggestionHint.jsx";
 import { NUTRITION_DB, NUTRIENT_LABELS } from "../data/nutrition.js";
@@ -7,11 +7,20 @@ import { normName, ingDictIndex, resolveIngId, flattenIngredients } from "../uti
 import { effectiveNutritionKey } from "../utils/aggregates.js";
 import { computeRecipeNutrition } from "../utils/recipeNutrition.js";
 
+const MAIN_MACROS = [
+  { key:"kcal", label:"Energia",     unit:"kcal", dec:0 },
+  { key:"carb", label:"Carboidrati", unit:"g",    dec:1 },
+  { key:"prot", label:"Proteine",    unit:"g",    dec:1 },
+  { key:"fat",  label:"Grassi",      unit:"g",    dec:1 },
+];
+
 // ══════════════════════════════════════════════════════════════
 // NUTRITION CARD — tabella valori nella scheda ricetta
 // ══════════════════════════════════════════════════════════════
 export default function NutritionCard({ recipe, nutritionMap = {}, equivalences = {}, customUnits = {}, customFoods = [], ingredientDict = null, aggregates = [], sourceByIngredient = {}, standalone = false, onManageEquivalences = null, onManageIngredients = null }) {
   const th = useTheme();
+  const ui = useUiStyle();
+  const isNew = ui.id !== "classico";
   const [open, setOpen] = useState(standalone);
   const [view, setView] = useState("serving"); // "serving" | "per100" | "total"
 
@@ -28,6 +37,12 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
       return nutritionMap[key] || dbByName.has(normName(ing.name));
     }).length;
   }, [recipe, nutritionMap, customFoods, ingredientDict, aggregates, sourceByIngredient]);
+  const totalIngCount = React.useMemo(() => flattenIngredients(recipe.ingredients).length, [recipe]);
+  // Copertura sempre dichiarata (DECISIONI.md §Nutrizione): i mancanti per nome.
+  const missingNames = React.useMemo(
+    () => nutri.details.filter(d => d.status === "unlinked" || d.status === "nounit").map(d => d.name),
+    [nutri.details]
+  );
 
   if (nutri.covered === 0 && mappedCount === 0) return null; // nessuna mappatura: nulla da mostrare
 
@@ -80,26 +95,26 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
     );
   }
 
-  const vals = view === "per100" ? nutri.per100 : nutri.perServing;
+  const vals = view === "per100" ? nutri.per100 : view === "total" ? nutri.total : nutri.perServing;
   const fmt = (v, dec) => v >= 100 ? String(Math.round(v)) : String(Math.round(v * 10**dec) / 10**dec).replace(".", ",");
 
   return (
-    <div style={{ marginTop: standalone ? 0 : 14, background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:14, overflow:"hidden" }}>
+    <div style={{ marginTop: standalone ? 0 : 14, background: isNew ? ui.card : th.appCard, border:`1px solid ${isNew ? ui.border : th.appBorder}`, borderRadius: isNew ? ui.radius.card : 14, overflow:"hidden" }}>
       <button onClick={() => { if (!standalone) setOpen(o => !o); }} style={{
         width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
         padding:"12px 14px", background:"none", border:"none", cursor: standalone ? "default" : "pointer",
       }}>
-        <span style={{ fontFamily:F.ui, fontSize:12, fontWeight:700, color:th.appInk }}>
+        <span style={{ fontFamily:F.ui, fontSize:12, fontWeight:700, color: isNew ? ui.ink : th.appInk }}>
           🍎 Valori nutrizionali
-          <span style={{ fontWeight:400, color:th.appFaded }}> · {fmt(nutri.perServing.kcal, 0)} kcal/porzione</span>
+          <span style={{ fontWeight:400, color: isNew ? ui.faded : th.appFaded }}> · {fmt(nutri.perServing.kcal, 0)} kcal/porzione</span>
         </span>
         {!standalone && <span style={{ color:th.appFaded, fontSize:12 }}>{open ? "▴" : "▾"}</span>}
       </button>
 
       {open && (
         <div style={{ padding:"0 14px 12px" }}>
-          <div style={{ display:"flex", gap:5, marginBottom:10, flexWrap:"wrap" }}>
-            {[["Per porzione","serving"], ["Per 100 g","per100"]].map(([label, v]) => (
+          <div style={{ display:"flex", gap:5, marginBottom: isNew ? 14 : 10, flexWrap:"wrap" }}>
+            {(isNew ? [["Porzione","serving"],["Totale","total"],["Per 100 g","per100"]] : [["Per porzione","serving"], ["Per 100 g","per100"]]).map(([label, v]) => (
               <button key={v} onClick={() => setView(v)} style={{
                 padding:"5px 11px", borderRadius:14,
                 border:`1.5px solid ${view === v ? th.appAccent : th.appBorder}`,
@@ -115,29 +130,65 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
             </div>
           )}
 
-          {NUTRIENT_LABELS.map(({ key, label, unit, dec, sub }) => (
-            <div key={key} style={{
-              display:"flex", justifyContent:"space-between",
-              padding: sub ? "3px 0 3px 16px" : "5px 0",
-              borderBottom:`1px solid ${th.appBorder}55`,
-              fontFamily:F.body, fontSize: sub ? 12 : 13.5,
-              color: sub ? th.appFaded : th.appInk,
-            }}>
-              <span>{label}</span>
-              <span style={{ fontWeight: sub ? 400 : 700 }}>{fmt(vals[key], dec)} {unit}</span>
-            </div>
-          ))}
+          {isNew ? (
+            <>
+              {/* Quattro macro alla pari, griglia 2×2 (DECISIONI.md §Nutrizione) */}
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:16 }}>
+                {MAIN_MACROS.map(({ key, label, unit, dec }) => (
+                  <div key={key} style={{ textAlign:"center" }}>
+                    <div style={{ fontFamily:F.mono, fontSize:34, color:ui.ink, lineHeight:1 }}>{fmt(vals[key], dec)}</div>
+                    <div style={{ fontFamily:F.ui, fontSize:9.5, color:ui.faded, textTransform:"uppercase", letterSpacing:0.6, marginTop:4 }}>{label} · {unit}</div>
+                  </div>
+                ))}
+              </div>
 
-          {/* Sintesi per ingrediente — quantità scalate alla vista corrente */}
+              {/* Copertura sempre dichiarata */}
+              <div style={{ fontFamily:F.ui, fontSize:11, color:ui.faded, marginBottom:10, lineHeight:1.5, padding:"8px 10px", background:`${th.appAccent}0d`, borderRadius:ui.radius.control }}>
+                Calcolato su {mappedCount} ingredient{mappedCount===1?"e":"i"} su {totalIngCount}.
+                {missingNames.length > 0 && <> Mancano: {missingNames.join(", ")}.</>}
+              </div>
+
+              {/* Dettaglio secondario (di cui zuccheri/saturi, fibre, sale) — tabella con riga alternata */}
+              {NUTRIENT_LABELS.filter(n => n.key !== "kcal" && n.key !== "carb" && n.key !== "prot" && n.key !== "fat").map((n, i) => (
+                <div key={n.key} style={{
+                  display:"flex", justifyContent:"space-between",
+                  padding: n.sub ? "5px 8px 5px 20px" : "5px 8px",
+                  background: i % 2 === 0 ? "rgba(240,234,217,0.4)" : "transparent",
+                  fontFamily:F.body, fontSize: n.sub ? 11.5 : 12.5,
+                  color: n.sub ? ui.faded : ui.ink,
+                }}>
+                  <span>{n.label}</span>
+                  <span style={{ fontFamily:F.mono, fontWeight: n.sub ? 400 : 700 }}>{fmt(vals[n.key], n.dec)} {n.unit}</span>
+                </div>
+              ))}
+            </>
+          ) : (
+            NUTRIENT_LABELS.map(({ key, label, unit, dec, sub }) => (
+              <div key={key} style={{
+                display:"flex", justifyContent:"space-between",
+                padding: sub ? "3px 0 3px 16px" : "5px 0",
+                borderBottom:`1px solid ${th.appBorder}55`,
+                fontFamily:F.body, fontSize: sub ? 12 : 13.5,
+                color: sub ? th.appFaded : th.appInk,
+              }}>
+                <span>{label}</span>
+                <span style={{ fontWeight: sub ? 400 : 700 }}>{fmt(vals[key], dec)} {unit}</span>
+              </div>
+            ))
+          )}
+
+          {/* Sintesi per ingrediente — quantità scalate alla vista corrente, sempre visibile (non nascosta dietro un altro click) */}
           <div style={{ marginTop:10 }}>
             <div style={{ fontFamily:F.ui, fontSize:9.5, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:5 }}>
-              Ingredienti nel calcolo · {view === "per100" ? "per 100 g" : "per porzione"}
+              Ingredienti nel calcolo · {view === "per100" ? "per 100 g" : view === "total" ? "totale" : "per porzione"}
             </div>
             {nutri.details.map((d, i) => (
               <div key={i} style={{
                 display:"flex", justifyContent:"space-between", gap:8,
+                padding: isNew ? "4px 6px" : 0,
+                background: isNew && i % 2 === 0 ? "rgba(240,234,217,0.4)" : "transparent",
                 fontFamily:F.ui, fontSize:10.5, lineHeight:1.7,
-                color: d.status === "ok" ? th.appInk : th.appFaded,
+                color: d.status === "ok" ? (isNew ? ui.ink : th.appInk) : (isNew ? ui.faded : th.appFaded),
               }}>
                 <span style={{ minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
                   {d.status === "ok" ? "✓" : d.status === "noqty" || d.status === "optout" ? "·" : "○"} {d.name}
@@ -156,7 +207,7 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
                     <span style={{ opacity:0.6 }}> → {d.foodName}</span>
                   )}
                 </span>
-                <span style={{ flexShrink:0, fontStyle: d.status === "ok" ? "normal" : "italic" }}>
+                <span style={{ flexShrink:0, fontFamily: isNew && d.status === "ok" ? F.mono : F.ui, fontStyle: d.status === "ok" ? "normal" : "italic" }}>
                   {d.status === "ok" ? (() => {
                       const factor = view === "serving" ? 1 / (recipe.servings > 0 ? recipe.servings : 1)
                                    : view === "per100"  ? (nutri.totalGrams > 0 ? 100 / nutri.totalGrams : 0)
