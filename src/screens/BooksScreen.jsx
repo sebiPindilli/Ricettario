@@ -32,7 +32,7 @@ export default function BooksScreen({
 }) {
   const th = useTheme();
   const ui = useUiStyle();
-  const isNew = ui.id !== "classico";
+  const isNew = ui.booksLayout === "list";
   const [phase, setPhase] = useState("list"); // "list" | "sharedLinks"
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
@@ -46,6 +46,10 @@ export default function BooksScreen({
   const [memberError, setMemberError] = useState({}); // bookId → messaggio d'errore
   const [memberBusy, setMemberBusy] = useState({}); // bookId → true mentre una chiamata è in corso
   const [roleFilter, setRoleFilter] = useState(null); // null = tutti i libri
+  // Azioni non permesse dal ruolo, visibili ma spente: mostra il perché al
+  // tocco invece di sparire del tutto (IMPLEMENTATION_PLAN Fase 10, bullet
+  // 42) — solo negli stili nuovi, book id per cui è aperta la spiegazione.
+  const [roleExplainFor, setRoleExplainFor] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null); // book id
   // trasferimento completo di un libro (tutte le ricette + Organizza
   // Ingredienti) in un altro proprio libro — annidato nella scheda del
@@ -251,8 +255,16 @@ export default function BooksScreen({
             }}>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                 {isNew && (
-                  // Dorso del libro — elenco, non scaffale (DECISIONI.md §Ricettari)
-                  <div style={{ width:5, alignSelf:"stretch", minHeight:32, borderRadius:2, background: active ? th.appAccent : th.appBorder, flexShrink:0 }}/>
+                  // Dorso del libro 44×58, gradiente del tema + filetto chiaro
+                  // a sinistra (IMPLEMENTATION_PLAN Fase 10, bullet 42) —
+                  // elenco, non scaffale di copertine (DECISIONI.md §Ricettari).
+                  <div style={{
+                    width:44, height:58, borderRadius:4, background:th.coverBg,
+                    position:"relative", overflow:"hidden", flexShrink:0,
+                    boxShadow: active ? `0 0 0 2px ${th.appAccent}` : "none",
+                  }}>
+                    <div style={{ position:"absolute", left:6, top:0, bottom:0, width:1, background:th.spineColor }}/>
+                  </div>
                 )}
                 {!isNew && <span style={{ fontSize:20 }}>{isBeta ? "🧪" : b.isBackup ? "📦" : b.type === "personale" ? "🔒" : "👥"}</span>}
                 {isRen ? (
@@ -509,6 +521,27 @@ export default function BooksScreen({
                       <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:6, fontStyle:"italic" }}>
                         {atMemberCap ? `Limite di ${MAX_MEMBERS} membri raggiunto.` : "Puoi invitare solo email già abilitate da un admin in \"Gestione utenti\"."}
                       </div>
+                    </>
+                  )}
+                  {/* Ruolo che non permette di invitare: visibile ma spenta,
+                      il perché compare al tocco invece di sparire del tutto
+                      (IMPLEMENTATION_PLAN Fase 10, bullet 42) — solo stili nuovi. */}
+                  {isNew && !canManageMembers && !isOwner && (
+                    <>
+                      <button
+                        onClick={() => setRoleExplainFor(o => o === b.id ? null : b.id)}
+                        style={{
+                          width:"100%", padding:"8px 11px", borderRadius:9,
+                          border:`1px dashed ${ui.border}`, background:"transparent",
+                          opacity:0.45, cursor:"pointer", textAlign:"left",
+                          fontFamily:F.ui, fontSize:11, fontWeight:600, color:ui.ink,
+                        }}
+                      >＋ Invita</button>
+                      {roleExplainFor === b.id && (
+                        <div style={{ fontFamily:F.ui, fontSize:10.5, color:ui.faded, marginTop:6, fontStyle:"italic" }}>
+                          {myRole === "lettore" ? "Hai accesso in sola lettura." : "Il tuo ruolo non permette di invitare membri."}
+                        </div>
+                      )}
                     </>
                   )}
                   {isOwner && (
