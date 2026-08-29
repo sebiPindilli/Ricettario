@@ -35,7 +35,7 @@ const suggestIconsFromTitle = (title, max = 6) => {
 // dell'admin (quello riguarda solo le icone fisse dell'interfaccia).
 export default function EmojiColorPicker({ emoji, color, icon, onEmoji, onColor, onIcon, title = "" }) {
   const ui = useUiStyle();
-  if (ui.id !== "classico") {
+  if (ui.iconPicker === "sheet") {
     return <EmojiColorPickerNew emoji={emoji} icon={icon} onEmoji={onEmoji} onIcon={onIcon} title={title} />;
   }
   return <EmojiColorPickerClassic emoji={emoji} color={color} icon={icon} onEmoji={onEmoji} onColor={onColor} onIcon={onIcon} />;
@@ -190,15 +190,25 @@ function EmojiColorPickerNew({ emoji, icon, onEmoji, onIcon, title }) {
             {!q && suggested.length > 0 && (
               <div style={{ marginBottom:14 }}>
                 <div style={{ fontFamily:F.ui, fontSize:9.5, letterSpacing:1, color:ui.faded, textTransform:"uppercase", marginBottom:6 }}>Suggeriti</div>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(6, 1fr)", gap:6 }}>
+                <div style={{ display:"flex", gap:6 }}>
                   {suggested.map(name => (
                     <button key={name} onClick={() => chooseSvg(name)} title={name} style={{
-                      aspectRatio:"1", borderRadius:ui.radius.control-1, cursor:"pointer",
-                      border:`1.5px solid ${icon===name ? th.appAccent : ui.border}`,
-                      background: icon===name ? `${th.appAccent}18` : ui.card,
-                      color: icon===name ? th.appAccent : ui.ink,
-                      display:"flex", alignItems:"center", justifyContent:"center",
-                    }}><Icon name={name} size={19} /></button>
+                      flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4,
+                      background:"none", border:"none", cursor:"pointer", padding:0,
+                    }}>
+                      <span style={{
+                        width:44, height:44, borderRadius:ui.radius.control-1,
+                        border:`1.5px solid ${icon===name ? th.appAccent : ui.border}`,
+                        background: icon===name ? `${th.appAccent}18` : ui.card,
+                        color: icon===name ? th.appAccent : ui.ink,
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                      }}><Icon name={name} size={19} /></span>
+                      <span style={{
+                        fontFamily:F.ui, fontSize:8.5, color: icon===name ? th.appAccent : ui.faded,
+                        textAlign:"center", lineHeight:1.2, overflow:"hidden", textOverflow:"ellipsis",
+                        whiteSpace:"nowrap", width:"100%",
+                      }}>{name}</span>
+                    </button>
                   ))}
                 </div>
               </div>
