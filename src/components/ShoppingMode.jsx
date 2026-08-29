@@ -104,9 +104,9 @@ export default function ShoppingMode({ recipe, scale, onClose, onAddToList, pres
                     display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:13,
                   }}>{sel && !isNew ? "✓" : ""}</div>
                   <div style={{ flex:1, display:"flex", alignItems:"baseline", gap:8, minWidth:0 }}>
-                    <span style={{ flex:1, fontFamily:F.body, fontSize:14, color: sel ? th.appInk : th.appFaded, textDecoration: sel ? "none" : "line-through", lineHeight:1.4 }}>{it.nameText}</span>
+                    <span style={{ flex:1, fontFamily:F.body, fontSize:14, color: sel ? th.appInk : (isNew ? "#B0A694" : th.appFaded), textDecoration: sel ? "none" : "line-through", lineHeight:1.4 }}>{it.nameText}</span>
                     {it.qtyText && (
-                      <span style={{ flexShrink:0, fontFamily: isNew ? F.mono : F.ui, fontSize:12.5, fontWeight:700, color: sel ? th.appAccent : th.appFaded, textDecoration: sel ? "none" : "line-through" }}>{it.qtyText}</span>
+                      <span style={{ flexShrink:0, fontFamily: isNew ? F.mono : F.ui, fontSize:12.5, fontWeight:700, color: sel ? th.appAccent : (isNew ? "#B0A694" : th.appFaded), textDecoration: sel ? "none" : "line-through" }}>{it.qtyText}</span>
                     )}
                   </div>
                 </button>
