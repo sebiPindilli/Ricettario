@@ -4,6 +4,8 @@ import { sortSectionsAltroLast } from "../utils/helpers.js";
 import { F, MACRO_SECTIONS, TAG_GROUPS } from "../data/constants.js";
 import GlobalNav from "../components/GlobalNav.jsx";
 import BottomNav from "../components/BottomNav.jsx";
+import ScreenHeader from "../components/ScreenHeader.jsx";
+import FiltersSheet from "../components/FiltersSheet.jsx";
 import RecipeCardList from "../components/RecipeCardList.jsx";
 import { guideRicette } from "../data/guideContent.jsx";
 import AppIcon from "../components/AppIcon.jsx";
@@ -18,6 +20,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
   const [showFavorites, setShowFavorites] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [timeOpen, setTimeOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const prepBound = Math.max(180, ...recipes.map(r => r.prepTime || 0));
   const cookBound = Math.max(180, ...recipes.map(r => r.cookTime || 0));
   // prepRange/cookRange sono i valori APPLICATI (usati per filtrare); gli
@@ -38,6 +41,13 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
   const toggleTag = (tag) => setActiveTags(prev =>
     prev.includes(tag) ? prev.filter(t=>t!==tag) : [...prev, tag]
   );
+  const resetTime = () => {
+    setPrepRange([0, prepBound]); setCookRange([0, cookBound]);
+    setDraftPrepRange([0, prepBound]); setDraftCookRange([0, cookBound]);
+  };
+  const resetAllFilters = () => {
+    setActiveSection(null); setActiveTags([]); setShowFavorites(false); resetTime();
+  };
 
   // ── Hierarchical filter ──────────────────────────────────────
   // Level 1: section (macroSection)
@@ -77,50 +87,18 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
     tags: g.tags.filter(t => sectionFiltered.some(r => r.tags.includes(t)))
   })).filter(g => g.tags.length > 0);
 
-  return (
-    <div style={{ background:th.appBg, minHeight:"100%", position:"relative" }}>
-      <GlobalNav
-        activeScreen="recipes"
-        onRecipes={() => {}}
-        onBook={onBook}
-        onMemories={onMemories}
-        onAdd={onAdd}
-        onFridge={onFridge}
-        onShopping={onShopping}
-        onLanding={onLanding}
-        onExport={onExport}
-        activeLabel={activeSection ? MACRO_SECTIONS.find(s=>s.id===activeSection)?.label : "Libro Ricette"}
-        infoContent={guideRicette}
-        bottomNavActive
-      />
+  const activeSectionLabel = activeSection ? MACRO_SECTIONS.find(s=>s.id===activeSection)?.label : null;
+  const activeFilterCount = (activeSection?1:0) + activeTags.length + (timeActive?1:0) + (showFavorites?1:0);
 
-      {/* ── Pulsante nuova ricetta (in alto al centro, come nei Ricordi) ── */}
-      <div style={{ padding:"10px 24px 2px", textAlign:"center" }}>
-        <button onClick={() => onAdd("recipe")} title="Nuova ricetta" style={{
-          padding:"9px 20px", borderRadius:20,
-          background:th.appAccent, border:"none", cursor:"pointer",
-          color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700,
-        }}>＋ Nuova ricetta</button>
-      </div>
-
-      {/* ── Ricerca sempre visibile (come nelle altre sezioni) ── */}
-      <div style={{ padding:"8px 16px 4px" }}>
-        <div style={{ display:"flex", gap:8, alignItems:"center", background:th.appCard, border:`1.5px solid ${searchQuery ? th.appAccent : th.appBorder}`, borderRadius:12, padding:"9px 14px" }}>
-          <span style={{ color:th.appFaded }}><AppIcon emoji="🔍" icon="cerca" size={15} /></span>
-          <input
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Cerca ricetta…"
-            style={{ flex:1, background:"none", border:"none", fontFamily:F.body, fontSize:14, color:th.appInk, outline:"none" }}
-          />
-          {searchQuery && <button onClick={() => setSearchQuery("")} style={{ background:"none", border:"none", color:th.appFaded, cursor:"pointer", fontSize:16 }}>×</button>}
-        </div>
-      </div>
-
+  // ── Controlli filtro — stesso markup/stessa logica in ogni stile: in
+  // "classico" restano aperti sotto la ricerca (com'era), negli stili
+  // nuovi si spostano dentro <FiltersSheet> invariati (vedi in fondo).
+  const filterControls = (
+    <>
       {/* ── Level 1: Section filter pills ── */}
       <div style={{
-        display:"flex", flexWrap:"wrap", gap:6, padding:"8px 16px 8px",
-        borderBottom:`1px solid ${th.appBorder}`, flexShrink:0,
+        display:"flex", flexWrap:"wrap", gap:6, padding: ui.filters==="expanded" ? "8px 16px 8px" : "0 0 12px",
+        borderBottom: ui.filters==="expanded" ? `1px solid ${th.appBorder}` : "none", flexShrink:0,
       }}>
         <button
           onClick={() => goSection(null)}
@@ -160,9 +138,9 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
       </div>
 
       {/* ── Level 2: Tag filter (accordion) ── */}
-      <div style={{ borderBottom:`1px solid ${th.appBorder}`, flexShrink:0 }}>
+      <div style={{ borderBottom: ui.filters==="expanded" ? `1px solid ${th.appBorder}` : "none", flexShrink:0 }}>
         {/* Active tags summary row */}
-        <div style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 16px", overflowX:"auto", scrollbarWidth:"none" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:6, padding: ui.filters==="expanded" ? "6px 16px" : "0 0 10px", overflowX:"auto", scrollbarWidth:"none" }}>
           <button
             onClick={() => setOpenTagGroup(g => g ? null : "open")}
             style={{
@@ -204,7 +182,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
 
         {/* Tag group accordion */}
         {openTagGroup && (
-          <div style={{ padding:"0 16px 10px", maxHeight:240, overflowY:"auto" }}>
+          <div style={{ padding: ui.filters==="expanded" ? "0 16px 10px" : "0 0 10px", maxHeight:240, overflowY:"auto" }}>
             {relevantTagGroups.map(group => (
               <div key={group.group} style={{ marginBottom:6 }}>
                 <button
@@ -256,8 +234,8 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
       </div>
 
       {/* ── Level 2b: Filtro tempo di preparazione/cottura (accordion, applicato solo su "Applica") ── */}
-      <div style={{ borderBottom:`1px solid ${th.appBorder}`, flexShrink:0 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 16px", overflowX:"auto", scrollbarWidth:"none" }}>
+      <div style={{ borderBottom: ui.filters==="expanded" ? `1px solid ${th.appBorder}` : "none", flexShrink:0 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:6, padding: ui.filters==="expanded" ? "6px 16px" : "0 0 6px", overflowX:"auto", scrollbarWidth:"none" }}>
           <button onClick={() => setTimeOpen(o => {
             if (!o) { setDraftPrepRange(prepRange); setDraftCookRange(cookRange); }
             return !o;
@@ -281,7 +259,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
             <span style={{ fontSize:10, opacity:0.6 }}>{timeOpen ? "▲" : "▼"}</span>
           </button>
           {timeActive && (
-            <button onClick={() => { setPrepRange([0, prepBound]); setCookRange([0, cookBound]); setDraftPrepRange([0, prepBound]); setDraftCookRange([0, cookBound]); }} style={{
+            <button onClick={resetTime} style={{
               flexShrink:0, padding:"4px 10px", borderRadius:20,
               background:"none", border:`1px solid ${th.appBorder}`,
               color:th.appFaded, fontFamily:F.ui, fontSize:10, cursor:"pointer",
@@ -289,7 +267,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
           )}
         </div>
         {timeOpen && (
-          <div style={{ padding:"2px 16px 12px", display:"flex", flexDirection:"column", gap:12 }}>
+          <div style={{ padding: ui.filters==="expanded" ? "2px 16px 12px" : "2px 0 12px", display:"flex", flexDirection:"column", gap:12 }}>
             {[
               { emoji:"🍳", icon:"preparazione", label:"Preparazione", range:draftPrepRange, setRange:setDraftPrepRange, bound:prepBound },
               { emoji:"🔥", icon:"cottura", label:"Cottura", range:draftCookRange, setRange:setDraftCookRange, bound:cookBound },
@@ -317,26 +295,146 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
                 </div>
               </div>
             ))}
-            <button onClick={() => { setPrepRange(draftPrepRange); setCookRange(draftCookRange); setTimeOpen(false); }} style={{
-              padding:"9px", borderRadius:10, border:"none",
-              background:th.appAccent, color:"#fff",
-              fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer",
-            }}>✓ Applica</button>
+            {ui.filters==="expanded" && (
+              <button onClick={() => { setPrepRange(draftPrepRange); setCookRange(draftCookRange); setTimeOpen(false); }} style={{
+                padding:"9px", borderRadius:10, border:"none",
+                background:th.appAccent, color:"#fff",
+                fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer",
+              }}>✓ Applica</button>
+            )}
           </div>
         )}
       </div>
+    </>
+  );
 
-      {/* Results count */}
-      <div style={{ padding:"6px 20px 2px", fontFamily:F.ui, fontSize:11, color:th.appFaded }}>
-        {displayRecipes.length} ricett{displayRecipes.length===1?"a":"e"}
-        {activeSection && ` · ${MACRO_SECTIONS.find(s=>s.id===activeSection)?.label}`}
-        {activeTags.length > 0 && ` · ${activeTags.length} tag`}
-        {timeActive && <> · <AppIcon emoji="⏱️" icon="tempo" size={11} style={{ verticalAlign:"-1px" }} /> tempo</>}
-        {showFavorites && <> · <AppIcon emoji="⭐" icon="preferito" size={11} style={{ verticalAlign:"-1px" }} /> Preferiti</>}
+  // ── Riepilogo filtri attivi (solo stili "sheet"), sotto la ricerca ──
+  const filterSummaryChip = (label, onRemove) => (
+    <button key={label} onClick={onRemove} style={{
+      flexShrink:0, display:"flex", alignItems:"center", gap:5,
+      padding: ui.id==="quaderno" ? "2px 0" : "4px 10px",
+      borderRadius: ui.id==="quaderno" ? 0 : 20,
+      border: ui.id==="quaderno" ? "none" : `1px solid ${th.appAccent}`,
+      background: ui.id==="quaderno" ? "none" : `${th.appAccent}12`,
+      color: th.appAccent, cursor:"pointer",
+      fontFamily:F.ui, fontSize: ui.id==="quaderno" ? 10 : 10.5, fontWeight:700,
+      textTransform: ui.id==="quaderno" ? "uppercase" : "none", letterSpacing: ui.id==="quaderno" ? 0.6 : 0,
+    }}>{label} <span style={{ opacity:0.7 }}>×</span></button>
+  );
+
+  return (
+    <div style={{ background:th.appBg, minHeight:"100%", position:"relative" }}>
+      <GlobalNav
+        activeScreen="recipes"
+        onRecipes={() => {}}
+        onBook={onBook}
+        onMemories={onMemories}
+        onAdd={onAdd}
+        onFridge={onFridge}
+        onShopping={onShopping}
+        onLanding={onLanding}
+        onExport={onExport}
+        activeLabel={activeSectionLabel || "Libro Ricette"}
+        infoContent={guideRicette}
+        bottomNavActive
+      />
+
+      {ui.navPosition === "bottom" && (
+        <ScreenHeader
+          eyebrow="Libro ricette"
+          title={activeSectionLabel || "Tutte le ricette"}
+          subtitle={`${displayRecipes.length} ricett${displayRecipes.length===1?"a":"e"}`}
+          infoContent={guideRicette}
+          actions={[
+            { icon:"libro", label:"Vista libro", onClick:onBook },
+            ...(onExport ? [{ icon:"esporta", label:"Esporta ricettario", onClick:onExport }] : []),
+            { icon:"aggiungi", label:"Nuova ricetta", onClick:() => onAdd("recipe"), tone: ui.id==="schedario" ? "accent" : undefined },
+          ]}
+        />
+      )}
+
+      {/* ── Pulsante nuova ricetta (solo classico: negli altri stili è nella testa) ── */}
+      {ui.navPosition !== "bottom" && (
+        <div style={{ padding:"10px 24px 2px", textAlign:"center" }}>
+          <button onClick={() => onAdd("recipe")} title="Nuova ricetta" style={{
+            padding:"9px 20px", borderRadius:20,
+            background:th.appAccent, border:"none", cursor:"pointer",
+            color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700,
+          }}>＋ Nuova ricetta</button>
+        </div>
+      )}
+
+      {/* ── Ricerca sempre visibile (come nelle altre sezioni) ── */}
+      <div style={{ padding: ui.navPosition==="bottom" ? `4px ${ui.padX}px 4px` : "8px 16px 4px" }}>
+        <div style={{ display:"flex", gap:8, alignItems:"center", background:th.appCard, border:`1.5px solid ${searchQuery ? th.appAccent : th.appBorder}`, borderRadius: ui.radius.control, padding:"9px 14px" }}>
+          <span style={{ color:th.appFaded }}><AppIcon emoji="🔍" icon="cerca" size={15} /></span>
+          <input
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Cerca ricetta…"
+            style={{ flex:1, background:"none", border:"none", fontFamily:F.body, fontSize:14, color:th.appInk, outline:"none" }}
+          />
+          {searchQuery && <button onClick={() => setSearchQuery("")} style={{ background:"none", border:"none", color:th.appFaded, cursor:"pointer", fontSize:16 }}>×</button>}
+        </div>
       </div>
 
+      {ui.filters === "expanded" ? (
+        filterControls
+      ) : (
+        <>
+          {/* Pulsante Filtri + riepilogo filtri attivi */}
+          <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", padding:`2px ${ui.padX}px 10px` }}>
+            <button onClick={() => setSheetOpen(true)} style={{
+              flexShrink:0, display:"flex", alignItems:"center", gap:6,
+              padding:"7px 13px", borderRadius: ui.radius.chip,
+              border:`1.5px solid ${activeFilterCount>0 ? th.appAccent : ui.hairlineStrong}`,
+              background: activeFilterCount>0 ? `${th.appAccent}12` : "transparent",
+              color: activeFilterCount>0 ? th.appAccent : ui.faded,
+              fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
+            }}>
+              <AppIcon emoji="🏷️" icon="tag" size={12} /> Filtri
+              {activeFilterCount>0 && (
+                <span style={{ background:th.appAccent, color:"#fff", borderRadius:9, padding:"1px 6px", fontSize:10 }}>{activeFilterCount}</span>
+              )}
+            </button>
+            {activeSectionLabel && filterSummaryChip(activeSectionLabel, () => setActiveSection(null))}
+            {showFavorites && filterSummaryChip("Preferiti", () => setShowFavorites(false))}
+            {activeTags.map(tag => filterSummaryChip(tag, () => toggleTag(tag)))}
+            {timeActive && filterSummaryChip("Tempo", resetTime)}
+            {activeFilterCount > 0 && (
+              <button onClick={resetAllFilters} style={{
+                background:"none", border:"none", cursor:"pointer",
+                fontFamily:F.ui, fontSize:11, color:ui.faded, textDecoration:"underline",
+              }}>azzera</button>
+            )}
+          </div>
+
+          <FiltersSheet
+            open={sheetOpen}
+            onClose={() => setSheetOpen(false)}
+            onApply={() => { setPrepRange(draftPrepRange); setCookRange(draftCookRange); setTimeOpen(false); }}
+            onReset={resetAllFilters}
+            activeCount={activeFilterCount}
+            title="Filtri"
+          >
+            {filterControls}
+          </FiltersSheet>
+        </>
+      )}
+
+      {/* Results count (solo classico: negli altri stili il conteggio è già nella testa) */}
+      {ui.navPosition !== "bottom" && (
+        <div style={{ padding:"6px 20px 2px", fontFamily:F.ui, fontSize:11, color:th.appFaded }}>
+          {displayRecipes.length} ricett{displayRecipes.length===1?"a":"e"}
+          {activeSectionLabel && ` · ${activeSectionLabel}`}
+          {activeTags.length > 0 && ` · ${activeTags.length} tag`}
+          {timeActive && <> · <AppIcon emoji="⏱️" icon="tempo" size={11} style={{ verticalAlign:"-1px" }} /> tempo</>}
+          {showFavorites && <> · <AppIcon emoji="⭐" icon="preferito" size={11} style={{ verticalAlign:"-1px" }} /> Preferiti</>}
+        </div>
+      )}
+
       {/* Recipe list */}
-      <div style={{ padding:"6px 20px 60px", display:"flex", flexDirection:"column", gap:10 }}>
+      <div style={{ padding: ui.navPosition==="bottom" ? `6px ${ui.padX}px 60px` : "6px 20px 60px", display:"flex", flexDirection:"column", gap:10 }}>
         {displayRecipes.length === 0
           ? <div style={{ textAlign:"center", padding:"40px 0", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>
               Nessuna ricetta trovata
