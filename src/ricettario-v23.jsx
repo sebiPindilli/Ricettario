@@ -2079,7 +2079,10 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
           <LandingScreen
             recipes={recipes}
             bookName={activeBook?.name}
+            activeBook={activeBook}
+            me={me}
             onBooks={() => goTo("books")}
+            onMySharedLinks={() => goTo("mySharedLinks")}
             onOrganize={() => openOrganize()}
             onRecipes={() => setScreen("recipes")}
             onBook={() => setScreen("book")}
@@ -2195,6 +2198,29 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             onAdd={(type) => type==="memory" ? openAddMemory() : goTo("addRecipeHub")}
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
+          />
+        )}
+        {screen==="mySharedLinks" && (
+          <MySharedLinksScreen
+            me={me}
+            onBack={() => setScreen("landing")}
+            nav={
+              <GlobalNav
+                activeScreen="books"
+                onRecipes={() => setScreen("recipes")}
+                onBook={() => setScreen("book")}
+                onMemories={() => setScreen("memories")}
+                onAdd={(type) => type==="memory" ? openAddMemory() : goTo("addRecipeHub")}
+                onFridge={() => setScreen("fridge")}
+                onShopping={() => setScreen("shoppingList")}
+                onLanding={() => setScreen("landing")}
+                onSearch={() => {}}
+                onFavorites={() => {}}
+                showSearch={false}
+                showFavorites={false}
+                activeLabel="Link condivisi da me"
+              />
+            }
           />
         )}
         {screen==="shoppingList" && (

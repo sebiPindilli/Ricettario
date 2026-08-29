@@ -7,7 +7,7 @@ import SuggestionHint from "../components/SuggestionHint.jsx";
 import { guideLibri } from "../data/guideContent.jsx";
 import { shouldRemindBackup } from "../utils/backupReminder.js";
 import {
-  ROLES, normalizeRole, assignableRoles, canAssignRole, canRemoveMember,
+  ROLES, normalizeRole, roleLabelLong, assignableRoles, canAssignRole, canRemoveMember,
   canAddMember, MAX_MEMBERS,
 } from "../utils/bookRoles.js";
 
@@ -295,7 +295,10 @@ export default function BooksScreen({
                         <>
                           <span>
                             {isBeta ? "Ricettario Beta" : b.isBackup ? "backup senza ricettario associato" : b.type === "personale" ? "personale" : `${(b.memberEmails || []).length + 1} persone`}
-                            {!isBeta && b.type === "condiviso" && <> · {isOwner ? roleLabel("proprietario") : roleLabel(myRole)}</>}
+                            {/* Ruolo per esteso, ui.muted 10.5px (IMPLEMENTATION_PLAN Fase 10, bullet 42) */}
+                            {!isBeta && b.type === "condiviso" && (
+                              <span style={{ color:ui.muted, fontSize:10.5 }}> · {isOwner ? roleLabelLong("proprietario") : roleLabelLong(myRole)}</span>
+                            )}
                           </span>
                           {!isBeta && b.type === "condiviso" && (
                             <div style={{ display:"flex" }}>

@@ -1,10 +1,36 @@
 import React from "react";
 import { useTheme, useRole, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
+import { normalizeRole, roleLabelLong } from "../utils/bookRoles.js";
 import OrganizeIcon from "../components/OrganizeIcon.jsx";
 import AppIcon from "../components/AppIcon.jsx";
+import Icon from "../components/Icon.jsx";
 
-export default function LandingScreen({ recipes = [], bookName = "Il mio Ricettario", onBooks, onRecipes, onBook, onMemories, onAdd, onAddMemory, onFridge, onShopping, onOrganize, onTheme, onUiStyle, onCover, onGuide, onAdminUsers }) {
+// Menù del contorno (Fase 11) — componenti a livello di modulo, non
+// dichiarati dentro il render: react-hooks/static-components li rifiuta
+// altrimenti (reset dello stato a ogni render). ui/th passati come prop.
+const LandingGroupLabel = ({ ui, text }) => (
+  <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:ui.muted, textTransform:"uppercase", margin:"18px 0 6px" }}>{text}</div>
+);
+const LandingRow = ({ ui, th, icon, label, fn, swatch }) => (
+  <button onClick={fn} style={{
+    width:"100%", display:"flex", alignItems:"center", gap:12,
+    padding:"11px 12px", background:"none", border:"none", borderBottom:`1px solid ${ui.hairline}`,
+    cursor:"pointer", textAlign:"left",
+  }}>
+    {swatch ? (
+      <span style={{ width:30, height:30, borderRadius:8, background:th.coverBg, border:`1px solid ${ui.border}`, flexShrink:0, boxSizing:"border-box" }}/>
+    ) : (
+      <span style={{ width:30, height:30, borderRadius:8, background:ui.card, border:`1px solid ${ui.border}`, color:ui.faded, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, boxSizing:"border-box" }}>
+        <Icon name={icon} size={15}/>
+      </span>
+    )}
+    <span style={{ flex:1, fontFamily:F.body, fontSize:14, color:ui.ink }}>{label}</span>
+    <span style={{ color:ui.faded, fontSize:16 }}>›</span>
+  </button>
+);
+
+export default function LandingScreen({ recipes = [], bookName = "Il mio Ricettario", activeBook = null, me = null, onBooks, onRecipes, onBook, onMemories, onAdd, onAddMemory, onFridge, onShopping, onOrganize, onTheme, onUiStyle, onCover, onGuide, onAdminUsers, onMySharedLinks }) {
   const th = useTheme();
   const ui = useUiStyle();
   const role = useRole();
@@ -24,6 +50,64 @@ export default function LandingScreen({ recipes = [], bookName = "Il mio Ricetta
     { emoji:"🔑", label:"Gestione utenti", desc:"Whitelist e ruoli", fn:onAdminUsers, color:"#555F6B" },
   ] : [];
   const mainItems = ui.navPosition === "bottom" ? adminItems : [...primaryItems, ...adminItems];
+
+  // Negli stili nuovi la Landing diventa il "menù del contorno" in quattro
+  // gruppi (IMPLEMENTATION_PLAN Fase 11, bullet 45): le cinque destinazioni
+  // principali non compaiono più qui, sono nella barra in basso. Ramo
+  // completamente separato da quello classico qui sotto, mai condiviso.
+  if (ui.navPosition === "bottom") {
+    const bookRole = activeBook
+      ? (activeBook.owner === me ? "proprietario" : normalizeRole((activeBook.memberRoles || {})[me]))
+      : null;
+    const roleText = activeBook?.type === "condiviso" && bookRole ? roleLabelLong(bookRole) : null;
+
+    return (
+      <div style={{ background:ui.bg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+        <div style={{ padding:"20px 20px 0" }}>
+          <div style={{ fontFamily:F.ui, fontSize:11, letterSpacing:3, color:ui.faded, textTransform:"uppercase" }}>Il mio</div>
+          <div style={{ fontFamily:F.display, fontSize:32, color:ui.ink, fontStyle:"italic" }}>Ricettario</div>
+        </div>
+
+        <div style={{ padding:"0 20px 40px", flex:1, overflowY:"auto" }}>
+          {/* Ricettario attivo — card con dorso, non una riga come le altre */}
+          <button onClick={onBooks} style={{
+            width:"100%", marginTop:14, display:"flex", alignItems:"center", gap:12,
+            padding:"10px 12px", ...ui.cardStyle, cursor:"pointer", textAlign:"left",
+          }}>
+            <span style={{ width:44, height:58, borderRadius:4, background:th.coverBg, position:"relative", overflow:"hidden", flexShrink:0 }}>
+              <span style={{ position:"absolute", left:6, top:0, bottom:0, width:1, background:th.spineColor }}/>
+            </span>
+            <span style={{ flex:1, minWidth:0 }}>
+              <span style={{ display:"block", fontFamily:F.display, fontSize:16, color:ui.ink, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{bookName}</span>
+              <span style={{ display:"block", fontFamily:F.ui, fontSize:11, color:ui.faded, marginTop:2 }}>
+                {recipes.length} ricett{recipes.length===1?"a":"e"}{roleText ? ` · ${roleText}` : ""}
+              </span>
+            </span>
+            <span style={{ color:ui.faded, fontSize:16 }}>›</span>
+          </button>
+
+          <LandingGroupLabel ui={ui} text="Il libro"/>
+          <div style={{ ...ui.cardStyle, overflow:"hidden" }}>
+            <LandingRow ui={ui} th={th} icon="libro" label="Copertina" fn={onCover}/>
+            <LandingRow ui={ui} th={th} swatch label="Stile del libro" fn={onTheme}/>
+            <LandingRow ui={ui} th={th} icon="schede" label="Stile dell'interfaccia" fn={onUiStyle}/>
+          </div>
+
+          <LandingGroupLabel ui={ui} text="Condivisione"/>
+          <div style={{ ...ui.cardStyle, overflow:"hidden" }}>
+            <LandingRow ui={ui} th={th} icon="libro" label="I miei ricettari" fn={onBooks}/>
+            <LandingRow ui={ui} th={th} icon="esporta" label="Link condivisi da me" fn={onMySharedLinks}/>
+          </div>
+
+          <LandingGroupLabel ui={ui} text="Aiuto"/>
+          <div style={{ ...ui.cardStyle, overflow:"hidden" }}>
+            <LandingRow ui={ui} th={th} icon="info" label="Guida" fn={onGuide}/>
+            {role === "admin" && <LandingRow ui={ui} th={th} icon="altro" label="Gestione utenti" fn={onAdminUsers}/>}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>

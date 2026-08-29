@@ -23,6 +23,13 @@ export const ROLES = ["proprietario", "collaboratore", "redattore", "lettore"];
 const LEGACY_ALIASES = { edit: "redattore", read: "lettore" };
 export const normalizeRole = (raw) => LEGACY_ALIASES[raw] || raw;
 
+// Ruolo per esteso, tre sole varianti (IMPLEMENTATION_PLAN Fase 10/11):
+// collaboratore e redattore collassano nella stessa frase — la UI non
+// distingue qui "può gestire i membri" da "può solo modificare le ricette",
+// solo isEditorRole/lettore contano a questo livello di dettaglio.
+const ROLE_LABELS_LONG = { proprietario: "Proprietario", collaboratore: "Puoi modificare", redattore: "Puoi modificare", lettore: "Sola lettura" };
+export const roleLabelLong = (raw) => ROLE_LABELS_LONG[normalizeRole(raw)] || normalizeRole(raw);
+
 // Ruoli che possono scrivere contenuti (ricette, Organizza, tag, sezioni).
 // Il lettore è l'unico realmente limitato in scrittura.
 export const EDITOR_ROLES = ["proprietario", "collaboratore", "redattore"];
