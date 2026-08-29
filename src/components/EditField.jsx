@@ -1,4 +1,4 @@
-import { useTheme, useUiStyle } from "../context.js";
+import { useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import EditLabel from "./EditLabel.jsx";
 
@@ -8,10 +8,9 @@ import EditLabel from "./EditLabel.jsx";
 const FOCUS_CSS = ".field-new:focus { border-color: var(--field-focus) !important; }";
 
 export default function EditField({ label, value, onChange, placeholder="" }) {
-  const th = useTheme();
   const ui = useUiStyle();
 
-  if (ui.id === "classico") {
+  if (ui.fields !== "placeholder") {
     return (
       <div>
         <EditLabel text={label}/>
@@ -34,10 +33,10 @@ export default function EditField({ label, value, onChange, placeholder="" }) {
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder || label}
         style={{
-          "--field-focus": th.appAccent,
-          width:"100%", padding:"11px 14px",
-          border:`1px solid ${th.appBorder}`, borderRadius:11,
-          background:th.appCard, fontFamily:F.body, fontSize:14, color:th.appInk,
+          "--field-focus": ui.accent,
+          width:"100%", padding:"11px 13px",
+          border:`1px solid ${ui.border}`, borderRadius:ui.radius.control,
+          background:ui.card, fontFamily:F.display, fontSize:15, color:ui.ink,
           outline:"none", boxSizing:"border-box",
         }}
       />
