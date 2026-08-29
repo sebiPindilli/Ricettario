@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useTheme } from "../context.js";
+import { useTheme, useUiStyle } from "../context.js";
 import { F, MACRO_SECTIONS, DEFAULT_UNIT_SUGGESTIONS } from "../data/constants.js";
 import { isSectioned, toSectioned, fromSectioned, stripPhotolessStep, stepPhotosOf, durationOf, collectAllIngredients, flattenIngredients, normalizeSteps } from "../utils/helpers.js";
 import BackBtn from "../components/BackBtn.jsx";
@@ -20,6 +20,7 @@ import { guideNuovaModificaRicetta } from "../data/guideContent.jsx";
 // ══════════════════════════════════════════════════════════════
 export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], onAddGroup, onAddTagToGroup, sectionList=MACRO_SECTIONS, onAddSection, onUpdateSection, onDeleteSection, allRecipes=[] }) {
   const th = useTheme();
+  const ui = useUiStyle();
   // Normalise steps: can be string or {text, photos} (o vecchio {text, photo}).
   // Sectioned-aware: se ci sono sottosezioni, normalizza gli item dentro
   // ciascuna, mai il wrapper {section, items} (vedi bug #steps-sezionati).
@@ -33,6 +34,8 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
 
   const [draft, setDraft] = useState({ ...recipe, steps: normaliseSteps(recipe.steps) });
   const [activeSection, setActiveSection] = useState("info");
+  const [openSections, setOpenSections] = useState({ info:true, ingredienti:false, preparazione:false, note:false });
+  const toggleSection = (s) => setOpenSections(o => ({ ...o, [s]: !o[s] }));
 
   const set = (key, val) => setDraft(d => ({ ...d, [key]: val }));
   // Rimuove del tutto la chiave invece di scriverci undefined: Firestore
@@ -133,24 +136,8 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
         />
       </div>
 
-      {/* Section tabs */}
-      <div style={{ display:"flex", overflowX:"auto", gap:6, padding:"4px 20px 10px", scrollbarWidth:"none" }}>
-        {sections.map(s => (
-          <button key={s} onClick={() => setActiveSection(s)} style={{
-            flexShrink:0, padding:"6px 14px", borderRadius:20,
-            border:"none",
-            background: activeSection===s ? "#2C2416" : "#EDE6D4",
-            color: activeSection===s ? "#fff" : "#7A6E5F",
-            fontFamily:F.ui, fontSize:12, fontWeight:600,
-            cursor:"pointer", textTransform:"capitalize",
-          }}>{s}</button>
-        ))}
-      </div>
-
-      <div style={{ flex:1, overflowY:"auto", padding:"0 20px 60px" }}>
-
-        {/* ── INFO ── */}
-        {activeSection==="info" && (
+      {(() => {
+        const infoSection = (
           <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
             <EditField label="Titolo" value={draft.title} onChange={v => set("title",v)}/>
             {/* Sezione del libro */}
@@ -162,7 +149,7 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
                 sections={sectionList}
                 onAddSection={onAddSection}
                 onUpdateSection={onUpdateSection}
-        onDeleteSection={onDeleteSection}
+                onDeleteSection={onDeleteSection}
                 showDefaultHint={false}
               />
             </div>
@@ -194,10 +181,9 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
               />
             </div>
           </div>
-        )}
+        );
 
-        {/* ── INGREDIENTI ── */}
-        {activeSection==="ingredienti" && (
+        const ingredientiSection = (
           <div>
             <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginBottom:10, lineHeight:1.4, background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"9px 12px" }}>
               💡 Inserisci ingrediente e quantità. Le <b>categorie</b> e gli <b>aggregati</b> (usati in Svuota Frigo) si gestiscono nella sezione <b>🍎⚙️ Organizza</b> del banner, così valgono per tutte le ricette.
@@ -211,10 +197,9 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
               unitSuggestions={unitSuggestions}
             />
           </div>
-        )}
+        );
 
-        {/* ── PREPARAZIONE ── */}
-        {activeSection==="preparazione" && (
+        const preparazioneSection = (
           <EditSectionedSteps
             data={toSectioned(draft.steps)}
             color={draft.color}
@@ -232,10 +217,9 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
               }
             }}
           />
-        )}
+        );
 
-        {/* ── NOTE ── */}
-        {activeSection==="note" && (
+        const noteSection = (
           <div>
             <EditLabel text="Note e consigli"/>
             <textarea
@@ -267,8 +251,58 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
               }}
             />
           </div>
-        )}
-      </div>
+        );
+
+        if (ui.id === "classico") {
+          return (
+            <>
+              {/* Section tabs */}
+              <div style={{ display:"flex", overflowX:"auto", gap:6, padding:"4px 20px 10px", scrollbarWidth:"none" }}>
+                {sections.map(s => (
+                  <button key={s} onClick={() => setActiveSection(s)} style={{
+                    flexShrink:0, padding:"6px 14px", borderRadius:20,
+                    border:"none",
+                    background: activeSection===s ? "#2C2416" : "#EDE6D4",
+                    color: activeSection===s ? "#fff" : "#7A6E5F",
+                    fontFamily:F.ui, fontSize:12, fontWeight:600,
+                    cursor:"pointer", textTransform:"capitalize",
+                  }}>{s}</button>
+                ))}
+              </div>
+              <div style={{ flex:1, overflowY:"auto", padding:"0 20px 60px" }}>
+                {activeSection==="info" && infoSection}
+                {activeSection==="ingredienti" && ingredientiSection}
+                {activeSection==="preparazione" && preparazioneSection}
+                {activeSection==="note" && noteSection}
+              </div>
+            </>
+          );
+        }
+
+        const items = [
+          ["info", "Info", infoSection],
+          ["ingredienti", "Ingredienti", ingredientiSection],
+          ["preparazione", "Preparazione", preparazioneSection],
+          ["note", "Note", noteSection],
+        ];
+        return (
+          <div style={{ flex:1, overflowY:"auto", padding:`4px ${ui.padX}px 60px` }}>
+            {items.map(([key, label, content]) => (
+              <div key={key} style={{ marginBottom:8 }}>
+                <button onClick={() => toggleSection(key)} style={{
+                  width:"100%", display:"flex", justifyContent:"space-between", alignItems:"center",
+                  padding:"12px 2px", background:"none", border:"none", cursor:"pointer",
+                  borderBottom:`1px solid ${ui.hairlineStrong}`,
+                }}>
+                  <span style={{ fontFamily:F.display, fontSize:16, color:ui.ink }}>{label}</span>
+                  <span style={{ color:ui.faded, fontSize:13 }}>{openSections[key] ? "▾" : "▸"}</span>
+                </button>
+                {openSections[key] && <div style={{ padding:"14px 0 4px" }}>{content}</div>}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Floating save bar */}
       <div style={{
