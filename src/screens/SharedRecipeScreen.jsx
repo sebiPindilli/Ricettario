@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useTheme } from "../context.js";
+import { useState, useEffect, useRef } from "react";
+import { useTheme, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import { isSectioned, ingredientToText, stepPhotosOf, dishPhotoOf } from "../utils/helpers.js";
 import { loadSharedStatus, loadSharedContent } from "../services/sharedRecipesStore.js";
@@ -33,6 +33,9 @@ const Message = ({ th, icon, title, sub }) => (
 
 export default function SharedRecipeScreen({ shareId, me, editableBooks = [], onAddToBook, onClose }) {
   const th = useTheme();
+  const ui = useUiStyle();
+  const isNew = ui.id !== "classico";
+  const saveSectionRef = useRef(null);
   const [phase, setPhase] = useState("loading"); // loading | not-found | revoked | expired | forbidden | ready
   const [status, setStatus] = useState(null);
   const [content, setContent] = useState(null);
@@ -134,7 +137,32 @@ export default function SharedRecipeScreen({ shareId, me, editableBooks = [], on
         <div style={{ fontFamily:F.ui, fontSize:11.5, color:th.appFaded, marginTop:8 }}>
           Prep: {recipe.prepTime || 0} min · Cottura: {recipe.cookTime || 0} min · {recipe.servings || 4} porzioni
         </div>
+        {/* "Salva nel mio ricettario" in cima e in fondo (DECISIONI.md §Ricetta condivisa) */}
+        {isNew && editableBooks.length > 0 && (
+          <button onClick={() => saveSectionRef.current?.scrollIntoView({ behavior:"smooth", block:"start" })} style={{
+            marginTop:12, padding:"10px 18px", borderRadius:20, border:"none",
+            background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:12.5, fontWeight:700, cursor:"pointer",
+          }}>＋ Salva nel mio ricettario</button>
+        )}
       </div>
+
+      {/* Ricordi collegati — solo se erano accesi al momento della condivisione */}
+      {isNew && recipe.memories && recipe.memories.length > 0 && (
+        <div style={{ marginBottom:20 }}>
+          <div style={{ fontFamily:F.ui, fontSize:12, fontWeight:700, letterSpacing:1, textTransform:"uppercase", color:th.appAccent, marginBottom:8 }}>Ricordi</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+            {recipe.memories.map(mem => (
+              <div key={mem.id} style={{ borderRadius:12, overflow:"hidden", border:`1px solid ${th.appBorder}`, background:th.appCard }}>
+                {mem.photo && <img src={mem.photo} alt="" style={{ width:"100%", height:100, objectFit:"cover", display:"block" }}/>}
+                <div style={{ padding:"7px 9px" }}>
+                  {mem.caption && <div style={{ fontFamily:F.body, fontSize:12, fontStyle:"italic", color:th.appInk, lineHeight:1.4 }}>{mem.caption}</div>}
+                  {mem.date && <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:3 }}>{mem.date}</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {(status.includedData?.ingredients || status.includedData?.photos || status.includedData?.memories) && (
         <div style={{ background:`${th.appAccent}10`, border:`1px dashed ${th.appAccent}55`, borderRadius:10, padding:"9px 12px", marginBottom:14, fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
@@ -182,7 +210,7 @@ export default function SharedRecipeScreen({ shareId, me, editableBooks = [], on
         })()}
       </div>
 
-      <div style={{ borderTop:`1px solid ${th.appBorder}`, paddingTop:16 }}>
+      <div ref={saveSectionRef} style={{ borderTop:`1px solid ${th.appBorder}`, paddingTop:16 }}>
         <div style={{ fontFamily:F.display, fontSize:15, color:th.appInk, marginBottom:8 }}>Aggiungi al mio ricettario</div>
         {editableBooks.length === 0 ? (
           <div style={{ fontFamily:F.ui, fontSize:12, color:th.appFaded, lineHeight:1.5 }}>Non hai libri su cui puoi scrivere (serve almeno un libro come proprietario, co-proprietario o collaboratore).</div>
