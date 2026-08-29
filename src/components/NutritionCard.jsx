@@ -113,17 +113,32 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
 
       {open && (
         <div style={{ padding:"0 14px 12px" }}>
-          <div style={{ display:"flex", gap:5, marginBottom: isNew ? 14 : 10, flexWrap:"wrap" }}>
-            {(isNew ? [["Porzione","serving"],["Totale","total"],["Per 100 g","per100"]] : [["Per porzione","serving"], ["Per 100 g","per100"]]).map(([label, v]) => (
-              <button key={v} onClick={() => setView(v)} style={{
-                padding:"5px 11px", borderRadius:14,
-                border:`1.5px solid ${view === v ? th.appAccent : th.appBorder}`,
-                background: view === v ? th.appAccent : "transparent",
-                color: view === v ? "#fff" : th.appFaded,
-                fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer",
-              }}>{label}</button>
-            ))}
-          </div>
+          {isNew ? (
+            // Selettore Porzione/Totale/100g come segmented su ui.border,
+            // non tre pillole separate (IMPLEMENTATION_PLAN Fase 9, bullet 39).
+            <div style={{ display:"flex", gap:3, marginBottom:14, background:ui.border, borderRadius:ui.radius.control, padding:3 }}>
+              {[["Porzione","serving"],["Totale","total"],["Per 100 g","per100"]].map(([label, v]) => (
+                <button key={v} onClick={() => setView(v)} style={{
+                  flex:1, padding:"6px 8px", borderRadius:ui.radius.control-2, border:"none",
+                  background: view===v ? ui.card : "transparent",
+                  color: view===v ? ui.ink : ui.muted,
+                  fontFamily:F.ui, fontSize:10.5, fontWeight: view===v ? 700 : 500, cursor:"pointer",
+                }}>{label}</button>
+              ))}
+            </div>
+          ) : (
+            <div style={{ display:"flex", gap:5, marginBottom:10, flexWrap:"wrap" }}>
+              {[["Per porzione","serving"], ["Per 100 g","per100"]].map(([label, v]) => (
+                <button key={v} onClick={() => setView(v)} style={{
+                  padding:"5px 11px", borderRadius:14,
+                  border:`1.5px solid ${view === v ? th.appAccent : th.appBorder}`,
+                  background: view === v ? th.appAccent : "transparent",
+                  color: view === v ? "#fff" : th.appFaded,
+                  fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer",
+                }}>{label}</button>
+              ))}
+            </div>
+          )}
           {view === "per100" && (
             <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginBottom:8 }}>
               su {fmt(nutri.totalGrams, 0)} g totali di ingredienti calcolati (a crudo)
@@ -132,12 +147,12 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
 
           {isNew ? (
             <>
-              {/* Quattro macro alla pari, griglia 2×2 (DECISIONI.md §Nutrizione) */}
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:16 }}>
+              {/* Quattro macro alla pari, griglia 2×2, ognuna nella propria card ui.cardStyle (DECISIONI.md §Nutrizione) */}
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16 }}>
                 {MAIN_MACROS.map(({ key, label, unit, dec }) => (
-                  <div key={key} style={{ textAlign:"center" }}>
+                  <div key={key} style={{ ...ui.cardStyle, padding:"12px 8px", textAlign:"center" }}>
                     <div style={{ fontFamily:F.mono, fontSize:34, color:ui.ink, lineHeight:1 }}>{fmt(vals[key], dec)}</div>
-                    <div style={{ fontFamily:F.ui, fontSize:9.5, color:ui.faded, textTransform:"uppercase", letterSpacing:0.6, marginTop:4 }}>{label} · {unit}</div>
+                    <div style={{ fontFamily:F.ui, fontSize:10.5, color:ui.muted, textTransform:"uppercase", letterSpacing:0.6, marginTop:4 }}>{label} · {unit}</div>
                   </div>
                 ))}
               </div>
