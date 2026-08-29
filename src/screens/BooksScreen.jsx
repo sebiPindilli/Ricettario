@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useTheme } from "../context.js";
+import { useTheme, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import GlobalNav from "../components/GlobalNav.jsx";
 import MySharedLinksScreen from "./MySharedLinksScreen.jsx";
@@ -31,6 +31,8 @@ export default function BooksScreen({
   onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping,
 }) {
   const th = useTheme();
+  const ui = useUiStyle();
+  const isNew = ui.id !== "classico";
   const [phase, setPhase] = useState("list"); // "list" | "sharedLinks"
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
@@ -248,7 +250,11 @@ export default function BooksScreen({
               borderRadius:14, padding:"12px 14px", marginBottom:10,
             }}>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                <span style={{ fontSize:20 }}>{isBeta ? "🧪" : b.isBackup ? "📦" : b.type === "personale" ? "🔒" : "👥"}</span>
+                {isNew && (
+                  // Dorso del libro — elenco, non scaffale (DECISIONI.md §Ricettari)
+                  <div style={{ width:5, alignSelf:"stretch", minHeight:32, borderRadius:2, background: active ? th.appAccent : th.appBorder, flexShrink:0 }}/>
+                )}
+                {!isNew && <span style={{ fontSize:20 }}>{isBeta ? "🧪" : b.isBackup ? "📦" : b.type === "personale" ? "🔒" : "👥"}</span>}
                 {isRen ? (
                   <input
                     value={renameVal}
@@ -259,11 +265,42 @@ export default function BooksScreen({
                   />
                 ) : (
                   <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontFamily:F.display, fontSize:16, color:th.appInk }}>{b.name}</div>
-                    <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded }}>
-                      {isBeta ? "Ricettario Beta" : b.isBackup ? "backup senza ricettario associato" : b.type === "personale" ? "personale" : `condiviso · ${(b.memberEmails || []).length + 1}/${MAX_MEMBERS} membri`}
-                      {!isBeta && b.type === "condiviso" && !isOwner && <> · tu: {roleLabel(myRole)}</>}
-                      {active && <span style={{ color:th.appAccent, fontWeight:700 }}> · attivo</span>}
+                    <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+                      <div style={{ fontFamily:F.display, fontSize:16, color:th.appInk }}>{b.name}</div>
+                      {isNew && active && (
+                        <span style={{ flexShrink:0, fontFamily:F.ui, fontSize:8.5, fontWeight:700, letterSpacing:0.5, color:"#fff", background:th.appAccent, borderRadius:6, padding:"2px 6px", textTransform:"uppercase" }}>Attivo</span>
+                      )}
+                    </div>
+                    <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, display:"flex", alignItems:"center", gap:6, marginTop: isNew ? 3 : 0 }}>
+                      {!isNew && (
+                        <span>
+                          {isBeta ? "Ricettario Beta" : b.isBackup ? "backup senza ricettario associato" : b.type === "personale" ? "personale" : `condiviso · ${(b.memberEmails || []).length + 1}/${MAX_MEMBERS} membri`}
+                          {!isBeta && b.type === "condiviso" && !isOwner && <> · tu: {roleLabel(myRole)}</>}
+                          {active && <span style={{ color:th.appAccent, fontWeight:700 }}> · attivo</span>}
+                        </span>
+                      )}
+                      {isNew && (
+                        <>
+                          <span>
+                            {isBeta ? "Ricettario Beta" : b.isBackup ? "backup senza ricettario associato" : b.type === "personale" ? "personale" : `${(b.memberEmails || []).length + 1} persone`}
+                            {!isBeta && b.type === "condiviso" && <> · {isOwner ? roleLabel("proprietario") : roleLabel(myRole)}</>}
+                          </span>
+                          {!isBeta && b.type === "condiviso" && (
+                            <div style={{ display:"flex" }}>
+                              {[b.owner, ...(b.memberEmails || [])].slice(0, 4).map((email, i) => (
+                                <span key={email} title={email} style={{
+                                  width:16, height:16, borderRadius:"50%", flexShrink:0,
+                                  marginLeft: i === 0 ? 0 : -5,
+                                  background:th.appAccent2, color:"#fff",
+                                  border:`1.5px solid ${th.appCard}`,
+                                  fontSize:7.5, fontWeight:700, fontFamily:F.ui,
+                                  display:"flex", alignItems:"center", justifyContent:"center",
+                                }}>{email.slice(0,2).toUpperCase()}</span>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
