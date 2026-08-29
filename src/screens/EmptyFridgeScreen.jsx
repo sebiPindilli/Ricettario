@@ -8,6 +8,7 @@ import {
 } from "../utils/helpers.js";
 import GlobalNav from "../components/GlobalNav.jsx";
 import BottomNav from "../components/BottomNav.jsx";
+import AppIcon from "../components/AppIcon.jsx";
 import RecipeFilterBar from "../components/RecipeFilterBar.jsx";
 import SuggestionHint from "../components/SuggestionHint.jsx";
 import SectionCategoryIcon from "../components/SectionCategoryIcon.jsx";
@@ -479,7 +480,7 @@ export default function EmptyFridgeScreen({
                       fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
                       display:"flex", flexDirection:"column", alignItems:"center", gap:2,
                     }}>
-                      <span style={{ fontSize:15 }}>📖</span>
+                      <AppIcon emoji="📖" icon="libro" size={15} />
                       Ricetta
                     </button>
                     {(ui.id === "classico" || missing.length > 0) && (
@@ -492,7 +493,7 @@ export default function EmptyFridgeScreen({
                           fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
                           display:"flex", flexDirection:"column", alignItems:"center", gap:2,
                         }}>
-                        <span style={{ fontSize:15 }}>🛒</span>
+                        <AppIcon emoji="🛒" icon="spesa" size={15} />
                         {ui.id === "classico" ? "Spesa" : `Compra i ${missing.length}`}
                       </button>
                     )}
@@ -505,7 +506,7 @@ export default function EmptyFridgeScreen({
                         fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
                         display:"flex", flexDirection:"column", alignItems:"center", gap:2,
                       }}>
-                      <span style={{ fontSize:15 }}>👨‍🍳</span>
+                      <AppIcon emoji="👨‍🍳" icon="cottura" size={15} />
                       Cucina
                     </button>
                     )}
