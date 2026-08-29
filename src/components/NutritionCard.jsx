@@ -153,7 +153,7 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
                 <div key={n.key} style={{
                   display:"flex", justifyContent:"space-between",
                   padding: n.sub ? "5px 8px 5px 20px" : "5px 8px",
-                  background: i % 2 === 0 ? "rgba(240,234,217,0.4)" : "transparent",
+                  background: i % 2 === 0 ? ui.stripe : "transparent",
                   fontFamily:F.body, fontSize: n.sub ? 11.5 : 12.5,
                   color: n.sub ? ui.faded : ui.ink,
                 }}>
@@ -186,7 +186,7 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
               <div key={i} style={{
                 display:"flex", justifyContent:"space-between", gap:8,
                 padding: isNew ? "4px 6px" : 0,
-                background: isNew && i % 2 === 0 ? "rgba(240,234,217,0.4)" : "transparent",
+                background: isNew && i % 2 === 0 ? ui.stripe : "transparent",
                 fontFamily:F.ui, fontSize:10.5, lineHeight:1.7,
                 color: d.status === "ok" ? (isNew ? ui.ink : th.appInk) : (isNew ? ui.faded : th.appFaded),
               }}>
