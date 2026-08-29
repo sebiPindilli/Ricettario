@@ -1,5 +1,5 @@
 import { useState, useRef, useLayoutEffect } from "react";
-import { useTheme, useNavActions, useCookingTimers } from "../context.js";
+import { useTheme, useNavActions, useCookingTimers, useUiStyle } from "../context.js";
 import { F, MOBILE_BREAKPOINT_CSS } from "../data/constants.js";
 import OrganizeIcon from "./OrganizeIcon.jsx";
 import InfoButton from "./InfoButton.jsx";
@@ -20,12 +20,21 @@ export default function GlobalNav({
   showSearch, showFavorites,
   activeLabel, extraAction, bookView = false, viewToggle = null,
   infoContent = null, onExport = null,
+  // Schermate destinazione della nav in basso (vedi BottomNav.jsx): quando
+  // true e lo stile attivo ha navPosition "bottom", questa barra a due righe
+  // non si mostra affatto — la schermata chiamante monta <BottomNav> al suo
+  // posto. Le altre schermate (add/adminUsers/books, vista libro forzata in
+  // classico) non passano questa prop e restano invariate in ogni stile.
+  bottomNavActive = false,
 }) {
   const th = useTheme();
+  const ui = useUiStyle();
   const navActions = useNavActions();
   const { topStackHeight } = useCookingTimers();
   const barRef = useRef(null);
   const [spacerHeight, setSpacerHeight] = useState(0);
+
+  const suppressed = bottomNavActive && ui.navPosition === "bottom";
 
   useLayoutEffect(() => {
     const el = barRef.current;
@@ -56,6 +65,10 @@ export default function GlobalNav({
       .globalnav-spacer { display:block !important; }
     }
   `;
+
+  // Stili quaderno/schedario: la barra a due righe lascia il posto a
+  // <BottomNav> (montato dalla schermata chiamante) + ScreenHeader.
+  if (suppressed) return null;
 
   // "recipes" e la vista libro condividono la stessa tab attiva (Ricette) e lo stesso banner.
   const inRecipes = activeScreen === "recipes" || bookView;

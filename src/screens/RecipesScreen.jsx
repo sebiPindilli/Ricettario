@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { useTheme } from "../context.js";
+import { useTheme, useUiStyle } from "../context.js";
 import { sortSectionsAltroLast } from "../utils/helpers.js";
 import { F, MACRO_SECTIONS, TAG_GROUPS } from "../data/constants.js";
 import GlobalNav from "../components/GlobalNav.jsx";
+import BottomNav from "../components/BottomNav.jsx";
 import RecipeCardList from "../components/RecipeCardList.jsx";
 import { guideRicette } from "../data/guideContent.jsx";
 import AppIcon from "../components/AppIcon.jsx";
@@ -10,6 +11,7 @@ import SectionCategoryIcon from "../components/SectionCategoryIcon.jsx";
 
 export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, onMemories, onAdd, onFridge, onShopping, onExport, extraTagGroups=[], sectionList=MACRO_SECTIONS }) {
   const th = useTheme();
+  const ui = useUiStyle();
   const [activeSection, setActiveSection] = useState(null);
   const [activeTags, setActiveTags] = useState([]);
   const [openTagGroup, setOpenTagGroup] = useState(null);
@@ -89,6 +91,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
         onExport={onExport}
         activeLabel={activeSection ? MACRO_SECTIONS.find(s=>s.id===activeSection)?.label : "Libro Ricette"}
         infoContent={guideRicette}
+        bottomNavActive
       />
 
       {/* ── Pulsante nuova ricetta (in alto al centro, come nei Ricordi) ── */}
@@ -343,6 +346,16 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
             ))
         }
       </div>
+
+      {ui.navPosition === "bottom" && (
+        <BottomNav
+          activeScreen="recipes"
+          onRecipes={() => {}}
+          onMemories={onMemories}
+          onFridge={onFridge}
+          onShopping={onShopping}
+        />
+      )}
     </div>
   );
 }

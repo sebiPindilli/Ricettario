@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import { useTheme } from "../context.js";
+import { useTheme, useUiStyle } from "../context.js";
 import { F, INGREDIENT_CATEGORIES, MACRO_SECTIONS } from "../data/constants.js";
 import {
   buildFridgeItems, ingDictIndex, flattenIngredients, ingredientToText,
   resolveIngId, sortCategoriesBaseFirst,
 } from "../utils/helpers.js";
 import GlobalNav from "../components/GlobalNav.jsx";
+import BottomNav from "../components/BottomNav.jsx";
 import RecipeFilterBar from "../components/RecipeFilterBar.jsx";
 import SuggestionHint from "../components/SuggestionHint.jsx";
 import SectionCategoryIcon from "../components/SectionCategoryIcon.jsx";
@@ -34,6 +35,8 @@ export default function EmptyFridgeScreen({
   onManageAggregates, onManageCategories, onManageCategoriesDb,
 }) {
   const th = useTheme();
+  const ui = useUiStyle();
+  const [navHeight, setNavHeight] = useState(0);
   const [search, setSearch] = useState("");
   const [servingsDialog, setServingsDialog] = useState(null);
   const [activeMode, setActiveMode] = useState(null);
@@ -122,6 +125,18 @@ export default function EmptyFridgeScreen({
       showFavorites={false}
       activeLabel="Svuota Frigo"
       infoContent={guideFrigo}
+      bottomNavActive
+    />
+  );
+
+  const bottomNav = ui.navPosition === "bottom" && (
+    <BottomNav
+      activeScreen="fridge"
+      onRecipes={onRecipes}
+      onMemories={onMemories}
+      onFridge={() => {}}
+      onShopping={onShopping}
+      onHeightChange={setNavHeight}
     />
   );
 
@@ -303,7 +318,7 @@ export default function EmptyFridgeScreen({
         </div>
 
         {/* CTA */}
-        <div style={{ position:"absolute", bottom:0, left:0, right:0, padding:"14px 18px 22px", background:`linear-gradient(transparent, ${th.appBg} 30%)` }}>
+        <div style={{ position:"absolute", bottom:navHeight, left:0, right:0, padding:"14px 18px 22px", background:`linear-gradient(transparent, ${th.appBg} 30%)` }}>
           <button
             onClick={() => setPhase("results")}
             disabled={ownedMembers.length === 0}
@@ -345,6 +360,8 @@ export default function EmptyFridgeScreen({
             )}
           </div>
         )}
+
+        {bottomNav}
       </div>
     );
   }
@@ -489,6 +506,7 @@ export default function EmptyFridgeScreen({
       {activeMode?.mode === "cooking" && (
         <CookingMode recipe={activeMode.recipe} scale={activeMode.scale} onClose={() => setActiveMode(null)}/>
       )}
+      {bottomNav}
     </>
   );
 }

@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import { useTheme } from "../context.js";
+import { useTheme, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import {
   normName, fmtQty, resolveIngId, ingDictIndex, normUnit, unitLabel, gramsPerUnitFor,
 } from "../utils/helpers.js";
 import { effectiveCategories } from "../utils/aggregates.js";
 import GlobalNav from "../components/GlobalNav.jsx";
+import BottomNav from "../components/BottomNav.jsx";
 import SuggestionHint from "../components/SuggestionHint.jsx";
 import { guideSpesa } from "../data/guideContent.jsx";
 
@@ -30,7 +31,11 @@ export default function ShoppingListScreen({
   onManageAggregates, onManageEquivalences,
 }) {
   const th = useTheme();
+  const ui = useUiStyle();
   const [copied, setCopied] = useState(false);
+  // Altezza reale di <BottomNav>, per sollevare della stessa misura il CTA
+  // "Copia tutto" fisso in fondo — altrimenti la nav in basso lo coprirebbe.
+  const [navHeight, setNavHeight] = useState(0);
   // Scelta di visualizzazione per riga (separate | unità di conversione) — non persistita, solo per la sessione corrente.
   const [unitChoice, setUnitChoice] = useState({});
   // Ingredienti base spostati manualmente in lista spesa vera ("non ce l'ho")
@@ -280,6 +285,7 @@ export default function ShoppingListScreen({
       showFavorites={false}
       activeLabel="Lista Spesa"
       infoContent={guideSpesa}
+      bottomNavActive
     />
   );
 
@@ -380,7 +386,7 @@ export default function ShoppingListScreen({
 
       {/* Copia tutto */}
       {entries.length > 0 && (
-        <div style={{ position:"absolute", bottom:0, left:0, right:0, padding:"14px 18px 22px", background:`linear-gradient(transparent, ${th.appBg} 30%)` }}>
+        <div style={{ position:"absolute", bottom:navHeight, left:0, right:0, padding:"14px 18px 22px", background:`linear-gradient(transparent, ${th.appBg} 30%)` }}>
           <button onClick={copyAll} style={{
             width:"100%", padding:"15px",
             background: copied ? "#6B8C6E" : th.appAccent,
@@ -391,6 +397,17 @@ export default function ShoppingListScreen({
             {copied ? "✓ Copiato negli appunti!" : "📋 Copia tutto negli appunti"}
           </button>
         </div>
+      )}
+
+      {ui.navPosition === "bottom" && (
+        <BottomNav
+          activeScreen="shopping"
+          onRecipes={onRecipes}
+          onMemories={onMemories}
+          onFridge={onFridge}
+          onShopping={() => {}}
+          onHeightChange={setNavHeight}
+        />
       )}
     </div>
   );

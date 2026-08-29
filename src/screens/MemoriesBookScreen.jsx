@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { useTheme } from "../context.js";
+import { useTheme, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import { memorySortKey, memoryPeriodLabel } from "../utils/helpers.js";
 import MemoryPhoto from "../components/MemoryPhoto.jsx";
 import PhotoLightbox from "../components/PhotoLightbox.jsx";
 import GlobalNav from "../components/GlobalNav.jsx";
+import BottomNav from "../components/BottomNav.jsx";
 import { guideRicordi } from "../data/guideContent.jsx";
 import ChosenIcon from "../components/ChosenIcon.jsx";
 
@@ -78,6 +79,7 @@ const MemoryOpenPage = ({ mems, linkedFor, onRecipe, th, confirmDeleteId, onRequ
 
 export default function MemoriesBookScreen({ recipes, onBack, onRecipe, onRecipes, onBook, onAdd, onFridge, onShopping, onDeleteMemory }) {
   const th = useTheme();
+  const ui = useUiStyle();
   const [lightbox, setLightbox] = useState(null);
   const [viewMode, setViewMode] = useState("cards"); // "cards" | "book"
   const [pageIndex, setPageIndex] = useState(0);
@@ -134,6 +136,7 @@ export default function MemoriesBookScreen({ recipes, onBack, onRecipe, onRecipe
           onCards: () => setViewMode("cards"),
           onBook: () => setViewMode("book"),
         } : null}
+        bottomNavActive
       />
 
       {/* Nuovo ricordo */}
@@ -255,6 +258,16 @@ export default function MemoriesBookScreen({ recipes, onBack, onRecipe, onRecipe
             }}>Succ. ›</button>
           </div>
         </div>
+      )}
+
+      {ui.navPosition === "bottom" && (
+        <BottomNav
+          activeScreen="memories"
+          onRecipes={onRecipes}
+          onMemories={() => {}}
+          onFridge={onFridge}
+          onShopping={onShopping}
+        />
       )}
     </div>
   );
