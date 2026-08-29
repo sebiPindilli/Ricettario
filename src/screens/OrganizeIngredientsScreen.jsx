@@ -1,10 +1,12 @@
 import React, { useState } from "react";
-import { useTheme } from "../context.js";
+import { useTheme, useUiStyle } from "../context.js";
 import { F, INGREDIENT_CATEGORIES } from "../data/constants.js";
 import AppIcon from "../components/AppIcon.jsx";
+import Icon from "../components/Icon.jsx";
 import SectionCategoryIcon from "../components/SectionCategoryIcon.jsx";
 import ChosenIcon from "../components/ChosenIcon.jsx";
 import FoodIconGrid from "../components/FoodIconGrid.jsx";
+import BottomNav from "../components/BottomNav.jsx";
 import { NUTRITION_DB } from "../data/nutrition.js";
 import {
   buildIngredientDict, ingDictIndex, sortCategoriesBaseFirst,
@@ -22,6 +24,7 @@ export const SHOPPING_SOURCE = "shopping";
 export default function OrganizeIngredientsScreen({
   nav, recipes, aggregates, ingredientCategories, sourceByIngredient = {}, onSetSourcePriority,
   onSetIngredientCats, onSaveAggregate, onDeleteAggregate, onBack,
+  onRecipes, onMemories, onFridge, onShopping,
   suggestedAggregates = [], ignoredSimilarities = [], onIgnoreSimilarity, onRestoreSimilarity,
   categoryList = INGREDIENT_CATEGORIES, onSaveCategory, onDeleteCategory,
   equivalences = {}, onSaveEquivalence,
@@ -34,6 +37,7 @@ export default function OrganizeIngredientsScreen({
   initialAggScope = "all",
 }) {
   const th = useTheme();
+  const ui = useUiStyle();
   const [editing, setEditing] = useState(null); // null | {kind:"ingredient"|"aggregate", ...}
   const [manageCats, setManageCats] = useState(!!initialManageCats); // gestione categorie (nome/icona)
   const [manageEq, setManageEq] = useState(false);     // gestione equivalenze unità
@@ -1245,6 +1249,22 @@ export default function OrganizeIngredientsScreen({
             </div>
             {isAgg && <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, marginTop:1 }}>{(agg.members||[]).map(dictName).join(" · ")}</div>}
           </div>
+          {ui.id === "schedario" && (
+            // Tre pastiglie di stato — verdi se il dato c'è, tratteggiate se
+            // manca (README §Screens 8). Leggono gli stessi issueNoCat/
+            // issueNoNutri/issueNoEq già calcolati sopra: nessuna regola nuova.
+            <div style={{ display:"flex", gap:3, flexShrink:0 }}>
+              {[["tag", !issueNoCat], ["nutrizione", !issueNoNutri], ["bilancia", !issueNoEq]].map(([icon, ok], i) => (
+                <span key={i} title={icon} style={{
+                  width:22, height:22, borderRadius:7,
+                  border: ok ? "none" : `1.5px dashed ${th.appAccent}`,
+                  background: ok ? "#6B8C6E29" : "transparent",
+                  color: ok ? "#6B8C6E" : th.appAccent,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                }}><Icon name={icon} size={12}/></span>
+              ))}
+            </div>
+          )}
           {isAgg ? (
             <button onClick={() => setEditing({ kind:"aggregate", id:agg.id, name:agg.name, members:[...(agg.members||[])], categories:[...(agg.categories||[])] })} style={{ background:"none", border:"none", fontSize:14, cursor:"pointer", color:th.appFaded, flexShrink:0, padding:"2px 4px" }}>✏️</button>
           ) : (onRenameIngredient && (
@@ -1439,6 +1459,26 @@ export default function OrganizeIngredientsScreen({
     setConfirmDeleteUnused(false);
   };
 
+  // ── Riepilogo in cima (quaderno/schedario, vedi README §Screens 8) —
+  // riusa issuesFor, la STESSA regola di segnalazione di ItemCard e dei
+  // filtri "Da gestire": non è un doppione, sono gli stessi tre contatori.
+  const summaryCounts = { cat:0, nutri:0, eq:0, any:0 };
+  aggregates.forEach(a => {
+    const iss = issuesFor(a.id, true, a);
+    if (iss.cat) summaryCounts.cat++;
+    if (iss.nutri) summaryCounts.nutri++;
+    if (iss.eq) summaryCounts.eq++;
+    if (iss.cat || iss.nutri || iss.eq) summaryCounts.any++;
+  });
+  allIngs.forEach(i => {
+    const iss = issuesFor(i.name, false, null);
+    if (iss.cat) summaryCounts.cat++;
+    if (iss.nutri) summaryCounts.nutri++;
+    if (iss.eq) summaryCounts.eq++;
+    if (iss.cat || iss.nutri || iss.eq) summaryCounts.any++;
+  });
+  const summaryTotal = aggregates.length + allIngs.length;
+
   return (
     <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
       {nav}
@@ -1449,32 +1489,96 @@ export default function OrganizeIngredientsScreen({
         </div>
       )}
 
+      {/* ── Riepilogo (quaderno/schedario) — i tre contatori SONO i filtri
+          "Da gestire" già esistenti, non un doppione: toccarne uno attiva
+          issueMode + quel solo alertFilter. ── */}
+      {ui.id !== "classico" && (
+        <div style={{ padding:"14px 20px 0" }}>
+          <div style={{ fontFamily:F.ui, fontSize:12, color:ui.faded, marginBottom:10 }}>
+            Su <b style={{ color:ui.ink }}>{summaryTotal}</b> ingredienti, <b style={{ color:ui.ink }}>{summaryCounts.any}</b> hanno un dato mancante
+          </div>
+          <div style={{ display:"flex", gap:8, marginBottom:4 }}>
+            {[["cat","Categoria",summaryCounts.cat],["nutri","Nutrizione",summaryCounts.nutri],["eq","Unità",summaryCounts.eq]].map(([type, label, count]) => (
+              <button key={type} onClick={() => { setIssueMode(true); setAlertFilter([type]); }} style={{
+                flex:1, padding:"8px 6px", borderRadius:ui.radius.control,
+                border:`1px solid ${ui.hairlineStrong}`, background: ui.id==="schedario" ? ui.card : "transparent",
+                cursor:"pointer", textAlign:"center",
+              }}>
+                <div style={{ fontFamily:F.mono, fontSize:16, fontWeight:700, color: count>0 ? th.appAccent : ui.faded }}>{count}</div>
+                <div style={{ fontFamily:F.ui, fontSize:9, color:ui.faded, textTransform:"uppercase", letterSpacing:0.5, marginTop:1 }}>{label}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── GESTISCI DATABASE ── */}
       <div style={{ padding:"14px 20px 0" }}>
         <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.2, color:th.appAccent, textTransform:"uppercase", fontWeight:700, marginBottom:8 }}>Gestisci database</div>
       </div>
-      <div style={{ padding:"0 18px 4px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-        {[
-          ["🍇", "Database aggregati", "#5A8C3A", () => { setManageAggs(true); setOpenAggSections({ existing:true, suggested:false }); }],
-          ["🏷️", "Database categorie", "#5A3A9A", () => setManageCats(true)],
-          ["⚖️", "Conversioni di sistema", "#2D8C6B", () => setManageEq(true)],
-          ["🍎", "Database valori nutrizionali", "#C4593A", () => setManageNutri(true)],
-        ].map(([icon, title, color, go]) => (
-          <button key={title} onClick={go} style={{
-            background:th.appCard, border:`1.5px solid ${th.appBorder}`, borderRadius:14,
-            padding:"13px 8px", cursor:"pointer",
-            display:"flex", flexDirection:"column", alignItems:"center", gap:7,
-          }}>
-            <span style={{
-              width:40, height:40, borderRadius:"50%",
-              border:`1.5px solid ${color}55`, background:`${color}1C`,
-              display:"flex", alignItems:"center", justifyContent:"center",
-              fontSize:20, lineHeight:1,
-            }}>{icon}</span>
-            <span style={{ fontFamily:F.ui, fontSize:10.5, fontWeight:700, color:th.appInk, textAlign:"center", lineHeight:1.3 }}>{title}</span>
-          </button>
-        ))}
-      </div>
+      {ui.id === "classico" ? (
+        <div style={{ padding:"0 18px 4px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+          {[
+            ["🍇", "Database aggregati", "#5A8C3A", () => { setManageAggs(true); setOpenAggSections({ existing:true, suggested:false }); }],
+            ["🏷️", "Database categorie", "#5A3A9A", () => setManageCats(true)],
+            ["⚖️", "Conversioni di sistema", "#2D8C6B", () => setManageEq(true)],
+            ["🍎", "Database valori nutrizionali", "#C4593A", () => setManageNutri(true)],
+          ].map(([icon, title, color, go]) => (
+            <button key={title} onClick={go} style={{
+              background:th.appCard, border:`1.5px solid ${th.appBorder}`, borderRadius:14,
+              padding:"13px 8px", cursor:"pointer",
+              display:"flex", flexDirection:"column", alignItems:"center", gap:7,
+            }}>
+              <span style={{
+                width:40, height:40, borderRadius:"50%",
+                border:`1.5px solid ${color}55`, background:`${color}1C`,
+                display:"flex", alignItems:"center", justifyContent:"center",
+                fontSize:20, lineHeight:1,
+              }}>{icon}</span>
+              <span style={{ fontFamily:F.ui, fontSize:10.5, fontWeight:700, color:th.appInk, textAlign:"center", lineHeight:1.3 }}>{title}</span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        // quaderno/schedario: niente colori arbitrari — icone SVG monocromatiche,
+        // conteggio a destra. Indice di righe in quaderno, griglia 2×2 in schedario.
+        <div style={{
+          padding:"0 18px 4px",
+          display: ui.id==="schedario" ? "grid" : "flex",
+          gridTemplateColumns: ui.id==="schedario" ? "1fr 1fr" : undefined,
+          flexDirection: ui.id==="quaderno" ? "column" : undefined,
+          gap: ui.id==="schedario" ? 8 : 0,
+        }}>
+          {[
+            ["uva", "Database aggregati", aggregates.length, () => { setManageAggs(true); setOpenAggSections({ existing:true, suggested:false }); }],
+            ["tag", "Database categorie", categoryList.length, () => setManageCats(true)],
+            ["bilancia", "Conversioni di sistema", Object.keys(customUnits).length, () => setManageEq(true)],
+            ["nutrizione", "Valori nutrizionali", customFoods.length, () => setManageNutri(true)],
+          ].map(([icon, title, count, go]) => (
+            ui.id === "schedario" ? (
+              <button key={title} onClick={go} style={{
+                ...ui.cardStyle, padding:"13px 10px", cursor:"pointer",
+                display:"flex", flexDirection:"column", alignItems:"flex-start", gap:8,
+              }}>
+                <Icon name={icon} size={18} style={{ color:ui.ink }}/>
+                <span style={{ fontFamily:F.ui, fontSize:11, fontWeight:700, color:ui.ink, textAlign:"left", lineHeight:1.3 }}>{title}</span>
+                <span style={{ fontFamily:F.mono, fontSize:11, color:ui.faded }}>{count}</span>
+              </button>
+            ) : (
+              <button key={title} onClick={go} style={{
+                display:"flex", alignItems:"center", gap:10, width:"100%",
+                padding:"11px 0", background:"none", border:"none", borderBottom:`1px solid ${ui.hairline}`,
+                cursor:"pointer", textAlign:"left",
+              }}>
+                <Icon name={icon} size={17} style={{ color:ui.faded, flexShrink:0 }}/>
+                <span style={{ flex:1, fontFamily:F.ui, fontSize:13, color:ui.ink }}>{title}</span>
+                <span style={{ fontFamily:F.mono, fontSize:11, color:ui.faded }}>{count}</span>
+                <span style={{ color:ui.faded, fontSize:14 }}>›</span>
+              </button>
+            )
+          ))}
+        </div>
+      )}
 
       {/* ── GESTISCI INGREDIENTI ── */}
       <div style={{ padding:"16px 20px 0" }}>
@@ -1628,6 +1732,16 @@ export default function OrganizeIngredientsScreen({
           </div>
         )}
       </div>
+
+      {ui.navPosition === "bottom" && (
+        <BottomNav
+          activeScreen="organize"
+          onRecipes={onRecipes}
+          onMemories={onMemories}
+          onFridge={onFridge}
+          onShopping={onShopping}
+        />
+      )}
     </div>
   );
 }

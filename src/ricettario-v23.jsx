@@ -2118,6 +2118,10 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             initialManageCats={organizeFilter.manageCats}
             initialAggScope={organizeFilter.aggScope}
             onBack={organizeOrigin ? () => nav.back() : undefined}
+            onRecipes={() => setScreen("recipes")}
+            onMemories={() => setScreen("memories")}
+            onFridge={() => setScreen("fridge")}
+            onShopping={() => setScreen("shoppingList")}
             nav={
               <GlobalNav
                 activeScreen="organize"
@@ -2134,6 +2138,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
                 showFavorites={false}
                 activeLabel="Organizza Ingredienti"
                 infoContent={guideOrganizza}
+                bottomNavActive
               />
             }
             recipes={recipes}
