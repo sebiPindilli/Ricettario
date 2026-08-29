@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveUiStyle, UI_STYLES, DEFAULT_UI_STYLE_ID, isUiStyleId, sectionColor, alpha } from "../src/data/uiStyles.js";
+import { resolveUiStyle, UI_STYLES, DEFAULT_UI_STYLE_ID, isUiStyleId, sectionColor, alpha, navPadBottom } from "../src/data/uiStyles.js";
 import { BOOK_THEMES } from "../src/data/constants.js";
 
 const classicTheme = BOOK_THEMES.find(t => t.id === "classic");
@@ -93,5 +93,52 @@ describe("sectionColor — palette terrosa profonda (DECISIONI.md)", () => {
 describe("alpha", () => {
   it("converte un esadecimale in rgba con la trasparenza data", () => {
     expect(alpha("#C4593A", 0.5)).toBe("rgba(196,89,58,0.5)");
+  });
+});
+
+// Un token per fase (IMPLEMENTATION_PLAN.md, "nuove istruzioni"): se un
+// componente non lo legge, quella fase non è fatta. Qui si verifica solo
+// che resolveUiStyle lo esponga con i valori attesi — la lettura nei
+// componenti la verificano i rispettivi commit.
+describe("resolveUiStyle — token per fase (Fase 6-11)", () => {
+  it("classico: tutti i punti di scelta sono sul valore 'di sempre'", () => {
+    const ui = resolveUiStyle(classicTheme, "classico");
+    expect(ui.header).toBe("legacy");
+    expect(ui.dialogTabs).toBe(false);
+    expect(ui.timer).toBe("fab");
+    expect(ui.fields).toBe("labeled");
+    expect(ui.iconPicker).toBe("screen");
+    expect(ui.tables).toBe("plain");
+    expect(ui.formSections).toBe("open");
+    expect(ui.exportFlow).toBe("legacy");
+    expect(ui.booksLayout).toBe("cards");
+    expect(ui.stripe).toBe("transparent");
+    expect(ui.sectionColor("basi")).toBe(null);
+  });
+  it("quaderno/schedario: tutti i punti di scelta sono sul valore nuovo", () => {
+    ["quaderno", "schedario"].forEach(id => {
+      const ui = resolveUiStyle(classicTheme, id);
+      expect(ui.dialogTabs).toBe(true);
+      expect(ui.timer).toBe("strip");
+      expect(ui.fields).toBe("placeholder");
+      expect(ui.iconPicker).toBe("sheet");
+      expect(ui.tables).toBe("striped");
+      expect(ui.formSections).toBe("accordion");
+      expect(ui.exportFlow).toBe("guided");
+      expect(ui.booksLayout).toBe("list");
+      expect(["rule", "bar"]).toContain(ui.header);
+      expect(ui.stripe).toMatch(/^rgba\(/);
+      expect(ui.sectionColor("basi")).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    });
+  });
+  it("ui.sectionColor ricade su 'altro' per una sezione sconosciuta", () => {
+    const ui = resolveUiStyle(classicTheme, "quaderno");
+    expect(ui.sectionColor("non-esiste")).toBe(sectionColor("altro").full);
+  });
+});
+
+describe("navPadBottom", () => {
+  it("è un solo punto di verità: calc(10px + safe-area)", () => {
+    expect(navPadBottom).toBe("calc(10px + env(safe-area-inset-bottom, 0px))");
   });
 });

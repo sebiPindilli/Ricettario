@@ -12,6 +12,11 @@
 //   ui.navPosition                       // "top" | "bottom"
 //   ui.hairline                          // colore filetto derivato dal tema
 //
+// Ogni fase del piano ha il suo punto di scelta qui sotto (ui.header,
+// ui.dialogTabs, ui.timer, ui.fields, ui.iconPicker, ui.formSections,
+// ui.exportFlow, ui.booksLayout, ui.tables/ui.stripe): se un componente
+// non legge il token della sua fase, quella fase non è fatta.
+//
 // Vedi design_handoff_ui_styles/README.md per la corrispondenza con i mockup.
 // ══════════════════════════════════════════════════════════════
 
@@ -49,6 +54,17 @@ export const UI_STYLES = [
     quantities: "inline",     // "200 g Farina" dentro la riga
     bullet: true,             // il ✦ negli ingredienti
     dividers: "ornament",     // Divider con ✦
+    // ── punti di scelta per le fasi 6-11 ──
+    navPad: "10px 6px 24px",  // barra in basso (classico non la usa)
+    header: "legacy",         // seconda riga di GlobalNav
+    dialogTabs: false,        // ServingsDialog a un solo pannello
+    timer: "fab",             // pallino flottante
+    fields: "labeled",        // etichetta sopra il campo
+    iconPicker: "screen",     // picker a schermata piena
+    tables: "plain",          // nessuna riga alternata
+    formSections: "open",     // tutte le sezioni aperte
+    exportFlow: "legacy",
+    booksLayout: "cards",
     sectionLabel: { size: 10, spacing: 1.5, weight: 700 },
     uppercaseButtons: false,
   },
@@ -71,6 +87,16 @@ export const UI_STYLES = [
     quantities: "right",      // nome a sinistra, quantità in F.mono a destra
     bullet: false,
     dividers: "hairline",
+    navPad: "8px 8px 10px",   // + safe-area, vedi navPadBottom
+    header: "rule",           // filetto, nessun fondo
+    dialogTabs: true,
+    timer: "strip",           // striscia sopra la nav
+    fields: "placeholder",
+    iconPicker: "sheet",
+    tables: "striped",
+    formSections: "accordion",
+    exportFlow: "guided",
+    booksLayout: "list",
     sectionLabel: { size: 9.5, spacing: 2, weight: 700 },
     uppercaseButtons: true,
     // Ritocchi di fondo: schiarisce lo sfondo del tema per dare aria.
@@ -96,6 +122,16 @@ export const UI_STYLES = [
     quantities: "right",
     bullet: false,
     dividers: "hairline",
+    navPad: "8px 6px 10px",
+    header: "bar",            // fascia #FFFDF8 con filetto sotto
+    dialogTabs: true,
+    timer: "strip",
+    fields: "placeholder",
+    iconPicker: "sheet",
+    tables: "striped",
+    formSections: "accordion",
+    exportFlow: "guided",
+    booksLayout: "list",
     sectionLabel: { size: 9.5, spacing: 1.8, weight: 700 },
     uppercaseButtons: false,
     bgTint: 0.15,
@@ -108,6 +144,8 @@ export const UI_STYLES = [
 // ricetta: lo decide la sezione. Indipendente dal tema (BOOK_THEMES): è
 // una palette a sé, non "il colore del libro". In classico non si usa:
 // resta `recipe.color`, il colore libero già salvato su ogni ricetta.
+// NOTA: esportati qui SOLO per compatibilità con i chiamanti esistenti
+// finché non passano a `ui.sectionColor(id)` sotto — vedi resolveUiStyle.
 export const SECTION_COLORS = {
   basi:   { full: "#A8906B", pill: "rgba(168,144,107,0.26)", text: "#6E5B36" },
   salati: { full: "#A4432A", pill: "rgba(164,67,42,0.15)",   text: "#A4432A" },
@@ -141,6 +179,12 @@ export function resolveUiStyle(theme, styleId = DEFAULT_UI_STYLE_ID) {
     accent2: theme.appAccent2,
     ok: "#6B8C6E",
     danger: "#D93025",
+    // riga alternata delle tabelle (vale ovunque ci siano righe lunghe) —
+    // deriva dal tema, non un rgba fisso: cambia con BOOK_THEMES diversi.
+    stripe: style.tables === "striped" ? alpha(theme.appBorder, 0.4) : "transparent",
+    // Colore di sezione — negli stili nuovi sostituisce recipe.color.
+    // Uso: pastiglia tenue in lista, pieno solo nell'hero della scheda.
+    sectionColor: (macroSection) => style.id === "classico" ? null : sectionColor(macroSection).full,
     // superfici pronte all'uso
     cardStyle:
       style.surface === "plain"
@@ -153,3 +197,8 @@ export function resolveUiStyle(theme, styleId = DEFAULT_UI_STYLE_ID) {
           },
   };
 }
+
+// Padding inferiore della barra in basso: 10px + safe area iOS. Solo punto
+// di verità per l'altezza della nav — CTA fissi e striscia timer lo
+// sommano da qui, mai una seconda misura indipendente (vedi Rischi noti).
+export const navPadBottom = "calc(10px + env(safe-area-inset-bottom, 0px))";
