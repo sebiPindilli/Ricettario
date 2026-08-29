@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { useTheme, useCookingTimers, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import { flattenSteps, flattenIngredients, ingredientToText, scaleIngredient, stepNumberLabel } from "../utils/helpers.js";
+import { remainingMs, isExpired, formatRemaining, formatOverdue } from "../utils/timers.js";
 import PhotoLightbox from "../components/PhotoLightbox.jsx";
 import InfoButton from "../components/InfoButton.jsx";
 import TimersPopup from "../components/TimersPopup.jsx";
@@ -14,7 +15,7 @@ import { guideCucina } from "../data/guideContent.jsx";
 export default function CookingMode({ recipe, scale, onClose }) {
   const th = useTheme();
   const ui = useUiStyle();
-  const { setCookingModeActive } = useCookingTimers();
+  const { setCookingModeActive, timers, now } = useCookingTimers();
 
   // Flag globale letto da TopStack.jsx (nasconde la barra timer, che ha
   // senso solo FUORI da qui, dove questa schermata ha il proprio FAB
@@ -286,6 +287,34 @@ export default function CookingMode({ recipe, scale, onClose }) {
         )}
       </div>
 
+      {/* Timer attivo — negli stili nuovi il FAB sparisce: una striscia
+          sottile sopra la barra Indietro/Avanti, col conto alla rovescia
+          (DECISIONI.md §Timer / IMPLEMENTATION_PLAN Fase 7). Stesso
+          TimersPopup di sempre, nessuna logica di stato timer nuova. */}
+      {ui.id !== "classico" && (() => {
+        const anyExpired = timers.some(t => isExpired(t, now));
+        // Nessun timer attivo: la striscia resta comunque il solo modo per
+        // aprirne uno in questo stile (il FAB, sempre disponibile, sparisce
+        // qui) — stesso accesso di prima, presentazione diversa.
+        const text = timers.length === 0 ? "Timer" : timers.map(t => {
+          const rem = remainingMs(t, now);
+          const expired = isExpired(t, now);
+          return `${t.label} — ${expired ? formatOverdue(-rem) : formatRemaining(rem)}`;
+        }).join("   ·   ");
+        return (
+          <button onClick={() => setTimerPopup({})} style={{
+            display:"flex", alignItems:"center", gap:8, width:"100%",
+            padding:"7px 16px", flexShrink:0, border:"none", borderTop:"1px solid rgba(255,255,255,0.1)",
+            background: anyExpired ? "#C0524A" : "rgba(255,255,255,0.06)",
+            color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
+            textAlign:"left", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
+          }}>
+            <span style={{ flexShrink:0 }}>⏱</span>
+            <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{text}</span>
+          </button>
+        );
+      })()}
+
       {/* Bottom nav */}
       {!isDone && (
         <div ref={navRef} style={{ display:"flex", flexShrink:0, borderTop:"1px solid rgba(255,255,255,0.1)" }}>
@@ -294,7 +323,9 @@ export default function CookingMode({ recipe, scale, onClose }) {
         </div>
       )}
 
-      <TimerFAB anchorSelector=".cooking-mode-shell" bottomOffset={isDone ? 20 : (navHeight || 56) + 20} />
+      {ui.id === "classico" && (
+        <TimerFAB anchorSelector=".cooking-mode-shell" bottomOffset={isDone ? 20 : (navHeight || 56) + 20} />
+      )}
 
       {lightbox && (
         <PhotoLightbox
