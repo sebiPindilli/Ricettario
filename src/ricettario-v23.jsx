@@ -112,6 +112,7 @@ import StepsView from "./components/StepsView.jsx";
 import RecipeScreen from "./screens/RecipeScreen.jsx";
 import CoverScreen from "./screens/CoverScreen.jsx";
 import ThemePickerScreen from "./screens/ThemePickerScreen.jsx";
+import UiStylePickerScreen from "./screens/UiStylePickerScreen.jsx";
 import LandingScreen from "./screens/LandingScreen.jsx";
 import SearchScreen from "./screens/SearchScreen.jsx";
 import RecipesScreen from "./screens/RecipesScreen.jsx";
@@ -2089,6 +2090,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
             onTheme={() => goTo("theme")}
+            onUiStyle={() => goTo("uiStyle")}
             onCover={() => nav.replace({ screen: "cover" })}
             onGuide={() => goTo("guide")}
             onAdminUsers={() => setScreen("adminUsers")}
@@ -2289,6 +2291,13 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
           <ThemePickerScreen
             onBack={() => nav.back()}
             onSelect={(t) => { setBookTheme(t); nav.replace({ screen: "cover" }); }}
+          />
+        )}
+        {screen==="uiStyle" && (
+          <UiStylePickerScreen
+            activeId={uiStyleId}
+            onSelect={changeUiStyle}
+            onBack={() => nav.back()}
           />
         )}
         {screen==="addRecipeHub" && (

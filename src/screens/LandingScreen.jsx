@@ -4,7 +4,7 @@ import { F } from "../data/constants.js";
 import OrganizeIcon from "../components/OrganizeIcon.jsx";
 import AppIcon from "../components/AppIcon.jsx";
 
-export default function LandingScreen({ recipes = [], bookName = "Il mio Ricettario", onBooks, onRecipes, onBook, onMemories, onAdd, onAddMemory, onFridge, onShopping, onOrganize, onTheme, onCover, onGuide, onAdminUsers }) {
+export default function LandingScreen({ recipes = [], bookName = "Il mio Ricettario", onBooks, onRecipes, onBook, onMemories, onAdd, onAddMemory, onFridge, onShopping, onOrganize, onTheme, onUiStyle, onCover, onGuide, onAdminUsers }) {
   const th = useTheme();
   const role = useRole();
 
@@ -35,7 +35,11 @@ export default function LandingScreen({ recipes = [], bookName = "Il mio Ricetta
           </button>
           <button onClick={onTheme} style={{ background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:2, padding:0, width:44 }}>
             <span style={{ width:26, height:26, borderRadius:7, background:th.coverBg, border:`1.5px solid ${th.appBorder}`, display:"block", boxSizing:"border-box" }}/>
-            <span style={{ fontFamily:F.ui, fontSize:8, color:th.appFaded }}>stile</span>
+            <span style={{ fontFamily:F.ui, fontSize:8, color:th.appFaded }}>stile libro</span>
+          </button>
+          <button onClick={onUiStyle} style={{ background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:2, padding:0, width:44 }}>
+            <span style={{ width:26, height:26, borderRadius:7, background:th.appCard, border:`1.5px solid ${th.appBorder}`, display:"flex", alignItems:"center", justifyContent:"center", color:th.appFaded, boxSizing:"border-box" }}><AppIcon emoji="🧭" icon="schede" size={15} /></span>
+            <span style={{ fontFamily:F.ui, fontSize:8, color:th.appFaded }}>stile app</span>
           </button>
         </div>
       </div>
