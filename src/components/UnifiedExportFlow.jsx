@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useTheme } from "../context.js";
+import { useTheme, useUiStyle } from "../context.js";
 import { F, MACRO_SECTIONS } from "../data/constants.js";
 import { sortSectionsAltroLast, uid } from "../utils/helpers.js";
 import InfoButton from "./InfoButton.jsx";
@@ -104,6 +104,12 @@ export default function UnifiedExportFlow({
   onSaveTemplate, onDeleteTemplate, onSetDefaultTemplate,
 }) {
   const th = useTheme();
+  const ui = useUiStyle();
+  // DECISIONI.md §Export vale solo per quaderno/schedario: la conseguenza
+  // dichiarata a ogni scelta e' un'aggiunta di testo, non un cambio di
+  // struttura — ma "classico byte-per-byte identico" vale anche per il
+  // testo visibile, quindi resta comunque dietro questo controllo.
+  const isNew = ui.id !== "classico";
   const [step, setStep] = useState("select"); // select | dest | books | format | prefs | result
   const [selected, setSelected] = useState(preselectId ? [preselectId] : []);
   const [dest, setDest] = useState(null); // "books" | "person"
@@ -260,8 +266,14 @@ export default function UnifiedExportFlow({
         <Title th={th}>Dove vuoi esportare?</Title>
         <Sub th={th}>{selected.length} ricett{selected.length === 1 ? "a" : "e"}</Sub>
         <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-          <Primary th={th} onClick={() => { setDest("books"); setStep("books"); }}>📚 Un mio altro ricettario</Primary>
-          <Primary th={th} onClick={() => { setDest("person"); setStep("format"); }}>🧑‍🤝‍🧑 Un'altra persona</Primary>
+          <Primary th={th} onClick={() => { setDest("books"); setStep("books"); }} style={isNew ? { display: "flex", flexDirection: "column", gap: 2 } : undefined}>
+            <span>📚 Un mio altro ricettario</span>
+            {isNew && <span style={{ fontWeight: 400, fontSize: 11, opacity: 0.85 }}>copia le ricette, restano indipendenti dall'originale</span>}
+          </Primary>
+          <Primary th={th} onClick={() => { setDest("person"); setStep("format"); }} style={isNew ? { display: "flex", flexDirection: "column", gap: 2 } : undefined}>
+            <span>🧑‍🤝‍🧑 Un'altra persona</span>
+            {isNew && <span style={{ fontWeight: 400, fontSize: 11, opacity: 0.85 }}>link o PDF, a scelta al passo successivo</span>}
+          </Primary>
           <Ghost th={th} onClick={() => setStep("select")} style={{ border: "none", color: th.appFaded }}>‹ Indietro</Ghost>
         </div>
       </Panel>
@@ -317,8 +329,14 @@ export default function UnifiedExportFlow({
         <Title th={th}>Come vuoi condividerle?</Title>
         <Sub th={th}>{selected.length} ricett{selected.length === 1 ? "a" : "e"}</Sub>
         <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-          <Primary th={th} onClick={() => { setFormat("link"); goPrefs(); }}>🔗 Link URL <span style={{ fontWeight: 400 }}>— consigliato per chi ha l'app</span></Primary>
-          <Primary th={th} onClick={() => { setFormat("pdf"); goPrefs(); }}>📄 PDF <span style={{ fontWeight: 400 }}>— consigliato per persone esterne</span></Primary>
+          <Primary th={th} onClick={() => { setFormat("link"); goPrefs(); }} style={isNew ? { display: "flex", flexDirection: "column", gap: 2 } : undefined}>
+            <span>🔗 Link URL <span style={{ fontWeight: 400 }}>— consigliato per chi ha l'app</span></span>
+            {isNew && <span style={{ fontWeight: 400, fontSize: 11, opacity: 0.85 }}>scade fra 30 giorni, revocabile in ogni momento</span>}
+          </Primary>
+          <Primary th={th} onClick={() => { setFormat("pdf"); goPrefs(); }} style={isNew ? { display: "flex", flexDirection: "column", gap: 2 } : undefined}>
+            <span>📄 PDF <span style={{ fontWeight: 400 }}>— consigliato per persone esterne</span></span>
+            {isNew && <span style={{ fontWeight: 400, fontSize: 11, opacity: 0.85 }}>si apre in una nuova scheda, da lì stampi o salvi</span>}
+          </Primary>
           <Ghost th={th} onClick={() => setStep("dest")} style={{ border: "none", color: th.appFaded }}>‹ Indietro</Ghost>
         </div>
       </Panel>
