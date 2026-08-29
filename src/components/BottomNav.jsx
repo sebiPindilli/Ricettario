@@ -1,8 +1,10 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { useTheme, useUiStyle, useNavActions } from "../context.js";
+import { useTheme, useUiStyle, useNavActions, useCookingTimers } from "../context.js";
 import { F, MOBILE_BREAKPOINT_CSS } from "../data/constants.js";
 import { navPadBottom } from "../data/uiStyles.js";
+import { remainingMs, isExpired, formatRemaining, formatOverdue } from "../utils/timers.js";
 import Icon from "./Icon.jsx";
+import TimersPopup from "./TimersPopup.jsx";
 
 // ══════════════════════════════════════════════════════════════
 // BARRA DI NAVIGAZIONE IN BASSO — stili "quaderno" e "schedario".
@@ -36,8 +38,25 @@ export default function BottomNav({
   const th = useTheme();
   const ui = useUiStyle();
   const navActions = useNavActions();
+  const { timers, now, cookingModeActive } = useCookingTimers();
+  const [timerPopupOpen, setTimerPopupOpen] = useState(false);
   const barRef = useRef(null);
   const [height, setHeight] = useState(0);
+
+  // Fase 7 (DECISIONI.md §Timer): su ui.timer==="strip" il FAB/la barra in
+  // cima (CookingTimerBar, TopStack.jsx) spariscono — l'indicatore vive qui,
+  // appena sopra la barra di navigazione. Nulla dentro la Modalità Cucina
+  // (ha già la propria striscia, vedi CookingMode.jsx).
+  const showTimerStrip = ui.timer === "strip" && timers.length > 0 && !cookingModeActive;
+  const anyExpired = timers.some(t => isExpired(t, now));
+  const timerStripText = timers.length === 1
+    ? null // nome passo a sinistra / conto a destra, resi separatamente
+    : `${timers.length} timer · ${(() => {
+        // timer più vicino alla scadenza — la cifra unica quando sono più di uno
+        const soonest = [...timers].sort((a, b) => remainingMs(a, now) - remainingMs(b, now))[0];
+        const rem = remainingMs(soonest, now);
+        return isExpired(soonest, now) ? formatOverdue(-rem) : formatRemaining(rem);
+      })()}`;
 
   useLayoutEffect(() => {
     const el = barRef.current;
@@ -77,21 +96,43 @@ export default function BottomNav({
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: responsiveCss }} />
-      <div
-        ref={barRef}
-        className="bottomnav-bar"
-        style={{
-          zIndex: 100,
-          background: bg,
-          borderTop: dark ? "none" : `1px solid ${ui.hairlineStrong}`,
-          display: "flex",
-          alignItems: "flex-end",
-          // top/orizzontale da ui.navPad, il fondo è SEMPRE navPadBottom
-          // (10px + safe area) — solo punto di verità, mai un valore fisso
-          // duplicato qui (vedi Rischi noti in IMPLEMENTATION_PLAN.md).
-          padding: `${ui.navPad.split(" ").slice(0, 2).join(" ")} ${navPadBottom}`,
-        }}
-      >
+      <div ref={barRef} className="bottomnav-bar" style={{ zIndex: 100 }}>
+        {showTimerStrip && (
+          <button
+            onClick={() => setTimerPopupOpen(true)}
+            style={{
+              display: "flex", alignItems: "center", gap: 8, width: "100%",
+              height: 36, padding: "0 14px", border: "none", cursor: "pointer",
+              background: anyExpired ? "#C0524A" : ui.ink, color: "#F6F1E6",
+              fontFamily: F.ui, fontSize: 11, fontWeight: 600, textAlign: "left",
+            }}
+          >
+            <Icon name="timer" size={15} />
+            {timers.length === 1 ? (
+              <>
+                <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{timers[0].label}</span>
+                <span style={{ flexShrink: 0, fontFamily: F.mono, fontSize: 14 }}>
+                  {isExpired(timers[0], now) ? formatOverdue(-remainingMs(timers[0], now)) : formatRemaining(remainingMs(timers[0], now))}
+                </span>
+              </>
+            ) : (
+              <span style={{ flex: 1, fontFamily: F.mono, fontSize: 14 }}>«{timerStripText}»</span>
+            )}
+          </button>
+        )}
+        {timerPopupOpen && <TimersPopup onClose={() => setTimerPopupOpen(false)} />}
+        <div
+          style={{
+            background: bg,
+            borderTop: dark ? "none" : `1px solid ${ui.hairlineStrong}`,
+            display: "flex",
+            alignItems: "flex-end",
+            // top/orizzontale da ui.navPad, il fondo è SEMPRE navPadBottom
+            // (10px + safe area) — solo punto di verità, mai un valore fisso
+            // duplicato qui (vedi Rischi noti in IMPLEMENTATION_PLAN.md).
+            padding: `${ui.navPad.split(" ").slice(0, 2).join(" ")} ${navPadBottom}`,
+          }}
+        >
         {NAV_ITEMS.map(item => {
           const active =
             activeScreen === item.id ||
@@ -130,6 +171,7 @@ export default function BottomNav({
             </button>
           );
         })}
+        </div>
       </div>
       <div className="bottomnav-spacer" style={{ display: "none", height }} />
     </>

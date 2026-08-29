@@ -291,7 +291,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
           sottile sopra la barra Indietro/Avanti, col conto alla rovescia
           (DECISIONI.md §Timer / IMPLEMENTATION_PLAN Fase 7). Stesso
           TimersPopup di sempre, nessuna logica di stato timer nuova. */}
-      {ui.id !== "classico" && (() => {
+      {ui.timer === "strip" && (() => {
         const anyExpired = timers.some(t => isExpired(t, now));
         // Nessun timer attivo: la striscia resta comunque il solo modo per
         // aprirne uno in questo stile (il FAB, sempre disponibile, sparisce
@@ -323,7 +323,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
         </div>
       )}
 
-      {ui.id === "classico" && (
+      {ui.timer !== "strip" && (
         <TimerFAB anchorSelector=".cooking-mode-shell" bottomOffset={isDone ? 20 : (navHeight || 56) + 20} />
       )}
 

@@ -1,5 +1,5 @@
 import { Fragment, useRef, useLayoutEffect } from "react";
-import { useCookingTimers, useScanExtraction } from "../context.js";
+import { useCookingTimers, useScanExtraction, useUiStyle } from "../context.js";
 import CookingTimerBar from "./CookingTimerBar.jsx";
 import ScanStatusBanner from "./ScanStatusBanner.jsx";
 
@@ -17,8 +17,12 @@ import ScanStatusBanner from "./ScanStatusBanner.jsx";
 export default function TopStack({ isOnline, isOnExtractionScreen, onOpenExtractionResult, onOpenExtractionScreen }) {
   const { topStackHeight, setTopStackHeight, timers, cookingModeActive } = useCookingTimers();
   const { job } = useScanExtraction();
+  const ui = useUiStyle();
   const wrapRef = useRef(null);
-  const showTimerBar = timers.length > 0 && !cookingModeActive;
+  // ui.timer==="strip" (quaderno/schedario, Fase 7): l'indicatore vive in
+  // BottomNav.jsx, appena sopra la barra di navigazione — questa barra in
+  // cima non si monta più per non duplicarlo.
+  const showTimerBar = ui.timer !== "strip" && timers.length > 0 && !cookingModeActive;
   const showScanBanner = !!job && !isOnExtractionScreen;
 
   // ResizeObserver come rete di sicurezza per variazioni di altezza NON
