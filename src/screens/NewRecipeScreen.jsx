@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useTheme, useUiStyle } from "../context.js";
 import { F, MACRO_SECTIONS, DEFAULT_UNIT_SUGGESTIONS } from "../data/constants.js";
-import { collectAllIngredients, flattenIngredients, toSectioned, fromSectioned, stripPhotolessStep } from "../utils/helpers.js";
+import { collectAllIngredients, flattenIngredients, flattenSteps, toSectioned, fromSectioned, stripPhotolessStep } from "../utils/helpers.js";
 import BackBtn from "../components/BackBtn.jsx";
 import EditLabel from "../components/EditLabel.jsx";
 import EditField from "../components/EditField.jsx";
@@ -232,7 +232,7 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
           </div>
         );
 
-        if (ui.id === "classico") {
+        if (ui.formSections !== "accordion") {
           return (
             <>
               {/* Section tabs */}
@@ -260,21 +260,31 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
         // quaderno/schedario: quattro sezioni richiudibili sulla stessa
         // pagina, la prima aperta (DECISIONI.md §Nuova ricetta).
         const items = [
-          ["info", "Info", infoSection],
-          ["ingredienti", "Ingredienti", ingredientiSection],
-          ["preparazione", "Preparazione", preparazioneSection],
-          ["note", "Note", noteSection],
+          ["info", "Info", infoSection, null],
+          ["ingredienti", "Ingredienti", ingredientiSection, flattenIngredients(draft.ingredients).length],
+          ["preparazione", "Preparazione", preparazioneSection, flattenSteps(draft.steps || []).length],
+          ["note", "Note", noteSection, null],
         ];
         return (
           <div style={{ flex:1, overflowY:"auto", padding:`4px ${ui.padX}px 80px` }}>
-            {items.map(([key, label, content]) => (
+            {items.map(([key, label, content, count]) => (
               <div key={key} style={{ marginBottom:8 }}>
                 <button onClick={() => toggleSection(key)} style={{
                   width:"100%", display:"flex", justifyContent:"space-between", alignItems:"center",
                   padding:"12px 2px", background:"none", border:"none", cursor:"pointer",
                   borderBottom:`1px solid ${ui.hairlineStrong}`,
                 }}>
-                  <span style={{ fontFamily:F.display, fontSize:16, color:ui.ink }}>{label}</span>
+                  <span style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <span style={{ fontFamily:F.display, fontSize:16, color:ui.ink }}>{label}</span>
+                    {count != null && (
+                      <span style={{
+                        minWidth:18, height:18, padding:"0 5px", borderRadius:9,
+                        background:ui.hairlineStrong, color:ui.faded,
+                        fontFamily:F.ui, fontSize:10.5, fontWeight:700,
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                      }}>{count}</span>
+                    )}
+                  </span>
                   <span style={{ color:ui.faded, fontSize:13 }}>{openSections[key] ? "▾" : "▸"}</span>
                 </button>
                 {openSections[key] && <div style={{ padding:"14px 0 4px" }}>{content}</div>}
