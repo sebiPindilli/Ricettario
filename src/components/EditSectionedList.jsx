@@ -127,7 +127,8 @@ export default function EditSectionedList({ data, color, itemType, onUpdate, nam
               const unit = ing.unit || "";
               const patch = (p) => updateItem(si, ii, { ...ing, ...p });
               const isQB = unit.toLowerCase() === "q.b.";
-              const inputBase = ui.id === "classico" ? {
+              const newFields = ui.fields === "placeholder";
+              const inputBase = !newFields ? {
                 padding:"9px 10px",
                 border:`1.5px solid ${th.appBorder}`,
                 borderRadius:10, background:th.appCard,
@@ -157,6 +158,12 @@ export default function EditSectionedList({ data, color, itemType, onUpdate, nam
                   )}
                   <div style={{ display:"flex", gap:5, alignItems:"center", flex:1, minWidth:0, ...(selectMode ? disabledStyle : {}) }}>
                   {(() => {
+                    // Larghezze fisse nei nuovi stili (IMPLEMENTATION_PLAN Fase
+                    // 8, bullet 36): quantità 68px, unità 92px, nome il resto.
+                    // In classico restano i rapporti flex di sempre.
+                    const qtySizing = newFields ? { width:68, flexShrink:0 } : { flex:0.9, minWidth:0 };
+                    const unitSizing = newFields ? { width:92, flexShrink:0 } : { flex:1.3, minWidth:0 };
+                    const nameSizing = newFields ? { flex:1, minWidth:0 } : { flex:2.2, minWidth:0 };
                     const qtyField = (
                       <input
                         key="qty"
@@ -165,7 +172,7 @@ export default function EditSectionedList({ data, color, itemType, onUpdate, nam
                         placeholder="Qtà"
                         inputMode="decimal"
                         disabled={isQB}
-                        style={{ ...inputBase, flex:0.9, minWidth:0, textAlign:"center", ...(isQB ? disabledStyle : {}) }}
+                        style={{ ...inputBase, ...qtySizing, textAlign:"center", ...(isQB ? disabledStyle : {}) }}
                       />
                     );
                     const unitField = (
@@ -175,7 +182,7 @@ export default function EditSectionedList({ data, color, itemType, onUpdate, nam
                         onChange={v => patch({ unit: v })}
                         suggestions={unitSuggestions}
                         placeholder="Unità"
-                        wrapperStyle={{ flex:1.3, minWidth:0, ...(isQB ? disabledStyle : {}) }}
+                        wrapperStyle={{ ...unitSizing, ...(isQB ? disabledStyle : {}) }}
                         inputStyle={inputBase}
                       />
                     );
@@ -186,16 +193,16 @@ export default function EditSectionedList({ data, color, itemType, onUpdate, nam
                         onChange={v => patch({ name: v })}
                         suggestions={nameSuggestions}
                         placeholder="Ingrediente"
-                        wrapperStyle={{ flex:2.2, minWidth:0 }}
+                        wrapperStyle={nameSizing}
                         inputStyle={inputBase}
                       />
                     );
                     // "Tre campi in riga: quantità, unità, nome" nei nuovi
                     // stili (DECISIONI.md §Nuova ricetta) — in classico
                     // l'ordine resta nome, quantità, unità come sempre.
-                    return ui.id === "classico"
-                      ? [nameField, qtyField, unitField]
-                      : [qtyField, unitField, nameField];
+                    return newFields
+                      ? [qtyField, unitField, nameField]
+                      : [nameField, qtyField, unitField];
                   })()}
                   {/* Spunta q.b. — quanto basta */}
                   <button
