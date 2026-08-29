@@ -1,23 +1,29 @@
 import React from "react";
-import { useTheme, useRole } from "../context.js";
+import { useTheme, useRole, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import OrganizeIcon from "../components/OrganizeIcon.jsx";
 import AppIcon from "../components/AppIcon.jsx";
 
 export default function LandingScreen({ recipes = [], bookName = "Il mio Ricettario", onBooks, onRecipes, onBook, onMemories, onAdd, onAddMemory, onFridge, onShopping, onOrganize, onTheme, onUiStyle, onCover, onGuide, onAdminUsers }) {
   const th = useTheme();
+  const ui = useUiStyle();
   const role = useRole();
-
-  const mainItems = [
+  // Negli stili nuovi la Landing si riduce al menù del contorno (DECISIONI.md
+  // §Navigazione e chrome): le cinque destinazioni principali non si
+  // duplicano più, sono già nella barra in basso — restano solo le voci di
+  // contorno (ricettario attivo/copertina/stile/guida, già nella testa
+  // sopra) e quelle non coperte dalla nav in basso (Gestione utenti).
+  const primaryItems = [
     { emoji:"🍽️", icon:"ricette",   label:"Libro Ricette",         desc:"Sfoglia, cerca e aggiungi",   fn:onRecipes, color:th.appAccent },
     { emoji:"📒", icon:"ricordi",   label:"Libro dei Ricordi",     desc:"Tutte le fotografie",         fn:onMemories,color:"#6B8C6E" },
     { emoji:"🧊", icon:"frigo",     label:"Svuota Frigo",          desc:"Cosa cucino con ciò che ho",  fn:onFridge,  color:"#5B7FA6" },
     { emoji:"🛒", icon:"spesa",     label:"Lista Spesa",           desc:"Gli ingredienti da comprare", fn:onShopping,color:"#8C6E4A" },
     { emoji:<OrganizeIcon/>, icon:"organizza", label:"Organizza Ingredienti", desc:"Aggregati, categorie, nutrizione", fn:onOrganize, color:"#7A5EA6" },
-    ...(role === "admin" ? [
-      { emoji:"🔑", label:"Gestione utenti", desc:"Whitelist e ruoli", fn:onAdminUsers, color:"#555F6B" },
-    ] : []),
   ];
+  const adminItems = role === "admin" ? [
+    { emoji:"🔑", label:"Gestione utenti", desc:"Whitelist e ruoli", fn:onAdminUsers, color:"#555F6B" },
+  ] : [];
+  const mainItems = ui.navPosition === "bottom" ? adminItems : [...primaryItems, ...adminItems];
 
   return (
     <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
