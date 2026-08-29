@@ -3,6 +3,7 @@ import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 import BackBtn from "../components/BackBtn.jsx";
 import ChosenIcon from "../components/ChosenIcon.jsx";
+import AppIcon from "../components/AppIcon.jsx";
 
 // Età della bozza in una didascalia breve, in italiano.
 function ageLabel(createdAt) {
@@ -77,7 +78,7 @@ export default function AddRecipeHubScreen({ onBack, onManual, onScan, onLink, o
             color:th.appInk,
           },
           {
-            icon:"📷",
+            icon:"📷", svgIcon:"altro",
             label:"Scansiona dalla fotocamera",
             desc:"Fotografa una ricetta scritta o stampata — OCR + AI la digitalizza",
             fn:() => onScan("camera"),
@@ -106,7 +107,7 @@ export default function AddRecipeHubScreen({ onBack, onManual, onScan, onLink, o
             boxShadow:"0 2px 12px rgba(0,0,0,0.05)",
           }}>
             <div style={{ width:52, height:52, borderRadius:14, background:item.color, display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, flexShrink:0 }}>
-              {item.icon}
+              <AppIcon emoji={item.icon} icon={item.svgIcon} size={26} />
             </div>
             <div>
               <div style={{ fontFamily:F.display, fontSize:16, color:th.appInk, marginBottom:3 }}>{item.label}</div>

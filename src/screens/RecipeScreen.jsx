@@ -389,7 +389,7 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
                 opacity: isOnline ? 1 : 0.4,
               }}
               title={!isOnline ? "Serve una connessione" : dishPhotoOf(recipe) ? "Modifica foto piatto" : "Aggiungi foto piatto"}
-            >📷</button>
+            ><AppIcon emoji="📷" icon="altro" size={17} /></button>
             {/* Remove dish photo */}
             {dishPhotoOf(recipe) && (
               <button
