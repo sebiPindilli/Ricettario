@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useTheme } from "../context.js";
+import { useTheme, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import { flattenIngredients, ingredientToText, fmtQty } from "../utils/helpers.js";
 import InfoButton from "./InfoButton.jsx";
@@ -7,10 +7,14 @@ import { guideCalcoloDosi } from "../data/guideContent.jsx";
 
 export default function ServingsDialog({ recipe, title, emoji, onConfirm, onClose, initialScale = null }) {
   const th = useTheme();
+  const ui = useUiStyle();
+  const isNew = ui.id !== "classico"; // DECISIONI.md vale solo per quaderno/schedario
   const baseServings = recipe.servings || 4;
-  const initMode = initialScale
-    ? (initialScale.factor === 1 ? "base" : (initialScale.people != null ? "people" : "limiting"))
-    : "people";
+  const initMode = isNew
+    ? "base" // "Si apre sempre su Dosi" (DECISIONI.md §Calcolo dosi)
+    : (initialScale
+        ? (initialScale.factor === 1 ? "base" : (initialScale.people != null ? "people" : "limiting"))
+        : "people");
   const [mode, setMode] = useState(initMode); // "base" | "people" | "limiting"
   const [people, setPeople] = useState(initialScale?.people || baseServings);
   // Ingrediente limitante
@@ -23,6 +27,7 @@ export default function ServingsDialog({ recipe, title, emoji, onConfirm, onClos
   const limFactor = (limParsed && limHave && parseFloat(limHave.replace(",", ".")) > 0)
     ? parseFloat(limHave.replace(",", ".")) / limParsed.amount
     : null;
+  const limServings = limFactor != null ? Math.round(baseServings * limFactor * 10) / 10 : null;
 
   const confirm = () => {
     if (mode === "base") {
@@ -35,6 +40,7 @@ export default function ServingsDialog({ recipe, title, emoji, onConfirm, onClos
   };
 
   const canConfirm = mode !== "limiting" || !!limFactor;
+  const peopleShortcuts = Array.from(new Set([4, baseServings, 12, 16])).filter(n => n > 0);
 
   const OptCard = ({ id, icon, label, desc }) => (
     <button onClick={() => setMode(id)} style={{
@@ -56,12 +62,12 @@ export default function ServingsDialog({ recipe, title, emoji, onConfirm, onClos
         <div style={{ fontSize:32, marginBottom:4 }}>{emoji}</div>
         <div style={{ fontFamily:F.display, fontSize:19, color:th.appInk, marginBottom:12 }}>{title}</div>
 
-        {/* Le 3 opzioni */}
+        {/* Le 3 opzioni — pari grado, DECISIONI.md §Calcolo dosi */}
         <div style={{ display:"flex", gap:6, marginBottom:16 }}>
-          <OptCard id="base"     icon="📄" label="Standard"     desc="dosi della ricetta"/>
+          <OptCard id="base"     icon="📄" label={isNew ? "Dosi" : "Standard"}     desc="dosi della ricetta"/>
           <OptCard id="people"   icon="👥" label="Persone"      desc="ricalcola per commensali"/>
           {parseable.length > 0 && (
-            <OptCard id="limiting" icon="⚖️" label="Ingrediente"  desc="in base a ciò che hai"/>
+            <OptCard id="limiting" icon="⚖️" label={isNew ? "Da un ingrediente" : "Ingrediente"}  desc="in base a ciò che hai"/>
           )}
         </div>
 
@@ -82,7 +88,21 @@ export default function ServingsDialog({ recipe, title, emoji, onConfirm, onClos
               </div>
               <button onClick={() => setPeople(p => Math.min(50, p+1))} style={{ width:44, height:44, borderRadius:"50%", border:`1.5px solid ${th.appBorder}`, background:th.appCard, fontSize:22, color:th.appInk, cursor:"pointer" }}>＋</button>
             </div>
-            {people !== baseServings && (
+            {isNew && (
+              <div style={{ display:"flex", gap:6, justifyContent:"center", marginBottom:12, flexWrap:"wrap" }}>
+                {peopleShortcuts.map(n => (
+                  <button key={n} onClick={() => setPeople(n)} style={{
+                    padding:"5px 12px", borderRadius:14,
+                    border:`1.5px solid ${people===n ? th.appAccent : th.appBorder}`,
+                    background: people===n ? `${th.appAccent}12` : "transparent",
+                    color: people===n ? th.appAccent : th.appFaded,
+                    fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
+                  }}>{n === baseServings ? "standard" : n}</button>
+                ))}
+              </div>
+            )}
+            {/* "Nessuna riga di verifica come cambia" (DECISIONI.md): solo in classico */}
+            {!isNew && people !== baseServings && (
               <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginBottom:12 }}>
                 ricetta originale per {baseServings} — quantità ×{Math.round(people/baseServings*100)/100}
               </div>
@@ -117,9 +137,16 @@ export default function ServingsDialog({ recipe, title, emoji, onConfirm, onClos
                   style={{ width:"100%", padding:"10px 12px", border:`1.5px solid ${limFactor ? th.appAccent : th.appBorder}`, borderRadius:10, background:th.appCard, fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none", boxSizing:"border-box" }}
                 />
                 {limFactor && (
-                  <div style={{ fontFamily:F.ui, fontSize:11, color:th.appAccent, marginTop:8, textAlign:"center", fontWeight:600 }}>
-                    tutte le quantità ×{Math.round(limFactor*100)/100}
-                  </div>
+                  isNew ? (
+                    // "L'app riporta le porzioni risultanti" (DECISIONI.md) — non il moltiplicatore
+                    <div style={{ fontFamily:F.ui, fontSize:11, color:th.appAccent, marginTop:8, textAlign:"center", fontWeight:600 }}>
+                      → {limServings} porzion{limServings===1?"e":"i"}
+                    </div>
+                  ) : (
+                    <div style={{ fontFamily:F.ui, fontSize:11, color:th.appAccent, marginTop:8, textAlign:"center", fontWeight:600 }}>
+                      tutte le quantità ×{Math.round(limFactor*100)/100}
+                    </div>
+                  )
                 )}
               </>
             )}
