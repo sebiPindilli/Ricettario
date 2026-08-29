@@ -7,6 +7,7 @@ import MemoryPhoto from "../components/MemoryPhoto.jsx";
 import PhotoLightbox from "../components/PhotoLightbox.jsx";
 import GlobalNav from "../components/GlobalNav.jsx";
 import BottomNav from "../components/BottomNav.jsx";
+import ScreenHeader from "../components/ScreenHeader.jsx";
 import { guideRicordi } from "../data/guideContent.jsx";
 import ChosenIcon from "../components/ChosenIcon.jsx";
 
@@ -146,14 +147,31 @@ export default function MemoriesBookScreen({ recipes, onBack, onRecipe, onRecipe
         bottomNavActive
       />
 
-      {/* Nuovo ricordo */}
-      <div style={{ padding:"10px 24px 2px", textAlign:"center" }}>
-        <button onClick={() => onAdd("memory")} style={{
-          padding:"9px 20px", borderRadius:20,
-          background:th.appAccent, border:"none", cursor:"pointer",
-          color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700,
-        }}>＋ Nuovo ricordo</button>
-      </div>
+      <ScreenHeader
+        section="ricordi"
+        title="Libro dei Ricordi"
+        subtitle={`${allMemories.length} ricord${allMemories.length===1?"o":"i"}`}
+        onHome={onBack}
+        actions={[
+          ...(allMemories.length > 0 ? [{
+            icon: viewMode === "book" ? "schede" : "libro",
+            label: viewMode === "book" ? "Vista schede" : "Vista libro",
+            onClick: () => setViewMode(viewMode === "book" ? "cards" : "book"),
+          }] : []),
+          { icon:"aggiungi", label:"Nuovo ricordo", onClick:() => onAdd("memory"), tone: ui.id==="schedario" ? "accent" : undefined },
+        ]}
+      />
+
+      {/* Nuovo ricordo (solo classico: negli altri stili è nella testa) */}
+      {ui.id === "classico" && (
+        <div style={{ padding:"10px 24px 2px", textAlign:"center" }}>
+          <button onClick={() => onAdd("memory")} style={{
+            padding:"9px 20px", borderRadius:20,
+            background:th.appAccent, border:"none", cursor:"pointer",
+            color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700,
+          }}>＋ Nuovo ricordo</button>
+        </div>
+      )}
 
       {allMemories.length === 0 ? (
         <div style={{ textAlign:"center", padding:"40px 24px", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>

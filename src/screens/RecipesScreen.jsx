@@ -339,19 +339,17 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
         bottomNavActive
       />
 
-      {ui.navPosition === "bottom" && (
-        <ScreenHeader
-          eyebrow="Libro ricette"
-          title={activeSectionLabel || "Tutte le ricette"}
-          subtitle={`${displayRecipes.length} ricett${displayRecipes.length===1?"a":"e"}`}
-          infoContent={guideRicette}
-          actions={[
-            { icon:"libro", label:"Vista libro", onClick:onBook },
-            ...(onExport ? [{ icon:"esporta", label:"Esporta ricettario", onClick:onExport }] : []),
-            { icon:"aggiungi", label:"Nuova ricetta", onClick:() => onAdd("recipe"), tone: ui.id==="schedario" ? "accent" : undefined },
-          ]}
-        />
-      )}
+      <ScreenHeader
+        section="ricette"
+        title={activeSectionLabel || "Libro Ricette"}
+        subtitle={`${displayRecipes.length} ricett${displayRecipes.length===1?"a":"e"}`}
+        onHome={onLanding}
+        actions={[
+          { icon:"libro", label:"Vista libro", onClick:onBook },
+          ...(onExport ? [{ icon:"esporta", label:"Esporta ricettario", onClick:onExport }] : []),
+          { icon:"aggiungi", label:"Nuova ricetta", onClick:() => onAdd("recipe"), tone: ui.id==="schedario" ? "accent" : undefined },
+        ]}
+      />
 
       {/* ── Pulsante nuova ricetta (solo classico: negli altri stili è nella testa) ── */}
       {ui.navPosition !== "bottom" && (

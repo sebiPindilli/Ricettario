@@ -2118,6 +2118,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             initialManageCats={organizeFilter.manageCats}
             initialAggScope={organizeFilter.aggScope}
             onBack={organizeOrigin ? () => nav.back() : undefined}
+            onLanding={() => setScreen("landing")}
             onRecipes={() => setScreen("recipes")}
             onMemories={() => setScreen("memories")}
             onFridge={() => setScreen("fridge")}

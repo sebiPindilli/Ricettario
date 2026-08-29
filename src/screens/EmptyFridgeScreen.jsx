@@ -8,6 +8,7 @@ import {
 } from "../utils/helpers.js";
 import GlobalNav from "../components/GlobalNav.jsx";
 import BottomNav from "../components/BottomNav.jsx";
+import ScreenHeader from "../components/ScreenHeader.jsx";
 import AppIcon from "../components/AppIcon.jsx";
 import RecipeFilterBar from "../components/RecipeFilterBar.jsx";
 import SuggestionHint from "../components/SuggestionHint.jsx";
@@ -224,6 +225,7 @@ export default function EmptyFridgeScreen({
     return (
       <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
         {nav}
+        <ScreenHeader section="frigo" title="Svuota Frigo" onHome={onLanding} />
         <div style={{ padding:"14px 20px 6px", display:"flex", alignItems:"flex-start", gap:10 }}>
           <div style={{ flex:1 }}>
             {ui.id !== "classico" && (
@@ -389,8 +391,19 @@ export default function EmptyFridgeScreen({
         recipes={recipes}
         extraTagGroups={extraTagGroups}
         sectionList={sectionList}
-        renderNav={() => nav}
-        topAction={(
+        renderNav={() => (
+          <>
+            {nav}
+            <ScreenHeader
+              section="frigo"
+              title="Ricette per te"
+              subtitle={`${ownedMembers.length} ingredienti in casa`}
+              onBack={() => setPhase("select")}
+              onHome={onLanding}
+            />
+          </>
+        )}
+        topAction={ui.id === "classico" ? (
           <div style={{ padding:"12px 20px 6px", display:"flex", alignItems:"center", gap:10 }}>
             <button onClick={() => setPhase("select")} style={{
               background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10,
@@ -402,7 +415,7 @@ export default function EmptyFridgeScreen({
               <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>{ownedMembers.length} ingredienti in casa</div>
             </div>
           </div>
-        )}
+        ) : null}
       >
         {(displayRecipes) => {
           const results = displayRecipes

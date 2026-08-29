@@ -7,6 +7,7 @@ import {
 import { effectiveCategories } from "../utils/aggregates.js";
 import GlobalNav from "../components/GlobalNav.jsx";
 import BottomNav from "../components/BottomNav.jsx";
+import ScreenHeader from "../components/ScreenHeader.jsx";
 import SuggestionHint from "../components/SuggestionHint.jsx";
 import SectionCategoryIcon from "../components/SectionCategoryIcon.jsx";
 import { guideSpesa } from "../data/guideContent.jsx";
@@ -327,21 +328,31 @@ export default function ShoppingListScreen({
     <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
       {nav}
 
-      <div style={{ padding:"14px 20px 6px", display:"flex", alignItems:"flex-start", gap:10 }}>
-        <div style={{ flex:1 }}>
-          <div style={{ fontFamily:F.display, fontSize:22, color:th.appInk }}>🛒 Lista Spesa</div>
-          <div style={{ fontFamily:F.ui, fontSize:12, color:th.appFaded, marginTop:3 }}>
-            {entries.length === 0 ? "vuota" : `da ${entries.length} ricett${entries.length===1?"a":"e"}`}
+      <ScreenHeader
+        section="spesa"
+        title="Lista Spesa"
+        subtitle={entries.length === 0 ? "vuota" : `da ${entries.length} ricett${entries.length===1?"a":"e"}`}
+        onHome={onLanding}
+        actions={entries.length > 0 ? [{ icon:"altro", label:"Svuota", onClick:onClearAll }] : []}
+      />
+
+      {ui.id === "classico" && (
+        <div style={{ padding:"14px 20px 6px", display:"flex", alignItems:"flex-start", gap:10 }}>
+          <div style={{ flex:1 }}>
+            <div style={{ fontFamily:F.display, fontSize:22, color:th.appInk }}>🛒 Lista Spesa</div>
+            <div style={{ fontFamily:F.ui, fontSize:12, color:th.appFaded, marginTop:3 }}>
+              {entries.length === 0 ? "vuota" : `da ${entries.length} ricett${entries.length===1?"a":"e"}`}
+            </div>
           </div>
+          {entries.length > 0 && (
+            <button onClick={onClearAll} style={{
+              background:"transparent", border:`1.5px solid #C4593A`, borderRadius:10,
+              padding:"7px 12px", cursor:"pointer", color:"#C4593A",
+              fontFamily:F.ui, fontSize:11, fontWeight:600, flexShrink:0,
+            }}>🗑️ Svuota</button>
+          )}
         </div>
-        {entries.length > 0 && (
-          <button onClick={onClearAll} style={{
-            background:"transparent", border:`1.5px solid #C4593A`, borderRadius:10,
-            padding:"7px 12px", cursor:"pointer", color:"#C4593A",
-            fontFamily:F.ui, fontSize:11, fontWeight:600, flexShrink:0,
-          }}>🗑️ Svuota</button>
-        )}
-      </div>
+      )}
 
       {entries.length === 0 ? (
         <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"0 40px", textAlign:"center" }}>

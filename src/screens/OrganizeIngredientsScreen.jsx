@@ -7,6 +7,7 @@ import SectionCategoryIcon from "../components/SectionCategoryIcon.jsx";
 import ChosenIcon from "../components/ChosenIcon.jsx";
 import FoodIconGrid from "../components/FoodIconGrid.jsx";
 import BottomNav from "../components/BottomNav.jsx";
+import ScreenHeader from "../components/ScreenHeader.jsx";
 import { NUTRITION_DB } from "../data/nutrition.js";
 import {
   buildIngredientDict, ingDictIndex, sortCategoriesBaseFirst,
@@ -24,7 +25,7 @@ export const SHOPPING_SOURCE = "shopping";
 export default function OrganizeIngredientsScreen({
   nav, recipes, aggregates, ingredientCategories, sourceByIngredient = {}, onSetSourcePriority,
   onSetIngredientCats, onSaveAggregate, onDeleteAggregate, onBack,
-  onRecipes, onMemories, onFridge, onShopping,
+  onLanding, onRecipes, onMemories, onFridge, onShopping,
   suggestedAggregates = [], ignoredSimilarities = [], onIgnoreSimilarity, onRestoreSimilarity,
   categoryList = INGREDIENT_CATEGORIES, onSaveCategory, onDeleteCategory,
   equivalences = {}, onSaveEquivalence,
@@ -1483,7 +1484,15 @@ export default function OrganizeIngredientsScreen({
     <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
       {nav}
 
-      {onBack && (
+      <ScreenHeader
+        section="organizza"
+        title="Organizza Ingredienti"
+        subtitle={`${summaryTotal} ingredienti`}
+        onBack={onBack}
+        onHome={onLanding}
+      />
+
+      {ui.id === "classico" && onBack && (
         <div style={{ padding:"12px 20px 0" }}>
           <button onClick={onBack} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
         </div>

@@ -3,6 +3,7 @@ import { useTheme, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import GlobalNav from "./GlobalNav.jsx";
 import BottomNav from "./BottomNav.jsx";
+import ScreenHeader from "./ScreenHeader.jsx";
 import RecipeCardBook from "./RecipeCardBook.jsx";
 import RecipeFilterBar from "./RecipeFilterBar.jsx";
 import { guideRicette } from "../data/guideContent.jsx";
@@ -14,21 +15,29 @@ export default function RecipeFilterBarBook({ recipes, extraTagGroups, sectionLi
   return (
     <RecipeFilterBar recipes={recipes} extraTagGroups={extraTagGroups} sectionList={sectionList} bookMode
       renderNav={() => (
-        <GlobalNav
-          activeScreen="book"
-          bookView={true}
-          onRecipes={onRecipes}
-          onBook={() => {}}
-          onMemories={onMemories}
-          onAdd={onAdd}
-          onFridge={onFridge}
-          onShopping={onShopping}
-          onLanding={onLanding}
-          onExport={onExport}
-          activeLabel="Libro Ricette"
-          infoContent={guideRicette}
-          bottomNavActive
-        />
+        <>
+          <GlobalNav
+            activeScreen="book"
+            bookView={true}
+            onRecipes={onRecipes}
+            onBook={() => {}}
+            onMemories={onMemories}
+            onAdd={onAdd}
+            onFridge={onFridge}
+            onShopping={onShopping}
+            onLanding={onLanding}
+            onExport={onExport}
+            activeLabel="Libro Ricette"
+            infoContent={guideRicette}
+            bottomNavActive
+          />
+          <ScreenHeader
+            section="ricette"
+            title="Vista Libro"
+            onHome={onLanding}
+            actions={onExport ? [{ icon:"esporta", label:"Esporta ricettario", onClick:onExport }] : []}
+          />
+        </>
       )}
       topAction={(
         <div style={{ padding:"10px 24px 2px", textAlign:"center" }}>
