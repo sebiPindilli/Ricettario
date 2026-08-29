@@ -9,8 +9,22 @@ import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from
 import { checkWhitelist, loadBetaConfig, loadIconStyleConfig, DEFAULT_TIMER_ALERTS } from "../services/authStore.js";
 import { OfflineNoCacheError } from "../services/offlineFirst.js";
 import { withTimeout } from "../utils/helpers.js";
+import { F, BOOK_THEMES } from "../data/constants.js";
+import { resolveUiStyle, isUiStyleId, DEFAULT_UI_STYLE_ID } from "../data/uiStyles.js";
 
 const provider = new GoogleAuthProvider();
+// AuthGate è montato PRIMA di ogni provider (Theme/UiStyle vivono dentro
+// AppInner, raggiunto solo dopo l'autenticazione): nessun useTheme()/
+// useUiStyle() qui. Lo stile scelto sopravvive comunque in localStorage
+// (stessa chiave letta da AppInner), quindi lo si legge direttamente; il
+// tema libro invece non è ancora noto pre-login, si usa quello di default
+// — stessa scelta già fatta per il valore di default di UiStyleCtx.
+const readUiStyleId = () => {
+  try {
+    const saved = localStorage.getItem("ricettario.uiStyle");
+    return isUiStyleId(saved) ? saved : DEFAULT_UI_STYLE_ID;
+  } catch { return DEFAULT_UI_STYLE_ID; }
+};
 const BOOT_TIMEOUT_MS = 10000;
 // Offline, il margine serve solo a coprire la lettura dalla cache locale
 // (istantanea) — non c'è alcuna rete da aspettare, quindi un timeout più
@@ -23,7 +37,34 @@ const pageStyle = {
   fontFamily: "sans-serif", padding: 20, textAlign: "center",
 };
 
+// Copertina a tutto schermo, azione in fondo su fascia scura — stessa
+// impaginazione per ogni stato (DECISIONI.md §Accesso), cambia solo il
+// testo. Solo negli stili nuovi: in classico resta pageStyle (sotto).
+const CoverShell = ({ title, sub, children: body }) => (
+  <div style={{
+    minHeight: "100vh", display: "flex", flexDirection: "column",
+    background: BOOK_THEMES[0].coverBg, color: BOOK_THEMES[0].coverText,
+  }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 28px", textAlign: "center" }}>
+      <div style={{ fontFamily: F.ui, fontSize: 11, letterSpacing: 4, opacity: 0.6, textTransform: "uppercase", marginBottom: 10 }}>Il mio</div>
+      <div style={{ fontFamily: F.display, fontSize: 32, fontStyle: "italic", marginBottom: 22 }}>Ricettario</div>
+      <div style={{ fontFamily: F.display, fontSize: 18, marginBottom: 10 }}>{title}</div>
+      {sub && <div style={{ fontFamily: F.ui, fontSize: 12.5, opacity: 0.8, lineHeight: 1.6, maxWidth: 320 }}>{sub}</div>}
+    </div>
+    <div style={{ background: "rgba(0,0,0,0.35)", padding: "18px 24px calc(18px + env(safe-area-inset-bottom, 0px))", display: "flex", flexDirection: "column", gap: 10 }}>
+      {body}
+    </div>
+  </div>
+);
+const coverGhostBtn = { width: "100%", padding: "12px", borderRadius: 12, border: "1.5px solid rgba(255,255,255,0.3)", background: "transparent", color: "rgba(255,255,255,0.85)", fontFamily: F.ui, fontSize: 13, cursor: "pointer" };
+
 export default function AuthGate({ children }) {
+  // Calcolato una sola volta per montaggio (lazy init), non ad ogni
+  // import del modulo: lo stile si cambia comunque solo da autenticati.
+  const [uiStyleId] = useState(readUiStyleId);
+  const isNewStyle = uiStyleId !== "classico";
+  const uiCover = resolveUiStyle(BOOK_THEMES[0], uiStyleId);
+  const coverPrimaryBtn = { width: "100%", padding: "14px", borderRadius: 12, border: "none", background: uiCover.accent, color: "#fff", fontFamily: F.ui, fontSize: 14, fontWeight: 700, cursor: "pointer" };
   // loading | loggedOut | unauthorized | authorized | offlineNoCache | error
   const [status, setStatus] = useState("loading");
   const [user, setUser] = useState(null);
@@ -105,10 +146,19 @@ export default function AuthGate({ children }) {
   };
 
   if (status === "loading") {
+    if (isNewStyle) return <CoverShell title="Caricamento…" />;
     return <div style={pageStyle}>Caricamento…</div>;
   }
 
   if (status === "loggedOut") {
+    if (isNewStyle) {
+      return (
+        <CoverShell title="Tocca per entrare" sub="Prototipo — funziona solo per chi è stato autorizzato.">
+          <button onClick={doSignIn} style={coverPrimaryBtn}>Accedi con Google</button>
+          {error && <div style={{ fontFamily: F.ui, fontSize: 12, color: "#FFD0C8", textAlign: "center" }}>{error}</div>}
+        </CoverShell>
+      );
+    }
     return (
       <div style={pageStyle}>
         <h1>Ricettario</h1>
@@ -121,6 +171,14 @@ export default function AuthGate({ children }) {
   }
 
   if (status === "unauthorized") {
+    // Copy per chi non è in whitelist (DECISIONI.md §Accesso)
+    if (isNewStyle) {
+      return (
+        <CoverShell title="Accesso non autorizzato" sub={`L'app è ancora un prototipo e funziona solo per chi è stato autorizzato. Scrivi all'admin per farti aggiungere. (${user?.email})`}>
+          <button onClick={doSignOut} style={coverGhostBtn}>Prova un altro account</button>
+        </CoverShell>
+      );
+    }
     return (
       <div style={pageStyle}>
         <h1>Accesso non autorizzato</h1>
@@ -133,6 +191,14 @@ export default function AuthGate({ children }) {
   }
 
   if (status === "offlineNoCache") {
+    if (isNewStyle) {
+      return (
+        <CoverShell title="Nessuna connessione" sub="Non ci sono ancora dati salvati su questo dispositivo: la prima apertura richiede una connessione internet.">
+          <button onClick={retry} style={coverPrimaryBtn}>Riprova</button>
+          <button onClick={doSignOut} style={coverGhostBtn}>Esci e riprova</button>
+        </CoverShell>
+      );
+    }
     return (
       <div style={pageStyle}>
         <h1>Nessuna connessione</h1>
@@ -150,6 +216,14 @@ export default function AuthGate({ children }) {
   }
 
   if (status === "error") {
+    if (isNewStyle) {
+      return (
+        <CoverShell title="Accesso non riuscito" sub="Controlla la connessione e riprova.">
+          <button onClick={retry} style={coverPrimaryBtn}>Riprova</button>
+          <button onClick={doSignOut} style={coverGhostBtn}>Esci e riprova</button>
+        </CoverShell>
+      );
+    }
     return (
       <div style={pageStyle}>
         <h1>Accesso non riuscito</h1>
