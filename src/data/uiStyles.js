@@ -103,6 +103,19 @@ export const UI_STYLES = [
   },
 ];
 
+// ── Colore per sezione — palette "terrosa profonda" (DECISIONI.md) ────
+// Negli stili quaderno/schedario il colore non è più una scelta libera per
+// ricetta: lo decide la sezione. Indipendente dal tema (BOOK_THEMES): è
+// una palette a sé, non "il colore del libro". In classico non si usa:
+// resta `recipe.color`, il colore libero già salvato su ogni ricetta.
+export const SECTION_COLORS = {
+  basi:   { full: "#A8906B", pill: "rgba(168,144,107,0.26)", text: "#6E5B36" },
+  salati: { full: "#A4432A", pill: "rgba(164,67,42,0.15)",   text: "#A4432A" },
+  dolci:  { full: "#9A7A21", pill: "rgba(154,122,33,0.20)",  text: "#7A6014" },
+  altro:  { full: "#5E7060", pill: "rgba(94,112,96,0.22)",   text: "#48573F" },
+};
+export const sectionColor = (macroSection) => SECTION_COLORS[macroSection] || SECTION_COLORS.altro;
+
 export const DEFAULT_UI_STYLE_ID = "classico";
 export const isUiStyleId = (id) => UI_STYLES.some(s => s.id === id);
 

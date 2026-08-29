@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useTheme } from "../context.js";
+import { useTheme, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import { isSectioned, stepPhotosOf, stepNumbers, stepNumberLabel } from "../utils/helpers.js";
 import SectionBadge from "./SectionBadge.jsx";
@@ -8,10 +8,14 @@ import PhotoLightbox from "./PhotoLightbox.jsx";
 // Renders steps (flat or sectioned, items can be string or {text,photos})
 export default function StepsView({ steps, recipeColor }) {
   const th = useTheme();
+  const ui = useUiStyle();
   const [lightbox, setLightbox] = useState(null);
   if (!steps || steps.length === 0) return null;
   const numbers = stepNumbers(steps);
   let flatI = 0;
+  // quaderno: pastiglia del numero passo in appInk (non nel colore di
+  // sezione), come da README §Screens 7.
+  const badgeColor = ui.id === "quaderno" ? th.appInk : recipeColor;
 
   const renderStep = (step, key, label, color) => {
     const text = typeof step === "string" ? step : step.text;
@@ -21,7 +25,7 @@ export default function StepsView({ steps, recipeColor }) {
         <div style={{ display:"flex", gap:12 }}>
           <div style={{
             minWidth:26, height:26, padding:"0 5px", borderRadius:13,
-            background: color || recipeColor,
+            background: color || badgeColor,
             color:"#fff",
             display:"flex", alignItems:"center", justifyContent:"center",
             fontFamily:F.ui, fontSize:12, fontWeight:700,
@@ -57,7 +61,7 @@ export default function StepsView({ steps, recipeColor }) {
           <SectionBadge label={sec.section} color={recipeColor}/>
           {sec.items.map((step, i) => {
             const { sectionIndex, indexInSection } = numbers[flatI++];
-            return renderStep(step, i, stepNumberLabel(sectionIndex, indexInSection), recipeColor);
+            return renderStep(step, i, stepNumberLabel(sectionIndex, indexInSection), badgeColor);
           })}
         </div>
       ))}
@@ -65,7 +69,7 @@ export default function StepsView({ steps, recipeColor }) {
   ) : (
     <div>{steps.map((step, i) => {
       const { sectionIndex, indexInSection } = numbers[flatI++];
-      return renderStep(step, i, stepNumberLabel(sectionIndex, indexInSection), recipeColor);
+      return renderStep(step, i, stepNumberLabel(sectionIndex, indexInSection), badgeColor);
     })}</div>
   );
 

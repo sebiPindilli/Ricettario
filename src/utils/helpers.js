@@ -194,6 +194,18 @@ export const ingredientToText = (ing) => {
   return tail ? `${ing.name}: ${tail}${note}` : `${ing.name}${note}`;
 };
 
+// Separa quantità+unità dal nome — per il layout "quantità in F.mono a
+// destra" degli stili quaderno/schedario (vedi IngredientsView.jsx). Stessa
+// sorgente di ingredientToText ma resa diversa: NON lo sostituisce, lo
+// usa anche il PDF e deve restare invariato.
+export const ingredientParts = (ing) => {
+  if (!ing || typeof ing === "string") return { name: ing || "", amount: "", note: "" };
+  const parts = [];
+  if (ing.qty != null) parts.push(fmtQty(ing.qty));
+  if (ing.unit) parts.push(ing.unit);
+  return { name: ing.name || "", amount: parts.join(" "), note: ing.note || "" };
+};
+
 // Scala la quantità (le unità restano invariate)
 export const scaleIngredient = (ing, factor) =>
   ing.qty != null ? { ...ing, qty: Math.round(ing.qty * factor * 100) / 100 } : ing;
