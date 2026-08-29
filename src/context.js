@@ -1,5 +1,6 @@
 import React from "react";
 import { BOOK_THEMES } from "./data/constants.js";
+import { resolveUiStyle, DEFAULT_UI_STYLE_ID } from "./data/uiStyles.js";
 
 // ── Theme context — avoids prop-drilling ──────────────────────
 export const ThemeCtx = React.createContext(BOOK_THEMES[0]);
@@ -25,6 +26,16 @@ export const useBetaEnabled = () => React.useContext(BetaEnabledCtx);
 // identico a prima finché nessun admin lo cambia esplicitamente.
 export const IconStyleCtx = React.createContext("emoji");
 export const useIconStyle = () => React.useContext(IconStyleCtx);
+
+// ── UI style context — "classico" | "quaderno" | "schedario".
+// Scelta PERSONALE dell'utente (localStorage, per dispositivo), diversa
+// dall'interruttore admin emoji/SVG (IconStyleCtx): quello resta valido
+// solo per lo stile "classico". Il valore esposto sono i token già
+// risolti su tema + stile (vedi data/uiStyles.js), non il solo id.
+export const UiStyleCtx = React.createContext(
+  resolveUiStyle(BOOK_THEMES[0], DEFAULT_UI_STYLE_ID)
+);
+export const useUiStyle = () => React.useContext(UiStyleCtx);
 
 // ── Online context — navigator.onLine, per bloccare azioni che richiedono
 // rete (es. upload foto: Storage non ha una coda offline) ovunque nella UI

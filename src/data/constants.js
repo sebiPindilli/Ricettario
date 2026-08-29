@@ -29,6 +29,9 @@ export const F = {
   body:    "'Georgia',serif",
   ui:      "'Helvetica Neue',Arial,sans-serif",
   book:    "'Arial','Helvetica',sans-serif",
+  // Quantità e numeri negli stili "quaderno"/"schedario": allineati a
+  // destra, larghezza fissa per cifra così le colonne si leggono a scorrimento.
+  mono:    "ui-monospace, Consolas, monospace",
 };
 
 // Condizione @media per "telefono vero" (non il mockup desktop), sia in

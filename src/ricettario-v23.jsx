@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 // Codice sorgente del polyfill paged.js incorporato come stringa a build
 // time (import "?raw" di Vite) e iniettato nell'HTML del PDF generato — mai
 // una <script src> esterna: l'export PDF deve restare utilizzabile offline
@@ -61,7 +61,8 @@ import {
   MOBILE_BREAKPOINT_CSS,
 } from "./data/constants.js";
 import { NUTRITION_DB } from "./data/nutrition.js";
-import { ThemeCtx, useTheme, NavCtx, useNavActions, RoleCtx, BetaEnabledCtx, IconStyleCtx, OnlineCtx } from "./context.js";
+import { ThemeCtx, useTheme, NavCtx, useNavActions, RoleCtx, BetaEnabledCtx, IconStyleCtx, OnlineCtx, UiStyleCtx } from "./context.js";
+import { resolveUiStyle, isUiStyleId, DEFAULT_UI_STYLE_ID } from "./data/uiStyles.js";
 import OrganizeIcon from "./components/OrganizeIcon.jsx";
 import BackBtn from "./components/BackBtn.jsx";
 import Divider from "./components/Divider.jsx";
@@ -541,6 +542,20 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   // silenzio, stesso principio di lastSyncedRecipesRef sopra.
   const lastSyncedSystemRef = useRef({});
   const [bookTheme, setBookTheme] = useState(BOOK_THEMES[0]);
+  // Stile di interfaccia scelto dall'utente — preferenza di dispositivo
+  // (localStorage), non sincronizzata via Firestore. Vedi src/data/uiStyles.js.
+  const [uiStyleId, setUiStyleId] = useState(() => {
+    try {
+      const saved = localStorage.getItem("ricettario.uiStyle");
+      return isUiStyleId(saved) ? saved : DEFAULT_UI_STYLE_ID;
+    } catch { return DEFAULT_UI_STYLE_ID; }
+  });
+  const changeUiStyle = (id) => {
+    if (!isUiStyleId(id)) return;
+    setUiStyleId(id);
+    try { localStorage.setItem("ricettario.uiStyle", id); } catch { /* Safari privato */ }
+  };
+  const ui = useMemo(() => resolveUiStyle(bookTheme, uiStyleId), [bookTheme, uiStyleId]);
   // Custom tag groups added by user — shared across whole app
   const [extraTagGroups, setExtraTagGroups] = useState([]);
 
@@ -2019,9 +2034,10 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     <ScanExtractionProvider>
     <RoleCtx.Provider value={role}>
     <BetaEnabledCtx.Provider value={betaEnabled}>
-    <IconStyleCtx.Provider value={iconStyle}>
+    <IconStyleCtx.Provider value={uiStyleId === "classico" ? iconStyle : "svg"}>
     <OnlineCtx.Provider value={isOnline}>
     <ThemeCtx.Provider value={bookTheme}>
+    <UiStyleCtx.Provider value={ui}>
     <NavCtx.Provider value={{ onOrganize: () => openOrganize() }}>
     <div className="iphone-page-wrap" style={{
       minHeight:"100vh",
@@ -2482,6 +2498,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
       </div>
     </div>
     </NavCtx.Provider>
+    </UiStyleCtx.Provider>
     </ThemeCtx.Provider>
     </OnlineCtx.Provider>
     </IconStyleCtx.Provider>
