@@ -1,7 +1,8 @@
 import React from "react";
-import { useTheme } from "../context.js";
+import { useTheme, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import GlobalNav from "./GlobalNav.jsx";
+import BottomNav from "./BottomNav.jsx";
 import RecipeCardBook from "./RecipeCardBook.jsx";
 import RecipeFilterBar from "./RecipeFilterBar.jsx";
 import { guideRicette } from "../data/guideContent.jsx";
@@ -9,6 +10,7 @@ import { guideRicette } from "../data/guideContent.jsx";
 // Wrapper che usa RecipeFilterBar sopra la pagina del libro, restringendo le pagine sfogliabili al filtro
 export default function RecipeFilterBarBook({ recipes, extraTagGroups, sectionList, pageIndex, setPageIndex, turning, setTurning, onLanding, onRecipe, onRecipes, onMemories, onAdd, onFridge, onShopping, onExport }) {
   const th = useTheme();
+  const ui = useUiStyle();
   return (
     <RecipeFilterBar recipes={recipes} extraTagGroups={extraTagGroups} sectionList={sectionList} bookMode
       renderNav={() => (
@@ -25,6 +27,7 @@ export default function RecipeFilterBarBook({ recipes, extraTagGroups, sectionLi
           onExport={onExport}
           activeLabel="Libro Ricette"
           infoContent={guideRicette}
+          bottomNavActive
         />
       )}
       topAction={(
@@ -156,6 +159,17 @@ export default function RecipeFilterBarBook({ recipes, extraTagGroups, sectionLi
             Nessuna ricetta con questi filtri
           </div>
         </div>
+      )}
+
+      {ui.navPosition === "bottom" && (
+        <BottomNav
+          activeScreen="recipes"
+          bookView
+          onRecipes={onRecipes}
+          onMemories={onMemories}
+          onFridge={onFridge}
+          onShopping={onShopping}
+        />
       )}
     </div>
         );
