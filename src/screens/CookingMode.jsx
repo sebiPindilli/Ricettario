@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
-import { useTheme, useCookingTimers } from "../context.js";
+import { useTheme, useCookingTimers, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import { flattenSteps, flattenIngredients, ingredientToText, scaleIngredient, stepNumberLabel } from "../utils/helpers.js";
 import PhotoLightbox from "../components/PhotoLightbox.jsx";
@@ -13,6 +13,7 @@ import { guideCucina } from "../data/guideContent.jsx";
 // ══════════════════════════════════════════════════════════════
 export default function CookingMode({ recipe, scale, onClose }) {
   const th = useTheme();
+  const ui = useUiStyle();
   const { setCookingModeActive } = useCookingTimers();
 
   // Flag globale letto da TopStack.jsx (nasconde la barra timer, che ha
@@ -141,6 +142,10 @@ export default function CookingMode({ recipe, scale, onClose }) {
             )}
             {group.items.map(it => {
               const active = idx === it.globalIdx;
+              // "fatto" (appAccent2) solo nei nuovi stili — in classico la
+              // barra a pastiglie resta identica a prima (nessun passo si
+              // distingue per "già visto").
+              const done = ui.id !== "classico" && it.globalIdx < idx;
               const label = stepNumberLabel(it.sectionIndex, it.indexInSection);
               return (
                 <button
@@ -149,9 +154,9 @@ export default function CookingMode({ recipe, scale, onClose }) {
                   title={`Passo ${label}`}
                   style={{
                     minWidth:30, height:30, padding:"0 6px", borderRadius:15, flexShrink:0, cursor:"pointer",
-                    border: active ? `2px solid ${th.appAccent2}` : "2px solid rgba(255,255,255,0.2)",
-                    background: active ? th.appAccent : "rgba(255,255,255,0.08)",
-                    color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700,
+                    border: active || done ? `2px solid ${th.appAccent2}` : "2px solid rgba(255,255,255,0.2)",
+                    background: active ? th.appAccent : done ? `${th.appAccent2}33` : "rgba(255,255,255,0.08)",
+                    color: done && !active ? th.appAccent2 : "#fff", fontFamily:F.ui, fontSize:12, fontWeight:700,
                     display:"flex", alignItems:"center", justifyContent:"center",
                     transition:"all 0.2s",
                   }}

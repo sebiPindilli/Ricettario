@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useTheme, useUiStyle } from "../context.js";
 import { F, INGREDIENT_CATEGORIES, MACRO_SECTIONS } from "../data/constants.js";
+import { sectionColor } from "../data/uiStyles.js";
 import {
   buildFridgeItems, ingDictIndex, flattenIngredients, ingredientToText,
   resolveIngId, sortCategoriesBaseFirst,
@@ -202,9 +203,9 @@ export default function EmptyFridgeScreen({
           onTouchMove={endPress}
           onTouchCancel={endPress}
           style={{
-            padding:"7px 12px", borderRadius:20,
+            padding:"7px 12px", borderRadius: ui.id==="classico" ? 20 : ui.radius.chip,
             border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
-            background: sel ? th.appAccent : "transparent",
+            background: sel ? (ui.id==="classico" ? th.appAccent : ui.ink) : "transparent",
             color: sel ? "#fff" : th.appFaded,
             fontFamily:F.ui, fontSize:12, cursor:"pointer",
             display:"flex", alignItems:"center", gap:5,
@@ -224,7 +225,10 @@ export default function EmptyFridgeScreen({
         {nav}
         <div style={{ padding:"14px 20px 6px", display:"flex", alignItems:"flex-start", gap:10 }}>
           <div style={{ flex:1 }}>
-            <div style={{ fontFamily:F.display, fontSize:22, color:th.appInk }}>🧊 Svuota Frigo</div>
+            {ui.id !== "classico" && (
+              <div style={{ fontFamily:F.ui, fontSize:ui.sectionLabel.size, letterSpacing:ui.sectionLabel.spacing, fontWeight:ui.sectionLabel.weight, textTransform:"uppercase", color:ui.muted, marginBottom:2 }}>Passo 1 di 2</div>
+            )}
+            <div style={{ fontFamily:F.display, fontSize:22, color:th.appInk }}>{ui.id==="classico" ? "🧊 Svuota Frigo" : "Cosa hai in casa?"}</div>
             <div style={{ fontFamily:F.ui, fontSize:12, color:th.appFaded, marginTop:3, lineHeight:1.5 }}>
               Seleziona gli ingredienti che hai in casa. Quelli <b>base</b> sono già selezionati (puoi deselezionarli).
             </div>
@@ -319,6 +323,15 @@ export default function EmptyFridgeScreen({
 
         {/* CTA */}
         <div style={{ position:"absolute", bottom:navHeight, left:0, right:0, padding:"14px 18px 22px", background:`linear-gradient(transparent, ${th.appBg} 30%)` }}>
+          {ui.id !== "classico" && ownedMembers.length > 0 && (() => {
+            const complete = analyzed.filter(a => a.ratio === 1).length;
+            const near = analyzed.filter(a => a.ratio >= 0.6 && a.ratio < 1).length;
+            return (
+              <div style={{ fontFamily:F.ui, fontSize:11, color:ui.faded, textAlign:"center", marginBottom:8 }}>
+                {complete} ricett{complete===1?"a":"e"} complet{complete===1?"a":"e"}{near>0 ? ` · e ${near} quasi` : ""}
+              </div>
+            );
+          })()}
           <button
             onClick={() => setPhase("results")}
             disabled={ownedMembers.length === 0}
@@ -326,12 +339,12 @@ export default function EmptyFridgeScreen({
               width:"100%", padding:"15px",
               background: ownedMembers.length===0 ? th.appBorder : th.appAccent,
               color: ownedMembers.length===0 ? th.appFaded : "#fff",
-              border:"none", borderRadius:14,
+              border:"none", borderRadius: ui.id==="classico" ? 14 : ui.radius.control+1,
               fontFamily:F.ui, fontSize:14, fontWeight:700,
               cursor: ownedMembers.length===0 ? "default" : "pointer",
             }}
           >
-            {ownedMembers.length===0 ? "Seleziona almeno un ingrediente" : "Mostra ricette →"}
+            {ownedMembers.length===0 ? "Seleziona almeno un ingrediente" : ui.id==="classico" ? "Mostra ricette →" : "Vedi"}
           </button>
         </div>
 
@@ -403,7 +416,7 @@ export default function EmptyFridgeScreen({
                   borderRadius:16, overflow:"hidden",
                 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px" }}>
-                    <div style={{ width:44, height:44, borderRadius:12, background:recipe.color, color:"#fff", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>{recipe.dishPhoto ? <span style={{ fontSize:22 }}>📸</span> : <ChosenIcon emoji={recipe.emoji} icon={recipe.icon} size={22} />}</div>
+                    <div style={{ width:44, height:44, borderRadius:12, background: ui.id==="classico" ? recipe.color : sectionColor(recipe.macroSection).full, color:"#fff", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>{recipe.dishPhoto ? <span style={{ fontSize:22 }}>📸</span> : <ChosenIcon emoji={recipe.emoji} icon={recipe.icon} size={22} />}</div>
                     <div style={{ flex:1 }}>
                       <div style={{ fontFamily:F.display, fontSize:16, color:th.appInk }}>{recipe.title}</div>
                       <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>{recipe.category} · {recipe.prepTime+recipe.cookTime} min</div>
@@ -422,25 +435,39 @@ export default function EmptyFridgeScreen({
                   </div>
 
                   <div style={{ padding:"10px 14px" }}>
-                    {present.length > 0 && (
-                      <div style={{ marginBottom:6 }}>
-                        <span style={{ fontFamily:F.ui, fontSize:10, color:"#6B8C6E", fontWeight:700 }}>✓ HAI: </span>
-                        <span style={{ fontFamily:F.ui, fontSize:11, color:th.appInk }}>
-                          {present.map(p => p.text).join(", ")}
-                        </span>
-                      </div>
-                    )}
-                    {missing.length > 0 ? (
-                      <div>
-                        <span style={{ fontFamily:F.ui, fontSize:10, color:"#C4593A", fontWeight:700 }}>✗ MANCA: </span>
-                        <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>
-                          {missing.map(m => m.text).join(", ")}
-                        </span>
-                      </div>
+                    {ui.id === "classico" ? (
+                      <>
+                        {present.length > 0 && (
+                          <div style={{ marginBottom:6 }}>
+                            <span style={{ fontFamily:F.ui, fontSize:10, color:"#6B8C6E", fontWeight:700 }}>✓ HAI: </span>
+                            <span style={{ fontFamily:F.ui, fontSize:11, color:th.appInk }}>
+                              {present.map(p => p.text).join(", ")}
+                            </span>
+                          </div>
+                        )}
+                        {missing.length > 0 ? (
+                          <div>
+                            <span style={{ fontFamily:F.ui, fontSize:10, color:"#C4593A", fontWeight:700 }}>✗ MANCA: </span>
+                            <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>
+                              {missing.map(m => m.text).join(", ")}
+                            </span>
+                          </div>
+                        ) : (
+                          <div style={{ fontFamily:F.ui, fontSize:11, color:"#6B8C6E", fontWeight:600 }}>
+                            🎉 Hai tutto per questa ricetta!
+                          </div>
+                        )}
+                      </>
                     ) : (
-                      <div style={{ fontFamily:F.ui, fontSize:11, color:"#6B8C6E", fontWeight:600 }}>
-                        🎉 Hai tutto per questa ricetta!
-                      </div>
+                      // Una sola riga "Manca: …" invece dei due elenchi (README §5)
+                      missing.length > 0 ? (
+                        <div>
+                          <span style={{ fontFamily:F.ui, fontSize:10, color:"#C4593A", fontWeight:700, textTransform:"uppercase", letterSpacing:0.5 }}>Manca: </span>
+                          <span style={{ fontFamily:F.ui, fontSize:11, color:ui.faded }}>{missing.map(m => m.text).join(", ")}</span>
+                        </div>
+                      ) : (
+                        <div style={{ fontFamily:F.ui, fontSize:11, color:"#6B8C6E", fontWeight:600 }}>Hai tutto per questa ricetta</div>
+                      )
                     )}
                   </div>
 
@@ -455,18 +482,21 @@ export default function EmptyFridgeScreen({
                       <span style={{ fontSize:15 }}>📖</span>
                       Ricetta
                     </button>
-                    <button
-                      onClick={() => setServingsDialog({ mode:"shopping", recipe, missingClean: missing.map(m => m.clean) })}
-                      style={{
-                        flex:1, padding:"9px 4px", borderRadius:10,
-                        border:`1.5px solid ${th.appAccent}`,
-                        background:`${th.appAccent}12`, color:th.appAccent,
-                        fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
-                        display:"flex", flexDirection:"column", alignItems:"center", gap:2,
-                      }}>
-                      <span style={{ fontSize:15 }}>🛒</span>
-                      Spesa
-                    </button>
+                    {(ui.id === "classico" || missing.length > 0) && (
+                      <button
+                        onClick={() => setServingsDialog({ mode:"shopping", recipe, missingClean: missing.map(m => m.clean) })}
+                        style={{
+                          flex:1, padding:"9px 4px", borderRadius:10,
+                          border:`1.5px solid ${th.appAccent}`,
+                          background:`${th.appAccent}12`, color:th.appAccent,
+                          fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
+                          display:"flex", flexDirection:"column", alignItems:"center", gap:2,
+                        }}>
+                        <span style={{ fontSize:15 }}>🛒</span>
+                        {ui.id === "classico" ? "Spesa" : `Compra i ${missing.length}`}
+                      </button>
+                    )}
+                    {(ui.id === "classico" || missing.length === 0) && (
                     <button
                       onClick={() => setServingsDialog({ mode:"cooking", recipe, missingClean: null })}
                       style={{
@@ -478,6 +508,7 @@ export default function EmptyFridgeScreen({
                       <span style={{ fontSize:15 }}>👨‍🍳</span>
                       Cucina
                     </button>
+                    )}
                   </div>
                 </div>
               ))}

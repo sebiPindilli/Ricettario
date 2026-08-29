@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTheme, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
+import { sectionColor } from "../data/uiStyles.js";
 import { memorySortKey, memoryPeriodLabel } from "../utils/helpers.js";
 import MemoryPhoto from "../components/MemoryPhoto.jsx";
 import PhotoLightbox from "../components/PhotoLightbox.jsx";
@@ -13,7 +14,9 @@ import ChosenIcon from "../components/ChosenIcon.jsx";
 // SCREEN: MEMORIES BOOK — all photos, each linked to recipes
 // ══════════════════════════════════════════════════════════════
 // Vista "ricordo aperto" a piena pagina — modalità libro, due ricordi per pagina
-const MemoryOpenPage = ({ mems, linkedFor, onRecipe, th, confirmDeleteId, onRequestDelete, onConfirmDelete, onCancelDelete }) => (
+const MemoryOpenPage = ({ mems, linkedFor, onRecipe, th, confirmDeleteId, onRequestDelete, onConfirmDelete, onCancelDelete }) => {
+  const ui = useUiStyle();
+  return (
   <div style={{ display:"flex", flexDirection:"column", gap:14, padding:"6px 4px" }}>
     {mems.map(mem => {
       const linked = linkedFor(mem);
@@ -55,27 +58,31 @@ const MemoryOpenPage = ({ mems, linkedFor, onRecipe, th, confirmDeleteId, onRequ
             </div>
           )}
           <div style={{ padding:"12px 16px 16px" }}>
-            <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginBottom:5 }}>📅 {mem.date}</div>
+            <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginBottom:5 }}>{ui.id==="classico" ? "📅 " : ""}{mem.date}</div>
             {mem.caption && <div style={{ fontFamily:F.display, fontSize:17, color:th.appInk, fontStyle:"italic", marginBottom:7, lineHeight:1.3 }}>"{mem.caption}"</div>}
             {mem.story && <div style={{ fontFamily:F.body, fontSize:13, color:th.appInk, lineHeight:1.6, marginBottom:10 }}>{mem.story}</div>}
             <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginTop:4 }}>
-              {linked.map(r => (
-                <button key={r.id} onClick={() => onRecipe(r)} style={{
-                  display:"flex", alignItems:"center", gap:5,
-                  background:`${r.color}18`, border:`1px solid ${r.color}30`,
-                  borderRadius:9, padding:"5px 10px", cursor:"pointer",
-                }}>
-                  <ChosenIcon emoji={r.emoji} icon={r.icon} size={13} />
-                  <span style={{ fontFamily:F.ui, fontSize:11, color:r.color, fontWeight:600 }}>{r.title}</span>
-                </button>
-              ))}
+              {linked.map(r => {
+                const c = ui.id==="classico" ? r.color : sectionColor(r.macroSection).full;
+                return (
+                  <button key={r.id} onClick={() => onRecipe(r)} style={{
+                    display:"flex", alignItems:"center", gap:5,
+                    background:`${c}18`, border:`1px solid ${c}30`,
+                    borderRadius:9, padding:"5px 10px", cursor:"pointer",
+                  }}>
+                    <ChosenIcon emoji={r.emoji} icon={r.icon} size={13} />
+                    <span style={{ fontFamily:F.ui, fontSize:11, color:c, fontWeight:600 }}>{r.title}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
       );
     })}
   </div>
-);
+  );
+};
 
 export default function MemoriesBookScreen({ recipes, onBack, onRecipe, onRecipes, onBook, onAdd, onFridge, onShopping, onDeleteMemory }) {
   const th = useTheme();
@@ -210,19 +217,26 @@ export default function MemoriesBookScreen({ recipes, onBack, onRecipe, onRecipe
                         </div>
                       )}
                       <div style={{ padding:"8px 10px 10px" }}>
-                        {mem.caption && <div style={{ fontFamily:F.body, fontSize:12, color:th.appInk, fontStyle:"italic", lineHeight:1.4, marginBottom:4 }}>"{mem.caption}"</div>}
+                        {mem.caption && (
+                          <div style={{ fontFamily:F.body, fontSize:12, color:th.appInk, fontStyle:"italic", lineHeight:1.4, marginBottom:4 }}>
+                            {ui.id==="classico" ? `"${mem.caption}"` : mem.caption}
+                          </div>
+                        )}
                         {mem.story && <div style={{ fontFamily:F.body, fontSize:11, color:th.appFaded, lineHeight:1.45, marginBottom:5, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>{mem.story}</div>}
-                        <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, marginBottom:6 }}>📅 {mem.date}</div>
-                        {linked.map(r => (
-                          <button key={r.id} onClick={() => onRecipe(r)} style={{
-                            display:"flex", alignItems:"center", gap:5, marginBottom:3,
-                            background:`${r.color}18`, border:`1px solid ${r.color}30`,
-                            borderRadius:8, padding:"3px 8px", cursor:"pointer",
-                          }}>
-                            <ChosenIcon emoji={r.emoji} icon={r.icon} size={12} />
-                            <span style={{ fontFamily:F.ui, fontSize:10, color:r.color, fontWeight:600 }}>{r.title}</span>
-                          </button>
-                        ))}
+                        <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, marginBottom:6 }}>{ui.id==="classico" ? "📅 " : ""}{mem.date}</div>
+                        {linked.map(r => {
+                          const c = ui.id==="classico" ? r.color : sectionColor(r.macroSection).full;
+                          return (
+                            <button key={r.id} onClick={() => onRecipe(r)} style={{
+                              display:"flex", alignItems:"center", gap:5, marginBottom:3,
+                              background:`${c}18`, border:`1px solid ${c}30`,
+                              borderRadius:8, padding:"3px 8px", cursor:"pointer",
+                            }}>
+                              <ChosenIcon emoji={r.emoji} icon={r.icon} size={12} />
+                              <span style={{ fontFamily:F.ui, fontSize:10, color:c, fontWeight:600 }}>{r.title}</span>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   );

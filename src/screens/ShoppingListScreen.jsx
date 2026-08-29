@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useTheme, useUiStyle } from "../context.js";
-import { F } from "../data/constants.js";
+import { F, INGREDIENT_CATEGORIES } from "../data/constants.js";
 import {
   normName, fmtQty, resolveIngId, ingDictIndex, normUnit, unitLabel, gramsPerUnitFor,
 } from "../utils/helpers.js";
@@ -8,6 +8,7 @@ import { effectiveCategories } from "../utils/aggregates.js";
 import GlobalNav from "../components/GlobalNav.jsx";
 import BottomNav from "../components/BottomNav.jsx";
 import SuggestionHint from "../components/SuggestionHint.jsx";
+import SectionCategoryIcon from "../components/SectionCategoryIcon.jsx";
 import { guideSpesa } from "../data/guideContent.jsx";
 
 const fmtNum = (n) => String(Math.round(n * 100) / 100).replace(".", ",");
@@ -41,6 +42,15 @@ export default function ShoppingListScreen({
   // Ingredienti base spostati manualmente in lista spesa vera ("non ce l'ho")
   // — non persistito, vale solo per questa visualizzazione della lista.
   const [movedToBuy, setMovedToBuy] = useState(new Set());
+  // Spunta "presa" (quaderno/schedario, vedi DECISIONI.md): stato locale di
+  // sessione, nessun ritardo, non persistito — solo per gli ingredienti da
+  // comprare, non per "Controlla in dispensa" (che ha già ce l'ho/non ce l'ho).
+  const [checkedIds, setCheckedIds] = useState(new Set());
+  const toggleChecked = (id) => setCheckedIds(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
 
   // ── Aggrega gli ingredienti di tutte le entry ──
   // Raggruppa per ingrediente/aggregato (non più per unità): ogni riga tiene
@@ -119,6 +129,12 @@ export default function ShoppingListScreen({
   const isBaseRow = (g) => g.isAggregate
     ? (g.agg?.categories || []).includes("base")
     : effectiveCategories(g.eqKey, aggregates, ingredientCategories, sourceByIngredient).categories.includes("base");
+  // Categorie di una riga (un ingrediente può appartenere a più di una,
+  // stesso principio già usato in EmptyFridgeScreen) — per il
+  // raggruppamento "per categoria" della lista spesa in schedario.
+  const rowCategoryIds = (g) => g.isAggregate
+    ? (g.agg?.categories || [])
+    : effectiveCategories(g.eqKey, aggregates, ingredientCategories, sourceByIngredient).categories;
   const baseRows = aggregated.filter(g => isBaseRow(g) && !movedToBuy.has(g.id));
   const shoppingRows = aggregated.filter(g => !isBaseRow(g) || movedToBuy.has(g.id));
   // "Ce l'ho": rimuove tutte le occorrenze della riga dalla lista spesa.
@@ -172,15 +188,32 @@ export default function ShoppingListScreen({
   // dispensa (ce l'ho / non ce l'ho) invece del selettore unità e della ×.
   const RenderRow = (g, { base }) => {
     const info = rowInfo(g);
+    const checkable = ui.id !== "classico" && !base;
+    const checked = checkable && checkedIds.has(g.id);
     return (
       <div key={g.id} style={{
-        background:th.appCard, border:`1px solid ${th.appBorder}`,
-        borderRadius:12, padding:"11px 14px", marginBottom:8,
+        background: ui.id==="classico" ? th.appCard : ui.card,
+        border:`1px solid ${ui.id==="classico" ? th.appBorder : ui.border}`,
+        borderRadius: ui.id==="classico" ? 12 : ui.radius.card,
+        padding:"11px 14px", marginBottom:8,
+        opacity: checked ? 0.6 : 1,
       }}>
         <div style={{ display:"flex", flexWrap:"wrap", alignItems:"baseline", gap:8 }}>
-          <span style={{ fontFamily:F.body, fontSize:14, color:th.appInk, fontWeight:600, flex:1 }}>{g.display}</span>
+          {checkable && (
+            // Nessun simbolo "spunta/check" nel set SVG: il segno di stato
+            // è il solo riempimento del controllo (nessuna icona nuova
+            // disegnata) — segnalato nel riepilogo finale.
+            <button onClick={() => toggleChecked(g.id)} title={checked ? "Segna da comprare" : "Segna come presa"} style={{
+              width:20, height:20, flexShrink:0, padding:0, cursor:"pointer",
+              border:`1.5px solid ${checked ? "#6B8C6E" : ui.faded}`,
+              borderRadius: ui.id==="schedario" ? 6 : "50%",
+              background: checked ? "#6B8C6E" : "transparent",
+              marginRight:2,
+            }}/>
+          )}
+          <span style={{ fontFamily:F.body, fontSize:14, color: checked ? "#B0A694" : (ui.id==="classico" ? th.appInk : ui.ink), fontWeight:600, flex:1, textDecoration: checked ? "line-through" : "none" }}>{g.display}</span>
           {info.totalText && (
-            <span style={{ fontFamily:F.display, fontSize:15, color:th.appAccent, fontWeight:700, textAlign:"right" }}>
+            <span style={{ fontFamily:F.display, fontSize:15, color: checked ? "#B0A694" : th.appAccent, fontWeight:700, textAlign:"right", textDecoration: checked ? "line-through" : "none" }}>
               {info.totalText}
             </span>
           )}
@@ -375,11 +408,57 @@ export default function ShoppingListScreen({
           )}
 
           {/* Ingredienti da comprare */}
-          <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appFaded, textTransform:"uppercase", margin:"16px 0 8px", fontWeight:700 }}>
-            Ingredienti
+          <div style={{ display:"flex", alignItems:"center", gap:8, margin:"16px 0 8px" }}>
+            <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appFaded, textTransform:"uppercase", fontWeight:700, flex:1 }}>
+              Ingredienti
+            </div>
+            {ui.id !== "classico" && shoppingRows.length > 0 && (
+              <div style={{ fontFamily:F.mono, fontSize:10.5, color:"#6B8C6E", fontWeight:700 }}>
+                {shoppingRows.filter(g => checkedIds.has(g.id)).length} di {shoppingRows.length}
+              </div>
+            )}
           </div>
+          {ui.id !== "classico" && shoppingRows.length > 0 && (
+            <div style={{ height:4, borderRadius:2, background:ui.hairlineStrong, marginBottom:12, overflow:"hidden" }}>
+              <div style={{
+                height:"100%", borderRadius:2, background:"#6B8C6E",
+                width:`${(shoppingRows.filter(g => checkedIds.has(g.id)).length / shoppingRows.length) * 100}%`,
+                transition:"width 0.2s",
+              }}/>
+            </div>
+          )}
           {shoppingRows.length === 0 ? (
             <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, fontStyle:"italic", padding:"6px 0" }}>Nessun altro ingrediente da comprare.</div>
+          ) : ui.id === "schedario" ? (
+            // schedario: raggruppato per categoria ingrediente (INGREDIENT_CATEGORIES);
+            // un ingrediente può comparire in più gruppi, come in Svuota Frigo.
+            (() => {
+              const grouped = INGREDIENT_CATEGORIES.map(cat => ({
+                cat, rows: shoppingRows.filter(g => rowCategoryIds(g).includes(cat.id)),
+              })).filter(x => x.rows.length > 0);
+              const categorizedIds = new Set(grouped.flatMap(x => x.rows.map(g => g.id)));
+              const uncategorized = shoppingRows.filter(g => !categorizedIds.has(g.id));
+              return (
+                <>
+                  {grouped.map(({ cat, rows }) => (
+                    <div key={cat.id} style={{ marginBottom:10 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:5, fontFamily:F.ui, fontSize:9.5, letterSpacing:1.2, color:ui.faded, textTransform:"uppercase", fontWeight:700, marginBottom:6 }}>
+                        <SectionCategoryIcon item={cat} size={11} /> {cat.label}
+                      </div>
+                      {rows.map(g => RenderRow(g, { base:false }))}
+                    </div>
+                  ))}
+                  {uncategorized.length > 0 && (
+                    <div style={{ marginBottom:10 }}>
+                      <div style={{ fontFamily:F.ui, fontSize:9.5, letterSpacing:1.2, color:ui.faded, textTransform:"uppercase", fontWeight:700, marginBottom:6 }}>
+                        Senza categoria
+                      </div>
+                      {uncategorized.map(g => RenderRow(g, { base:false }))}
+                    </div>
+                  )}
+                </>
+              );
+            })()
           ) : shoppingRows.map(g => RenderRow(g, { base:false }))}
         </div>
       )}
