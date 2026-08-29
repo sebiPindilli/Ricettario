@@ -323,7 +323,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
   );
 
   return (
-    <div style={{ background:th.appBg, minHeight:"100%", position:"relative" }}>
+    <div style={{ background:th.appBg, minHeight:"100%", position:"relative", display:"flex", flexDirection:"column" }}>
       <GlobalNav
         activeScreen="recipes"
         onRecipes={() => {}}
@@ -431,8 +431,17 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
         </div>
       )}
 
-      {/* Recipe list */}
-      <div style={{ padding: ui.navPosition==="bottom" ? `6px ${ui.padX}px 60px` : "6px 20px 60px", display:"flex", flexDirection:"column", gap:10 }}>
+      {/* Recipe list — negli stili nuovi flex:1+overflowY riempie lo spazio
+          rimasto sotto ricerca/filtri, così <BottomNav> (sticky bottom:0,
+          sibling qui sotto) resta ancorato in fondo anche con pochi
+          risultati, invece di comparire subito dopo un elenco corto.
+          Classico non tocca questo ramo: scroll di pagina naturale come
+          sempre, nessun contenitore interno. */}
+      <div style={{
+        padding: ui.navPosition==="bottom" ? `6px ${ui.padX}px 60px` : "6px 20px 60px",
+        display:"flex", flexDirection:"column", gap:10,
+        ...(ui.navPosition==="bottom" ? { flex:1, overflowY:"auto" } : {}),
+      }}>
         {displayRecipes.length === 0
           ? <div style={{ textAlign:"center", padding:"40px 0", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>
               Nessuna ricetta trovata

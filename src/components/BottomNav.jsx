@@ -49,7 +49,11 @@ export default function BottomNav({
   // (ha già la propria striscia, vedi CookingMode.jsx).
   const showTimerStrip = ui.timer === "strip" && timers.length > 0 && !cookingModeActive;
   const anyExpired = timers.some(t => isExpired(t, now));
-  const timerStripText = timers.length === 1
+  // Con zero timer non c'è nulla da ordinare: calcolarlo comunque (anche se
+  // showTimerStrip=false non lo mostra) faceva leggere .endAt di un elemento
+  // undefined da un array vuoto ordinato — crash ad ogni schermata senza
+  // timer attivi, il caso normale. timers.length<=1 copre sia 0 sia 1.
+  const timerStripText = timers.length <= 1
     ? null // nome passo a sinistra / conto a destra, resi separatamente
     : `${timers.length} timer · ${(() => {
         // timer più vicino alla scadenza — la cifra unica quando sono più di uno

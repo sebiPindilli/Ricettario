@@ -5,6 +5,7 @@ import { normalizeRole, roleLabelLong } from "../utils/bookRoles.js";
 import OrganizeIcon from "../components/OrganizeIcon.jsx";
 import AppIcon from "../components/AppIcon.jsx";
 import Icon from "../components/Icon.jsx";
+import BottomNav from "../components/BottomNav.jsx";
 
 // Menù del contorno (Fase 11) — componenti a livello di modulo, non
 // dichiarati dentro il render: react-hooks/static-components li rifiuta
@@ -105,6 +106,18 @@ export default function LandingScreen({ recipes = [], bookName = "Il mio Ricetta
             {role === "admin" && <LandingRow ui={ui} th={th} icon="altro" label="Gestione utenti" fn={onAdminUsers}/>}
           </div>
         </div>
+
+        {/* Landing non è una delle 5 destinazioni, ma senza questa barra qui
+            non c'era alcun modo di raggiungerle: il menù del contorno non
+            collega più a Ricette/Ricordi/Frigo/Spesa/Organizza (erano nella
+            vecchia Landing, ora solo nella nav in basso) — un vicolo cieco
+            di navigazione. Nessuna voce risulta "attiva" qui. */}
+        <BottomNav
+          onRecipes={onRecipes}
+          onMemories={onMemories}
+          onFridge={onFridge}
+          onShopping={onShopping}
+        />
       </div>
     );
   }
