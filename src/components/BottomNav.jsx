@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { useTheme, useUiStyle, useNavActions } from "../context.js";
 import { F, MOBILE_BREAKPOINT_CSS } from "../data/constants.js";
+import { navPadBottom } from "../data/uiStyles.js";
 import Icon from "./Icon.jsx";
 
 // ══════════════════════════════════════════════════════════════
@@ -85,8 +86,10 @@ export default function BottomNav({
           borderTop: dark ? "none" : `1px solid ${ui.hairlineStrong}`,
           display: "flex",
           alignItems: "flex-end",
-          // 24px extra in fondo per la home bar iOS (safe area)
-          padding: dark ? "10px 6px 24px" : "10px 8px 26px",
+          // top/orizzontale da ui.navPad, il fondo è SEMPRE navPadBottom
+          // (10px + safe area) — solo punto di verità, mai un valore fisso
+          // duplicato qui (vedi Rischi noti in IMPLEMENTATION_PLAN.md).
+          padding: `${ui.navPad.split(" ").slice(0, 2).join(" ")} ${navPadBottom}`,
         }}
       >
         {NAV_ITEMS.map(item => {
