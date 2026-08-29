@@ -1,7 +1,6 @@
 import React, { useState, useRef } from "react";
 import { useTheme, useOnline, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
-import { sectionColor } from "../data/uiStyles.js";
 import { NUTRITION_DB } from "../data/nutrition.js";
 import { uid, dishPhotoOf, readImageFile, normName, ingDictIndex, resolveIngId, flattenIngredients } from "../utils/helpers.js";
 import { effectiveNutritionKey } from "../utils/aggregates.js";
@@ -30,7 +29,7 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
   // Colore per ricetta (classico) → colore di sezione (quaderno/schedario,
   // vedi DECISIONI.md: "il colore per ricetta sparisce, lo decide la
   // sezione"). Un solo punto di derivazione, riusato ovunque nella scheda.
-  const heroColor = ui.id === "classico" ? recipe.color : sectionColor(recipe.macroSection).full;
+  const heroColor = ui.sectionColor(recipe.macroSection) ?? recipe.color;
   const isOnline = useOnline();
   const [tab, setTab] = useState("ingredienti");
   const [toast, setToast] = useState({ msg:"", visible:false });

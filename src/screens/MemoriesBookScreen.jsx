@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useTheme, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
-import { sectionColor } from "../data/uiStyles.js";
 import { memorySortKey, memoryPeriodLabel } from "../utils/helpers.js";
 import MemoryPhoto from "../components/MemoryPhoto.jsx";
 import PhotoLightbox from "../components/PhotoLightbox.jsx";
@@ -64,7 +63,7 @@ const MemoryOpenPage = ({ mems, linkedFor, onRecipe, th, confirmDeleteId, onRequ
             {mem.story && <div style={{ fontFamily:F.body, fontSize:13, color:th.appInk, lineHeight:1.6, marginBottom:10 }}>{mem.story}</div>}
             <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginTop:4 }}>
               {linked.map(r => {
-                const c = ui.id==="classico" ? r.color : sectionColor(r.macroSection).full;
+                const c = ui.sectionColor(r.macroSection) ?? r.color;
                 return (
                   <button key={r.id} onClick={() => onRecipe(r)} style={{
                     display:"flex", alignItems:"center", gap:5,
@@ -243,7 +242,7 @@ export default function MemoriesBookScreen({ recipes, onBack, onRecipe, onRecipe
                         {mem.story && <div style={{ fontFamily:F.body, fontSize:11, color:th.appFaded, lineHeight:1.45, marginBottom:5, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>{mem.story}</div>}
                         <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, marginBottom:6 }}>{ui.id==="classico" ? "📅 " : ""}{mem.date}</div>
                         {linked.map(r => {
-                          const c = ui.id==="classico" ? r.color : sectionColor(r.macroSection).full;
+                          const c = ui.sectionColor(r.macroSection) ?? r.color;
                           return (
                             <button key={r.id} onClick={() => onRecipe(r)} style={{
                               display:"flex", alignItems:"center", gap:5, marginBottom:3,

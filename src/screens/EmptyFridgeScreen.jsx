@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useTheme, useUiStyle } from "../context.js";
 import { F, INGREDIENT_CATEGORIES, MACRO_SECTIONS } from "../data/constants.js";
-import { sectionColor } from "../data/uiStyles.js";
 import {
   buildFridgeItems, ingDictIndex, flattenIngredients, ingredientToText,
   resolveIngId, sortCategoriesBaseFirst,
@@ -430,7 +429,7 @@ export default function EmptyFridgeScreen({
                   borderRadius:16, overflow:"hidden",
                 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px" }}>
-                    <div style={{ width:44, height:44, borderRadius:12, background: ui.id==="classico" ? recipe.color : sectionColor(recipe.macroSection).full, color:"#fff", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>{recipe.dishPhoto ? <span style={{ fontSize:22 }}>📸</span> : <ChosenIcon emoji={recipe.emoji} icon={recipe.icon} size={22} />}</div>
+                    <div style={{ width:44, height:44, borderRadius:12, background: ui.sectionColor(recipe.macroSection) ?? recipe.color, color:"#fff", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>{recipe.dishPhoto ? <span style={{ fontSize:22 }}>📸</span> : <ChosenIcon emoji={recipe.emoji} icon={recipe.icon} size={22} />}</div>
                     <div style={{ flex:1 }}>
                       <div style={{ fontFamily:F.display, fontSize:16, color:th.appInk }}>{recipe.title}</div>
                       <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>{recipe.category} · {recipe.prepTime+recipe.cookTime} min</div>
