@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useTheme } from "../context.js";
+import { useTheme, useUiStyle } from "../context.js";
 import { F, DEFAULT_UNIT_SUGGESTIONS } from "../data/constants.js";
 import { moveItemsBetweenSections } from "../utils/helpers.js";
 import AutocompleteInput from "./AutocompleteInput.jsx";
@@ -9,6 +9,7 @@ import Toast from "./Toast.jsx";
 // ── Editable sectioned ingredient list ───────────────────────────
 export default function EditSectionedList({ data, color, itemType, onUpdate, nameSuggestions = [], unitSuggestions = DEFAULT_UNIT_SUGGESTIONS }) {
   const th = useTheme();
+  const ui = useUiStyle();
   const sections = data;
   const [nutriOpen, setNutriOpen] = useState(null); // "si_ii" con la riga % aperta
   const [nutriInfo, setNutriInfo] = useState(false); // popup "i" mostrato mentre premuto
@@ -126,11 +127,17 @@ export default function EditSectionedList({ data, color, itemType, onUpdate, nam
               const unit = ing.unit || "";
               const patch = (p) => updateItem(si, ii, { ...ing, ...p });
               const isQB = unit.toLowerCase() === "q.b.";
-              const inputBase = {
+              const inputBase = ui.id === "classico" ? {
                 padding:"9px 10px",
                 border:`1.5px solid ${th.appBorder}`,
                 borderRadius:10, background:th.appCard,
                 fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none",
+              } : {
+                // Un solo stile di campo per tutta l'app (DECISIONI.md §Nuova ricetta / Fase 8)
+                padding:"10px 10px",
+                border:`1px solid ${ui.border}`,
+                borderRadius:11, background:ui.card,
+                fontFamily:F.body, fontSize:13, color:ui.ink, outline:"none",
               };
               const disabledStyle = { opacity:0.4, pointerEvents:"none" };
               const hasPct = typeof ing.nutriPct === "number" ? ing.nutriPct < 100 : (ing.nutriPct !== "" && ing.nutriPct != null && parseFloat(String(ing.nutriPct).replace(",", ".")) < 100);
@@ -149,30 +156,47 @@ export default function EditSectionedList({ data, color, itemType, onUpdate, nam
                     <span style={{ color:th.appAccent2, fontSize:12, flexShrink:0 }}>✦</span>
                   )}
                   <div style={{ display:"flex", gap:5, alignItems:"center", flex:1, minWidth:0, ...(selectMode ? disabledStyle : {}) }}>
-                  <AutocompleteInput
-                    value={name}
-                    onChange={v => patch({ name: v })}
-                    suggestions={nameSuggestions}
-                    placeholder="Ingrediente"
-                    wrapperStyle={{ flex:2.2, minWidth:0 }}
-                    inputStyle={inputBase}
-                  />
-                  <input
-                    value={isQB ? "" : qty}
-                    onChange={e => patch({ qty: e.target.value })}
-                    placeholder="Qtà"
-                    inputMode="decimal"
-                    disabled={isQB}
-                    style={{ ...inputBase, flex:0.9, minWidth:0, textAlign:"center", ...(isQB ? disabledStyle : {}) }}
-                  />
-                  <AutocompleteInput
-                    value={isQB ? "" : unit}
-                    onChange={v => patch({ unit: v })}
-                    suggestions={unitSuggestions}
-                    placeholder="Unità"
-                    wrapperStyle={{ flex:1.3, minWidth:0, ...(isQB ? disabledStyle : {}) }}
-                    inputStyle={inputBase}
-                  />
+                  {(() => {
+                    const qtyField = (
+                      <input
+                        key="qty"
+                        value={isQB ? "" : qty}
+                        onChange={e => patch({ qty: e.target.value })}
+                        placeholder="Qtà"
+                        inputMode="decimal"
+                        disabled={isQB}
+                        style={{ ...inputBase, flex:0.9, minWidth:0, textAlign:"center", ...(isQB ? disabledStyle : {}) }}
+                      />
+                    );
+                    const unitField = (
+                      <AutocompleteInput
+                        key="unit"
+                        value={isQB ? "" : unit}
+                        onChange={v => patch({ unit: v })}
+                        suggestions={unitSuggestions}
+                        placeholder="Unità"
+                        wrapperStyle={{ flex:1.3, minWidth:0, ...(isQB ? disabledStyle : {}) }}
+                        inputStyle={inputBase}
+                      />
+                    );
+                    const nameField = (
+                      <AutocompleteInput
+                        key="name"
+                        value={name}
+                        onChange={v => patch({ name: v })}
+                        suggestions={nameSuggestions}
+                        placeholder="Ingrediente"
+                        wrapperStyle={{ flex:2.2, minWidth:0 }}
+                        inputStyle={inputBase}
+                      />
+                    );
+                    // "Tre campi in riga: quantità, unità, nome" nei nuovi
+                    // stili (DECISIONI.md §Nuova ricetta) — in classico
+                    // l'ordine resta nome, quantità, unità come sempre.
+                    return ui.id === "classico"
+                      ? [nameField, qtyField, unitField]
+                      : [qtyField, unitField, nameField];
+                  })()}
                   {/* Spunta q.b. — quanto basta */}
                   <button
                     onClick={() => patch(isQB ? { qty:"", unit:"" } : { qty:"", unit:"q.b." })}
