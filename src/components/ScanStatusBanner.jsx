@@ -1,5 +1,6 @@
 import { useScanExtraction } from "../context.js";
 import { F } from "../data/constants.js";
+import AppIcon from "./AppIcon.jsx";
 
 // ── Banner globale di stato dell'estrazione AI — visibile solo quando
 // l'utente NON è già sullo screen che l'ha avviata (quello screen mostra
@@ -20,7 +21,8 @@ export default function ScanStatusBanner({ isOnExtractionScreen, onOpenResult, o
     ? "🍳 Estrazione ricetta in corso…"
     : isDone
     ? `🍳 "${title && title !== "?" ? title : "Ricetta"}" è pronta — tocca per rivedere`
-    : "⚠️ Estrazione non riuscita — tocca per i dettagli";
+    : "Estrazione non riuscita — tocca per i dettagli";
+  const isFailed = !isRunning && !isDone;
 
   const handleTap = () => {
     if (isRunning) return;
@@ -34,8 +36,11 @@ export default function ScanStatusBanner({ isOnExtractionScreen, onOpenResult, o
         flex:1, minWidth:0, border:"none", background:"none", color:"#fff",
         fontFamily:F.ui, fontSize:11, fontWeight:600, textAlign:"left",
         padding:"0 12px", cursor: isRunning ? "default" : "pointer",
-        overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
-      }}>{label}</button>
+        display:"flex", alignItems:"center", gap:6,
+      }}>
+        {isFailed && <AppIcon emoji="⚠️" icon="avviso" size={12} />}
+        <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{label}</span>
+      </button>
       {!isRunning && (
         <button onClick={dismissJob} title="Chiudi" style={{
           flexShrink:0, background:"rgba(0,0,0,0.15)", border:"none",

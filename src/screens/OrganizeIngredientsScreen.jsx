@@ -1249,7 +1249,7 @@ export default function OrganizeIngredientsScreen({
             <div style={{ fontFamily:F.body, fontSize:14.5, fontWeight:700, color:th.appInk, textAlign:"center" }}>
               {isAgg && <span style={{ color:th.appAccent }}>⊕ </span>}
               {display.charAt(0).toUpperCase() + display.slice(1)}
-              {hasIssues && <span style={{ fontSize:11, marginLeft:5 }}>⚠️</span>}
+              {hasIssues && <span style={{ fontSize:11, marginLeft:5, display:"inline-flex", verticalAlign:"middle" }}><AppIcon emoji="⚠️" icon="avviso" size={11} /></span>}
             </div>
             {isAgg && <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, marginTop:1 }}>{(agg.members||[]).map(dictName).join(" · ")}</div>}
           </div>
@@ -1632,7 +1632,7 @@ export default function OrganizeIngredientsScreen({
 
       {/* Filtro: tutti / solo da gestire */}
       <div style={{ padding:"8px 18px 0", display:"flex", gap:6 }}>
-        {[[false, "Tutti"], [true, "⚠️ Da gestire"]].map(([val, label]) => {
+        {[[false, "Tutti"], [true, "Da gestire"]].map(([val, label]) => {
           const on = issueMode === val;
           return (
             <button
@@ -1647,8 +1647,9 @@ export default function OrganizeIngredientsScreen({
                 background: on ? (val ? "#C4593A18" : th.appAccent + "18") : "transparent",
                 color: on ? (val ? "#C4593A" : th.appAccent) : th.appFaded,
                 fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
+                display:"flex", alignItems:"center", justifyContent:"center", gap:5,
               }}
-            >{label}</button>
+            >{val && <AppIcon emoji="⚠️" icon="avviso" size={12} />} {label}</button>
           );
         })}
       </div>

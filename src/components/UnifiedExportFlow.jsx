@@ -749,8 +749,9 @@ export default function UnifiedExportFlow({
         <Title th={th}>🔗 {result.links.length > 1 ? "Link creati" : "Link creato"}</Title>
         <Sub th={th}>Validi 30 giorni, revocabili in ogni momento da "I miei link condivisi".</Sub>
         {result.links.some(l => l.photosDegraded) && (
-          <div style={{ fontFamily: F.ui, fontSize: 11, color: "#C4593A", background: "#C4593A18", border: "1px solid #C4593A40", borderRadius: 10, padding: "8px 10px", marginBottom: 10 }}>
-            ⚠️ {result.links.filter(l => l.photosDegraded).length === result.links.length ? "Foto/ricordi non inclusi" : "Foto/ricordi non inclusi in alcuni link"}: duplicazione non riuscita, il link è stato creato comunque senza.
+          <div style={{ fontFamily: F.ui, fontSize: 11, color: "#C4593A", background: "#C4593A18", border: "1px solid #C4593A40", borderRadius: 10, padding: "8px 10px", marginBottom: 10, display: "flex", gap: 6 }}>
+            <span style={{ flexShrink: 0 }}><AppIcon emoji="⚠️" icon="avviso" size={11} /></span>
+            <span>{result.links.filter(l => l.photosDegraded).length === result.links.length ? "Foto/ricordi non inclusi" : "Foto/ricordi non inclusi in alcuni link"}: duplicazione non riuscita, il link è stato creato comunque senza.</span>
           </div>
         )}
         <div style={{ flex: 1, overflowY: "auto", marginBottom: 12 }}>
@@ -758,7 +759,7 @@ export default function UnifiedExportFlow({
             const url = `${window.location.origin}/?shared=${l.shareId}`;
             return (
               <div key={l.shareId} style={{ marginBottom: 10 }}>
-                <div style={{ fontFamily: F.ui, fontSize: 11.5, color: th.appInk, fontWeight: 700, marginBottom: 4 }}>{l.recipeTitle}{l.photosDegraded ? " ⚠️" : ""}</div>
+                <div style={{ fontFamily: F.ui, fontSize: 11.5, color: th.appInk, fontWeight: 700, marginBottom: 4, display: "flex", alignItems: "center", gap: 5 }}>{l.recipeTitle}{l.photosDegraded && <AppIcon emoji="⚠️" icon="avviso" size={11} />}</div>
                 <textarea readOnly value={url} onClick={e => e.target.select()} style={{
                   width: "100%", height: 40, resize: "none", borderRadius: 10, padding: "8px 10px",
                   border: `1.5px solid ${th.appBorder}`, background: th.appCard, color: th.appInk,

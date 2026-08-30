@@ -58,7 +58,7 @@ export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemor
       setBetaEnabled(next);
       showToast(next ? "🟢 Beta riattivata" : "⚪ Beta disattivata");
     } catch {
-      showToast("⚠️ Cambio stato beta non riuscito");
+      showToast(<><AppIcon emoji="⚠️" icon="avviso" size={13} /> Cambio stato beta non riuscito</>);
     } finally {
       setBetaBusy(false);
     }
@@ -75,7 +75,7 @@ export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemor
       setIconStyleState(next);
       showToast(next === "svg" ? "🎨 Icone SVG attivate per tutti" : "🎨 Emoji ripristinate per tutti");
     } catch {
-      showToast("⚠️ Cambio stile icone non riuscito");
+      showToast(<><AppIcon emoji="⚠️" icon="avviso" size={13} /> Cambio stile icone non riuscito</>);
     } finally {
       setIconStyleBusy(false);
     }
@@ -110,7 +110,7 @@ export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemor
       await navigator.clipboard.writeText(buildInviteMessage());
       showToast("📋 Copiato negli appunti");
     } catch {
-      showToast("⚠️ Copia non riuscita");
+      showToast(<><AppIcon emoji="⚠️" icon="avviso" size={13} /> Copia non riuscita</>);
     }
   };
 
@@ -119,7 +119,7 @@ export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemor
       await setAllowlistRole(email, role);
       setUsers((list) => list.map((u) => (u.email === email ? { ...u, role } : u)));
     } catch {
-      showToast("⚠️ Cambio ruolo non riuscito");
+      showToast(<><AppIcon emoji="⚠️" icon="avviso" size={13} /> Cambio ruolo non riuscito</>);
     }
   };
 
@@ -131,7 +131,7 @@ export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemor
       showToast(<><AppIcon emoji="🗑️" icon="elimina" size={13} /> Utente rimosso</>);
     } catch {
       setPendingRemove(null);
-      showToast("⚠️ Rimozione non riuscita");
+      showToast(<><AppIcon emoji="⚠️" icon="avviso" size={13} /> Rimozione non riuscita</>);
     }
   };
 

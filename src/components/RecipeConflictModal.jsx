@@ -78,7 +78,7 @@ export default function RecipeConflictModal({ conflict, onKeepMine, onDiscardMin
   return (
     <div style={{ position: "absolute", inset: 0, zIndex: 700, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
       <div style={{ width: "100%", maxHeight: "88%", background: th.appBg, borderRadius: 20, padding: "20px 18px", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <div style={{ fontSize: 26, textAlign: "center", marginBottom: 6 }}>⚠️</div>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 6 }}><AppIcon emoji="⚠️" icon="avviso" size={26} /></div>
         <div style={{ fontFamily: F.display, fontSize: 17, color: th.appInk, textAlign: "center", marginBottom: 4 }}>
           {intent === "delete" ? "Conflitto durante l'eliminazione" : "Conflitto di modifica"}
         </div>
