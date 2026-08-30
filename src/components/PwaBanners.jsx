@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
+import AppIcon from "./AppIcon.jsx";
 
 const IOS_DISMISS_KEY = "ricettario:iosInstallDismissed";
 
@@ -43,7 +44,7 @@ function UpdateBanner() {
       background:th.appInk, color:th.appBg, borderRadius:14, padding:"11px 14px",
       display:"flex", alignItems:"center", gap:10, boxShadow:"0 4px 20px rgba(0,0,0,0.3)",
     }}>
-      <span style={{ flex:1, minWidth:0, fontFamily:F.ui, fontSize:12.5 }}>🔄 Nuova versione disponibile.</span>
+      <span style={{ flex:1, minWidth:0, fontFamily:F.ui, fontSize:12.5, display:"flex", alignItems:"center", gap:6 }}><AppIcon emoji="🔄" icon="aggiorna" size={13} /> Nuova versione disponibile.</span>
       <button onClick={() => updateServiceWorker(true)} style={{
         flexShrink:0, padding:"8px 14px", borderRadius:10, border:"none",
         background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer",

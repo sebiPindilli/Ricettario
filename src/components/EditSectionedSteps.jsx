@@ -105,7 +105,7 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
   // un solo input, il target (quale passaggio) è tenuto in pendingTarget.
   // Richiede connessione (Storage non ha una coda offline come Firestore).
   const openPhotoPicker = (si, ii) => {
-    if (!isOnline) { showToast("📡 Serve una connessione per aggiungere una foto"); return; }
+    if (!isOnline) { showToast(<><AppIcon emoji="📡" icon="connessione" size={13} /> Serve una connessione per aggiungere una foto</>); return; }
     setPendingTarget({ si, ii });
     fileInputRef.current && fileInputRef.current.click();
   };

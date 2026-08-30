@@ -67,6 +67,7 @@ import OrganizeIcon from "./components/OrganizeIcon.jsx";
 import BackBtn from "./components/BackBtn.jsx";
 import Divider from "./components/Divider.jsx";
 import Toast from "./components/Toast.jsx";
+import AppIcon from "./components/AppIcon.jsx";
 import SectionBadge from "./components/SectionBadge.jsx";
 import Pill from "./components/Pill.jsx";
 import ProgressBar from "./components/ProgressBar.jsx";
@@ -2481,7 +2482,8 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
                   <button onClick={() => resolveShopUpdate("update")} style={{
                     padding:"13px", borderRadius:12, border:"none", background:th.appAccent,
                     color:"#fff", fontFamily:F.ui, fontSize:13, fontWeight:700, cursor:"pointer",
-                  }}>🔄 Aggiorna le quantità nella spesa</button>
+                    display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+                  }}><AppIcon emoji="🔄" icon="aggiorna" size={14} /> Aggiorna le quantità nella spesa</button>
                   <button onClick={() => resolveShopUpdate("keep")} style={{
                     padding:"13px", borderRadius:12, border:`1.5px solid ${th.appBorder}`, background:"transparent",
                     color:th.appInk, fontFamily:F.ui, fontSize:13, fontWeight:600, cursor:"pointer",

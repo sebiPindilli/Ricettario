@@ -1,4 +1,5 @@
 import { F } from "../data/constants.js";
+import AppIcon from "./AppIcon.jsx";
 
 export default function PhotoLightbox({ photo, caption, date, isImage = false, onClose }) {
   // Le foto sono URL di Firebase Storage: un salvataggio "vero" via
@@ -93,7 +94,7 @@ export default function PhotoLightbox({ photo, caption, date, isImage = false, o
             transition:"all 0.2s",
           }}
         >
-          ⬇️ Salva in galleria
+          <AppIcon emoji="⬇️" icon="scarica" size={15} /> Salva in galleria
         </button>
       )}
 

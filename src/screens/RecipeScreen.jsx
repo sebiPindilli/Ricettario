@@ -112,7 +112,7 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
   // una coda offline come Firestore, vedi services/bookStore.js): bloccato
   // qui invece che lasciar fallire l'upload in silenzio più avanti.
   const openDishPhotoPicker = () => {
-    if (!isOnline) { showToast("📡 Serve una connessione per aggiungere una foto"); return; }
+    if (!isOnline) { showToast(<><AppIcon emoji="📡" icon="connessione" size={13} /> Serve una connessione per aggiungere una foto</>); return; }
     dishPhotoInputRef.current && dishPhotoInputRef.current.click();
   };
   // La dataURL grezza appena scelta non va mai dritta in onUpdate: prima

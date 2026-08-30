@@ -347,8 +347,8 @@ export default function BooksScreen({
                 }}
               >
                 {b.id === defaultBookId
-                  ? <><span>⭐</span> Predefinito all'avvio dell'app</>
-                  : <><span style={{ opacity:0.5 }}>☆</span> <span style={{ textDecoration:"underline", textUnderlineOffset:2 }}>Imposta come predefinito all'avvio</span></>}
+                  ? <><AppIcon emoji="⭐" icon="preferito" size={11} /> Predefinito all'avvio dell'app</>
+                  : <><span style={{ opacity:0.5, display:"flex" }}><AppIcon emoji="☆" icon="preferito-vuoto" size={11} /></span> <span style={{ textDecoration:"underline", textUnderlineOffset:2 }}>Imposta come predefinito all'avvio</span></>}
               </button>
 
               {/* Backup orfano (il ricettario a cui era associato non esiste
@@ -375,8 +375,8 @@ export default function BooksScreen({
                         : <><AppIcon emoji="⬇️" icon="scarica" size={11} /> Scarica backup</>}
                     </button>
                   )}
-                  <button disabled={restoreBusy && restoreTargetId === b.id} onClick={() => { setRestoreTargetId(b.id); setRestoreError(null); setRestoreSuccess(null); fileInputRef.current?.click(); }} style={{ padding:"6px 10px", borderRadius:8, border:`1px solid ${th.appBorder}`, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:10, fontWeight:600, cursor:"pointer" }}>
-                    {restoreBusy && restoreTargetId === b.id ? "Ripristino…" : "📥 Ripristina backup qui"}
+                  <button disabled={restoreBusy && restoreTargetId === b.id} onClick={() => { setRestoreTargetId(b.id); setRestoreError(null); setRestoreSuccess(null); fileInputRef.current?.click(); }} style={{ padding:"6px 10px", borderRadius:8, border:`1px solid ${th.appBorder}`, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:10, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}>
+                    {restoreBusy && restoreTargetId === b.id ? "Ripristino…" : <><AppIcon emoji="📥" icon="importa" size={11} /> Ripristina backup qui</>}
                   </button>
                 </div>
               )}
@@ -395,7 +395,7 @@ export default function BooksScreen({
                   selezione di ricette (vedi UnifiedExportFlow.jsx). */}
               {active && !isBeta && otherBooks.length > 0 && (
                 <div style={{ marginTop:10, paddingTop:10, borderTop:`1px dashed ${th.appBorder}` }}>
-                  <div style={{ fontFamily:F.ui, fontSize:9, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:6 }}>🔀 Trasferisci tutto questo ricettario</div>
+                  <div style={{ fontFamily:F.ui, fontSize:9, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:6, display:"flex", alignItems:"center", gap:4 }}><AppIcon emoji="🔀" icon="trasferisci" size={10} /> Trasferisci tutto questo ricettario</div>
                   <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                     {otherBooks.map(ob => (
                       pendingTransferTarget === ob.id ? (
@@ -435,7 +435,7 @@ export default function BooksScreen({
                           </>
                         ) : (
                           <>
-                            <button onClick={() => setPendingBackupCopyId(bk.id)} style={{ padding:"5px 9px", borderRadius:8, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:10.5, fontWeight:700, cursor:"pointer" }}>🔀 Copia tutto qui</button>
+                            <button onClick={() => setPendingBackupCopyId(bk.id)} style={{ padding:"5px 9px", borderRadius:8, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:10.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}><AppIcon emoji="🔀" icon="trasferisci" size={11} /> Copia tutto qui</button>
                             <button onClick={() => setPendingDelete(bk.id)} title="Elimina backup" style={{ padding:"5px 9px", borderRadius:8, border:`1px solid ${th.appBorder}`, background:"transparent", color:DANGER, fontFamily:F.ui, fontSize:10.5, cursor:"pointer", display:"flex", alignItems:"center" }}><AppIcon emoji="🗑️" icon="elimina" size={13} /></button>
                           </>
                         )}

@@ -6,6 +6,7 @@ import BottomNav from "./BottomNav.jsx";
 import ScreenHeader from "./ScreenHeader.jsx";
 import RecipeCardBook from "./RecipeCardBook.jsx";
 import RecipeFilterBar from "./RecipeFilterBar.jsx";
+import AppIcon from "./AppIcon.jsx";
 import { guideRicette } from "../data/guideContent.jsx";
 
 // Wrapper che usa RecipeFilterBar sopra la pagina del libro, restringendo le pagine sfogliabili al filtro
@@ -139,7 +140,8 @@ export default function RecipeFilterBarBook({ recipes, extraTagGroups, sectionLi
               </div>
             ) : showFavorites ? (
               <div style={{ padding:"60px 30px", textAlign:"center", fontFamily:F.ui, fontSize:13, color:th.bookInk || "#5a4f42" }}>
-                ⭐ Nessuna ricetta preferita.<br/>Segna una ricetta col ☆ nella sua scheda per ritrovarla qui.
+                <div style={{ display:"flex", justifyContent:"center", marginBottom:6 }}><AppIcon emoji="⭐" icon="preferito" size={16} /></div>
+                Nessuna ricetta preferita.<br/>Segna una ricetta col ☆ nella sua scheda per ritrovarla qui.
               </div>
             ) : null}
           </div>

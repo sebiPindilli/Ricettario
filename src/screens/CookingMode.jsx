@@ -179,7 +179,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
             color:"#fff", fontSize:13,
             display:"flex", alignItems:"center", justifyContent:"center",
           }}
-        >🏁</button>
+        ><AppIcon emoji="🏁" icon="bandiera" size={13} /></button>
       </div>
     </div>
   );

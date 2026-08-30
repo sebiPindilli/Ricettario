@@ -313,7 +313,7 @@ export default function OrganizeIngredientsScreen({
                       {Array.from(new Set(g.members.map(memberOrAggName))).join(" · ")}
                     </div>
                   </div>
-                  <button onClick={() => g.pairs.forEach(([a, b]) => onRestoreSimilarity && onRestoreSimilarity(a, b))} style={{ background:"transparent", border:`1.5px solid ${th.appBorder}`, borderRadius:9, padding:"7px 11px", color:th.appFaded, fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer" }}>🔄 Ripristina</button>
+                  <button onClick={() => g.pairs.forEach(([a, b]) => onRestoreSimilarity && onRestoreSimilarity(a, b))} style={{ background:"transparent", border:`1.5px solid ${th.appBorder}`, borderRadius:9, padding:"7px 11px", color:th.appFaded, fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="🔄" icon="ripristina" size={11} /> Ripristina</button>
                 </div>
               ))}
             </div>
@@ -584,7 +584,7 @@ export default function OrganizeIngredientsScreen({
               </div>
               {customUnitForm.error && <div style={{ fontFamily:F.ui, fontSize:10.5, color:"#C4593A", marginTop:8 }}>{customUnitForm.error}</div>}
               <div style={{ display:"flex", gap:8, marginTop:10 }}>
-                <button onClick={submitForm} style={{ padding:"7px 14px", borderRadius:9, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer" }}>💾 Salva</button>
+                <button onClick={submitForm} style={{ padding:"7px 14px", borderRadius:9, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="💾" icon="salva" size={12} /> Salva</button>
                 <button onClick={cancelForm} style={{ padding:"7px 14px", borderRadius:9, border:`1px solid ${th.appBorder}`, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:11.5, cursor:"pointer" }}>Annulla</button>
               </div>
             </div>
@@ -1036,7 +1036,7 @@ export default function OrganizeIngredientsScreen({
             );
           })}
         </div>
-        <button onClick={save} style={{ marginTop:9, padding:"7px 14px", borderRadius:9, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer" }}>💾 Salva</button>
+        <button onClick={save} style={{ marginTop:9, padding:"7px 14px", borderRadius:9, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="💾" icon="salva" size={12} /> Salva</button>
       </div>
     );
   };
@@ -1109,7 +1109,7 @@ export default function OrganizeIngredientsScreen({
             )}
           </div>
         )}
-        <button onClick={save} style={{ marginTop:9, padding:"7px 14px", borderRadius:9, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer" }}>💾 Salva</button>
+        <button onClick={save} style={{ marginTop:9, padding:"7px 14px", borderRadius:9, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="💾" icon="salva" size={12} /> Salva</button>
       </div>
     );
   };
@@ -1169,7 +1169,7 @@ export default function OrganizeIngredientsScreen({
             </div>
           );
         })}
-        <button onClick={save} style={{ marginTop:3, padding:"7px 14px", borderRadius:9, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer" }}>💾 Salva</button>
+        <button onClick={save} style={{ marginTop:3, padding:"7px 14px", borderRadius:9, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="💾" icon="salva" size={12} /> Salva</button>
       </div>
     );
   };

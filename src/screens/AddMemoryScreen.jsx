@@ -40,7 +40,7 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
 
   // Richiede connessione (Storage non ha una coda offline come Firestore).
   const openPhotoPicker = () => {
-    if (!isOnline) { showToast("📡 Serve una connessione per aggiungere una foto"); return; }
+    if (!isOnline) { showToast(<><AppIcon emoji="📡" icon="connessione" size={13} /> Serve una connessione per aggiungere una foto</>); return; }
     fileInputRef.current && fileInputRef.current.click();
   };
 
@@ -123,7 +123,8 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
                 background:"rgba(0,0,0,0.6)", color:"#fff", border:"none",
                 borderRadius:10, padding:"7px 12px", fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
                 opacity: isOnline ? 1 : 0.5,
-              }}>🔄 Cambia foto</button>
+                display:"flex", alignItems:"center", gap:5,
+              }}><AppIcon emoji="🔄" icon="aggiorna" size={11} /> Cambia foto</button>
             </div>
           ) : (
             <button onClick={openPhotoPicker} style={{

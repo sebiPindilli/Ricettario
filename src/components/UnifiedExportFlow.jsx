@@ -336,7 +336,7 @@ export default function UnifiedExportFlow({
             {isNew && <span style={{ fontWeight: 400, fontSize: 11, opacity: 0.85 }}>scade fra 30 giorni, revocabile in ogni momento</span>}
           </Primary>
           <Primary th={th} onClick={() => { setFormat("pdf"); goPrefs(); }} style={isNew ? { display: "flex", flexDirection: "column", gap: 2 } : undefined}>
-            <span>📄 PDF <span style={{ fontWeight: 400 }}>— consigliato per persone esterne</span></span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><AppIcon emoji="📄" icon="pdf" size={13} /> PDF <span style={{ fontWeight: 400 }}>— consigliato per persone esterne</span></span>
             {isNew && <span style={{ fontWeight: 400, fontSize: 11, opacity: 0.85 }}>si apre in una nuova scheda, da lì stampi o salvi</span>}
           </Primary>
           <Ghost th={th} onClick={() => setStep("dest")} style={{ border: "none", color: th.appFaded }}>‹ Indietro</Ghost>
@@ -658,7 +658,7 @@ export default function UnifiedExportFlow({
                     </div>
                     <span onClick={e => { e.stopPropagation(); setEditingTemplate(tpl); }} style={{ fontSize: 15, padding: 4, cursor: "pointer", display: "flex" }} title="Modifica"><AppIcon emoji="✏️" icon="modifica" size={15} /></span>
                     {defaultTemplateId !== tpl.id && (
-                      <span onClick={e => { e.stopPropagation(); onSetDefaultTemplate(tpl.id); }} style={{ fontSize: 15, padding: 4, cursor: "pointer" }} title="Imposta come predefinito">☆</span>
+                      <span onClick={e => { e.stopPropagation(); onSetDefaultTemplate(tpl.id); }} style={{ fontSize: 15, padding: 4, cursor: "pointer", display: "flex" }} title="Imposta come predefinito"><AppIcon emoji="☆" icon="preferito-vuoto" size={15} /></span>
                     )}
                   </button>
                 ))}
@@ -730,7 +730,7 @@ export default function UnifiedExportFlow({
         </div>
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
           <Ghost th={th} onClick={() => setStep("format")} style={{ flex: 1 }}>‹ Indietro</Ghost>
-          <Primary th={th} onClick={submitPDF} style={{ flex: 2 }}>📄 Genera PDF</Primary>
+          <Primary th={th} onClick={submitPDF} style={{ flex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><AppIcon emoji="📄" icon="pdf" size={14} /> Genera PDF</Primary>
         </div>
       </Panel>
     );
@@ -798,7 +798,7 @@ export default function UnifiedExportFlow({
   if (result?.kind === "pdf") {
     return (
       <Panel th={th}>
-        <Title th={th}>📄 PDF generato</Title>
+        <Title th={th}><span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}><AppIcon emoji="📄" icon="pdf" size={17} /> PDF generato</span></Title>
         <Sub th={th}>Si è aperta una nuova scheda: da lì puoi stampare o salvare come PDF.</Sub>
         <Ghost th={th} onClick={onClose}>Chiudi</Ghost>
       </Panel>
