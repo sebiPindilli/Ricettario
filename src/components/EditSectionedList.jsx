@@ -5,6 +5,7 @@ import { moveItemsBetweenSections } from "../utils/helpers.js";
 import AutocompleteInput from "./AutocompleteInput.jsx";
 import SectionMovePicker from "./SectionMovePicker.jsx";
 import Toast from "./Toast.jsx";
+import AppIcon from "./AppIcon.jsx";
 
 // ── Editable sectioned ingredient list ───────────────────────────
 export default function EditSectionedList({ data, color, itemType, onUpdate, nameSuggestions = [], unitSuggestions = DEFAULT_UNIT_SUGGESTIONS }) {
@@ -106,8 +107,8 @@ export default function EditSectionedList({ data, color, itemType, onUpdate, nam
             {sections.length > 1 && (
               <button onClick={() => removeSection(si)} style={{
                 background:"none", border:"none", color:"#ccc",
-                fontSize:16, cursor:"pointer", flexShrink:0,
-              }}>🗑️</button>
+                fontSize:16, cursor:"pointer", flexShrink:0, display:"flex",
+              }}><AppIcon emoji="🗑️" icon="elimina" size={16} /></button>
             )}
           </div>
           {sec.section && sec.items.length === 0 && (

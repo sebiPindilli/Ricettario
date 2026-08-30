@@ -4,6 +4,7 @@ import { uid, sortSectionsAltroLast } from "../utils/helpers.js";
 import SectionCategoryIcon from "./SectionCategoryIcon.jsx";
 import ChosenIcon from "./ChosenIcon.jsx";
 import FoodIconGrid from "./FoodIconGrid.jsx";
+import AppIcon from "./AppIcon.jsx";
 
 // Primo livello Emoji/SVG condiviso dai due popup sotto (nuova sezione,
 // modifica icona di una sezione esistente).
@@ -79,7 +80,8 @@ export default function SectionPicker({ value, onChange, sections = MACRO_SECTIO
           marginTop:8, background:"none", border:"none", cursor:"pointer",
           fontFamily:F.ui, fontSize:11, color:"#7A6E5F",
           textDecoration:"underline", textUnderlineOffset:3, padding:0,
-        }}>✏️ Modifica sezioni esistenti</button>
+          display:"flex", alignItems:"center", gap:4,
+        }}><AppIcon emoji="✏️" icon="modifica" size={11} /> Modifica sezioni esistenti</button>
       )}
 
       {/* Popup nuova sezione */}
@@ -191,7 +193,7 @@ export default function SectionPicker({ value, onChange, sections = MACRO_SECTIO
                         confirmDelId === sec.id ? (
                           <button onClick={() => { onDeleteSection(sec.id); if (value === sec.id) onChange("altro"); setConfirmDelId(null); }} style={{ flexShrink:0, padding:"8px 10px", border:"none", borderRadius:10, background:"#D93025", color:"#fff", fontFamily:F.ui, fontSize:10, fontWeight:700, cursor:"pointer" }}>Confermi?</button>
                         ) : (
-                          <button onClick={() => setConfirmDelId(sec.id)} title="Elimina sezione" style={{ flexShrink:0, background:"none", border:"none", color:"#ccc", fontSize:15, cursor:"pointer", padding:"0 2px" }}>🗑️</button>
+                          <button onClick={() => setConfirmDelId(sec.id)} title="Elimina sezione" style={{ flexShrink:0, background:"none", border:"none", color:"#ccc", fontSize:15, cursor:"pointer", padding:"0 2px", display:"flex" }}><AppIcon emoji="🗑️" icon="elimina" size={14} /></button>
                         )
                       )}
                     </div>

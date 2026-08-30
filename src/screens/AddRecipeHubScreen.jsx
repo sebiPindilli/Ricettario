@@ -71,7 +71,7 @@ export default function AddRecipeHubScreen({ onBack, onManual, onScan, onLink, o
 
         {[
           {
-            icon:"✏️",
+            icon:"✏️", svgIcon:"modifica",
             label:"Inserimento manuale",
             desc:"Scrivi titolo, ingredienti e preparazione direttamente in app",
             fn:onManual,

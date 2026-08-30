@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
+import AppIcon from "./AppIcon.jsx";
 import { flattenIngredients, ingredientToText, relativeTimeLabel } from "../utils/helpers.js";
 
 // Estrae il testo di ogni passaggio, piatto o a sottosezioni — solo testo,
@@ -95,7 +96,9 @@ export default function RecipeConflictModal({ conflict, onKeepMine, onDiscardMin
               padding: "12px 14px", borderRadius: 12, border: "none", cursor: "pointer",
               background: th.appAccent, color: "#fff", fontFamily: F.ui, fontSize: 13, fontWeight: 700, textAlign: "left",
             }}>
-              {intent === "delete" ? "🗑️ Elimina comunque" : "✓ Tieni le mie modifiche"}
+              {intent === "delete" ? (
+                <span style={{ display: "flex", alignItems: "center", gap: 6 }}><AppIcon emoji="🗑️" icon="elimina" size={13} /> Elimina comunque</span>
+              ) : "✓ Tieni le mie modifiche"}
               <div style={{ fontWeight: 400, fontSize: 11, opacity: 0.9, marginTop: 2 }}>
                 {intent === "delete" ? "La versione modificata da altri viene eliminata." : "Sovrascrive la versione sul server con la tua."}
               </div>

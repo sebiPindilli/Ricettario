@@ -239,7 +239,7 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
             padding:"28px 24px",
           }}>
             <div style={{ textAlign:"center", marginBottom:6 }}>
-              <div style={{ fontSize:40, marginBottom:10 }}>🗑️</div>
+              <div style={{ display:"flex", justifyContent:"center", marginBottom:10 }}><AppIcon emoji="🗑️" icon="elimina" size={40} /></div>
               <div style={{ fontFamily:F.display, fontSize:20, color:"#2C2416", marginBottom:8 }}>
                 Elimina ricetta?
               </div>
@@ -284,7 +284,7 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
             padding:"28px 24px",
           }}>
             <div style={{ textAlign:"center", marginBottom:6 }}>
-              <div style={{ fontSize:40, marginBottom:10 }}>🗑️</div>
+              <div style={{ display:"flex", justifyContent:"center", marginBottom:10 }}><AppIcon emoji="🗑️" icon="elimina" size={40} /></div>
               <div style={{ fontFamily:F.display, fontSize:20, color:"#2C2416", marginBottom:8 }}>
                 Rimuovere la foto del piatto?
               </div>
@@ -609,8 +609,8 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
                           <div style={{ display:"flex", gap:4, flexShrink:0 }}>
                             <button onClick={() => startEditComment(c)} style={{
                               background:"none", border:"none", color:th.appFaded,
-                              fontSize:13, cursor:"pointer", padding:0,
-                            }}>✏️</button>
+                              fontSize:13, cursor:"pointer", padding:0, display:"flex",
+                            }}><AppIcon emoji="✏️" icon="modifica" size={13} /></button>
                             <button onClick={() => deleteComment(c.id)} style={{
                               background:"none", border:"none", color:"#ccc",
                               fontSize:15, cursor:"pointer", padding:0,

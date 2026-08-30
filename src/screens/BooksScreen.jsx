@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { useTheme, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import GlobalNav from "../components/GlobalNav.jsx";
+import AppIcon from "../components/AppIcon.jsx";
 import MySharedLinksScreen from "./MySharedLinksScreen.jsx";
 import SuggestionHint from "../components/SuggestionHint.jsx";
 import { guideLibri } from "../data/guideContent.jsx";
@@ -322,7 +323,7 @@ export default function BooksScreen({
                 {isRen ? (
                   <button onClick={() => { onRename(b.id, renameVal.trim() || b.name); setRenaming(null); }} style={{ background:th.appAccent, border:"none", borderRadius:9, padding:"7px 11px", color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0 }}>✓</button>
                 ) : (
-                  <button onClick={() => { setRenaming(b.id); setRenameVal(b.name); }} title="Rinomina" style={{ background:"none", border:"none", fontSize:15, cursor:"pointer", color:th.appFaded, flexShrink:0, padding:"4px 6px" }}>✏️</button>
+                  <button onClick={() => { setRenaming(b.id); setRenameVal(b.name); }} title="Rinomina" style={{ background:"none", border:"none", fontSize:15, cursor:"pointer", color:th.appFaded, flexShrink:0, padding:"4px 6px", display:"flex" }}><AppIcon emoji="✏️" icon="modifica" size={15} /></button>
                 )}
                 {!active && !isRen && (
                   <button onClick={() => onSwitch(b.id)} style={{ background:th.appInk, border:"none", borderRadius:9, padding:"8px 13px", color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0 }}>Apri</button>
@@ -349,13 +350,13 @@ export default function BooksScreen({
                   più): resta comunque eliminabile, stesso overlay di conferma
                   usato per gli altri ricettari (vedi confirmingDelete sotto). */}
               {b.isBackup && (
-                <button onClick={() => setPendingDelete(b.id)} style={{ marginTop:8, background:"none", border:"none", color:DANGER, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, display:"block" }}>🗑️ Elimina ricettario di backup</button>
+                <button onClick={() => setPendingDelete(b.id)} style={{ marginTop:8, background:"none", border:"none", color:DANGER, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="🗑️" icon="elimina" size={12} /> Elimina ricettario di backup</button>
               )}
 
               {/* Libro personale vero: eliminabile come i condivisi, stesso
                   overlay di conferma (confirmingDelete sotto). */}
               {canDeletePersonal && (
-                <button onClick={() => setPendingDelete(b.id)} style={{ marginTop:8, background:"none", border:"none", color:DANGER, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, display:"block" }}>🗑️ Elimina ricettario</button>
+                <button onClick={() => setPendingDelete(b.id)} style={{ marginTop:8, background:"none", border:"none", color:DANGER, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="🗑️" icon="elimina" size={12} /> Elimina ricettario</button>
               )}
 
               {/* Backup: scarica (solo libro attivo) e ripristina-qui (tutti i
@@ -428,7 +429,7 @@ export default function BooksScreen({
                         ) : (
                           <>
                             <button onClick={() => setPendingBackupCopyId(bk.id)} style={{ padding:"5px 9px", borderRadius:8, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:10.5, fontWeight:700, cursor:"pointer" }}>🔀 Copia tutto qui</button>
-                            <button onClick={() => setPendingDelete(bk.id)} title="Elimina backup" style={{ padding:"5px 9px", borderRadius:8, border:`1px solid ${th.appBorder}`, background:"transparent", color:DANGER, fontFamily:F.ui, fontSize:10.5, cursor:"pointer" }}>🗑️</button>
+                            <button onClick={() => setPendingDelete(bk.id)} title="Elimina backup" style={{ padding:"5px 9px", borderRadius:8, border:`1px solid ${th.appBorder}`, background:"transparent", color:DANGER, fontFamily:F.ui, fontSize:10.5, cursor:"pointer", display:"flex", alignItems:"center" }}><AppIcon emoji="🗑️" icon="elimina" size={13} /></button>
                           </>
                         )}
                       </div>
@@ -548,7 +549,7 @@ export default function BooksScreen({
                     </>
                   )}
                   {isOwner && (
-                    <button onClick={() => setPendingDelete(b.id)} style={{ marginTop:10, background:"none", border:"none", color:DANGER, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0 }}>🗑️ Elimina ricettario</button>
+                    <button onClick={() => setPendingDelete(b.id)} style={{ marginTop:10, background:"none", border:"none", color:DANGER, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="🗑️" icon="elimina" size={12} /> Elimina ricettario</button>
                   )}
                 </div>
                 );

@@ -10,6 +10,7 @@ import BottomNav from "../components/BottomNav.jsx";
 import ScreenHeader from "../components/ScreenHeader.jsx";
 import SuggestionHint from "../components/SuggestionHint.jsx";
 import SectionCategoryIcon from "../components/SectionCategoryIcon.jsx";
+import AppIcon from "../components/AppIcon.jsx";
 import { guideSpesa } from "../data/guideContent.jsx";
 
 const fmtNum = (n) => String(Math.round(n * 100) / 100).replace(".", ",");
@@ -401,7 +402,7 @@ export default function ShoppingListScreen({
                   background:"none", border:`1px solid #C4593A`, color:"#C4593A",
                   fontFamily:F.ui, fontSize:10.5, fontWeight:700, cursor:"pointer",
                   flexShrink:0, padding:"6px 10px", borderRadius:9, display:"flex", alignItems:"center", gap:5,
-                }}>🗑️ Rimuovi</button>
+                }}><AppIcon emoji="🗑️" icon="elimina" size={11} /> Rimuovi</button>
               </div>
             ));
           })()}

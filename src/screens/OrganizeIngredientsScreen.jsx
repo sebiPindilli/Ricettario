@@ -223,7 +223,7 @@ export default function OrganizeIngredientsScreen({
                       <div style={{ fontFamily:F.body, fontSize:14.5, fontWeight:700, color:th.appInk }}>⊕ {agg.name}</div>
                       <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:2 }}>{(agg.members||[]).map(dictName).join(" · ")}</div>
                     </div>
-                    <button onClick={() => { setManageAggs(false); setEditingFrom("manageAggs"); setEditing({ kind:"aggregate", id:agg.id, name:agg.name, members:[...(agg.members||[])], categories:[...(agg.categories||[])] }); }} style={{ background:th.appInk, border:"none", borderRadius:9, padding:"7px 11px", color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0 }}>✏️ Modifica</button>
+                    <button onClick={() => { setManageAggs(false); setEditingFrom("manageAggs"); setEditing({ kind:"aggregate", id:agg.id, name:agg.name, members:[...(agg.members||[])], categories:[...(agg.categories||[])] }); }} style={{ background:th.appInk, border:"none", borderRadius:9, padding:"7px 11px", color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0, display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="✏️" icon="modifica" size={11} /> Modifica</button>
                   </div>
                 </div>
               ))}
@@ -372,7 +372,9 @@ export default function OrganizeIngredientsScreen({
           <div style={{ padding:"12px 20px 8px", display:"flex", alignItems:"center", gap:10 }}>
             <button onClick={closeFoodForm} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Annulla</button>
             <div style={{ flex:1 }}>
-              <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>{foodForm.id ? "✏️ Modifica alimento" : "＋ Nuovo alimento"}</div>
+              <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk, display:"flex", alignItems:"center", gap:6 }}>
+                <AppIcon emoji={foodForm.id ? "✏️" : "＋"} icon={foodForm.id ? "modifica" : "aggiungi"} size={16} /> {foodForm.id ? "Modifica alimento" : "Nuovo alimento"}
+              </div>
               <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>valori per 100 g · fonte personalizzata</div>
             </div>
           </div>
@@ -442,7 +444,7 @@ export default function OrganizeIngredientsScreen({
                       </div>
                       <div style={{ fontFamily:F.ui, fontSize:9, color:th.appAccent, marginTop:2 }}>fonte: {f.source || "personalizzata"}</div>
                     </div>
-                    <button onClick={() => setFoodForm({ ...f, kcal:String(f.kcal), carb:String(f.carb), sug:String(f.sug), prot:String(f.prot), fat:String(f.fat), sat:String(f.sat), fib:String(f.fib), salt:String(f.salt) })} style={{ background:"none", border:"none", fontSize:13, cursor:"pointer", color:th.appFaded, flexShrink:0, padding:"2px 4px" }}>✏️</button>
+                    <button onClick={() => setFoodForm({ ...f, kcal:String(f.kcal), carb:String(f.carb), sug:String(f.sug), prot:String(f.prot), fat:String(f.fat), sat:String(f.sat), fib:String(f.fib), salt:String(f.salt) })} style={{ background:"none", border:"none", fontSize:13, cursor:"pointer", color:th.appFaded, flexShrink:0, padding:"2px 4px", display:"flex" }}><AppIcon emoji="✏️" icon="modifica" size={13} /></button>
                     <button onClick={() => onDeleteCustomFood(f.id)} style={{ background:"none", border:"none", fontSize:14, cursor:"pointer", color:"#C4593A", flexShrink:0, padding:"2px 4px" }}>×</button>
                   </div>
                 </div>
@@ -598,8 +600,8 @@ export default function OrganizeIngredientsScreen({
                 <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}> = {fmtQty(def.value)} {unitLabel(def.base)}</span>
               </div>
               <span style={{ fontFamily:F.display, fontSize:15, color:th.appAccent, fontWeight:700, flexShrink:0 }}>{fmtQty(def.grams)} g</span>
-              <button onClick={() => startEdit(unit, def)} style={{ background:"none", border:"none", fontSize:13, cursor:"pointer", color:th.appFaded, flexShrink:0, padding:"2px 4px" }}>✏️</button>
-              <button onClick={() => requestDelete(unit)} style={{ background:"none", border:"none", fontSize:14, cursor:"pointer", color:"#C4593A", flexShrink:0, padding:"2px 4px" }}>🗑️</button>
+              <button onClick={() => startEdit(unit, def)} style={{ background:"none", border:"none", fontSize:13, cursor:"pointer", color:th.appFaded, flexShrink:0, padding:"2px 4px", display:"flex" }}><AppIcon emoji="✏️" icon="modifica" size={13} /></button>
+              <button onClick={() => requestDelete(unit)} style={{ background:"none", border:"none", fontSize:14, cursor:"pointer", color:"#C4593A", flexShrink:0, padding:"2px 4px", display:"flex" }}><AppIcon emoji="🗑️" icon="elimina" size={14} /></button>
             </div>
           ))}
         </div>
@@ -660,8 +662,8 @@ export default function OrganizeIngredientsScreen({
                   ) : (
                     <button onClick={() => onDeleteCategory(cat.id)} style={{
                       background:"none", border:"none", color:"#C4593A",
-                      fontSize:17, cursor:"pointer", flexShrink:0, padding:"4px 6px",
-                    }}>🗑️</button>
+                      fontSize:17, cursor:"pointer", flexShrink:0, padding:"4px 6px", display:"flex",
+                    }}><AppIcon emoji="🗑️" icon="elimina" size={17} /></button>
                   )}
                 </div>
                 <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:8, lineHeight:1.6 }}>
@@ -908,8 +910,8 @@ export default function OrganizeIngredientsScreen({
             <button onClick={() => { onDeleteAggregate(editing.id); closeEditor(); }} style={{
               padding:"14px 16px", borderRadius:12, border:`1.5px solid #C4593A`,
               background:"transparent", color:"#C4593A",
-              fontFamily:F.ui, fontSize:13, fontWeight:600, cursor:"pointer",
-            }}>🗑️</button>
+              fontFamily:F.ui, fontSize:13, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center",
+            }}><AppIcon emoji="🗑️" icon="elimina" size={15} /></button>
           )}
           <button onClick={save} disabled={!canSaveAgg} style={{
             flex:1, padding:"14px", borderRadius:12, border:"none",
@@ -1268,7 +1270,7 @@ export default function OrganizeIngredientsScreen({
             </div>
           )}
           {isAgg ? (
-            <button onClick={() => setEditing({ kind:"aggregate", id:agg.id, name:agg.name, members:[...(agg.members||[])], categories:[...(agg.categories||[])] })} style={{ background:"none", border:"none", fontSize:14, cursor:"pointer", color:th.appFaded, flexShrink:0, padding:"2px 4px" }}>✏️</button>
+            <button onClick={() => setEditing({ kind:"aggregate", id:agg.id, name:agg.name, members:[...(agg.members||[])], categories:[...(agg.categories||[])] })} style={{ background:"none", border:"none", fontSize:14, cursor:"pointer", color:th.appFaded, flexShrink:0, padding:"2px 4px", display:"flex" }}><AppIcon emoji="✏️" icon="modifica" size={14} /></button>
           ) : (onRenameIngredient && (
             <button
               title="Rinomina ingrediente"
@@ -1277,8 +1279,8 @@ export default function OrganizeIngredientsScreen({
                 setRenameErr(null);
                 toggleExpand(key, "rename");
               }}
-              style={{ background:"none", border:"none", fontSize:14, cursor:"pointer", color:th.appFaded, flexShrink:0, padding:"2px 4px" }}
-            >✏️</button>
+              style={{ background:"none", border:"none", fontSize:14, cursor:"pointer", color:th.appFaded, flexShrink:0, padding:"2px 4px", display:"flex" }}
+            ><AppIcon emoji="✏️" icon="modifica" size={14} /></button>
           ))}
         </div>
 
@@ -1705,8 +1707,8 @@ export default function OrganizeIngredientsScreen({
               background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:12,
               padding:"10px 12px", marginBottom:8, cursor:"pointer",
             }}>
-              <span style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.2, color:th.appFaded, textTransform:"uppercase", fontWeight:700 }}>
-                🗑️ Ingredienti non utilizzati ({unusedIngs.length})
+              <span style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.2, color:th.appFaded, textTransform:"uppercase", fontWeight:700, display:"inline-flex", alignItems:"center", gap:5 }}>
+                <AppIcon emoji="🗑️" icon="elimina" size={11} /> Ingredienti non utilizzati ({unusedIngs.length})
               </span>
               <span style={{ color:th.appFaded, fontSize:12 }}>{unusedOpen ? "▾" : "▸"}</span>
             </button>
@@ -1733,8 +1735,8 @@ export default function OrganizeIngredientsScreen({
                       </div>
                     </div>
                   ) : (
-                    <button onClick={() => setConfirmDeleteUnused(true)} style={{ width:"100%", marginTop:6, padding:"11px", border:"1.5px solid #C4593A66", borderRadius:12, background:"#C4593A18", color:"#C4593A", fontFamily:F.ui, fontSize:12.5, fontWeight:700, cursor:"pointer" }}>
-                      🗑️ Elimina selezionati ({selectedUnused.size})
+                    <button onClick={() => setConfirmDeleteUnused(true)} style={{ width:"100%", marginTop:6, padding:"11px", border:"1.5px solid #C4593A66", borderRadius:12, background:"#C4593A18", color:"#C4593A", fontFamily:F.ui, fontSize:12.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+                      <AppIcon emoji="🗑️" icon="elimina" size={13} /> Elimina selezionati ({selectedUnused.size})
                     </button>
                   )
                 )}

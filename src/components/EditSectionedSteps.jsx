@@ -4,6 +4,7 @@ import { F } from "../data/constants.js";
 import { stepPhotosOf, durationOf, parseStepDuration, stepNumbers, stepNumberLabel, MAX_STEP_PHOTOS, readImageFile, moveItemsBetweenSections } from "../utils/helpers.js";
 import Toast from "./Toast.jsx";
 import SectionMovePicker from "./SectionMovePicker.jsx";
+import AppIcon from "./AppIcon.jsx";
 
 // ── Editable sectioned steps ─────────────────────────────────────
 export default function EditSectionedSteps({ data, color, onUpdate }) {
@@ -182,8 +183,8 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
             {sections.length > 1 && (
               <button onClick={() => removeSection(si)} style={{
                 background:"none", border:"none", color:"#ccc",
-                fontSize:16, cursor:"pointer", flexShrink:0,
-              }}>🗑️</button>
+                fontSize:16, cursor:"pointer", flexShrink:0, display:"flex",
+              }}><AppIcon emoji="🗑️" icon="elimina" size={16} /></button>
             )}
           </div>
           {/* Linea che raggruppa visivamente i passaggi sotto la sottosezione

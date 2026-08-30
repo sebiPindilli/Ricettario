@@ -3,6 +3,7 @@ import { useTheme, useUiStyle } from "../context.js";
 import { F, MACRO_SECTIONS } from "../data/constants.js";
 import { sortSectionsAltroLast, uid } from "../utils/helpers.js";
 import InfoButton from "./InfoButton.jsx";
+import AppIcon from "./AppIcon.jsx";
 import { guideEsporta } from "../data/guideContent.jsx";
 import {
   PDF_STYLES, PDF_LAYOUTS, DEFAULT_PDF_CONTENT, PDF_ALWAYS_INCLUDED,
@@ -534,8 +535,8 @@ export default function UnifiedExportFlow({
               onDeleteTemplate(draft.id);
               if (pdfPrefs.templateId === draft.id) setPdfPrefs(p => ({ ...p, templateId: "classico" }));
               setEditingTemplate(null);
-            }} style={{ background: "transparent", border: "none", color: "#C4593A", fontFamily: F.ui, fontSize: 12, cursor: "pointer", padding: "6px 0", marginBottom: 6 }}>
-              🗑️ Elimina template
+            }} style={{ background: "transparent", border: "none", color: "#C4593A", fontFamily: F.ui, fontSize: 12, cursor: "pointer", padding: "6px 0", marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}>
+              <AppIcon emoji="🗑️" icon="elimina" size={12} /> Elimina template
             </button>
           )}
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
@@ -652,7 +653,7 @@ export default function UnifiedExportFlow({
                       <div style={{ fontFamily: F.ui, fontSize: 12.5, fontWeight: 700, color: th.appInk }}>{tpl.name}</div>
                       {defaultTemplateId === tpl.id && <div style={{ fontFamily: F.ui, fontSize: 10, color: th.appFaded, marginTop: 1 }}>Predefinito</div>}
                     </div>
-                    <span onClick={e => { e.stopPropagation(); setEditingTemplate(tpl); }} style={{ fontSize: 15, padding: 4, cursor: "pointer" }} title="Modifica">✏️</span>
+                    <span onClick={e => { e.stopPropagation(); setEditingTemplate(tpl); }} style={{ fontSize: 15, padding: 4, cursor: "pointer", display: "flex" }} title="Modifica"><AppIcon emoji="✏️" icon="modifica" size={15} /></span>
                     {defaultTemplateId !== tpl.id && (
                       <span onClick={e => { e.stopPropagation(); onSetDefaultTemplate(tpl.id); }} style={{ fontSize: 15, padding: 4, cursor: "pointer" }} title="Imposta come predefinito">☆</span>
                     )}
