@@ -1,6 +1,7 @@
 import { useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import Icon from "./Icon.jsx";
+import InfoButton from "./InfoButton.jsx";
 
 // ══════════════════════════════════════════════════════════════
 // TESTA DI SCHERMATA — la stessa in tutte le sezioni.
@@ -12,13 +13,15 @@ import Icon from "./Icon.jsx";
 //
 // Contenuto FISSO, sempre nello stesso ordine e nella stessa misura:
 //
-//   [ ‹ indietro ]  [ icona ]  Titolo          [ azioni ]  [ home ]
+//   [ ‹ indietro ]  [ icona ]  Titolo      [ i ]  [ azioni ]  [ home ]
 //                              occhiello
 //
 // - indietro: c'è solo se onBack è passato; occupa comunque il suo posto
 //   (spacer invisibile) così il titolo non balla fra una schermata e l'altra.
 // - icona: SEMPRE quella della sezione (ricette, ricordi, frigo, spesa,
 //   organizza) — è ciò che dice "dove sono".
+// - info: slot fisso se infoContent è passato, ogni sezione ne ha una —
+//   non conta fra le azioni.
 // - home: sempre presente, sempre ultimo a destra.
 // - azioni: al massimo tre, icone 20px, mai testo.
 //
@@ -38,6 +41,7 @@ export default function ScreenHeader({
   subtitle,         // occhiello sotto il titolo (conteggi, stato)
   onBack,           // se assente, lo slot resta vuoto ma occupato
   onHome,
+  infoContent,      // contenuto guida della sezione — slot fisso, non conta fra le azioni
   actions = [],     // [{ icon, label, onClick, tone }] — max 3
 }) {
   const ui = useUiStyle();
@@ -51,18 +55,27 @@ export default function ScreenHeader({
       minHeight: HEADER_H,
       display: "flex",
       alignItems: "center",
-      gap: 12,
-      padding: `2px ${ui.padX}px 14px`,
+      gap: 10,
+      // Verticale simmetrico: prima era 2px/14px, con alignItems:center lo
+      // sbilanciamento spingeva titolo/occhiello visibilmente verso l'alto
+      // dentro il blocco di 64px invece di centrarli davvero.
+      padding: `8px ${ui.padX}px`,
       background: onBar ? ui.card : "transparent",
       borderBottom: `1px solid ${onBar ? ui.border : ui.hairlineStrong}`,
     }}>
-      <div style={{ width: ICON_SLOT, flexShrink: 0, display: "flex" }}>
-        {onBack && (
+      {/* Lo slot indietro occupa spazio solo quando serve davvero: tenerlo
+          sempre riservato (anche vuoto) rubava ~46px al titolo su OGNI
+          schermata di primo livello (la maggioranza, senza onBack) per una
+          coerenza di posizione che conta solo confrontando schermate
+          annidate con quelle di primo livello — un compromesso peggiore
+          del titolo troncato che causava. */}
+      {onBack && (
+        <div style={{ width: ICON_SLOT, flexShrink: 0, display: "flex" }}>
           <button onClick={onBack} title="Indietro" style={btn(ui.ink)}>
             <Icon name="indietro" size={21} />
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {section && (
         <span style={{ display: "flex", color: ui.faded, flexShrink: 0 }}>
@@ -70,10 +83,10 @@ export default function ScreenHeader({
         </span>
       )}
 
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
         <div style={{
           fontFamily: F.display,
-          fontSize: 21,
+          fontSize: 19,
           color: ui.ink,
           lineHeight: 1.2,
           whiteSpace: "nowrap",
@@ -91,6 +104,13 @@ export default function ScreenHeader({
           }}>{subtitle}</div>
         )}
       </div>
+
+      {/* Guida della sezione — slot fisso, non una delle azioni: ogni
+          sezione ne ha una (era raggiungibile solo dalla seconda riga di
+          GlobalNav, soppressa qui). */}
+      {infoContent && (
+        <InfoButton triggerStyle={{ width: 30, height: 30 }}>{infoContent}</InfoButton>
+      )}
 
       {actions.slice(0, 3).map((a, i) => (
         <button key={i} onClick={a.onClick} title={a.label}

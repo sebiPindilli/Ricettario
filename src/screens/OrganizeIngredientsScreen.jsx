@@ -8,6 +8,7 @@ import ChosenIcon from "../components/ChosenIcon.jsx";
 import FoodIconGrid from "../components/FoodIconGrid.jsx";
 import BottomNav from "../components/BottomNav.jsx";
 import ScreenHeader from "../components/ScreenHeader.jsx";
+import { guideOrganizza } from "../data/guideContent.jsx";
 import { NUTRITION_DB } from "../data/nutrition.js";
 import {
   buildIngredientDict, ingDictIndex, sortCategoriesBaseFirst,
@@ -1490,6 +1491,7 @@ export default function OrganizeIngredientsScreen({
         subtitle={`${summaryTotal} ingredienti`}
         onBack={onBack}
         onHome={onLanding}
+        infoContent={guideOrganizza}
       />
 
       {ui.id === "classico" && onBack && (

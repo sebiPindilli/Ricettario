@@ -9,6 +9,7 @@ import FiltersSheet from "../components/FiltersSheet.jsx";
 import RecipeCardList from "../components/RecipeCardList.jsx";
 import { guideRicette } from "../data/guideContent.jsx";
 import AppIcon from "../components/AppIcon.jsx";
+import Icon from "../components/Icon.jsx";
 import SectionCategoryIcon from "../components/SectionCategoryIcon.jsx";
 
 export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, onMemories, onAdd, onFridge, onShopping, onExport, extraTagGroups=[], sectionList=MACRO_SECTIONS }) {
@@ -344,10 +345,10 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
         title={activeSectionLabel || "Libro Ricette"}
         subtitle={`${displayRecipes.length} ricett${displayRecipes.length===1?"a":"e"}`}
         onHome={onLanding}
+        infoContent={guideRicette}
         actions={[
           { icon:"libro", label:"Vista libro", onClick:onBook },
           ...(onExport ? [{ icon:"esporta", label:"Esporta ricettario", onClick:onExport }] : []),
-          { icon:"aggiungi", label:"Nuova ricetta", onClick:() => onAdd("recipe"), tone: ui.id==="schedario" ? "accent" : undefined },
         ]}
       />
 
@@ -362,9 +363,26 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
         </div>
       )}
 
-      {/* ── Ricerca sempre visibile (come nelle altre sezioni) ── */}
-      <div style={{ padding: ui.navPosition==="bottom" ? `4px ${ui.padX}px 4px` : "8px 16px 4px" }}>
-        <div style={{ display:"flex", gap:8, alignItems:"center", background:th.appCard, border:`1.5px solid ${searchQuery ? th.appAccent : th.appBorder}`, borderRadius: ui.radius.control, padding:"9px 14px" }}>
+      {/* ── Nuova ricetta, negli stili nuovi: non più un'icona nell'header
+          (troppo poco evidente), un pulsante pieno in cima alla lista,
+          prima della ricerca. ── */}
+      {ui.navPosition === "bottom" && (
+        <div style={{ padding:`10px ${ui.padX}px 2px` }}>
+          <button onClick={() => onAdd("recipe")} style={{
+            width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+            padding:"13px", borderRadius:ui.radius.control, border:"none",
+            background:ui.accent, color:"#fff", cursor:"pointer",
+            fontFamily:F.ui, fontSize:14, fontWeight:700,
+          }}>
+            <Icon name="aggiungi" size={18} /> Nuova ricetta
+          </button>
+        </div>
+      )}
+
+      {/* ── Ricerca sempre visibile (come nelle altre sezioni); negli stili
+          nuovi condivide la riga con il pulsante Filtri (80/20). ── */}
+      <div style={{ padding: ui.navPosition==="bottom" ? `4px ${ui.padX}px 4px` : "8px 16px 4px", display:"flex", gap:8 }}>
+        <div style={{ flex:1, minWidth:0, display:"flex", gap:8, alignItems:"center", background:th.appCard, border:`1.5px solid ${searchQuery ? th.appAccent : th.appBorder}`, borderRadius: ui.radius.control, padding:"9px 14px" }}>
           <span style={{ color:th.appFaded }}><AppIcon emoji="🔍" icon="cerca" size={15} /></span>
           <input
             value={searchQuery}
@@ -374,38 +392,43 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
           />
           {searchQuery && <button onClick={() => setSearchQuery("")} style={{ background:"none", border:"none", color:th.appFaded, cursor:"pointer", fontSize:16 }}>×</button>}
         </div>
+        {ui.filters !== "expanded" && (
+          <button onClick={() => setSheetOpen(true)} title="Filtri" style={{
+            position:"relative", flexShrink:0, width:44,
+            display:"flex", alignItems:"center", justifyContent:"center",
+            border:`1.5px solid ${activeFilterCount>0 ? th.appAccent : th.appBorder}`,
+            borderRadius: ui.radius.control,
+            background: activeFilterCount>0 ? `${th.appAccent}12` : th.appCard,
+            color: activeFilterCount>0 ? th.appAccent : ui.faded,
+            cursor:"pointer",
+          }}>
+            <Icon name="altro" size={18} />
+            {activeFilterCount>0 && (
+              <span style={{ position:"absolute", top:-5, right:-5, background:th.appAccent, color:"#fff", borderRadius:8, minWidth:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 3px" }}>{activeFilterCount}</span>
+            )}
+          </button>
+        )}
       </div>
 
       {ui.filters === "expanded" ? (
         filterControls
       ) : (
         <>
-          {/* Pulsante Filtri + riepilogo filtri attivi */}
-          <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", padding:`2px ${ui.padX}px 10px` }}>
-            <button onClick={() => setSheetOpen(true)} style={{
-              flexShrink:0, display:"flex", alignItems:"center", gap:6,
-              padding:"7px 13px", borderRadius: ui.radius.chip,
-              border:`1.5px solid ${activeFilterCount>0 ? th.appAccent : ui.hairlineStrong}`,
-              background: activeFilterCount>0 ? `${th.appAccent}12` : "transparent",
-              color: activeFilterCount>0 ? th.appAccent : ui.faded,
-              fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
-            }}>
-              <AppIcon emoji="🏷️" icon="tag" size={12} /> Filtri
-              {activeFilterCount>0 && (
-                <span style={{ background:th.appAccent, color:"#fff", borderRadius:9, padding:"1px 6px", fontSize:10 }}>{activeFilterCount}</span>
+          {/* Riepilogo filtri attivi — il pulsante Filtri è sulla riga della ricerca, qui sopra */}
+          {(activeSectionLabel || showFavorites || activeTags.length > 0 || timeActive) && (
+            <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", padding:`2px ${ui.padX}px 10px` }}>
+              {activeSectionLabel && filterSummaryChip(activeSectionLabel, () => setActiveSection(null))}
+              {showFavorites && filterSummaryChip("Preferiti", () => setShowFavorites(false))}
+              {activeTags.map(tag => filterSummaryChip(tag, () => toggleTag(tag)))}
+              {timeActive && filterSummaryChip("Tempo", resetTime)}
+              {activeFilterCount > 0 && (
+                <button onClick={resetAllFilters} style={{
+                  background:"none", border:"none", cursor:"pointer",
+                  fontFamily:F.ui, fontSize:11, color:ui.faded, textDecoration:"underline",
+                }}>azzera</button>
               )}
-            </button>
-            {activeSectionLabel && filterSummaryChip(activeSectionLabel, () => setActiveSection(null))}
-            {showFavorites && filterSummaryChip("Preferiti", () => setShowFavorites(false))}
-            {activeTags.map(tag => filterSummaryChip(tag, () => toggleTag(tag)))}
-            {timeActive && filterSummaryChip("Tempo", resetTime)}
-            {activeFilterCount > 0 && (
-              <button onClick={resetAllFilters} style={{
-                background:"none", border:"none", cursor:"pointer",
-                fontFamily:F.ui, fontSize:11, color:ui.faded, textDecoration:"underline",
-              }}>azzera</button>
-            )}
-          </div>
+            </div>
+          )}
 
           <FiltersSheet
             open={sheetOpen}

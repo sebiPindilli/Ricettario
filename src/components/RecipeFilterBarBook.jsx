@@ -35,6 +35,7 @@ export default function RecipeFilterBarBook({ recipes, extraTagGroups, sectionLi
             section="ricette"
             title="Vista Libro"
             onHome={onLanding}
+            infoContent={guideRicette}
             actions={onExport ? [{ icon:"esporta", label:"Esporta ricettario", onClick:onExport }] : []}
           />
         </>

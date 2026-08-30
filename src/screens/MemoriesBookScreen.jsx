@@ -9,6 +9,7 @@ import BottomNav from "../components/BottomNav.jsx";
 import ScreenHeader from "../components/ScreenHeader.jsx";
 import { guideRicordi } from "../data/guideContent.jsx";
 import ChosenIcon from "../components/ChosenIcon.jsx";
+import Icon from "../components/Icon.jsx";
 
 // ══════════════════════════════════════════════════════════════
 // SCREEN: MEMORIES BOOK — all photos, each linked to recipes
@@ -151,17 +152,17 @@ export default function MemoriesBookScreen({ recipes, onBack, onRecipe, onRecipe
         title="Libro dei Ricordi"
         subtitle={`${allMemories.length} ricord${allMemories.length===1?"o":"i"}`}
         onHome={onBack}
-        actions={[
-          ...(allMemories.length > 0 ? [{
+        infoContent={guideRicordi}
+        actions={
+          allMemories.length > 0 ? [{
             icon: viewMode === "book" ? "schede" : "libro",
             label: viewMode === "book" ? "Vista schede" : "Vista libro",
             onClick: () => setViewMode(viewMode === "book" ? "cards" : "book"),
-          }] : []),
-          { icon:"aggiungi", label:"Nuovo ricordo", onClick:() => onAdd("memory"), tone: ui.id==="schedario" ? "accent" : undefined },
-        ]}
+          }] : []
+        }
       />
 
-      {/* Nuovo ricordo (solo classico: negli altri stili è nella testa) */}
+      {/* Nuovo ricordo (solo classico: negli altri stili è sotto, più evidente) */}
       {ui.id === "classico" && (
         <div style={{ padding:"10px 24px 2px", textAlign:"center" }}>
           <button onClick={() => onAdd("memory")} style={{
@@ -169,6 +170,21 @@ export default function MemoriesBookScreen({ recipes, onBack, onRecipe, onRecipe
             background:th.appAccent, border:"none", cursor:"pointer",
             color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700,
           }}>＋ Nuovo ricordo</button>
+        </div>
+      )}
+
+      {/* Nuovo ricordo, negli stili nuovi: non più un'icona nell'header
+          (troppo poco evidente), un pulsante pieno in cima alla lista. */}
+      {ui.id !== "classico" && (
+        <div style={{ padding:`10px ${ui.padX}px 2px` }}>
+          <button onClick={() => onAdd("memory")} style={{
+            width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+            padding:"13px", borderRadius:ui.radius.control, border:"none",
+            background:ui.accent, color:"#fff", cursor:"pointer",
+            fontFamily:F.ui, fontSize:14, fontWeight:700,
+          }}>
+            <Icon name="aggiungi" size={18} /> Nuovo ricordo
+          </button>
         </div>
       )}
 

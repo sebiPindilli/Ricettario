@@ -333,6 +333,7 @@ export default function ShoppingListScreen({
         title="Lista Spesa"
         subtitle={entries.length === 0 ? "vuota" : `da ${entries.length} ricett${entries.length===1?"a":"e"}`}
         onHome={onLanding}
+        infoContent={guideSpesa}
         actions={entries.length > 0 ? [{ icon:"altro", label:"Svuota", onClick:onClearAll }] : []}
       />
 

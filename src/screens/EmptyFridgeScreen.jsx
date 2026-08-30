@@ -224,7 +224,7 @@ export default function EmptyFridgeScreen({
     return (
       <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
         {nav}
-        <ScreenHeader section="frigo" title="Svuota Frigo" onHome={onLanding} />
+        <ScreenHeader section="frigo" title="Svuota Frigo" onHome={onLanding} infoContent={guideFrigo} />
         <div style={{ padding:"14px 20px 6px", display:"flex", alignItems:"flex-start", gap:10 }}>
           <div style={{ flex:1 }}>
             {ui.id !== "classico" && (
@@ -399,6 +399,7 @@ export default function EmptyFridgeScreen({
               subtitle={`${ownedMembers.length} ingredienti in casa`}
               onBack={() => setPhase("select")}
               onHome={onLanding}
+              infoContent={guideFrigo}
             />
           </>
         )}

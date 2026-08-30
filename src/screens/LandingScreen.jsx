@@ -13,7 +13,7 @@ import BottomNav from "../components/BottomNav.jsx";
 const LandingGroupLabel = ({ ui, text }) => (
   <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:ui.muted, textTransform:"uppercase", margin:"18px 0 6px" }}>{text}</div>
 );
-const LandingRow = ({ ui, th, icon, label, fn, swatch }) => (
+const LandingRow = ({ ui, th, icon, label, desc, fn, swatch }) => (
   <button onClick={fn} style={{
     width:"100%", display:"flex", alignItems:"center", gap:12,
     padding:"11px 12px", background:"none", border:"none", borderBottom:`1px solid ${ui.hairline}`,
@@ -26,8 +26,13 @@ const LandingRow = ({ ui, th, icon, label, fn, swatch }) => (
         <Icon name={icon} size={15}/>
       </span>
     )}
-    <span style={{ flex:1, fontFamily:F.body, fontSize:14, color:ui.ink }}>{label}</span>
-    <span style={{ color:ui.faded, fontSize:16 }}>›</span>
+    <span style={{ flex:1, minWidth:0 }}>
+      <span style={{ display:"block", fontFamily:F.body, fontSize:14, color:ui.ink, fontWeight: desc ? 600 : 400 }}>{label}</span>
+      {desc && (
+        <span style={{ display:"block", fontFamily:F.ui, fontSize:11, color:ui.faded, marginTop:2, lineHeight:1.4 }}>{desc}</span>
+      )}
+    </span>
+    <span style={{ color:ui.faded, fontSize:16, flexShrink:0 }}>›</span>
   </button>
 );
 
@@ -87,9 +92,17 @@ export default function LandingScreen({ recipes = [], bookName = "Il mio Ricetta
             <span style={{ color:ui.faded, fontSize:16 }}>›</span>
           </button>
 
+          <LandingGroupLabel ui={ui} text="Da qui puoi"/>
+          <div style={{ ...ui.cardStyle, overflow:"hidden" }}>
+            <LandingRow ui={ui} th={th} icon="ricette" label="Ricette" desc="Sfoglia, modifica o cucina una ricetta" fn={onRecipes}/>
+            <LandingRow ui={ui} th={th} icon="ricordi" label="Ricordi" desc="Rivedi i ricordi legati alle tue ricette" fn={onMemories}/>
+            <LandingRow ui={ui} th={th} icon="frigo" label="Frigo" desc="Scegli cosa cucinare con quello che hai in casa" fn={onFridge}/>
+            <LandingRow ui={ui} th={th} icon="spesa" label="Spesa" desc="Tieni pronta la lista della spesa" fn={onShopping}/>
+            <LandingRow ui={ui} th={th} icon="organizza" label="Organizza" desc="Metti ordine tra ingredienti e dati dell'app" fn={onOrganize}/>
+          </div>
+
           <LandingGroupLabel ui={ui} text="Il libro"/>
           <div style={{ ...ui.cardStyle, overflow:"hidden" }}>
-            <LandingRow ui={ui} th={th} icon="libro" label="Copertina" fn={onCover}/>
             <LandingRow ui={ui} th={th} swatch label="Stile del libro" fn={onTheme}/>
             <LandingRow ui={ui} th={th} icon="schede" label="Stile dell'interfaccia" fn={onUiStyle}/>
           </div>
