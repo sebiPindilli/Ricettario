@@ -39,7 +39,7 @@ export default function EditSectionedList({ data, color, itemType, onUpdate, nam
         });
     onUpdate(moveItemsBetweenSections(sections, positions, destination));
     const destLabel = destination.type === "new" ? (destination.name.trim() || "Sciolti") : (sections[destination.sectionIndex].section || "Sciolti");
-    showToast(`📂 Spostat${positions.length === 1 ? "o" : "i"} in «${destLabel}»`);
+    showToast(<><AppIcon emoji="📂" icon="sposta" size={13} /> Spostat{positions.length === 1 ? "o" : "i"} in «{destLabel}»</>);
     setMovePickerFor(null);
     exitSelectMode();
   };
@@ -78,7 +78,8 @@ export default function EditSectionedList({ data, color, itemType, onUpdate, nam
           <button onClick={() => setMovePickerFor({ mode:"bulk" })} style={{
             flexShrink:0, padding:"6px 12px", border:"none", borderRadius:10,
             background:color, color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer",
-          }}>📂 Sposta in… ({selected.size})</button>
+            display:"flex", alignItems:"center", gap:5,
+          }}><AppIcon emoji="📂" icon="sposta" size={12} /> Sposta in… ({selected.size})</button>
         )}
         <button onClick={() => { if (selectMode) { exitSelectMode(); } else { setNutriOpen(null); setSelectMode(true); } }} style={{
           flexShrink:0, background:"none", border:"none", color:th.appFaded,
@@ -239,8 +240,8 @@ export default function EditSectionedList({ data, color, itemType, onUpdate, nam
                   {!selectMode && (
                     <>
                       <button onClick={() => setMovePickerFor({ mode:"single", si, ii })} title="Sposta in…" style={{
-                        background:"none", border:"none", fontSize:15, cursor:"pointer", flexShrink:0, padding:0,
-                      }}>📂</button>
+                        background:"none", border:"none", fontSize:15, cursor:"pointer", flexShrink:0, padding:0, display:"flex",
+                      }}><AppIcon emoji="📂" icon="sposta" size={15} /></button>
                       <button onClick={() => removeItem(si, ii)} style={{
                         background:"none", border:"none", color:"#ccc",
                         fontSize:16, cursor:"pointer", flexShrink:0, padding:"0 2px",
@@ -324,8 +325,8 @@ export default function EditSectionedList({ data, color, itemType, onUpdate, nam
                 {!selectMode && (
                   <>
                     <button onClick={() => setMovePickerFor({ mode:"single", si, ii })} title="Sposta in…" style={{
-                      background:"none", border:"none", fontSize:15, cursor:"pointer", flexShrink:0, padding:0,
-                    }}>📂</button>
+                      background:"none", border:"none", fontSize:15, cursor:"pointer", flexShrink:0, padding:0, display:"flex",
+                    }}><AppIcon emoji="📂" icon="sposta" size={15} /></button>
                     <button onClick={() => removeItem(si, ii)} style={{
                       background:"none", border:"none", color:"#ccc",
                       fontSize:16, cursor:"pointer", flexShrink:0,
