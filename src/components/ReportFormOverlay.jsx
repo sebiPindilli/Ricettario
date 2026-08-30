@@ -3,10 +3,11 @@ import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 import { createReport } from "../services/reportsStore.js";
 import Toast from "./Toast.jsx";
+import AppIcon from "./AppIcon.jsx";
 
 const TYPE_META = {
-  bug: { icon: "🐛", title: "Segnala un bug", placeholder: "Cosa non funziona? Cosa ti aspettavi succedesse invece?" },
-  improvement: { icon: "💡", title: "Proponi un miglioramento", placeholder: "Cosa vorresti che l'app facesse, o facesse meglio?" },
+  bug: { icon: "🐛", svgIcon: "bug", title: "Segnala un bug", placeholder: "Cosa non funziona? Cosa ti aspettavi succedesse invece?" },
+  improvement: { icon: "💡", svgIcon: "suggerimento", title: "Proponi un miglioramento", placeholder: "Cosa vorresti che l'app facesse, o facesse meglio?" },
 };
 
 export default function ReportFormOverlay({ type, me, onClose, initialScreenshot = null }) {
@@ -40,7 +41,7 @@ export default function ReportFormOverlay({ type, me, onClose, initialScreenshot
       <div style={{ width: "100%", background: th.appBg, borderRadius: 20, padding: "22px 20px", maxHeight: "90%", overflowY: "auto", boxSizing: "border-box" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 22 }}>{meta.icon}</span>
+            <span style={{ fontSize: 22, display: "flex" }}><AppIcon emoji={meta.icon} icon={meta.svgIcon} size={22} /></span>
             <span style={{ fontFamily: F.display, fontSize: 18, color: th.appInk }}>{meta.title}</span>
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, color: th.appFaded, cursor: "pointer", lineHeight: 1 }}>×</button>

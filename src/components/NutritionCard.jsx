@@ -55,7 +55,7 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
         {hasNonConvertible && onManageEquivalences && (
           <SuggestionHint>
             <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
-              ⚖️* Alcuni ingredienti usano un'unità senza un'equivalenza in grammi definita (es. 1 cucchiaio = ? g): per un funzionamento ottimale{" "}
+              Alcuni ingredienti usano un'unità senza un'equivalenza in grammi definita (es. 1 cucchiaio = ? g): per un funzionamento ottimale{" "}
               <span onClick={() => onManageEquivalences(recipe.id)} style={linkStyle}>gestisci le equivalenze mancanti di questa ricetta</span>.
             </span>
           </SuggestionHint>
@@ -63,7 +63,7 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
         {hasUnlinked && onManageIngredients && (
           <SuggestionHint>
             <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
-              🍎* Alcuni ingredienti non sono ancora collegati a un valore nutrizionale: per un funzionamento ottimale{" "}
+              Alcuni ingredienti non sono ancora collegati a un valore nutrizionale: per un funzionamento ottimale{" "}
               <span onClick={() => onManageIngredients(recipe.id)} style={linkStyle}>gestisci i valori nutrizionali mancanti di questa ricetta</span>.
             </span>
           </SuggestionHint>

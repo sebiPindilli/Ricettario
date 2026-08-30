@@ -5,6 +5,7 @@ import { F, MOBILE_BREAKPOINT_CSS } from "../data/constants.js";
 import { auth } from "../firebase.js";
 import ReportFormOverlay from "./ReportFormOverlay.jsx";
 import ReportsListOverlay from "./ReportsListOverlay.jsx";
+import AppIcon from "./AppIcon.jsx";
 
 // Cattura cosa c'è sullo schermo un attimo prima di aprire il form (non è
 // uno screenshot reale — il browser non può farne uno senza il dialogo di
@@ -194,8 +195,11 @@ export default function BetaButton() {
             border: `1px solid ${th.appBorder}`, overflow: "hidden",
             boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
           }}>
-            <MenuItem th={th} icon="🐛" label={capturing ? "Cattura schermata…" : "Segnala un bug"} onClick={openBugReport} disabled={capturing} />
-            <MenuItem th={th} icon="💡" label="Proponi un miglioramento" onClick={() => setView("form-improvement")} disabled={capturing} />
+            <MenuItem th={th} icon="🐛" svgIcon="bug" label={capturing ? "Cattura schermata…" : "Segnala un bug"} onClick={openBugReport} disabled={capturing} />
+            <MenuItem th={th} icon="💡" svgIcon="suggerimento" label="Proponi un miglioramento" onClick={() => setView("form-improvement")} disabled={capturing} />
+            {/* 📋 qui significa "elenco delle segnalazioni", non "copia negli
+                appunti": ic-copia non calza, nessuna icona nuova per questo
+                significato -- resta emoji. */}
             <MenuItem th={th} icon="📋" label="Visualizza segnalazioni" onClick={() => setView("list")} disabled={capturing} last />
           </div>
         </div>
@@ -217,7 +221,7 @@ export default function BetaButton() {
   );
 }
 
-function MenuItem({ th, icon, label, onClick, last = false, disabled = false }) {
+function MenuItem({ th, icon, svgIcon, label, onClick, last = false, disabled = false }) {
   return (
     <button onClick={onClick} disabled={disabled} style={{
       display: "flex", alignItems: "center", gap: 10, width: "100%", boxSizing: "border-box",
@@ -226,7 +230,7 @@ function MenuItem({ th, icon, label, onClick, last = false, disabled = false }) 
       fontFamily: F.ui, fontSize: 13, color: disabled ? th.appFaded : th.appInk, textAlign: "left",
       cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.7 : 1,
     }}>
-      <span style={{ fontSize: 17 }}>{icon}</span>
+      <span style={{ fontSize: 17, display: "flex" }}><AppIcon emoji={icon} icon={svgIcon} size={17} /></span>
       <span>{label}</span>
     </button>
   );

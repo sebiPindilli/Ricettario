@@ -212,7 +212,7 @@ export default function BooksScreen({
         <div style={{ padding:"0 18px 4px" }}>
           <SuggestionHint>
             <span style={{ fontFamily:F.ui, fontSize:11.5, color:th.appInk }}>
-              💾 Non hai ancora un backup locale recente. Scaricalo dalla scheda del ricettario attivo qui sotto ("⬇️ Scarica backup").
+              Non hai ancora un backup locale recente. Scaricalo dalla scheda del ricettario attivo qui sotto ("⬇️ Scarica backup").
             </span>
           </SuggestionHint>
         </div>

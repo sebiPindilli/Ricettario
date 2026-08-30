@@ -4,6 +4,7 @@ import { F } from "../data/constants.js";
 import { isSectioned, ingredientToText, stepPhotosOf, dishPhotoOf } from "../utils/helpers.js";
 import { loadSharedStatus, loadSharedContent } from "../services/sharedRecipesStore.js";
 import ChosenIcon from "../components/ChosenIcon.jsx";
+import AppIcon from "../components/AppIcon.jsx";
 
 // ══════════════════════════════════════════════════════════════
 // SCREEN: SharedRecipeScreen — apertura di un link di condivisione
@@ -165,13 +166,15 @@ export default function SharedRecipeScreen({ shareId, me, editableBooks = [], on
       )}
 
       {(status.includedData?.ingredients || status.includedData?.photos || status.includedData?.memories) && (
-        <div style={{ background:`${th.appAccent}10`, border:`1px dashed ${th.appAccent}55`, borderRadius:10, padding:"9px 12px", marginBottom:14, fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
-          💡 Questa condivisione include anche {[
+        <div style={{ background:`${th.appAccent}10`, border:`1px dashed ${th.appAccent}55`, borderRadius:10, padding:"9px 12px", marginBottom:14, fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5, display:"flex", gap:6 }}>
+          <span style={{ flexShrink:0 }}><AppIcon emoji="💡" icon="suggerimento" size={11} /></span>
+          <span>Questa condivisione include anche {[
             status.includedData.ingredients && "i dati ingredienti (categorie, nutrizione, equivalenze)",
             status.includedData.photos && "le foto",
             status.includedData.memories && "i ricordi",
           ].filter(Boolean).join(", ")}.
           {status.includedData.ingredients ? " I dati ingredienti verranno applicati solo se il libro scelto non ne ha già di propri." : ""}
+          </span>
         </div>
       )}
 

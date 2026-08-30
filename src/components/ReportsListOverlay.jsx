@@ -3,9 +3,11 @@ import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 import { loadReports, setReportStatus } from "../services/reportsStore.js";
 import Toast from "./Toast.jsx";
+import AppIcon from "./AppIcon.jsx";
 
 const TYPE_LABEL = { bug: "[BUG]", improvement: "[MIGLIORAMENTO]" };
 const TYPE_ICON = { bug: "🐛", improvement: "💡" };
+const TYPE_SVG_ICON = { bug: "bug", improvement: "suggerimento" };
 
 const formatDate = (ts) => {
   if (!ts?.seconds) return "";
@@ -75,8 +77,8 @@ export default function ReportsListOverlay({ role, me, onClose }) {
         <FilterPill th={th} active={statusFilter === "all"} onClick={() => setStatusFilter("all")}>Tutte</FilterPill>
         <div style={{ width: 1, background: th.appBorder, margin: "2px 4px" }} />
         <FilterPill th={th} active={typeFilter === "all"} onClick={() => setTypeFilter("all")}>Tutti i tipi</FilterPill>
-        <FilterPill th={th} active={typeFilter === "bug"} onClick={() => setTypeFilter("bug")}>🐛 Bug</FilterPill>
-        <FilterPill th={th} active={typeFilter === "improvement"} onClick={() => setTypeFilter("improvement")}>💡 Miglioramenti</FilterPill>
+        <FilterPill th={th} active={typeFilter === "bug"} onClick={() => setTypeFilter("bug")}><AppIcon emoji="🐛" icon="bug" size={11} /> Bug</FilterPill>
+        <FilterPill th={th} active={typeFilter === "improvement"} onClick={() => setTypeFilter("improvement")}><AppIcon emoji="💡" icon="suggerimento" size={11} /> Miglioramenti</FilterPill>
       </div>
 
       {isAdmin && (
@@ -107,7 +109,7 @@ export default function ReportsListOverlay({ role, me, onClose }) {
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-                  <span>{TYPE_ICON[r.type]}</span>
+                  <span style={{ display: "flex" }}><AppIcon emoji={TYPE_ICON[r.type]} icon={TYPE_SVG_ICON[r.type]} size={13} /></span>
                   <span style={{ fontFamily: F.ui, fontSize: 13, fontWeight: 700, color: th.appInk }}>{r.title}</span>
                   <span style={{
                     marginLeft: "auto", flexShrink: 0, fontFamily: F.ui, fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 10,
@@ -149,6 +151,7 @@ function FilterPill({ th, active, onClick, children }) {
       background: active ? th.appAccent : "transparent",
       color: active ? "#fff" : th.appFaded,
       fontFamily: F.ui, fontSize: 11, fontWeight: 600, cursor: "pointer",
+      display: "inline-flex", alignItems: "center", gap: 5,
     }}>{children}</button>
   );
 }

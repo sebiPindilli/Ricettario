@@ -264,7 +264,7 @@ export default function EmptyFridgeScreen({
             {suggestedAggregates.length > 0 && onManageAggregates && (
               <SuggestionHint onClick={() => onManageAggregates()}>
                 <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
-                  💡 Sono stati rilevati ingredienti con nomi simili. Per un funzionamento ottimale{" "}
+                  Sono stati rilevati ingredienti con nomi simili. Per un funzionamento ottimale{" "}
                   <span style={{ color:th.appAccent, fontWeight:700, textDecoration:"underline" }}>raggruppali in aggregati o ignora le similitudini</span>.
                 </span>
               </SuggestionHint>
@@ -272,7 +272,7 @@ export default function EmptyFridgeScreen({
             {uncategorizedItems.length > 0 && (onManageCategories || onManageCategoriesDb) && (
               <SuggestionHint>
                 <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
-                  💡 Sono stati rilevati degli ingredienti senza categoria. Per un funzionamento ottimale{" "}
+                  Sono stati rilevati degli ingredienti senza categoria. Per un funzionamento ottimale{" "}
                   {onManageCategories && (
                     <span onClick={() => onManageCategories()} style={{ color:th.appAccent, fontWeight:700, cursor:"pointer", textDecoration:"underline" }}>assegnali a delle categorie esistenti</span>
                   )}

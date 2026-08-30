@@ -369,7 +369,7 @@ export default function ShoppingListScreen({
           {shoppingSuggestedAggregates.length > 0 && onManageAggregates && (
             <SuggestionHint onClick={() => onManageAggregates()}>
               <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
-                💡 Sono stati rilevati ingredienti con nomi simili nella tua lista spesa. Per un funzionamento ottimale{" "}
+                Sono stati rilevati ingredienti con nomi simili nella tua lista spesa. Per un funzionamento ottimale{" "}
                 <span style={{ color:th.appAccent, fontWeight:700, textDecoration:"underline" }}>raggruppali in aggregati o ignora le similitudini</span>.
               </span>
             </SuggestionHint>

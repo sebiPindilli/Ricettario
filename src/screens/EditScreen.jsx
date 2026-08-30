@@ -13,6 +13,7 @@ import SectionPicker from "../components/SectionPicker.jsx";
 import EditSectionedList from "../components/EditSectionedList.jsx";
 import EditSectionedSteps from "../components/EditSectionedSteps.jsx";
 import InfoButton from "../components/InfoButton.jsx";
+import AppIcon from "../components/AppIcon.jsx";
 import { guideNuovaModificaRicetta } from "../data/guideContent.jsx";
 
 // ══════════════════════════════════════════════════════════════
@@ -185,8 +186,9 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
 
         const ingredientiSection = (
           <div>
-            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginBottom:10, lineHeight:1.4, background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"9px 12px" }}>
-              💡 Inserisci ingrediente e quantità. Le <b>categorie</b> e gli <b>aggregati</b> (usati in Svuota Frigo) si gestiscono nella sezione <b>🍎⚙️ Organizza</b> del banner, così valgono per tutte le ricette.
+            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginBottom:10, lineHeight:1.4, background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"9px 12px", display:"flex", gap:6 }}>
+              <span style={{ flexShrink:0 }}><AppIcon emoji="💡" icon="suggerimento" size={12} /></span>
+              <span>Inserisci ingrediente e quantità. Le <b>categorie</b> e gli <b>aggregati</b> (usati in Svuota Frigo) si gestiscono nella sezione <b>🍎⚙️ Organizza</b> del banner, così valgono per tutte le ricette.</span>
             </div>
             <EditSectionedList
               data={toSectioned(draft.ingredients)}
