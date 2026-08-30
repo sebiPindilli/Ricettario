@@ -105,7 +105,7 @@ export default function BooksScreen({
   const handleDownloadBackup = () => {
     onDownloadBackup();
     setRemindBackup(false);
-    setBackupDoneMsg("✓ Backup scaricato");
+    setBackupDoneMsg("Backup scaricato");
     setTimeout(() => setBackupDoneMsg(null), 2500);
   };
 
@@ -122,7 +122,7 @@ export default function BooksScreen({
       const payload = JSON.parse(text);
       if (payload.app !== "ricettario" || !payload.data) throw new Error("Questo file non è un backup valido di Ricettario.");
       await onRestoreBackup(payload, targetId);
-      setRestoreSuccess("✓ Backup ripristinato e associato a questo ricettario.");
+      setRestoreSuccess("Backup ripristinato e associato a questo ricettario.");
     } catch (err) {
       setRestoreError(err.message || "Ripristino non riuscito.");
     } finally {
@@ -135,7 +135,7 @@ export default function BooksScreen({
     try {
       await onTransferBookData(backupId, targetId);
       setPendingBackupCopyId(null);
-      setBackupCopyMsg(p => ({ ...p, [backupId]: { ok: true, text: `✓ Copiato in "${targetName}"` } }));
+      setBackupCopyMsg(p => ({ ...p, [backupId]: { ok: true, text: `Copiato in "${targetName}"` } }));
     } catch (err) {
       setBackupCopyMsg(p => ({ ...p, [backupId]: { ok: false, text: err.message || "Copia non riuscita." } }));
     } finally {
@@ -149,10 +149,10 @@ export default function BooksScreen({
     try {
       await onTransferAll(targetId);
       setPendingTransferTarget(null);
-      setTransferMsg(`✓ Tutti i dati trasferiti in "${targetName}"`);
+      setTransferMsg({ ok: true, text: `Tutti i dati trasferiti in "${targetName}"` });
       setTimeout(() => setTransferMsg(null), 3000);
     } catch (err) {
-      setTransferMsg(err.message || "Trasferimento non riuscito.");
+      setTransferMsg({ ok: false, text: err.message || "Trasferimento non riuscito." });
       setTimeout(() => setTransferMsg(null), 3000);
     } finally {
       setTransferBusy(false);
@@ -364,8 +364,10 @@ export default function BooksScreen({
               {!isBeta && (
                 <div style={{ marginTop:8, display:"flex", gap:6, flexWrap:"wrap" }}>
                   {active && (
-                    <button onClick={handleDownloadBackup} style={{ padding:"6px 10px", borderRadius:8, border:`1px solid ${th.appBorder}`, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:10, fontWeight:600, cursor:"pointer" }}>
-                      {backupDoneMsg || "⬇️ Scarica backup"}
+                    <button onClick={handleDownloadBackup} style={{ padding:"6px 10px", borderRadius:8, border:`1px solid ${th.appBorder}`, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:10, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}>
+                      {backupDoneMsg
+                        ? <><AppIcon emoji="✓" icon="fatto" size={11} /> {backupDoneMsg}</>
+                        : <><AppIcon emoji="⬇️" icon="scarica" size={11} /> Scarica backup</>}
                     </button>
                   )}
                   <button disabled={restoreBusy && restoreTargetId === b.id} onClick={() => { setRestoreTargetId(b.id); setRestoreError(null); setRestoreSuccess(null); fileInputRef.current?.click(); }} style={{ padding:"6px 10px", borderRadius:8, border:`1px solid ${th.appBorder}`, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:10, fontWeight:600, cursor:"pointer" }}>
@@ -377,7 +379,7 @@ export default function BooksScreen({
                 <div style={{ fontFamily:F.ui, fontSize:10.5, color:DANGER, marginTop:5 }}>{restoreError}</div>
               )}
               {restoreTargetId === b.id && restoreSuccess && (
-                <div style={{ fontFamily:F.ui, fontSize:10.5, color:"#6B8C6E", marginTop:5 }}>{restoreSuccess}</div>
+                <div style={{ fontFamily:F.ui, fontSize:10.5, color:"#6B8C6E", marginTop:5, display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="✓" icon="fatto" size={11} /> {restoreSuccess}</div>
               )}
 
               {/* Trasferisci tutto questo ricettario (solo libro attivo, non
@@ -402,7 +404,7 @@ export default function BooksScreen({
                       )
                     ))}
                   </div>
-                  {transferMsg && <div style={{ fontFamily:F.ui, fontSize:10.5, color: transferMsg.startsWith("✓") ? "#6B8C6E" : DANGER, marginTop:6 }}>{transferMsg}</div>}
+                  {transferMsg && <div style={{ fontFamily:F.ui, fontSize:10.5, color: transferMsg.ok ? "#6B8C6E" : DANGER, marginTop:6, display:"flex", alignItems:"center", gap:5 }}>{transferMsg.ok && <AppIcon emoji="✓" icon="fatto" size={11} />} {transferMsg.text}</div>}
                 </div>
               )}
 
@@ -434,7 +436,7 @@ export default function BooksScreen({
                         )}
                       </div>
                       {backupCopyMsg[bk.id] && (
-                        <div style={{ fontFamily:F.ui, fontSize:10, color: backupCopyMsg[bk.id].ok ? "#6B8C6E" : DANGER, marginTop:3 }}>{backupCopyMsg[bk.id].text}</div>
+                        <div style={{ fontFamily:F.ui, fontSize:10, color: backupCopyMsg[bk.id].ok ? "#6B8C6E" : DANGER, marginTop:3, display:"flex", alignItems:"center", gap:4 }}>{backupCopyMsg[bk.id].ok && <AppIcon emoji="✓" icon="fatto" size={10} />} {backupCopyMsg[bk.id].text}</div>
                       )}
                     </div>
                   ))}
