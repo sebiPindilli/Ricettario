@@ -285,7 +285,7 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
 
   return (
     <>
-      {renderNav && renderNav()}
+      {renderNav && renderNav({ activeSectionLabel, resultCount: displayRecipes.length })}
       {topAction}
       {/* Ricerca */}
       <div style={{ padding:"8px 16px 4px" }}>

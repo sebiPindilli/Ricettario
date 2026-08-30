@@ -14,7 +14,7 @@ export default function RecipeFilterBarBook({ recipes, extraTagGroups, sectionLi
   const ui = useUiStyle();
   return (
     <RecipeFilterBar recipes={recipes} extraTagGroups={extraTagGroups} sectionList={sectionList} bookMode
-      renderNav={() => (
+      renderNav={({ activeSectionLabel, resultCount }) => (
         <>
           <GlobalNav
             activeScreen="book"
@@ -31,12 +31,20 @@ export default function RecipeFilterBarBook({ recipes, extraTagGroups, sectionLi
             infoContent={guideRicette}
             bottomNavActive
           />
+          {/* Stessa testa di RecipesScreen.jsx (titolo/occhiello identici):
+              qui l'icona "libro" è quella attiva (tone accent) e torna alla
+              lista invece di aprire di nuovo la vista libro -- un
+              interruttore, non due schermate con intestazioni diverse. */}
           <ScreenHeader
             section="ricette"
-            title="Vista Libro"
+            title={activeSectionLabel || "Libro Ricette"}
+            subtitle={`${resultCount} ricett${resultCount===1?"a":"e"}`}
             onHome={onLanding}
             infoContent={guideRicette}
-            actions={onExport ? [{ icon:"esporta", label:"Esporta ricettario", onClick:onExport }] : []}
+            actions={[
+              { icon:"libro", label:"Torna alla lista", onClick:onRecipes, tone:"accent" },
+              ...(onExport ? [{ icon:"esporta", label:"Esporta ricettario", onClick:onExport }] : []),
+            ]}
           />
         </>
       )}
