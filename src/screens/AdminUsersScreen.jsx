@@ -3,6 +3,7 @@ import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 import GlobalNav from "../components/GlobalNav.jsx";
 import Toast from "../components/Toast.jsx";
+import AppIcon from "../components/AppIcon.jsx";
 import {
   loadAllowlist, addAllowlistEntry, setAllowlistRole, removeAllowlistEntry,
   loadBetaConfig, setBetaEnabled as setBetaEnabledRemote,
@@ -127,7 +128,7 @@ export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemor
       await removeAllowlistEntry(email);
       setUsers((list) => list.filter((u) => u.email !== email));
       setPendingRemove(null);
-      showToast("🗑️ Utente rimosso");
+      showToast(<><AppIcon emoji="🗑️" icon="elimina" size={13} /> Utente rimosso</>);
     } catch {
       setPendingRemove(null);
       showToast("⚠️ Rimozione non riuscita");

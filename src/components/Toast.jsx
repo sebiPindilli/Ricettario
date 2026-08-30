@@ -13,6 +13,11 @@ export default function Toast({ msg, visible }) {
       pointerEvents:"none",
       zIndex:999,
       whiteSpace:"nowrap",
+      // display:flex invece del solo testo: showToast può ricevere un
+      // frammento <AppIcon/> + testo (icona SVG, non solo emoji nuda) e
+      // senza questo l'SVG (display:block) va a capo invece di stare in
+      // riga con la scritta.
+      display:"inline-flex", alignItems:"center", gap:6,
     }}>{msg}</div>
   );
 }
