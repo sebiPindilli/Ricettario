@@ -768,7 +768,12 @@ export default function UnifiedExportFlow({
                 <button onClick={() => copyToClipboard(url, () => { setLinkCopiedId(l.shareId); setTimeout(() => setLinkCopiedId(null), 1500); })} style={{
                   padding: "6px 12px", borderRadius: 8, border: `1.5px solid ${th.appBorder}`, background: "transparent",
                   color: th.appInk, fontFamily: F.ui, fontSize: 11, cursor: "pointer",
-                }}>{linkCopiedId === l.shareId ? "✓ Copiato" : "📋 Copia"}</button>
+                  display: "flex", alignItems: "center", gap: 5,
+                }}>
+                  {linkCopiedId === l.shareId
+                    ? <><AppIcon emoji="✓" icon="fatto" size={12} /> Copiato</>
+                    : <><AppIcon emoji="📋" icon="copia" size={12} /> Copia</>}
+                </button>
               </div>
             );
           })}
@@ -777,7 +782,11 @@ export default function UnifiedExportFlow({
           <Primary th={th} onClick={() => copyToClipboard(
             result.links.map(l => `${l.recipeTitle}: ${window.location.origin}/?shared=${l.shareId}`).join("\n"),
             () => { setAllCopied(true); setTimeout(() => setAllCopied(false), 1500); }
-          )} style={{ marginBottom: 8 }}>{allCopied ? "✓ Copiati" : "📋 Copia tutti i link"}</Primary>
+          )} style={{ marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+            {allCopied
+              ? <><AppIcon emoji="✓" icon="fatto" size={14} /> Copiati</>
+              : <><AppIcon emoji="📋" icon="copia" size={14} /> Copia tutti i link</>}
+          </Primary>
         )}
         <Ghost th={th} onClick={onClose}>Chiudi</Ghost>
       </Panel>

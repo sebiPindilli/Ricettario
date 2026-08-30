@@ -57,7 +57,7 @@ export default function ReportsListOverlay({ role, me, onClose }) {
   const copySelected = async () => {
     const chosen = reports.filter((r) => selected.includes(r.id));
     await navigator.clipboard.writeText(buildCopyText(chosen));
-    showToast("📋 Copiato negli appunti");
+    showToast(<><AppIcon emoji="✓" icon="fatto" size={13} /> Copiato negli appunti</>);
   };
 
   const filtered = reports

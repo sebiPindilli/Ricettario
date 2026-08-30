@@ -485,8 +485,11 @@ export default function ShoppingListScreen({
             color:"#fff", border:"none", borderRadius:14,
             fontFamily:F.ui, fontSize:14, fontWeight:700, cursor:"pointer",
             transition:"background 0.2s",
+            display:"flex", alignItems:"center", justifyContent:"center", gap:7,
           }}>
-            {copied ? "✓ Copiato negli appunti!" : "📋 Copia tutto negli appunti"}
+            {copied
+              ? <><AppIcon emoji="✓" icon="fatto" size={16} /> Copiato negli appunti!</>
+              : <><AppIcon emoji="📋" icon="copia" size={16} /> Copia tutto negli appunti</>}
           </button>
         </div>
       )}
