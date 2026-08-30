@@ -402,7 +402,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
             color: activeFilterCount>0 ? th.appAccent : ui.faded,
             cursor:"pointer",
           }}>
-            <Icon name="altro" size={18} />
+            <Icon name="filtra" size={18} />
             {activeFilterCount>0 && (
               <span style={{ position:"absolute", top:-5, right:-5, background:th.appAccent, color:"#fff", borderRadius:8, minWidth:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 3px" }}>{activeFilterCount}</span>
             )}

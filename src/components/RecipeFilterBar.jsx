@@ -312,7 +312,7 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
               color: activeFilterCount>0 ? th.appAccent : ui.faded,
               fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
             }}>
-              <AppIcon emoji="🏷️" icon="tag" size={12} /> Filtri
+              <AppIcon emoji="🏷️" icon="filtra" size={12} /> Filtri
               {activeFilterCount>0 && (
                 <span style={{ background:th.appAccent, color:"#fff", borderRadius:9, padding:"1px 6px", fontSize:10 }}>{activeFilterCount}</span>
               )}

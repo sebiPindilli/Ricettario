@@ -217,11 +217,8 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
           </div>
           <button onClick={() => onOpenExport(recipe.id)} title="Esporta / condividi" style={{ background:"none", border:"none", cursor:"pointer", color:ui.faded, padding:6, display:"flex" }}><Icon name="esporta" size={19} /></button>
           <button onClick={() => onUpdate({ ...recipe, favorite: !recipe.favorite })} title={recipe.favorite ? "Rimuovi dai preferiti" : "Aggiungi ai preferiti"} style={{ background:"none", border:"none", cursor:"pointer", color: recipe.favorite ? th.appAccent2 : ui.faded, padding:6, display:"flex" }}><Icon name="preferito" size={19} /></button>
-          {/* Nessun simbolo "modifica"/"elimina" nel set SVG: uso "altro"
-              come da istruzioni (nessuna icona nuova disegnata) — segnalato
-              nel riepilogo finale. */}
-          <button onClick={onEdit} title="Modifica ricetta" style={{ background:"none", border:"none", cursor:"pointer", color:ui.faded, padding:6, display:"flex" }}><Icon name="altro" size={19} /></button>
-          <button onClick={() => setShowDeleteConfirm(true)} title="Elimina ricetta" style={{ background:"none", border:"none", cursor:"pointer", color:"#D93025", padding:6, display:"flex" }}><Icon name="altro" size={19} /></button>
+          <button onClick={onEdit} title="Modifica ricetta" style={{ background:"none", border:"none", cursor:"pointer", color:ui.faded, padding:6, display:"flex" }}><Icon name="modifica" size={19} /></button>
+          <button onClick={() => setShowDeleteConfirm(true)} title="Elimina ricetta" style={{ background:"none", border:"none", cursor:"pointer", color:"#D93025", padding:6, display:"flex" }}><Icon name="elimina" size={19} /></button>
         </div>
       )}
 
