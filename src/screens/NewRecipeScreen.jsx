@@ -89,7 +89,8 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
             fontFamily:F.ui, fontSize:13, fontWeight:700,
             cursor: canSave ? "pointer" : "default",
             transition:"all 0.2s",
-          }}>Salva ✓</button>
+            display:"flex", alignItems:"center", gap:5,
+          }}>Salva <AppIcon emoji="✓" icon="fatto" size={12} /></button>
         </div>
       </div>
 
@@ -317,8 +318,9 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
           cursor: canSave ? "pointer" : "default",
           boxShadow: canSave ? "0 4px 16px rgba(196,89,58,0.35)" : "none",
           transition:"all 0.2s",
+          display:"flex", alignItems:"center", justifyContent:"center", gap:6,
         }}>
-          {canSave ? "Salva ricetta ✓" : "Inserisci un titolo"}
+          {canSave ? <>Salva ricetta <AppIcon emoji="✓" icon="fatto" size={13} /></> : "Inserisci un titolo"}
         </button>
       </div>
     </div>

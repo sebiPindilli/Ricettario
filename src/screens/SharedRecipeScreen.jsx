@@ -229,7 +229,7 @@ export default function SharedRecipeScreen({ shareId, me, editableBooks = [], on
             </div>
             {addError && <div style={{ fontFamily:F.ui, fontSize:11.5, color:"#C4593A", marginBottom:8 }}>{addError}</div>}
             {addedTo.length > 0 && (
-              <div style={{ fontFamily:F.ui, fontSize:11.5, color:"#6B8C6E", fontWeight:700, marginBottom:8 }}>✓ Aggiunta a {addedTo.join(", ")}</div>
+              <div style={{ fontFamily:F.ui, fontSize:11.5, color:"#6B8C6E", fontWeight:700, marginBottom:8, display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="✓" icon="fatto" size={12} /> Aggiunta a {addedTo.join(", ")}</div>
             )}
             <button onClick={doAdd} disabled={selectedBooks.length === 0 || adding} style={{
               width:"100%", padding:"13px", borderRadius:12, border:"none",

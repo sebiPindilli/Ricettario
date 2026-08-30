@@ -4,6 +4,7 @@ import { F } from "../data/constants.js";
 import { flattenSteps, flattenIngredients, ingredientToText, scaleIngredient, stepNumberLabel } from "../utils/helpers.js";
 import { remainingMs, isExpired, formatRemaining, formatOverdue } from "../utils/timers.js";
 import PhotoLightbox from "../components/PhotoLightbox.jsx";
+import AppIcon from "../components/AppIcon.jsx";
 import InfoButton from "../components/InfoButton.jsx";
 import TimersPopup from "../components/TimersPopup.jsx";
 import TimerFAB from "../components/TimerFAB.jsx";
@@ -319,7 +320,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
       {!isDone && (
         <div ref={navRef} style={{ display:"flex", flexShrink:0, borderTop:"1px solid rgba(255,255,255,0.1)" }}>
           <button onClick={(e) => { e.stopPropagation(); prev(); }} disabled={isIntro} style={{ flex:1, padding:"16px", background:"none", border:"none", color: isIntro ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.75)", fontFamily:F.ui, fontSize:14, cursor: isIntro ? "default" : "pointer", borderRight:"1px solid rgba(255,255,255,0.1)" }}>‹ Indietro</button>
-          <button onClick={(e) => { e.stopPropagation(); next(); }} style={{ flex:1, padding:"16px", background:"none", border:"none", color:th.appAccent2, fontFamily:F.ui, fontSize:14, fontWeight:700, cursor:"pointer" }}>{isIntro ? "Inizia →" : idx === steps.length-1 ? "Fine ✓" : "Avanti ›"}</button>
+          <button onClick={(e) => { e.stopPropagation(); next(); }} style={{ flex:1, padding:"16px", background:"none", border:"none", color:th.appAccent2, fontFamily:F.ui, fontSize:14, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>{isIntro ? "Inizia →" : idx === steps.length-1 ? <>Fine <AppIcon emoji="✓" icon="fatto" size={13} /></> : "Avanti ›"}</button>
         </div>
       )}
 

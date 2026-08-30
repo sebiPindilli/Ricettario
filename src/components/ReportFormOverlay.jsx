@@ -28,7 +28,7 @@ export default function ReportFormOverlay({ type, me, onClose, initialScreenshot
     setError(false);
     try {
       await createReport({ type, title: title.trim(), description: description.trim(), createdBy: me, screenshotDataUrl: screenshot });
-      setToast({ msg: "✅ Segnalazione inviata, grazie!", visible: true });
+      setToast({ msg: <><AppIcon emoji="✅" icon="fatto" size={13} /> Segnalazione inviata, grazie!</>, visible: true });
       setTimeout(onClose, 1200);
     } catch {
       setError(true);

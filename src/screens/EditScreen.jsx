@@ -92,7 +92,8 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
             padding:"8px 18px",
             fontFamily:F.ui, fontSize:13, fontWeight:700,
             cursor:"pointer",
-          }}>Salva ✓</button>
+            display:"flex", alignItems:"center", gap:5,
+          }}>Salva <AppIcon emoji="✓" icon="fatto" size={12} /></button>
         </div>
       </div>
 
@@ -338,7 +339,8 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
           fontFamily:F.ui, fontSize:14, fontWeight:700,
           cursor:"pointer",
           boxShadow:"0 4px 16px rgba(196,89,58,0.35)",
-        }}>Salva modifiche ✓</button>
+          display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+        }}>Salva modifiche <AppIcon emoji="✓" icon="fatto" size={13} /></button>
       </div>
     </div>
   );

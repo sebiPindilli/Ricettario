@@ -6,6 +6,7 @@ import BackBtn from "../components/BackBtn.jsx";
 import EditLabel from "../components/EditLabel.jsx";
 import Toast from "../components/Toast.jsx";
 import ChosenIcon from "../components/ChosenIcon.jsx";
+import AppIcon from "../components/AppIcon.jsx";
 import { guideNuovoRicordo } from "../data/guideContent.jsx";
 
 export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBack, onSave, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping }) {
@@ -77,8 +78,9 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
             border:"none", borderRadius:10, padding:"8px 18px",
             fontFamily:F.ui, fontSize:13, fontWeight:700,
             cursor: canSave ? "pointer" : "default", transition:"all 0.2s",
+            display:"flex", alignItems:"center", gap:5,
           }}
-        >Salva ✓</button>
+        >Salva <AppIcon emoji="✓" icon="fatto" size={12} /></button>
       </div>
 
       <div style={{ padding:"12px 20px 4px" }}>
@@ -235,13 +237,14 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
             cursor: canSave ? "pointer" : "default",
             boxShadow: canSave ? `0 4px 16px ${th.appAccent}44` : "none",
             transition:"all 0.2s",
+            display:"flex", alignItems:"center", justifyContent:"center", gap:6,
           }}
         >
           {!chosenPhoto
             ? "Seleziona una foto o emoji"
             : selectedRecipeIds.length === 0
               ? "Seleziona almeno una ricetta"
-              : `Salva ricordo ✓ (${selectedRecipeIds.length} ricett${selectedRecipeIds.length===1?"a":"e"})`
+              : <><AppIcon emoji="✓" icon="fatto" size={14} /> {`Salva ricordo (${selectedRecipeIds.length} ricett${selectedRecipeIds.length===1?"a":"e"})`}</>
           }
         </button>
       </div>

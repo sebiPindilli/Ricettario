@@ -97,7 +97,7 @@ export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemor
       setUsers((list) => [...list, { email, role: newRole }].sort((a, b) => a.email.localeCompare(b.email)));
       setAdding(false); setNewEmail(""); setNewRole("base"); setAddError(null);
       setLastAdded(email);
-      showToast("✅ Utente aggiunto");
+      showToast(<><AppIcon emoji="✅" icon="fatto" size={13} /> Utente aggiunto</>);
     } catch {
       setAddError("Aggiunta non riuscita. Riprova.");
     } finally {
@@ -283,8 +283,8 @@ export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemor
 
         {!loading && !loadError && lastAdded && (
           <div style={{ background: `${th.appAccent}12`, border: `1.5px solid ${th.appAccent}`, borderRadius: 14, padding: "12px 14px", marginBottom: 10 }}>
-            <div style={{ fontFamily: F.ui, fontSize: 12, color: th.appInk, marginBottom: 8 }}>
-              ✅ <b>{lastAdded}</b> aggiunto. Invito pronto da inviare:
+            <div style={{ fontFamily: F.ui, fontSize: 12, color: th.appInk, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+              <AppIcon emoji="✅" icon="fatto" size={13} /> <b>{lastAdded}</b> aggiunto. Invito pronto da inviare:
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={() => setLastAdded(null)} style={{ flex: 1, padding: "10px", border: `1.5px solid ${th.appBorder}`, borderRadius: 10, background: "transparent", color: th.appFaded, fontFamily: F.ui, fontSize: 12, cursor: "pointer" }}>Chiudi</button>

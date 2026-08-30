@@ -262,7 +262,8 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
                 padding:"9px", borderRadius:10, border:"none",
                 background:th.appAccent, color:"#fff",
                 fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer",
-              }}>✓ Applica</button>
+                display:"flex", alignItems:"center", justifyContent:"center", gap:5,
+              }}><AppIcon emoji="✓" icon="fatto" size={12} /> Applica</button>
             )}
           </div>
         )}

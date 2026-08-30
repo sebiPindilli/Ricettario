@@ -3,6 +3,7 @@ import { useTheme, useScanExtraction } from "../context.js";
 import { F } from "../data/constants.js";
 import BackBtn from "../components/BackBtn.jsx";
 import InfoButton from "../components/InfoButton.jsx";
+import AppIcon from "../components/AppIcon.jsx";
 import { guideScansiona } from "../data/guideContent.jsx";
 
 export default function ScanScreen({ onBack, onSave, mode = "camera" }) {
@@ -338,10 +339,13 @@ export default function ScanScreen({ onBack, onSave, mode = "camera" }) {
                 fontFamily: F.ui,
                 fontSize: 12.5,
                 fontWeight: 700,
-                cursor: "pointer"
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 6
               }}
             >
-              ✅ Continua a usare l'app
+              <AppIcon emoji="✅" icon="fatto" size={13} /> Continua a usare l'app
             </button>
             <div style={{ fontFamily: F.ui, fontSize: 10.5, color: th.appFaded, textAlign: "center", maxWidth: 240 }}>
               L'estrazione prosegue in background — ti avviseremo con un banner quando è pronta.

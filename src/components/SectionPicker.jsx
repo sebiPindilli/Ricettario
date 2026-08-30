@@ -200,11 +200,11 @@ export default function SectionPicker({ value, onChange, sections = MACRO_SECTIO
                   );
                 })}
                 {onDeleteSection && (
-                  <div style={{ fontFamily:F.ui, fontSize:9.5, color:"#7A6E5F", margin:"2px 0 6px", lineHeight:1.4 }}>
-                    🗑️ elimina la sezione: le sue ricette passano in "Altro".
+                  <div style={{ fontFamily:F.ui, fontSize:9.5, color:"#7A6E5F", margin:"2px 0 6px", lineHeight:1.4, display:"flex", alignItems:"flex-start", gap:4 }}>
+                    <AppIcon emoji="🗑️" icon="elimina" size={11} /> <span>elimina la sezione: le sue ricette passano in "Altro".</span>
                   </div>
                 )}
-                <button onClick={() => { setManaging(false); setConfirmDelId(null); }} style={{ width:"100%", marginTop:8, padding:"12px", border:"none", borderRadius:12, background:"#C4593A", color:"#fff", fontFamily:F.ui, fontSize:13, fontWeight:700, cursor:"pointer" }}>Fatto ✓</button>
+                <button onClick={() => { setManaging(false); setConfirmDelId(null); }} style={{ width:"100%", marginTop:8, padding:"12px", border:"none", borderRadius:12, background:"#C4593A", color:"#fff", fontFamily:F.ui, fontSize:13, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>Fatto <AppIcon emoji="✓" icon="fatto" size={13} /></button>
               </>
             )}
           </div>

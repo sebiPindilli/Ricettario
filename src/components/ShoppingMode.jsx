@@ -3,6 +3,7 @@ import { useTheme, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import { flattenIngredients, scaleIngredient, normName, fmtQty } from "../utils/helpers.js";
 import InfoButton from "./InfoButton.jsx";
+import AppIcon from "./AppIcon.jsx";
 import { guideModalitaSpesa } from "../data/guideContent.jsx";
 
 // ══════════════════════════════════════════════════════════════
@@ -77,8 +78,9 @@ export default function ShoppingMode({ recipe, scale, onClose, onAddToList, pres
             background:`${th.appAccent}12`, border:`1px solid ${th.appAccent}44`,
             borderRadius:12, padding:"11px 14px", marginBottom:14,
             fontFamily:F.ui, fontSize:12, color:th.appInk, lineHeight:1.5,
+            display:"flex", alignItems:"flex-start", gap:6,
           }}>
-            ✓ Gli ingredienti <b>selezionati</b> (spuntati) verranno aggiunti alla <b>Lista Spesa</b>. Deseleziona quelli che hai già in casa.
+            <AppIcon emoji="✓" icon="fatto" size={13} /> <span>Gli ingredienti <b>selezionati</b> (spuntati) verranno aggiunti alla <b>Lista Spesa</b>. Deseleziona quelli che hai già in casa.</span>
           </div>
           {items.map(it => {
             const showSection = it.section && it.section !== lastSection;
@@ -123,8 +125,11 @@ export default function ShoppingMode({ recipe, scale, onClose, onAddToList, pres
             color:"#fff", border:"none", borderRadius:14,
             fontFamily:F.ui, fontSize:14, fontWeight:700, cursor:"pointer",
             transition:"background 0.2s",
+            display:"flex", alignItems:"center", justifyContent:"center", gap:7,
           }}>
-            {copied ? "✓ Aggiunto alla Lista Spesa!" : `🛒 Aggiungi alla Lista Spesa (${checked.length})`}
+            {copied
+              ? <><AppIcon emoji="✓" icon="fatto" size={14} /> Aggiunto alla Lista Spesa!</>
+              : <><AppIcon emoji="🛒" icon="spesa" size={14} /> {`Aggiungi alla Lista Spesa (${checked.length})`}</>}
           </button>
         </div>
       </div>

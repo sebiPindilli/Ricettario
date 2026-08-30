@@ -452,8 +452,8 @@ export default function EmptyFridgeScreen({
                     {ui.id === "classico" ? (
                       <>
                         {present.length > 0 && (
-                          <div style={{ marginBottom:6 }}>
-                            <span style={{ fontFamily:F.ui, fontSize:10, color:"#6B8C6E", fontWeight:700 }}>✓ HAI: </span>
+                          <div style={{ marginBottom:6, display:"flex", alignItems:"baseline", flexWrap:"wrap", gap:4 }}>
+                            <span style={{ fontFamily:F.ui, fontSize:10, color:"#6B8C6E", fontWeight:700, display:"inline-flex", alignItems:"center", gap:3 }}><AppIcon emoji="✓" icon="fatto" size={10} /> HAI:</span>
                             <span style={{ fontFamily:F.ui, fontSize:11, color:th.appInk }}>
                               {present.map(p => p.text).join(", ")}
                             </span>

@@ -323,10 +323,13 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
                 fontFamily: F.ui,
                 fontSize: 12.5,
                 fontWeight: 700,
-                cursor: "pointer"
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 6
               }}
             >
-              ✅ Continua a usare l'app
+              <AppIcon emoji="✅" icon="fatto" size={13} /> Continua a usare l'app
             </button>
             <div style={{ fontFamily: F.ui, fontSize: 10.5, color: th.appFaded, textAlign: "center", maxWidth: 240 }}>
               L'estrazione prosegue in background — ti avviseremo con un banner quando è pronta.

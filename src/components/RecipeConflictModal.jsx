@@ -98,7 +98,9 @@ export default function RecipeConflictModal({ conflict, onKeepMine, onDiscardMin
             }}>
               {intent === "delete" ? (
                 <span style={{ display: "flex", alignItems: "center", gap: 6 }}><AppIcon emoji="🗑️" icon="elimina" size={13} /> Elimina comunque</span>
-              ) : "✓ Tieni le mie modifiche"}
+              ) : (
+                <span style={{ display: "flex", alignItems: "center", gap: 6 }}><AppIcon emoji="✓" icon="fatto" size={13} /> Tieni le mie modifiche</span>
+              )}
               <div style={{ fontWeight: 400, fontSize: 11, opacity: 0.9, marginTop: 2 }}>
                 {intent === "delete" ? "La versione modificata da altri viene eliminata." : "Sovrascrive la versione sul server con la tua."}
               </div>

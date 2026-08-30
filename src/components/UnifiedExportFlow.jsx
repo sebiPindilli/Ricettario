@@ -221,7 +221,8 @@ export default function UnifiedExportFlow({
           background: allSelected ? th.appAccent : "transparent",
           color: allSelected ? "#fff" : th.appAccent,
           fontFamily: F.ui, fontSize: 12, fontWeight: 700, cursor: "pointer", marginBottom: 10, flexShrink: 0,
-        }}>{allSelected ? "✓ Tutto il ricettario selezionato" : "Seleziona tutto"}</button>
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+        }}>{allSelected ? <><AppIcon emoji="✓" icon="fatto" size={13} /> Tutto il ricettario selezionato</> : "Seleziona tutto"}</button>
         <div style={{ flex: 1, overflowY: "auto", marginBottom: 12 }}>
           {sortSectionsAltroLast(sectionList).map(sec => {
             const inSec = recipes.filter(r => r.macroSection === sec.id);
@@ -365,7 +366,7 @@ export default function UnifiedExportFlow({
           {error && <div style={{ fontFamily: F.ui, fontSize: 11.5, color: "#C4593A", marginBottom: 8, textAlign: "center" }}>{error}</div>}
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             <Ghost th={th} onClick={() => setStep("books")} style={{ flex: 1 }} disabled={busy}>‹ Indietro</Ghost>
-            <Primary th={th} onClick={submitBooks} disabled={busy} style={{ flex: 2 }}>{busy ? "Copia…" : "✓ Copia ricette"}</Primary>
+            <Primary th={th} onClick={submitBooks} disabled={busy} style={{ flex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>{busy ? "Copia…" : <><AppIcon emoji="✓" icon="fatto" size={14} /> Copia ricette</>}</Primary>
           </div>
         </Panel>
       );
@@ -548,7 +549,7 @@ export default function UnifiedExportFlow({
               onSaveTemplate(saved);
               setPdfPrefs(p => ({ ...p, templateId: saved.id, layout: saved.layoutId }));
               setEditingTemplate(null);
-            }} style={{ flex: 2 }}>✓ Salva template</Primary>
+            }} style={{ flex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><AppIcon emoji="✓" icon="fatto" size={14} /> Salva template</Primary>
           </div>
         </Panel>
       );
@@ -739,7 +740,7 @@ export default function UnifiedExportFlow({
   if (result?.kind === "books") {
     return (
       <Panel th={th}>
-        <Title th={th}>✓ Fatto</Title>
+        <Title th={th}><span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}><AppIcon emoji="✓" icon="fatto" size={17} /> Fatto</span></Title>
         <Sub th={th}>{selected.length} ricett{selected.length === 1 ? "a copiata" : "e copiate"} in {result.names.map(n => `«${n}»`).join(", ")}.</Sub>
         <Ghost th={th} onClick={onClose}>Chiudi</Ghost>
       </Panel>

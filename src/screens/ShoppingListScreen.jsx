@@ -227,7 +227,8 @@ export default function ShoppingListScreen({
               padding:"6px 10px", borderRadius:9, border:`1.5px solid ${th.appBorder}`,
               background:"transparent", color:th.appFaded,
               fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer",
-            }}>✅ Ce l'ho</button>
+              display:"flex", alignItems:"center", gap:5,
+            }}><AppIcon emoji="✅" icon="fatto" size={11} /> Ce l'ho</button>
             <button onClick={() => setMovedToBuy(p => new Set(p).add(g.id))} style={{
               padding:"6px 10px", borderRadius:9, border:`1.5px solid ${th.appAccent}`,
               background:"transparent", color:th.appAccent,
