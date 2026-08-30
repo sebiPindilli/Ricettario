@@ -210,8 +210,8 @@ export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemor
               </div>
 
               {isAdminRow ? (
-                <div style={{ marginTop: 8, fontFamily: F.ui, fontSize: 10, color: th.appFaded, fontStyle: "italic" }}>
-                  🔒 gestibile solo da Firebase Console
+                <div style={{ marginTop: 8, fontFamily: F.ui, fontSize: 10, color: th.appFaded, fontStyle: "italic", display: "flex", alignItems: "center", gap: 4 }}>
+                  <AppIcon emoji="🔒" icon="privato" size={10} /> gestibile solo da Firebase Console
                 </div>
               ) : (
                 <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>

@@ -142,9 +142,11 @@ export default function MySharedLinksScreen({ me, nav, onBack }) {
               </div>
             ) : (
               <div style={{ fontFamily:F.ui, fontSize:11.5, color:th.appFaded, marginBottom:10, lineHeight:1.6 }}>
-                {item.visibility === "anyone"
-                  ? "🔓 Chiunque abbia il link"
-                  : `🔒 Solo: ${(item.allowedEmails || []).join(", ") || "nessuno (non apribile da nessuno)"}`}
+                <span style={{ display:"inline-flex", alignItems:"center", gap:5 }}>
+                  {item.visibility === "anyone"
+                    ? <><AppIcon emoji="🔓" icon="pubblico" size={12} /> Chiunque abbia il link</>
+                    : <><AppIcon emoji="🔒" icon="privato" size={12} /> {`Solo: ${(item.allowedEmails || []).join(", ") || "nessuno (non apribile da nessuno)"}`}</>}
+                </span>
                 {(item.includedData?.ingredients || item.includedData?.photos || item.includedData?.memories) && (
                   <>
                     <br/>

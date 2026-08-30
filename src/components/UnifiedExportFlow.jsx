@@ -269,11 +269,11 @@ export default function UnifiedExportFlow({
         <Sub th={th}>{selected.length} ricett{selected.length === 1 ? "a" : "e"}</Sub>
         <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
           <Primary th={th} onClick={() => { setDest("books"); setStep("books"); }} style={isNew ? { display: "flex", flexDirection: "column", gap: 2 } : undefined}>
-            <span>📚 Un mio altro ricettario</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><AppIcon emoji="📚" icon="ricettari" size={14} /> Un mio altro ricettario</span>
             {isNew && <span style={{ fontWeight: 400, fontSize: 11, opacity: 0.85 }}>copia le ricette, restano indipendenti dall'originale</span>}
           </Primary>
           <Primary th={th} onClick={() => { setDest("person"); setStep("format"); }} style={isNew ? { display: "flex", flexDirection: "column", gap: 2 } : undefined}>
-            <span>🧑‍🤝‍🧑 Un'altra persona</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><AppIcon emoji="🧑‍🤝‍🧑" icon="persona" size={14} /> Un'altra persona</span>
             {isNew && <span style={{ fontWeight: 400, fontSize: 11, opacity: 0.85 }}>link o PDF, a scelta al passo successivo</span>}
           </Primary>
           <Ghost th={th} onClick={() => setStep("select")} style={{ border: "none", color: th.appFaded }}>‹ Indietro</Ghost>
@@ -309,7 +309,7 @@ export default function UnifiedExportFlow({
                     background: sel ? th.appAccent : "transparent",
                     color: "#fff", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center",
                   }}>{sel ? "✓" : ""}</span>
-                  <span style={{ fontSize: 16 }}>{b.type === "personale" ? "🔒" : "👥"}</span>
+                  {b.type === "personale" ? <AppIcon emoji="🔒" icon="privato" size={16} /> : <span style={{ fontSize: 16 }}>👥</span>}
                   <span style={{ fontFamily: F.body, fontSize: 13, color: th.appInk }}>{b.name}</span>
                 </button>
               );

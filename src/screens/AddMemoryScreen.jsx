@@ -134,7 +134,7 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
               display:"flex", flexDirection:"column", alignItems:"center", gap:8,
               opacity: isOnline ? 1 : 0.5,
             }}>
-              <span style={{ fontSize:30 }}>📷</span>
+              <AppIcon emoji="📷" icon="foto" size={30} />
               <span>Scatta o scegli dalla galleria</span>
             </button>
           )}

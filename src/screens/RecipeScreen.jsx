@@ -129,7 +129,7 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
   };
   const handleCropConfirm = (croppedDataUrl) => {
     onUpdate({ ...recipe, dishPhoto: croppedDataUrl });
-    showToast(cropSource.wasPresent ? "📸 Foto piatto aggiornata!" : "📸 Foto piatto aggiunta!");
+    showToast(<><AppIcon emoji="📸" icon="foto" size={13} /> {cropSource.wasPresent ? "Foto piatto aggiornata!" : "Foto piatto aggiunta!"}</>);
     setCropSource(null);
   };
 
@@ -386,7 +386,7 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
                 opacity: isOnline ? 1 : 0.4,
               }}
               title={!isOnline ? "Serve una connessione" : dishPhotoOf(recipe) ? "Modifica foto piatto" : "Aggiungi foto piatto"}
-            ><AppIcon emoji="📷" icon="altro" size={17} /></button>
+            ><AppIcon emoji="📷" icon="foto" size={17} /></button>
             {/* Remove dish photo */}
             {dishPhotoOf(recipe) && (
               <button

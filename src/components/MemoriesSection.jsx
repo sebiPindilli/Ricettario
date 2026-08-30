@@ -3,6 +3,7 @@ import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 import PhotoLightbox from "./PhotoLightbox.jsx";
 import MemoryPhoto from "./MemoryPhoto.jsx";
+import AppIcon from "./AppIcon.jsx";
 
 // ── Memories Section ───────────────────────────────────────────
 export default function MemoriesSection({ memories, color, onAdd, onDelete }) {
@@ -41,7 +42,7 @@ export default function MemoriesSection({ memories, color, onAdd, onDelete }) {
           border:`1.5px dashed ${th.appBorder}`,
           marginBottom:16,
         }}>
-          <div style={{ fontSize:36, marginBottom:8 }}>📷</div>
+          <div style={{ marginBottom:8, display:"flex", justifyContent:"center" }}><AppIcon emoji="📷" icon="foto" size={36} /></div>
           <div style={{ fontFamily:F.display, fontSize:15, color:th.appFaded, fontStyle:"italic" }}>
             Nessun ricordo ancora
           </div>

@@ -1,4 +1,5 @@
 import { useTheme } from "../context.js";
+import AppIcon from "./AppIcon.jsx";
 
 // Rende la "foto" di un ricordo: immagine reale (dataURL) o emoji grande
 export default function MemoryPhoto({ mem, height, fontSize = 44, rounded = false }) {
@@ -8,7 +9,7 @@ export default function MemoryPhoto({ mem, height, fontSize = 44, rounded = fals
   }
   return (
     <div style={{ height, display:"flex", alignItems:"center", justifyContent:"center", fontSize, background:`${th.appAccent}15`, borderRadius: rounded ? 12 : 0 }}>
-      {mem.photo || "📸"}
+      {mem.photo || <AppIcon emoji="📸" icon="foto" size={fontSize} />}
     </div>
   );
 }

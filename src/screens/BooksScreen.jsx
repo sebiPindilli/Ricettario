@@ -267,7 +267,12 @@ export default function BooksScreen({
                     <div style={{ position:"absolute", left:6, top:0, bottom:0, width:1, background:th.spineColor }}/>
                   </div>
                 )}
-                {!isNew && <span style={{ fontSize:20 }}>{isBeta ? "🧪" : b.isBackup ? "📦" : b.type === "personale" ? "🔒" : "👥"}</span>}
+                {!isNew && (
+                  isBeta ? <AppIcon emoji="🧪" icon="beta" size={20} />
+                  : b.isBackup ? <span style={{ fontSize:20 }}>📦</span>
+                  : b.type === "personale" ? <AppIcon emoji="🔒" icon="privato" size={20} />
+                  : <span style={{ fontSize:20 }}>👥</span>
+                )}
                 {isRen ? (
                   <input
                     value={renameVal}

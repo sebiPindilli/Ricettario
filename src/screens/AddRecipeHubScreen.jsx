@@ -78,7 +78,7 @@ export default function AddRecipeHubScreen({ onBack, onManual, onScan, onLink, o
             color:th.appInk,
           },
           {
-            icon:"📷", svgIcon:"altro",
+            icon:"📷", svgIcon:"foto",
             label:"Scansiona dalla fotocamera",
             desc:"Fotografa una ricetta scritta o stampata — OCR + AI la digitalizza",
             fn:() => onScan("camera"),

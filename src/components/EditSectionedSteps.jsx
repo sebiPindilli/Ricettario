@@ -303,7 +303,7 @@ export default function EditSectionedSteps({ data, color, onUpdate }) {
                       color:th.appFaded, fontFamily:F.ui, fontSize:11, cursor:"pointer",
                       display:"flex", alignItems:"center", justifyContent:"center", gap:6,
                       opacity: isOnline ? 1 : 0.5,
-                    }}>📷 Aggiungi foto{step.photos.length > 0 ? ` (${step.photos.length}/${MAX_STEP_PHOTOS})` : ""}</button>
+                    }}><AppIcon emoji="📷" icon="foto" size={13} /> Aggiungi foto{step.photos.length > 0 ? ` (${step.photos.length}/${MAX_STEP_PHOTOS})` : ""}</button>
                   )}
                 </div>
               </div>

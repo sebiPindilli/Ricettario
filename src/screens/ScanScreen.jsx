@@ -113,7 +113,7 @@ export default function ScanScreen({ onBack, onSave, mode = "camera" }) {
           gap: 12,
           alignItems: "flex-start"
         }}>
-          <span style={{ fontSize: 24 }}>📸</span>
+          <AppIcon emoji="📸" icon="foto" size={24} />
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <div style={{ fontFamily: F.ui, fontSize: 14, fontWeight: 700, color: th.appInk }}>
               Fotografa una ricetta
@@ -150,7 +150,7 @@ export default function ScanScreen({ onBack, onSave, mode = "camera" }) {
               onChange={handleFileChange}
               style={{ display: "none" }}
             />
-            <span style={{ fontSize: 44 }}>{isGallery ? "🗃️" : "📷"}</span>
+            {isGallery ? <span style={{ fontSize: 44 }}>🗃️</span> : <AppIcon emoji="📷" icon="foto" size={44} />}
             <div>
               <div style={{ fontFamily: F.ui, fontSize: 14, fontWeight: 700, color: th.appInk }}>
                 {isGallery ? "Scegli una o più immagini" : "Fai una foto"}
