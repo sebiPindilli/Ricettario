@@ -467,7 +467,7 @@ export default function BooksScreen({
                 <div style={{ marginTop:10, paddingTop:10, borderTop:`1px dashed ${th.appBorder}` }}>
                   <div style={{ fontFamily:F.ui, fontSize:9, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:6 }}>Membri</div>
                   <div style={{ display:"flex", flexDirection:"column", gap:4, marginBottom:8 }}>
-                    <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appInk }}>{b.owner} <span style={{ color:th.appFaded }}>👑 proprietario</span></div>
+                    <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appInk }}>{b.owner} <span style={{ color:th.appFaded, display:"inline-flex", alignItems:"center", gap:3 }}><AppIcon emoji="👑" icon="corona" size={10} /> proprietario</span></div>
                     {(b.memberEmails || []).map(m => {
                       const targetRole = normalizeRole(roles[m]);
                       const emails = { actorEmail: me, targetEmail: m };

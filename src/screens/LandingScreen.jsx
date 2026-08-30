@@ -53,7 +53,7 @@ export default function LandingScreen({ recipes = [], bookName = "Il mio Ricetta
     { emoji:<OrganizeIcon/>, icon:"organizza", label:"Organizza Ingredienti", desc:"Aggregati, categorie, nutrizione", fn:onOrganize, color:"#7A5EA6" },
   ];
   const adminItems = role === "admin" ? [
-    { emoji:"🔑", label:"Gestione utenti", desc:"Whitelist e ruoli", fn:onAdminUsers, color:"#555F6B" },
+    { emoji:"🔑", icon:"chiave", label:"Gestione utenti", desc:"Whitelist e ruoli", fn:onAdminUsers, color:"#555F6B" },
   ] : [];
   const mainItems = ui.navPosition === "bottom" ? adminItems : [...primaryItems, ...adminItems];
 
@@ -116,7 +116,7 @@ export default function LandingScreen({ recipes = [], bookName = "Il mio Ricetta
           <LandingGroupLabel ui={ui} text="Aiuto"/>
           <div style={{ ...ui.cardStyle, overflow:"hidden" }}>
             <LandingRow ui={ui} th={th} icon="info" label="Guida" fn={onGuide}/>
-            {role === "admin" && <LandingRow ui={ui} th={th} icon="altro" label="Gestione utenti" fn={onAdminUsers}/>}
+            {role === "admin" && <LandingRow ui={ui} th={th} icon="chiave" label="Gestione utenti" fn={onAdminUsers}/>}
           </div>
         </div>
 

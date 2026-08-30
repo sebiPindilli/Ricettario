@@ -73,7 +73,9 @@ export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemor
     try {
       await setIconStyleRemote(next);
       setIconStyleState(next);
-      showToast(next === "svg" ? "🎨 Icone SVG attivate per tutti" : "🎨 Emoji ripristinate per tutti");
+      showToast(next === "svg"
+        ? <><AppIcon emoji="🎨" icon="stile" size={13} /> Icone SVG attivate per tutti</>
+        : <><AppIcon emoji="🎨" icon="stile" size={13} /> Emoji ripristinate per tutti</>);
     } catch {
       showToast(<><AppIcon emoji="⚠️" icon="avviso" size={13} /> Cambio stile icone non riuscito</>);
     } finally {
@@ -150,7 +152,7 @@ export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemor
       />
 
       <div style={{ padding: "14px 20px 6px" }}>
-        <div style={{ fontFamily: F.display, fontSize: 22, color: th.appInk }}>🔑 Gestione utenti</div>
+        <div style={{ fontFamily: F.display, fontSize: 22, color: th.appInk, display: "flex", alignItems: "center", gap: 8 }}><AppIcon emoji="🔑" icon="chiave" size={20} /> Gestione utenti</div>
         <div style={{ fontFamily: F.ui, fontSize: 11, color: th.appFaded, marginTop: 3 }}>
           Whitelist — solo i ruoli base e tester sono gestibili da qui
         </div>
@@ -174,7 +176,7 @@ export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemor
 
       <div style={{ margin: "8px 20px 0", background: th.appCard, border: `1.5px solid ${th.appBorder}`, borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: F.ui, fontSize: 12.5, fontWeight: 700, color: th.appInk }}>🎨 Stile icone</div>
+          <div style={{ fontFamily: F.ui, fontSize: 12.5, fontWeight: 700, color: th.appInk, display: "flex", alignItems: "center", gap: 6 }}><AppIcon emoji="🎨" icon="stile" size={13} /> Stile icone</div>
           <div style={{ fontFamily: F.ui, fontSize: 10, color: th.appFaded, marginTop: 2 }}>
             Vale per l'interfaccia di tutti gli utenti
           </div>

@@ -165,8 +165,8 @@ export default function MySharedLinksScreen({ me, nav, onBack }) {
                 </button>
                 <div style={{ display:"flex", gap:6 }}>
                   <button onClick={() => openEdit(item)} disabled={busyId === item.id} style={{ flex:1, padding:"9px", borderRadius:9, border:`1.5px solid ${th.appBorder}`, background:"transparent", color:th.appInk, fontFamily:F.ui, fontSize:11.5, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}><AppIcon emoji="✏️" icon="modifica" size={12} /> Modifica destinatari</button>
-                  <button onClick={() => doRevoke(item.id)} disabled={busyId === item.id} style={{ flex:1, padding:"9px", borderRadius:9, border:"none", background:"#C4593A", color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer" }}>
-                    {busyId === item.id ? "…" : "🚫 Revoca"}
+                  <button onClick={() => doRevoke(item.id)} disabled={busyId === item.id} style={{ flex:1, padding:"9px", borderRadius:9, border:"none", background:"#C4593A", color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
+                    {busyId === item.id ? "…" : <><AppIcon emoji="🚫" icon="revoca" size={12} /> Revoca</>}
                   </button>
                 </div>
               </div>

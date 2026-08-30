@@ -311,8 +311,8 @@ export default function EmptyFridgeScreen({
               {/* Senza categoria: sempre in fondo, sezione a sé rispetto alle categorie vere e proprie */}
               {uncategorizedItems.length > 0 && (
                 <div style={{ marginBottom:16 }}>
-                  <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appAccent, textTransform:"uppercase", margin:"4px 0 8px", fontWeight:700 }}>
-                    ❓ Senza categoria
+                  <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appAccent, textTransform:"uppercase", margin:"4px 0 8px", fontWeight:700, display:"flex", alignItems:"center", gap:4 }}>
+                    <AppIcon emoji="❓" icon="domanda" size={10} /> Senza categoria
                   </div>
                   <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
                     {uncategorizedItems.map(renderItemBtn)}
@@ -467,8 +467,8 @@ export default function EmptyFridgeScreen({
                             </span>
                           </div>
                         ) : (
-                          <div style={{ fontFamily:F.ui, fontSize:11, color:"#6B8C6E", fontWeight:600 }}>
-                            🎉 Hai tutto per questa ricetta!
+                          <div style={{ fontFamily:F.ui, fontSize:11, color:"#6B8C6E", fontWeight:600, display:"flex", alignItems:"center", gap:5 }}>
+                            <AppIcon emoji="🎉" icon="festa" size={12} /> Hai tutto per questa ricetta!
                           </div>
                         )}
                       </>

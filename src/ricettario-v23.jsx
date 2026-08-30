@@ -2487,7 +2487,8 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
                   <button onClick={() => resolveShopUpdate("keep")} style={{
                     padding:"13px", borderRadius:12, border:`1.5px solid ${th.appBorder}`, background:"transparent",
                     color:th.appInk, fontFamily:F.ui, fontSize:13, fontWeight:600, cursor:"pointer",
-                  }}>📌 Mantieni le vecchie quantità</button>
+                    display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+                  }}><AppIcon emoji="📌" icon="blocca" size={14} /> Mantieni le vecchie quantità</button>
                   <button onClick={() => resolveShopUpdate("remove")} style={{
                     padding:"13px", borderRadius:12, border:"none", background:"transparent",
                     color:"#C0392B", fontFamily:F.ui, fontSize:12.5, fontWeight:600, cursor:"pointer",

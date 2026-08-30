@@ -80,8 +80,8 @@ function IosInstallBanner() {
       background:th.appCard, border:`1.5px solid ${th.appBorder}`, borderRadius:14, padding:"11px 14px",
       display:"flex", alignItems:"center", gap:10, boxShadow:"0 4px 20px rgba(0,0,0,0.15)",
     }}>
-      <span style={{ flex:1, minWidth:0, fontFamily:F.ui, fontSize:12, color:th.appInk, lineHeight:1.4 }}>
-        📲 Installa Ricettario: tocca <b>Condividi</b> (⬆️) e poi <b>"Aggiungi a Home"</b>.
+      <span style={{ flex:1, minWidth:0, fontFamily:F.ui, fontSize:12, color:th.appInk, lineHeight:1.4, display:"flex", alignItems:"flex-start", gap:6 }}>
+        <AppIcon emoji="📲" icon="installa" size={13} /> <span>Installa Ricettario: tocca <b>Condividi</b> (⬆️) e poi <b>"Aggiungi a Home"</b>.</span>
       </span>
       <button onClick={dismiss} title="Ignora" style={{
         flexShrink:0, background:"none", border:"none", color:th.appFaded,

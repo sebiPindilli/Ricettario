@@ -243,7 +243,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
           </div>
         ) : isDone ? (
           <div style={{ textAlign:"center" }}>
-            <div style={{ fontSize:64, marginBottom:16 }}>🎉</div>
+            <div style={{ marginBottom:16, display:"flex", justifyContent:"center" }}><AppIcon emoji="🎉" icon="festa" size={64} /></div>
             <div style={{ fontFamily:F.display, fontSize:26, fontStyle:"italic", marginBottom:8 }}>Buon appetito!</div>
             <div style={{ fontFamily:F.ui, fontSize:13, color:"rgba(255,255,255,0.5)" }}>tocca per chiudere</div>
           </div>

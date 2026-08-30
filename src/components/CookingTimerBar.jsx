@@ -3,6 +3,7 @@ import { useCookingTimers } from "../context.js";
 import { F } from "../data/constants.js";
 import { remainingMs, isExpired, formatRemaining, formatOverdue } from "../utils/timers.js";
 import TimersPopup from "./TimersPopup.jsx";
+import AppIcon from "./AppIcon.jsx";
 
 const MARQUEE_CSS = `
   @keyframes cookingTimerBarMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
@@ -73,7 +74,8 @@ export default function CookingTimerBar() {
           flexShrink:0, background:"rgba(0,0,0,0.2)", border:"none",
           padding:"0 10px", color:"#fff", fontSize:11, fontWeight:700,
           fontFamily:F.ui, cursor:"pointer", whiteSpace:"nowrap",
-        }}>🔕 Ferma</button>
+          display:"flex", alignItems:"center", gap:4,
+        }}><AppIcon emoji="🔕" icon="silenzio" size={11} /> Ferma</button>
       )}
       <button onClick={() => setOpen(true)} title="Timer" style={{
         flexShrink:0, background:"rgba(255,255,255,0.12)", border:"none",

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTheme, useCookingTimers } from "../context.js";
 import { F } from "../data/constants.js";
 import { remainingMs, isExpired, formatRemaining, formatOverdue } from "../utils/timers.js";
+import AppIcon from "./AppIcon.jsx";
 
 const smallBtnStyle = (th, color) => ({
   width: 32, height: 32, borderRadius: 8, flexShrink: 0,
@@ -59,9 +60,9 @@ export default function TimersPopup({ onClose, initialDraft = null }) {
 
         {/* Preferenze avviso — combinabili, co-locate con ciò che controllano */}
         <div style={{ display: "flex", gap: 6, padding: "10px 18px", borderBottom: `1px solid ${th.appBorder}`, flexShrink: 0 }}>
-          <button onClick={() => updatePrefs({ sound: !prefs.sound })} style={toggleBtnStyle(th, prefs.sound)}>🔊 Suono</button>
+          <button onClick={() => updatePrefs({ sound: !prefs.sound })} style={toggleBtnStyle(th, prefs.sound)}><AppIcon emoji="🔊" icon="audio" size={12} /> Suono</button>
           {canVibrate && (
-            <button onClick={() => updatePrefs({ vibrate: !prefs.vibrate })} style={toggleBtnStyle(th, prefs.vibrate)}>📳 Vibrazione</button>
+            <button onClick={() => updatePrefs({ vibrate: !prefs.vibrate })} style={toggleBtnStyle(th, prefs.vibrate)}><AppIcon emoji="📳" icon="vibrazione" size={12} /> Vibrazione</button>
           )}
           <button onClick={() => updatePrefs({ visual: !prefs.visual })} style={toggleBtnStyle(th, prefs.visual)}>💡 Visivo</button>
         </div>
@@ -76,7 +77,8 @@ export default function TimersPopup({ onClose, initialDraft = null }) {
               width: "100%", padding: "10px", marginBottom: 10, borderRadius: 10,
               border: "none", background: "#C0524A", color: "#fff",
               fontFamily: F.ui, fontSize: 12, fontWeight: 700, cursor: "pointer",
-            }}>🔕 Ferma tutti ({expiredIds.length})</button>
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            }}><AppIcon emoji="🔕" icon="silenzio" size={13} /> Ferma tutti ({expiredIds.length})</button>
           )}
           {timers.map(t => {
             const rem = remainingMs(t, now);
