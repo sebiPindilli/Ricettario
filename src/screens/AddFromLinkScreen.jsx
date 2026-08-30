@@ -3,6 +3,7 @@ import { useTheme, useScanExtraction } from "../context.js";
 import { F } from "../data/constants.js";
 import BackBtn from "../components/BackBtn.jsx";
 import InfoButton from "../components/InfoButton.jsx";
+import AppIcon from "../components/AppIcon.jsx";
 import { guideLink } from "../data/guideContent.jsx";
 
 export default function AddFromLinkScreen({ onBack, onSave }) {
@@ -104,7 +105,7 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
           gap: 12,
           alignItems: "flex-start"
         }}>
-          <span style={{ fontSize: 24 }}>🔗</span>
+          <span style={{ fontSize: 24, display: "flex" }}><AppIcon emoji="🔗" icon="link" size={24} /></span>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <div style={{ fontFamily: F.ui, fontSize: 13, fontWeight: 700, color: th.appInk }}>
               Importa ricette da internet

@@ -17,16 +17,16 @@ import AppIcon from "../components/AppIcon.jsx";
 const Shell = ({ th, onClose, children }) => (
   <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
     <div style={{ padding:"14px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", borderBottom:`1px solid ${th.appBorder}` }}>
-      <div style={{ fontFamily:F.display, fontSize:16, fontStyle:"italic", color:th.appInk }}>🔗 Ricetta condivisa</div>
+      <div style={{ fontFamily:F.display, fontSize:16, fontStyle:"italic", color:th.appInk, display:"flex", alignItems:"center", gap:6 }}><AppIcon emoji="🔗" icon="link" size={14} /> Ricetta condivisa</div>
       <button onClick={onClose} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>Chiudi</button>
     </div>
     <div style={{ flex:1, overflowY:"auto", padding:"20px" }}>{children}</div>
   </div>
 );
 
-const Message = ({ th, icon, title, sub }) => (
+const Message = ({ th, icon, svgIcon, title, sub }) => (
   <div style={{ textAlign:"center", padding:"60px 20px" }}>
-    <div style={{ fontSize:44, marginBottom:14 }}>{icon}</div>
+    <div style={{ display:"flex", justifyContent:"center", marginBottom:14 }}><AppIcon emoji={icon} icon={svgIcon} size={44} /></div>
     <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk, marginBottom:8 }}>{title}</div>
     <div style={{ fontFamily:F.ui, fontSize:13, color:th.appFaded, lineHeight:1.5 }}>{sub}</div>
   </div>
@@ -101,16 +101,16 @@ export default function SharedRecipeScreen({ shareId, me, editableBooks = [], on
     return <Shell th={th} onClose={onClose}><Message th={th} icon="⏳" title="Apertura in corso…" sub="Un attimo." /></Shell>;
   }
   if (phase === "not-found") {
-    return <Shell th={th} onClose={onClose}><Message th={th} icon="🔗" title="Link non valido" sub="Questo link non esiste o è scritto male. Chiedi a chi te l'ha mandato di rimandartelo." /></Shell>;
+    return <Shell th={th} onClose={onClose}><Message th={th} icon="🔗" svgIcon="link" title="Link non valido" sub="Questo link non esiste o è scritto male. Chiedi a chi te l'ha mandato di rimandartelo." /></Shell>;
   }
   if (phase === "revoked") {
-    return <Shell th={th} onClose={onClose}><Message th={th} icon="🚫" title="Link revocato" sub={`Chi ha condiviso "${status?.recipeTitle || "questa ricetta"}" ha disattivato il link.`} /></Shell>;
+    return <Shell th={th} onClose={onClose}><Message th={th} icon="🚫" svgIcon="revoca" title="Link revocato" sub={`Chi ha condiviso "${status?.recipeTitle || "questa ricetta"}" ha disattivato il link.`} /></Shell>;
   }
   if (phase === "expired") {
     return <Shell th={th} onClose={onClose}><Message th={th} icon="⌛" title="Link scaduto" sub="I link di condivisione durano 30 giorni. Chiedi un nuovo link a chi te l'ha mandato." /></Shell>;
   }
   if (phase === "forbidden") {
-    return <Shell th={th} onClose={onClose}><Message th={th} icon="🔒" title="Non condiviso con te" sub="Chi ha condiviso questa ricetta l'ha riservata a persone specifiche, e il tuo account non è tra queste." /></Shell>;
+    return <Shell th={th} onClose={onClose}><Message th={th} icon="🔒" svgIcon="privato" title="Non condiviso con te" sub="Chi ha condiviso questa ricetta l'ha riservata a persone specifiche, e il tuo account non è tra queste." /></Shell>;
   }
 
   // phase === "ready"

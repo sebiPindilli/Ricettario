@@ -199,7 +199,7 @@ export default function BooksScreen({
             background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10,
             padding:"7px 11px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:11, fontWeight:600,
             display:"flex", alignItems:"center", gap:5,
-          }}>🔗 Link condivisi</button>
+          }}><AppIcon emoji="🔗" icon="link" size={13} /> Link condivisi</button>
         </div>
       </div>
 

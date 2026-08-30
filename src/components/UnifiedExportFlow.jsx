@@ -331,7 +331,7 @@ export default function UnifiedExportFlow({
         <Sub th={th}>{selected.length} ricett{selected.length === 1 ? "a" : "e"}</Sub>
         <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
           <Primary th={th} onClick={() => { setFormat("link"); goPrefs(); }} style={isNew ? { display: "flex", flexDirection: "column", gap: 2 } : undefined}>
-            <span>🔗 Link URL <span style={{ fontWeight: 400 }}>— consigliato per chi ha l'app</span></span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><AppIcon emoji="🔗" icon="link" size={13} /> Link URL <span style={{ fontWeight: 400 }}>— consigliato per chi ha l'app</span></span>
             {isNew && <span style={{ fontWeight: 400, fontSize: 11, opacity: 0.85 }}>scade fra 30 giorni, revocabile in ogni momento</span>}
           </Primary>
           <Primary th={th} onClick={() => { setFormat("pdf"); goPrefs(); }} style={isNew ? { display: "flex", flexDirection: "column", gap: 2 } : undefined}>
@@ -411,7 +411,9 @@ export default function UnifiedExportFlow({
           {error && <div style={{ fontFamily: F.ui, fontSize: 11.5, color: "#C4593A", marginBottom: 8, textAlign: "center" }}>{error}</div>}
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             <Ghost th={th} onClick={() => setStep("format")} style={{ flex: 1 }} disabled={busy}>‹ Indietro</Ghost>
-            <Primary th={th} onClick={submitLink} disabled={busy || !linkCanSubmit} style={{ flex: 2 }}>{busy ? "Creazione…" : `🔗 Genera ${sel.length > 1 ? `${sel.length} link` : "link"}`}</Primary>
+            <Primary th={th} onClick={submitLink} disabled={busy || !linkCanSubmit} style={{ flex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+              {busy ? "Creazione…" : <><AppIcon emoji="🔗" icon="link" size={13} /> Genera {sel.length > 1 ? `${sel.length} link` : "link"}</>}
+            </Primary>
           </div>
         </Panel>
       );
@@ -746,7 +748,7 @@ export default function UnifiedExportFlow({
   if (result?.kind === "link") {
     return (
       <Panel th={th}>
-        <Title th={th}>🔗 {result.links.length > 1 ? "Link creati" : "Link creato"}</Title>
+        <Title th={th}><span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><AppIcon emoji="🔗" icon="link" size={16} /> {result.links.length > 1 ? "Link creati" : "Link creato"}</span></Title>
         <Sub th={th}>Validi 30 giorni, revocabili in ogni momento da "I miei link condivisi".</Sub>
         {result.links.some(l => l.photosDegraded) && (
           <div style={{ fontFamily: F.ui, fontSize: 11, color: "#C4593A", background: "#C4593A18", border: "1px solid #C4593A40", borderRadius: 10, padding: "8px 10px", marginBottom: 10, display: "flex", gap: 6 }}>

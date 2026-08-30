@@ -92,7 +92,7 @@ export default function AddRecipeHubScreen({ onBack, onManual, onScan, onLink, o
             color:"#6B4A8B",
           },
           {
-            icon:"🔗",
+            icon:"🔗", svgIcon:"link",
             label:"Aggiungi da link",
             desc:"Incolla il link di una ricetta trovata online — l'AI la importa per te",
             fn:onLink,

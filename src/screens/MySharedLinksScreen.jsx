@@ -97,7 +97,7 @@ export default function MySharedLinksScreen({ me, nav, onBack }) {
       {nav}
       <div style={{ padding:"12px 20px 6px", display:"flex", alignItems:"center", gap:10 }}>
         <button onClick={onBack} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
-        <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>🔗 I miei link condivisi</div>
+        <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk, display:"flex", alignItems:"center", gap:7 }}><AppIcon emoji="🔗" icon="link" size={16} /> I miei link condivisi</div>
       </div>
 
       <div style={{ flex:1, overflowY:"auto", padding:"10px 18px 30px" }}>
@@ -156,8 +156,10 @@ export default function MySharedLinksScreen({ me, nav, onBack }) {
 
             {editingId !== item.id && (
               <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                <button onClick={() => copyLink(item.id)} style={{ padding:"9px", borderRadius:9, border:`1.5px solid ${th.appAccent}`, background: copiedId === item.id ? "#6B8C6E" : "transparent", color: copiedId === item.id ? "#fff" : th.appAccent, fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer" }}>
-                  {copiedId === item.id ? "✓ Copiato" : "🔗 Copia link"}
+                <button onClick={() => copyLink(item.id)} style={{ padding:"9px", borderRadius:9, border:`1.5px solid ${th.appAccent}`, background: copiedId === item.id ? "#6B8C6E" : "transparent", color: copiedId === item.id ? "#fff" : th.appAccent, fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+                  {copiedId === item.id
+                    ? <><AppIcon emoji="✓" icon="fatto" size={13} /> Copiato</>
+                    : <><AppIcon emoji="📋" icon="copia" size={13} /> Copia link</>}
                 </button>
                 <div style={{ display:"flex", gap:6 }}>
                   <button onClick={() => openEdit(item)} disabled={busyId === item.id} style={{ flex:1, padding:"9px", borderRadius:9, border:`1.5px solid ${th.appBorder}`, background:"transparent", color:th.appInk, fontFamily:F.ui, fontSize:11.5, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}><AppIcon emoji="✏️" icon="modifica" size={12} /> Modifica destinatari</button>

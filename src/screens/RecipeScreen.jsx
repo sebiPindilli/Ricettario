@@ -361,7 +361,7 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
               {recipe.source && (
                 <div style={{ fontFamily:F.ui, fontSize:12, color:"rgba(255,255,255,0.6)", marginTop:4 }}>
                   {recipe.sourceUrl
-                    ? <a href={recipe.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color:"rgba(255,255,255,0.8)", textDecoration:"underline", cursor:"pointer" }}>🔗 Ricetta di {recipe.source}</a>
+                    ? <a href={recipe.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color:"rgba(255,255,255,0.8)", textDecoration:"underline", cursor:"pointer", display:"inline-flex", alignItems:"center", gap:5 }}><AppIcon emoji="🔗" icon="link" size={11} /> Ricetta di {recipe.source}</a>
                     : <>Ricetta di {recipe.source}</>
                   }
                 </div>
