@@ -34,7 +34,7 @@ const captureScreenshot = async () => {
 // pagina o, più raro, esterno dell'intero shell).
 const BETA_FAB_RESPONSIVE_CSS = `
   @media ${MOBILE_BREAKPOINT_CSS} {
-    .beta-fab-button, .beta-fab-menu { position:fixed !important; }
+    .beta-fab-button, .beta-fab-menu, .beta-hide-zone { position:fixed !important; }
   }
 `;
 
@@ -42,6 +42,8 @@ const BTN_SIZE = 52;
 const MENU_WIDTH = 230;
 const MARGIN = 20;
 const DRAG_THRESHOLD = 8; // px sotto cui il gesto resta un tap (apre il menu), non un trascinamento
+const HIDE_ZONE_SIZE = 72; // area di rilascio per nascondere il FAB, in basso al centro
+const HIDE_HIT_RADIUS = HIDE_ZONE_SIZE / 2 + BTN_SIZE / 2; // "aggancio": i due cerchi si sovrappongono
 
 export default function BetaButton() {
   const role = useRole();
@@ -54,8 +56,19 @@ export default function BetaButton() {
   // (basso a destra). Solo stato in memoria (nessuna persistenza): torna
   // sempre al default a ogni riavvio dell'app, come richiesto.
   const [pos, setPos] = useState(null); // {top, left} px, relativi a .iphone-shell
+  // Nascosto per la sessione in corso (trascinato sull'area di rilascio in
+  // basso) — solo stato in memoria, come `pos`: torna visibile al prossimo
+  // riavvio dell'app, mai persistito.
+  const [hidden, setHidden] = useState(false);
+  // true durante un trascinamento reale (sopra DRAG_THRESHOLD): mostra
+  // l'area di rilascio. `overHideZone` è solo per l'evidenziazione visiva:
+  // la decisione se nascondere in onPointerUp legge dragRef (vedi sotto),
+  // mai questo state — sarebbe letto "vecchio" per via della chiusura
+  // catturata una sola volta in onPointerDown (stesso motivo di `moved`).
+  const [dragging, setDragging] = useState(false);
+  const [overHideZone, setOverHideZone] = useState(false);
   const btnRef = useRef(null);
-  const dragRef = useRef({ dragging: false, moved: false, startX: 0, startY: 0, origTop: 0, origLeft: 0, shellRect: null });
+  const dragRef = useRef({ dragging: false, moved: false, overHideZone: false, startX: 0, startY: 0, origTop: 0, origLeft: 0, shellRect: null });
   const [shellSize, setShellSize] = useState({ width: 0, height: 0 });
   const menuRef = useRef(null);
   const [menuHeight, setMenuHeight] = useState(0);
@@ -88,7 +101,7 @@ export default function BetaButton() {
     return () => ro.disconnect();
   }, [view]);
 
-  if (!betaEnabled || (role !== "admin" && role !== "tester")) return null;
+  if (!betaEnabled || hidden || (role !== "admin" && role !== "tester")) return null;
 
   const me = auth.currentUser?.email || "";
   const close = () => { setView(null); setScreenshot(null); };
@@ -111,7 +124,7 @@ export default function BetaButton() {
     const shellRect = shell.getBoundingClientRect();
     const btnRect = btn.getBoundingClientRect();
     dragRef.current = {
-      dragging: true, moved: false,
+      dragging: true, moved: false, overHideZone: false,
       startX: e.clientX, startY: e.clientY,
       origTop: btnRect.top - shellRect.top, origLeft: btnRect.left - shellRect.left,
       shellRect,
@@ -123,16 +136,28 @@ export default function BetaButton() {
     const d = dragRef.current;
     if (!d.dragging) return;
     const dx = e.clientX - d.startX, dy = e.clientY - d.startY;
-    if (!d.moved && Math.hypot(dx, dy) > DRAG_THRESHOLD) d.moved = true;
+    if (!d.moved && Math.hypot(dx, dy) > DRAG_THRESHOLD) { d.moved = true; setDragging(true); }
     if (!d.moved) return;
     const top = Math.max(0, Math.min(d.origTop + dy, d.shellRect.height - BTN_SIZE));
     const left = Math.max(0, Math.min(d.origLeft + dx, d.shellRect.width - BTN_SIZE));
     setPos({ top, left });
+    // Distanza fra il centro del bottone e il centro dell'area di rilascio
+    // (in basso al centro della shell, stesse coordinate di top/left sopra):
+    // sotto HIDE_HIT_RADIUS i due cerchi si sovrappongono a sufficienza.
+    const btnCenterX = left + BTN_SIZE / 2, btnCenterY = top + BTN_SIZE / 2;
+    const zoneCenterX = d.shellRect.width / 2;
+    const zoneCenterY = d.shellRect.height - MARGIN - HIDE_ZONE_SIZE / 2;
+    const overZone = Math.hypot(btnCenterX - zoneCenterX, btnCenterY - zoneCenterY) < HIDE_HIT_RADIUS;
+    d.overHideZone = overZone; // letto da onPointerUp: mai lo state, sarebbe "vecchio"
+    setOverHideZone(overZone); // solo per l'evidenziazione visiva della zona
   };
   const onPointerUp = () => {
     window.removeEventListener("pointermove", onPointerMove);
     window.removeEventListener("pointerup", onPointerUp);
+    if (dragRef.current.moved && dragRef.current.overHideZone) setHidden(true);
     dragRef.current.dragging = false;
+    setDragging(false);
+    setOverHideZone(false);
   };
   const onButtonClick = () => {
     if (dragRef.current.moved) { dragRef.current.moved = false; return; } // era un trascinamento, non un tap
@@ -166,6 +191,32 @@ export default function BetaButton() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: BETA_FAB_RESPONSIVE_CSS }} />
+
+      {/* Area di rilascio "nascondi" — appare solo durante un trascinamento
+          reale del FAB (non per un tap). Rilasciare il bottone qui lo
+          nasconde per la sessione in corso (solo in memoria, come `pos`:
+          torna visibile al prossimo riavvio dell'app). */}
+      {dragging && (
+        <div
+          className="beta-hide-zone"
+          style={{
+            position: "absolute",
+            top: shellSize.height - MARGIN - HIDE_ZONE_SIZE,
+            left: shellSize.width / 2 - HIDE_ZONE_SIZE / 2,
+            width: HIDE_ZONE_SIZE, height: HIDE_ZONE_SIZE, borderRadius: "50%",
+            zIndex: 149, // sotto il bottone (150), che ci passa sopra durante il trascinamento
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2,
+            background: overHideZone ? "rgba(217,48,37,0.9)" : "rgba(0,0,0,0.55)",
+            color: "#fff", transform: overHideZone ? "scale(1.1)" : "scale(1)",
+            transition: "background 0.15s, transform 0.15s",
+            pointerEvents: "none", // il bottone resta l'unico target del puntatore durante il drag
+          }}
+        >
+          <AppIcon emoji="🙈" icon="elimina" size={20} />
+          <span style={{ fontFamily: F.ui, fontSize: 8, fontWeight: 600 }}>Nascondi</span>
+        </div>
+      )}
+
       <button
         ref={btnRef}
         className="beta-fab-button"
