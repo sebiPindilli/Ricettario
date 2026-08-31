@@ -3,6 +3,8 @@ import { useTheme, useUiStyle, useOnline } from "../context.js";
 import { F } from "../data/constants.js";
 import GlobalNav from "../components/GlobalNav.jsx";
 import BackBtn from "../components/BackBtn.jsx";
+import ScreenHeader from "../components/ScreenHeader.jsx";
+import EditField from "../components/EditField.jsx";
 import EditLabel from "../components/EditLabel.jsx";
 import Toast from "../components/Toast.jsx";
 import ChosenIcon from "../components/ChosenIcon.jsx";
@@ -68,45 +70,33 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
         showFavorites={false}
         activeLabel="Nuovo Ricordo"
         infoContent={guideNuovoRicordo}
+        bottomNavActive
       />
-      <div style={{ padding:"8px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-        <BackBtn onBack={onBack} label="Annulla"/>
-        <button
-          onClick={() => canSave && onSave({ photo:chosenPhoto, photoIsImage, caption, story, date:today, dateISO:selectedDate, recipeIds:selectedRecipeIds })}
-          style={{
-            background: canSave ? th.appAccent : th.appBorder,
-            color: canSave ? "#fff" : th.appFaded,
-            border:"none", borderRadius:10, padding:"8px 18px",
-            fontFamily:F.ui, fontSize:13, fontWeight:700,
-            cursor: canSave ? "pointer" : "default", transition:"all 0.2s",
-            display:"flex", alignItems:"center", gap:5,
-          }}
-        >Salva <AppIcon emoji="✓" icon="fatto" size={12} /></button>
-      </div>
+      {ui.header === "legacy" && (
+        <div style={{ padding:"8px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <BackBtn onBack={onBack} label="Annulla"/>
+          <button
+            onClick={() => canSave && onSave({ photo:chosenPhoto, photoIsImage, caption, story, date:today, dateISO:selectedDate, recipeIds:selectedRecipeIds })}
+            style={{
+              background: canSave ? th.appAccent : th.appBorder,
+              color: canSave ? th.appOnAccent : th.appFaded,
+              border:"none", borderRadius:10, padding:"8px 18px",
+              fontFamily:F.ui, fontSize:13, fontWeight:700,
+              cursor: canSave ? "pointer" : "default", transition:"all 0.2s",
+              display:"flex", alignItems:"center", gap:5,
+            }}
+          >Salva <AppIcon emoji="✓" icon="fatto" size={12} /></button>
+        </div>
+      )}
+      {/* Negli stili nuovi niente Salva duplicato in testa: c'è già il
+          pulsante pieno in fondo alla scheda (Fase 8, come le altre schermate). */}
+      <ScreenHeader title="Nuovo Ricordo" subtitle={today} onBack={onBack} onHome={onLanding} infoContent={guideNuovoRicordo}/>
 
-      <div style={{ padding:"12px 20px 4px" }}>
-        <div style={{ fontFamily:F.display, fontSize:22, color:th.appInk }}>Nuovo Ricordo</div>
-        <div style={{ fontFamily:F.ui, fontSize:12, color:th.appFaded, marginTop:2 }}>{today}</div>
-      </div>
-
-      <div style={{ flex:1, overflowY:"auto", padding:"0 20px 40px", display:"flex", flexDirection:"column", gap:16 }}>
+      <div style={{ flex:1, overflowY:"auto", padding:`0 ${ui.padX}px 40px`, display:"flex", flexDirection:"column", gap:16 }}>
 
         {/* Data del ricordo */}
         <div>
-          <EditLabel text="Quando è successo"/>
-          <input
-            type="date"
-            value={selectedDate}
-            max={todayISO}
-            onChange={e => setSelectedDate(e.target.value)}
-            style={{
-              width:"100%", padding:"11px 14px",
-              border:`1.5px solid ${th.appBorder}`,
-              borderRadius:12, background:th.appCard,
-              fontFamily:F.body, fontSize:14, color:th.appInk,
-              outline:"none", boxSizing:"border-box",
-            }}
-          />
+          <EditField label="Quando è successo" type="date" value={selectedDate} onChange={v => setSelectedDate(v)} placeholder="Quando è successo" max={todayISO}/>
           <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginTop:6 }}>
             Predefinita a oggi. Cambiala se il momento è di un altro giorno.
           </div>
@@ -117,7 +107,7 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
           <EditLabel text="Foto"/>
           <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFile} style={{ display:"none" }}/>
           {photoIsImage && chosenPhoto ? (
-            <div style={{ position:"relative", borderRadius:14, overflow:"hidden", border:`1.5px solid ${th.appBorder}` }}>
+            <div style={{ position:"relative", borderRadius:ui.radius.card, overflow:"hidden", border:`1.5px solid ${ui.border}` }}>
               <img src={chosenPhoto} alt="anteprima" style={{ width:"100%", height:200, objectFit:"cover", display:"block" }}/>
               <button onClick={openPhotoPicker} style={{
                 position:"absolute", bottom:10, right:10,
@@ -130,7 +120,7 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
           ) : (
             <button onClick={openPhotoPicker} style={{
               width:"100%", padding:"22px 8px",
-              border:`2px dashed ${th.appBorder}`, borderRadius:14,
+              border:`2px dashed ${ui.border}`, borderRadius:ui.radius.card,
               background:"transparent", color:th.appFaded,
               fontFamily:F.ui, fontSize:13, fontWeight:600, cursor:"pointer",
               display:"flex", flexDirection:"column", alignItems:"center", gap:8,
@@ -159,24 +149,10 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
         </div>
 
         {/* Titolo breve */}
-        <div>
-          <EditLabel text="Titolo (opzionale)"/>
-          <input
-            value={caption}
-            onChange={e => setCaption(e.target.value)}
-            placeholder="es. Domenica in famiglia, prima volta insieme…"
-            style={{
-              width:"100%", padding:"11px 14px",
-              border:`1.5px solid ${th.appBorder}`,
-              borderRadius:12, background:th.appCard,
-              fontFamily:F.body, fontStyle:"italic",
-              fontSize:14, color:th.appInk,
-              outline:"none", boxSizing:"border-box",
-            }}
-          />
-        </div>
+        <EditField label="Titolo (opzionale)" value={caption} onChange={setCaption} placeholder="es. Domenica in famiglia, prima volta insieme…"/>
 
-        {/* Racconto — spazio ampio per la storia */}
+        {/* Racconto — spazio ampio per la storia (EditField non copre le
+            textarea multilinea: resta il campo con etichetta di sempre). */}
         <div>
           <EditLabel text="Il racconto (opzionale)"/>
           <textarea
@@ -186,8 +162,8 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
             rows={4}
             style={{
               width:"100%", padding:"11px 14px",
-              border:`1.5px solid ${th.appBorder}`,
-              borderRadius:12, background:th.appCard,
+              border:`1.5px solid ${ui.border}`,
+              borderRadius:ui.radius.control, background:ui.card,
               fontFamily:F.body, fontSize:14, color:th.appInk,
               outline:"none", boxSizing:"border-box", resize:"vertical", lineHeight:1.5,
             }}
@@ -238,9 +214,10 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
           style={{
             width:"100%", padding:"15px",
             background: canSave ? th.appAccent : th.appBorder,
-            color: canSave ? "#fff" : th.appFaded,
-            border:"none", borderRadius:14,
+            color: canSave ? th.appOnAccent : th.appFaded,
+            border:"none", borderRadius:ui.radius.control,
             fontFamily:F.ui, fontSize:14, fontWeight:700,
+            textTransform: ui.uppercaseButtons ? "uppercase" : "none",
             cursor: canSave ? "pointer" : "default",
             boxShadow: canSave ? `0 4px 16px ${th.appAccent}44` : "none",
             transition:"all 0.2s",

@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { useTheme, useScanExtraction } from "../context.js";
+import { useTheme, useUiStyle, useScanExtraction } from "../context.js";
 import { F } from "../data/constants.js";
 import BackBtn from "../components/BackBtn.jsx";
+import ScreenHeader from "../components/ScreenHeader.jsx";
+import EditField from "../components/EditField.jsx";
+import Divider from "../components/Divider.jsx";
 import InfoButton from "../components/InfoButton.jsx";
 import AppIcon from "../components/AppIcon.jsx";
 import { guideLink } from "../data/guideContent.jsx";
 
-export default function AddFromLinkScreen({ onBack, onSave }) {
+export default function AddFromLinkScreen({ onBack, onSave, onLanding }) {
   const th = useTheme();
+  const ui = useUiStyle();
   const [urlInput, setUrlInput] = useState("");
   const [htmlContent, setHtmlContent] = useState("");
   const [fileName, setFileName] = useState("");
@@ -84,22 +88,23 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
       <style dangerouslySetInnerHTML={{ __html: cssAnimations }} />
 
       {/* Header */}
-      <div style={{ padding: "12px 18px 6px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-        <BackBtn onBack={handleBack} label="Annulla" />
-        <div style={{ flex: 1 }}>
-          <div style={{ fontFamily: F.display, fontSize: 17, color: th.appInk }}>Importa da Link</div>
-          <div style={{ fontFamily: F.ui, fontSize: 10.5, color: th.appFaded }}>Estrai ricetta da URL con AI</div>
+      {ui.header === "legacy" && (
+        <div style={{ padding: "12px 18px 6px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+          <BackBtn onBack={handleBack} label="Annulla" />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: F.display, fontSize: 17, color: th.appInk }}>Importa da Link</div>
+            <div style={{ fontFamily: F.ui, fontSize: 10.5, color: th.appFaded }}>Estrai ricetta da URL con AI</div>
+          </div>
+          <InfoButton>{guideLink}</InfoButton>
         </div>
-        <InfoButton>{guideLink}</InfoButton>
-      </div>
+      )}
+      <ScreenHeader title="Importa da Link" subtitle="Estrai ricetta da URL con AI" onBack={handleBack} onHome={onLanding} infoContent={guideLink}/>
 
-      <div style={{ flex: 1, overflowY: "auto", padding: "12px 20px 40px", display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: `12px ${ui.padX}px 40px`, display: "flex", flexDirection: "column", gap: 16 }}>
 
         {/* Info Box */}
         <div style={{
-          background: th.appCard,
-          border: `1.5px solid ${th.appBorder}`,
-          borderRadius: 16,
+          ...ui.cardStyle,
           padding: "14px 16px",
           display: "flex",
           gap: 12,
@@ -125,32 +130,13 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
           return (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {/* Input URL */}
-            <div>
-              <label style={{ fontFamily: F.ui, fontSize: 12, fontWeight: 700, color: th.appInk, display: "block", marginBottom: 6 }}>
-                Incolla l'indirizzo (URL) della ricetta
-              </label>
-              <input
-                type="url"
-                value={urlInput}
-                onChange={(e) => {
-                  setUrlInput(e.target.value);
-                  setValidationError(null);
-                }}
-                placeholder="es. https://ricette.giallozafferano.it/..."
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  borderRadius: 10,
-                  border: `1.5px solid ${th.appBorder}`,
-                  background: th.appCard,
-                  fontFamily: F.ui,
-                  fontSize: 13,
-                  color: th.appInk,
-                  outline: "none",
-                  boxSizing: "border-box"
-                }}
-              />
-            </div>
+            <EditField
+              label="Incolla l'indirizzo (URL) della ricetta"
+              type="url"
+              value={urlInput}
+              onChange={(v) => { setUrlInput(v); setValidationError(null); }}
+              placeholder="es. https://ricette.giallozafferano.it/..."
+            />
 
             {/* Submit Button */}
             <button
@@ -159,15 +145,16 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
               style={{
                 width: "100%",
                 padding: "12px 16px",
-                borderRadius: 12,
+                borderRadius: ui.radius.control,
                 border: "none",
                 background: canSubmit ? th.appAccent : th.appBorder,
-                color: "#fff",
+                color: canSubmit ? th.appOnAccent : th.appFaded,
                 fontFamily: F.ui,
                 fontSize: 13,
                 fontWeight: 700,
+                textTransform: ui.uppercaseButtons ? "uppercase" : "none",
                 cursor: canSubmit ? "pointer" : "default",
-                boxShadow: canSubmit ? `0 4px 12px rgba(196,89,58,0.25)` : "none",
+                boxShadow: canSubmit ? `0 4px 12px ${th.appAccent}40` : "none",
                 marginTop: 4
               }}
             >
@@ -200,13 +187,9 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
 
             {/* Alternativa Manuale Area */}
             {showManualPaste && (
-              <div style={{
-                borderTop: `1px dashed ${th.appBorder}`,
-                paddingTop: 14,
-                display: "flex",
-                flexDirection: "column",
-                gap: 14
-              }}>
+              <div>
+                <Divider/>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {/* HTML File Upload */}
                 <div>
                   <label style={{ fontFamily: F.ui, fontSize: 11, fontWeight: 700, color: th.appInk, display: "block", marginBottom: 6 }}>
@@ -217,9 +200,9 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
                     alignItems: "center",
                     justifyContent: "center",
                     gap: 10,
-                    border: `1.5px dashed ${th.appBorder}`,
-                    borderRadius: 10,
-                    background: th.appCard,
+                    border: `1.5px dashed ${ui.border}`,
+                    borderRadius: ui.radius.control,
+                    background: ui.card,
                     padding: "12px",
                     cursor: "pointer",
                     textAlign: "center"
@@ -230,7 +213,7 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
                       onChange={handleFileUpload}
                       style={{ display: "none" }}
                     />
-                    <span style={{ fontSize: 18 }}>📂</span>
+                    <AppIcon emoji="📂" icon="sposta" size={18}/>
                     <span style={{ fontFamily: F.ui, fontSize: 12, color: fileName ? th.appInk : th.appFaded, fontWeight: fileName ? 600 : 400 }}>
                       {fileName ? `File: ${fileName}` : "Scegli file HTML"}
                     </span>
@@ -253,9 +236,9 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
                     style={{
                       width: "100%",
                       padding: "10px",
-                      borderRadius: 10,
-                      border: `1.5px solid ${th.appBorder}`,
-                      background: th.appCard,
+                      borderRadius: ui.radius.control,
+                      border: `1.5px solid ${ui.border}`,
+                      background: ui.card,
                       fontFamily: F.ui,
                       fontSize: 12,
                       color: th.appInk,
@@ -265,6 +248,7 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
                       lineHeight: 1.4
                     }}
                   />
+                </div>
                 </div>
               </div>
             )}
@@ -340,21 +324,21 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
         {/* Error Alert */}
         {displayError && (
           <div style={{
-            background: "#FFF5F5",
-            border: "1.5px solid #FEB2B2",
-            borderRadius: 14,
+            background: `${ui.danger}15`,
+            border: `1.5px solid ${ui.danger}66`,
+            borderRadius: ui.radius.card,
             padding: "16px",
             display: "flex",
             flexDirection: "column",
             gap: 10
           }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <span style={{ fontSize: 18 }}>❌</span>
-              <div style={{ fontFamily: F.ui, fontSize: 13, fontWeight: 700, color: "#C53030" }}>
+              <AppIcon emoji="❌" icon="avviso" size={18} style={{ color: ui.danger }}/>
+              <div style={{ fontFamily: F.ui, fontSize: 13, fontWeight: 700, color: ui.danger }}>
                 Errore di importazione
               </div>
             </div>
-            <div style={{ fontFamily: F.ui, fontSize: 12, color: "#9B2C2C", lineHeight: 1.5 }}>
+            <div style={{ fontFamily: F.ui, fontSize: 12, color: th.appInk, lineHeight: 1.5 }}>
               {displayError}
             </div>
             <button
@@ -362,9 +346,9 @@ export default function AddFromLinkScreen({ onBack, onSave }) {
               style={{
                 alignSelf: "flex-end",
                 padding: "6px 12px",
-                borderRadius: 8,
+                borderRadius: ui.radius.control,
                 border: "none",
-                background: "#C53030",
+                background: ui.danger,
                 color: "#fff",
                 fontFamily: F.ui,
                 fontSize: 11,

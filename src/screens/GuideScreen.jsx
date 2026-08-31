@@ -1,18 +1,20 @@
 import { useState } from "react";
-import { useTheme } from "../context.js";
+import { useTheme, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
+import ScreenHeader from "../components/ScreenHeader.jsx";
 
 // ══════════════════════════════════════════════════════════════
 // GUIDA IN-APP — stessa struttura del manuale utente
 // ══════════════════════════════════════════════════════════════
 export default function GuideScreen({ onBack }) {
   const th = useTheme();
+  const ui = useUiStyle();
   const [open, setOpen] = useState("idea"); // capitolo espanso (il primo, all'apertura)
 
   const Chapter = ({ id, icon, title, children }) => {
     const isOpen = open === id;
     return (
-      <div style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:13, marginBottom:8, overflow:"hidden" }}>
+      <div style={{ ...ui.cardStyle, marginBottom:8, overflow:"hidden" }}>
         <button onClick={() => setOpen(isOpen ? null : id)} style={{
           width:"100%", display:"flex", alignItems:"center", gap:10, padding:"13px 14px",
           background:"none", border:"none", cursor:"pointer", textAlign:"left",
@@ -40,15 +42,19 @@ export default function GuideScreen({ onBack }) {
 
   return (
     <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
-      <div style={{ padding:"12px 18px 6px", display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
-        <button onClick={onBack} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
-        <div style={{ flex:1 }}>
-          <div style={{ fontFamily:F.display, fontSize:17, color:th.appInk }}>Guida</div>
-          <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded }}>come funziona l'app</div>
+      {ui.header === "legacy" && (
+        <div style={{ padding:"12px 18px 6px", display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
+          <button onClick={onBack} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
+          <div style={{ flex:1 }}>
+            <div style={{ fontFamily:F.display, fontSize:17, color:th.appInk }}>Guida</div>
+            <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded }}>come funziona l'app</div>
+          </div>
         </div>
-      </div>
+      )}
+      {/* onHome=onBack: la schermata non riceve un onLanding separato. */}
+      <ScreenHeader title="Guida" subtitle="come funziona l'app" onBack={onBack} onHome={onBack}/>
 
-      <div style={{ flex:1, overflowY:"auto", padding:"8px 16px 36px" }}>
+      <div style={{ flex:1, overflowY:"auto", padding:`8px ${ui.padX}px 36px` }}>
 
         <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.1, color:th.appAccent, fontWeight:700, textTransform:"uppercase", margin:"2px 0 7px" }}>Come funziona</div>
 

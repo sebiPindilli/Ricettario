@@ -7,14 +7,14 @@ import EditLabel from "./EditLabel.jsx";
 // ricetta / IMPLEMENTATION_PLAN Fase 8). In classico resta come prima.
 const FOCUS_CSS = ".field-new:focus { border-color: var(--field-focus) !important; }";
 
-export default function EditField({ label, value, onChange, placeholder="" }) {
+export default function EditField({ label, value, onChange, placeholder="", type="text", ...rest }) {
   const ui = useUiStyle();
 
   if (ui.fields !== "placeholder") {
     return (
       <div>
         <EditLabel text={label}/>
-        <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{
+        <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} {...rest} style={{
           width:"100%", padding:"10px 14px",
           border:`1.5px solid #EDE6D4`, borderRadius:10,
           background:"#F7F2E8", fontFamily:F.body, fontSize:14, color:"#2C2416",
@@ -29,9 +29,11 @@ export default function EditField({ label, value, onChange, placeholder="" }) {
       <style dangerouslySetInnerHTML={{ __html: FOCUS_CSS }} />
       <input
         className="field-new"
+        type={type}
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder || label}
+        {...rest}
         style={{
           "--field-focus": ui.accent,
           width:"100%", padding:"11px 13px",

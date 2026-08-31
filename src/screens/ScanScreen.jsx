@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { useTheme, useScanExtraction } from "../context.js";
+import { useTheme, useUiStyle, useScanExtraction } from "../context.js";
 import { F } from "../data/constants.js";
 import BackBtn from "../components/BackBtn.jsx";
+import ScreenHeader from "../components/ScreenHeader.jsx";
 import InfoButton from "../components/InfoButton.jsx";
 import AppIcon from "../components/AppIcon.jsx";
 import { guideScansiona } from "../data/guideContent.jsx";
 
-export default function ScanScreen({ onBack, onSave, mode = "camera" }) {
+export default function ScanScreen({ onBack, onSave, mode = "camera", onLanding }) {
   const isGallery = mode === "gallery";
   const th = useTheme();
+  const ui = useUiStyle();
   const [images, setImages] = useState([]); // array di { id, base64, mimeType, previewUrl }
   const [validationError, setValidationError] = useState(null);
   const { job, startExtraction, retryExtraction, dismissJob } = useScanExtraction();
@@ -93,21 +95,28 @@ export default function ScanScreen({ onBack, onSave, mode = "camera" }) {
       <style dangerouslySetInnerHTML={{ __html: cssAnimations }} />
 
       {/* Header */}
-      <div style={{ padding: "12px 18px 6px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-        <BackBtn onBack={handleBack} label="Annulla" />
-        <div style={{ flex: 1 }}>
-          <div style={{ fontFamily: F.display, fontSize: 17, color: th.appInk }}>{isGallery ? "Importa dalla Galleria" : "Scansiona dalla Fotocamera"}</div>
-          <div style={{ fontFamily: F.ui, fontSize: 10.5, color: th.appFaded }}>Crea ricetta da foto AI</div>
+      {ui.header === "legacy" && (
+        <div style={{ padding: "12px 18px 6px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+          <BackBtn onBack={handleBack} label="Annulla" />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: F.display, fontSize: 17, color: th.appInk }}>{isGallery ? "Importa dalla Galleria" : "Scansiona dalla Fotocamera"}</div>
+            <div style={{ fontFamily: F.ui, fontSize: 10.5, color: th.appFaded }}>Crea ricetta da foto AI</div>
+          </div>
+          <InfoButton>{guideScansiona}</InfoButton>
         </div>
-        <InfoButton>{guideScansiona}</InfoButton>
-      </div>
+      )}
+      <ScreenHeader
+        title={isGallery ? "Importa dalla Galleria" : "Scansiona dalla Fotocamera"}
+        subtitle="Crea ricetta da foto AI"
+        onBack={handleBack}
+        onHome={onLanding}
+        infoContent={guideScansiona}
+      />
 
-      <div style={{ flex: 1, overflowY: "auto", padding: "12px 20px 40px", display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: `12px ${ui.padX}px 40px`, display: "flex", flexDirection: "column", gap: 16 }}>
         {/* Info card */}
         <div style={{
-          background: th.appCard,
-          border: `1.5px solid ${th.appBorder}`,
-          borderRadius: 16,
+          ...ui.cardStyle,
           padding: "16px",
           display: "flex",
           gap: 12,
@@ -129,9 +138,9 @@ export default function ScanScreen({ onBack, onSave, mode = "camera" }) {
           <label style={{
             flex: 1,
             minHeight: 200,
-            border: `2px dashed ${th.appBorder}`,
-            borderRadius: 20,
-            background: th.appCard,
+            border: `2px dashed ${ui.border}`,
+            borderRadius: ui.radius.card,
+            background: ui.card,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -214,9 +223,9 @@ export default function ScanScreen({ onBack, onSave, mode = "camera" }) {
 
               {/* Add More Tile */}
               <label style={{
-                borderRadius: 12,
-                border: `2px dashed ${th.appBorder}`,
-                background: th.appCard,
+                borderRadius: ui.radius.tile,
+                border: `2px dashed ${ui.border}`,
+                background: ui.card,
                 aspectRatio: "1/1",
                 display: "flex",
                 flexDirection: "column",
@@ -246,13 +255,14 @@ export default function ScanScreen({ onBack, onSave, mode = "camera" }) {
                 style={{
                   flex: 1,
                   padding: "12px 16px",
-                  borderRadius: 12,
-                  border: `1.5px solid ${th.appBorder}`,
+                  borderRadius: ui.radius.control,
+                  border: `1.5px solid ${ui.border}`,
                   background: "transparent",
                   color: th.appInk,
                   fontFamily: F.ui,
                   fontSize: 13,
                   fontWeight: 600,
+                  textTransform: ui.uppercaseButtons ? "uppercase" : "none",
                   cursor: "pointer"
                 }}
               >
@@ -265,15 +275,16 @@ export default function ScanScreen({ onBack, onSave, mode = "camera" }) {
                 style={{
                   flex: 2,
                   padding: "12px 16px",
-                  borderRadius: 12,
+                  borderRadius: ui.radius.control,
                   border: "none",
                   background: otherRunning ? th.appBorder : th.appAccent,
-                  color: "#fff",
+                  color: otherRunning ? th.appFaded : th.appOnAccent,
                   fontFamily: F.ui,
                   fontSize: 13,
                   fontWeight: 700,
+                  textTransform: ui.uppercaseButtons ? "uppercase" : "none",
                   cursor: otherRunning ? "default" : "pointer",
-                  boxShadow: otherRunning ? "none" : `0 4px 12px rgba(196,89,58,0.25)`
+                  boxShadow: otherRunning ? "none" : `0 4px 12px ${th.appAccent}40`
                 }}
               >
                 Analizza Foto ({images.length}) 🍳
@@ -356,21 +367,21 @@ export default function ScanScreen({ onBack, onSave, mode = "camera" }) {
         {/* Error Alert */}
         {displayError && (
           <div style={{
-            background: "#FFF5F5",
-            border: "1.5px solid #FEB2B2",
-            borderRadius: 14,
+            background: `${ui.danger}15`,
+            border: `1.5px solid ${ui.danger}66`,
+            borderRadius: ui.radius.card,
             padding: "16px",
             display: "flex",
             flexDirection: "column",
             gap: 10
           }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <span style={{ fontSize: 18 }}>❌</span>
-              <div style={{ fontFamily: F.ui, fontSize: 13, fontWeight: 700, color: "#C53030" }}>
+              <AppIcon emoji="❌" icon="avviso" size={18} style={{ color: ui.danger }}/>
+              <div style={{ fontFamily: F.ui, fontSize: 13, fontWeight: 700, color: ui.danger }}>
                 Si è verificato un errore
               </div>
             </div>
-            <div style={{ fontFamily: F.ui, fontSize: 12, color: "#9B2C2C", lineHeight: 1.5 }}>
+            <div style={{ fontFamily: F.ui, fontSize: 12, color: th.appInk, lineHeight: 1.5 }}>
               {displayError}
             </div>
             <button
@@ -378,9 +389,9 @@ export default function ScanScreen({ onBack, onSave, mode = "camera" }) {
               style={{
                 alignSelf: "flex-end",
                 padding: "6px 12px",
-                borderRadius: 8,
+                borderRadius: ui.radius.control,
                 border: "none",
-                background: "#C53030",
+                background: ui.danger,
                 color: "#fff",
                 fontFamily: F.ui,
                 fontSize: 11,

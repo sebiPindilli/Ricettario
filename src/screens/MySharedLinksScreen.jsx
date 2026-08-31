@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
-import { useTheme } from "../context.js";
+import { useState, useEffect, cloneElement } from "react";
+import { useTheme, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
+import ScreenHeader from "../components/ScreenHeader.jsx";
 import AppIcon from "../components/AppIcon.jsx";
 import {
   listMySharedRecipes, revokeSharedRecipe, deleteSharedRecipeFully, updateSharedRecipeAccess,
@@ -22,6 +23,7 @@ const fmtDate = (ts) => {
 // ══════════════════════════════════════════════════════════════
 export default function MySharedLinksScreen({ me, nav, onBack }) {
   const th = useTheme();
+  const ui = useUiStyle();
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
   const [busyId, setBusyId] = useState(null);
@@ -94,13 +96,24 @@ export default function MySharedLinksScreen({ me, nav, onBack }) {
 
   return (
     <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
-      {nav}
-      <div style={{ padding:"12px 20px 6px", display:"flex", alignItems:"center", gap:10 }}>
-        <button onClick={onBack} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
-        <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk, display:"flex", alignItems:"center", gap:7 }}><AppIcon emoji="🔗" icon="link" size={16} /> I miei link condivisi</div>
-      </div>
+      {/* `nav` arriva già costruito dal chiamante (BooksScreen o
+          ricettario-v23.jsx), condiviso con la vista "libri" — non tocchiamo
+          quel GlobalNav all'origine (fuori scope qui), ma questa schermata
+          ha la sua ScreenHeader e deve sopprimerlo negli stili nuovi come le
+          altre: clonato solo per aggiungere bottomNavActive. */}
+      {nav && cloneElement(nav, { bottomNavActive: true })}
+      {ui.header === "legacy" && (
+        <div style={{ padding:"12px 20px 6px", display:"flex", alignItems:"center", gap:10 }}>
+          <button onClick={onBack} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
+          <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk, display:"flex", alignItems:"center", gap:7 }}><AppIcon emoji="🔗" icon="link" size={16} /> I miei link condivisi</div>
+        </div>
+      )}
+      {/* onHome=onBack: la schermata non riceve un onLanding separato — qui
+          "indietro" e "menù" portano allo stesso posto (lista libri o landing,
+          a seconda di dove è stata aperta — vedi i due punti di montaggio). */}
+      <ScreenHeader title="I miei link condivisi" onBack={onBack} onHome={onBack}/>
 
-      <div style={{ flex:1, overflowY:"auto", padding:"10px 18px 30px" }}>
+      <div style={{ flex:1, overflowY:"auto", padding:`10px ${ui.padX}px 30px` }}>
         {loading ? (
           <div style={{ textAlign:"center", padding:"40px 0", color:th.appFaded, fontFamily:F.ui, fontSize:13 }}>Caricamento…</div>
         ) : items.length === 0 ? (
@@ -109,7 +122,7 @@ export default function MySharedLinksScreen({ me, nav, onBack }) {
             <span style={{ fontFamily:F.ui, fontSize:12 }}>Condividi una ricetta dalla sua scheda per crearne uno.</span>
           </div>
         ) : items.map(item => (
-          <div key={item.id} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:14, padding:"12px 14px", marginBottom:10 }}>
+          <div key={item.id} style={{ ...ui.cardStyle, padding:"12px 14px", marginBottom:10 }}>
             <div style={{ fontFamily:F.display, fontSize:15, color:th.appInk, marginBottom:4 }}>{item.recipeTitle || "Ricetta"}</div>
             <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginBottom:8 }}>
               Condiviso il {fmtDate(item.sharedAt)} · scade il {fmtDate(item.expiresAt)}
@@ -165,7 +178,7 @@ export default function MySharedLinksScreen({ me, nav, onBack }) {
                 </button>
                 <div style={{ display:"flex", gap:6 }}>
                   <button onClick={() => openEdit(item)} disabled={busyId === item.id} style={{ flex:1, padding:"9px", borderRadius:9, border:`1.5px solid ${th.appBorder}`, background:"transparent", color:th.appInk, fontFamily:F.ui, fontSize:11.5, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}><AppIcon emoji="✏️" icon="modifica" size={12} /> Modifica destinatari</button>
-                  <button onClick={() => doRevoke(item.id)} disabled={busyId === item.id} style={{ flex:1, padding:"9px", borderRadius:9, border:"none", background:"#C4593A", color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
+                  <button onClick={() => doRevoke(item.id)} disabled={busyId === item.id} style={{ flex:1, padding:"9px", borderRadius:ui.radius.control, border:"none", background:ui.danger, color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
                     {busyId === item.id ? "…" : <><AppIcon emoji="🚫" icon="revoca" size={12} /> Revoca</>}
                   </button>
                 </div>
