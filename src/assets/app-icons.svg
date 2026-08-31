@@ -1,0 +1,1184 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="ic-ricette" viewBox="0 0 24 24">
+    <path d="M5.5 4v5a2.5 2.5 0 0 0 5 0V4" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+    <path d="M8 11.5V20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M16 4c2.2 1.6 3.2 4 3.2 7.2H16z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+    <path d="M16 11.2V20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-ricordi" viewBox="0 0 24 24">
+    <path d="M4.5 4.5h4v15h-4z" fill="currentColor" fill-opacity=".16" stroke="none"></path>
+    <rect x="4.5" y="4" width="15" height="16" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></rect>
+    <path d="M8.5 4v16" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+    <path d="M12 9h4.2M12 13h4.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-frigo" viewBox="0 0 24 24">
+    <path d="M6 4h12v6H6z" fill="currentColor" fill-opacity=".16" stroke="none"></path>
+    <rect x="5.5" y="3.5" width="13" height="17" rx="2.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></rect>
+    <path d="M5.5 10h13" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+    <path d="M15.2 6v2.2M15.2 12.4v2.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-spesa" viewBox="0 0 24 24">
+    <path d="M6.6 8h13.4l-2 6.6H8.4z" fill="currentColor" fill-opacity=".16" stroke="none"></path>
+    <path d="M3 4.5h2.3l3.1 10.1h9.6L20 8H6.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+    <circle cx="10" cy="19" r="1.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <circle cx="16.6" cy="19" r="1.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+  </symbol>
+  <symbol id="ic-organizza" viewBox="0 0 24 24">
+    <circle cx="10.5" cy="14" r="6.5" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M10.5 7.5V4.5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <circle cx="18.5" cy="6" r="3.2" fill="none" stroke="currentColor" stroke-width="1.75"></circle>
+    <circle cx="18.5" cy="6" r="1" fill="currentColor"></circle>
+  </symbol>
+
+  <symbol id="ic-home" viewBox="0 0 24 24">
+    <path d="M9.5 14h5v6.5h-5z" fill="currentColor" fill-opacity=".16" stroke="none"></path>
+    <path d="M3.5 10.5 12 4l8.5 6.5v9a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+    <path d="M9.5 20.5V14h5v6.5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-esporta" viewBox="0 0 24 24">
+    <path d="M4 15h16v5H4z" fill="currentColor" fill-opacity=".16" stroke="none"></path>
+    <path d="M4 14.5v4.2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M12 15.5V4M7.8 8.2 12 4l4.2 4.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-schede" viewBox="0 0 24 24">
+    <path d="M4 4h7v7H4zM13 13h7v7h-7z" fill="currentColor" fill-opacity=".16" stroke="none"></path>
+    <rect x="3.6" y="3.6" width="7.4" height="7.4" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.75"></rect>
+    <rect x="13" y="3.6" width="7.4" height="7.4" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.75"></rect>
+    <rect x="3.6" y="13" width="7.4" height="7.4" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.75"></rect>
+    <rect x="13" y="13" width="7.4" height="7.4" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.75"></rect>
+  </symbol>
+  <symbol id="ic-libro" viewBox="0 0 24 24">
+    <path d="M12 6.6C9.6 5.2 7 4.7 4 4.9v13.4c3-.2 5.6.3 8 1.7z" fill="currentColor" fill-opacity=".16" stroke="none"></path>
+    <path d="M12 6.6C9.6 5.2 7 4.7 4 4.9v13.4c3-.2 5.6.3 8 1.7 2.4-1.4 5-1.9 8-1.7V4.9c-3-.2-5.6.3-8 1.7z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 6.6V20" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+  </symbol>
+  <symbol id="ic-info" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="8.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M12 11v5.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <circle cx="12" cy="7.9" r="1.1" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-filtra" viewBox="0 0 24 24">
+    <path d="M4.4 5.4h15.2l-5.4 7.2h-4.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M10.4 12.6h3.2v4.8a1.6 1.6 0 0 1-3.2 0z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-elimina" viewBox="0 0 24 24">
+    <path d="M6.4 7.6h11.2l-.9 11.2a1.9 1.9 0 0 1-1.9 1.8H9.2a1.9 1.9 0 0 1-1.9-1.8z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M4.4 7.6h15.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M9.6 7.6V6a1.4 1.4 0 0 1 1.4-1.4h2a1.4 1.4 0 0 1 1.4 1.4v1.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M10.5 11.4v5.4M13.5 11.4v5.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-modifica" viewBox="0 0 24 24">
+    <path d="M15.6 3.9l4.5 4.5L9.8 18.7l-5.4.9.9-5.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M13.2 6.3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M4.4 19.6l.7-4.2 3.5 3.5z" fill="currentColor"></path>
+  </symbol>
+  <symbol id="ic-fatto" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="8.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M8.2 12.3l2.6 2.6 5-5.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-avviso" viewBox="0 0 24 24">
+    <path d="M12 4.2l8.3 14.4a1 1 0 0 1-.87 1.5H4.57a1 1 0 0 1-.87-1.5z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 9.4v4.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <circle cx="12" cy="16.9" r="1.1" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-suggerimento" viewBox="0 0 24 24">
+    <path d="M12 3.8a5.7 5.7 0 0 1 3.3 10.3v1.5H8.7v-1.5A5.7 5.7 0 0 1 12 3.8z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M9.4 17.6h5.2M10.4 20.2h3.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-copia" viewBox="0 0 24 24">
+    <rect x="8.6" y="8.6" width="11" height="11.2" rx="2" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></rect>
+    <path d="M8.6 15.4H6.4a2 2 0 0 1-2-2V6.4a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v2.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-link" viewBox="0 0 24 24">
+    <path d="M10.4 7.2l1.8-1.8a4.1 4.1 0 0 1 5.8 5.8l-1.8 1.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+    <path d="M13.6 16.8l-1.8 1.8a4.1 4.1 0 0 1-5.8-5.8l1.8-1.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+    <path d="M9.2 14.8l5.6-5.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-sposta" viewBox="0 0 24 24">
+    <path d="M4.2 8.4V6.6a1.9 1.9 0 0 1 1.9-1.9h3.3l1.9 2.1h6.7a1.9 1.9 0 0 1 1.9 1.9v9.7a1.9 1.9 0 0 1-1.9 1.9H6.1a1.9 1.9 0 0 1-1.9-1.9z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M9.4 13.4h4.9M12.2 11.2l2.2 2.2-2.2 2.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-foto" viewBox="0 0 24 24">
+    <rect x="3.6" y="7" width="16.8" height="12.6" rx="2.4" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></rect>
+    <path d="M9 7V5.8a1.2 1.2 0 0 1 1.2-1.2h3.6A1.2 1.2 0 0 1 15 5.8V7" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <circle cx="12" cy="13.3" r="3.4" fill="none" stroke="currentColor" stroke-width="1.75"></circle>
+  </symbol>
+  <symbol id="ic-privato" viewBox="0 0 24 24">
+    <rect x="5.4" y="10.6" width="13.2" height="9.4" rx="2.2" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></rect>
+    <path d="M8.4 10.6V8.2a3.6 3.6 0 0 1 7.2 0v2.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <circle cx="12" cy="15.3" r="1.2" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-pubblico" viewBox="0 0 24 24">
+    <rect x="5.4" y="10.6" width="13.2" height="9.4" rx="2.2" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></rect>
+    <path d="M8.4 10.6V8.2a3.6 3.6 0 0 1 7.2-.7" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+    <circle cx="12" cy="15.3" r="1.2" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-salva" viewBox="0 0 24 24">
+    <rect x="4" y="4" width="16" height="16" rx="2.2" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></rect>
+    <path d="M8.6 20v-5.4h6.8V20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M9.2 4v4.4h4.4V4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-connessione" viewBox="0 0 24 24">
+    <circle cx="12" cy="17.6" r="1.7" fill="currentColor"></circle>
+    <path d="M8.6 14a4.9 4.9 0 0 1 6.8 0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M5.8 10.9a8.9 8.9 0 0 1 12.4 0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-aggiorna" viewBox="0 0 24 24">
+    <path d="M19.4 12a7.4 7.4 0 0 1-12.7 5.2M4.6 12A7.4 7.4 0 0 1 17.3 6.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M17.3 3.4v3.4h-3.4M6.7 20.6v-3.4h3.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-ripristina" viewBox="0 0 24 24">
+    <path d="M4.6 12a7.4 7.4 0 1 0 3.1-6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M7.7 3v3.4h3.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-trasferisci" viewBox="0 0 24 24">
+    <path d="M4.6 9h13M14.6 6 17.6 9l-3 3" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+    <path d="M19.4 15h-13M9.4 12 6.4 15l3 3" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-persona" viewBox="0 0 24 24">
+    <circle cx="12" cy="8.6" r="3.5" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></circle>
+    <path d="M5.4 19.8a6.6 6.6 0 0 1 13.2 0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-ricettari" viewBox="0 0 24 24">
+    <rect x="4.2" y="8.6" width="15.6" height="11.2" rx="2" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></rect>
+    <path d="M12 8.6v11.2" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+    <path d="M6 6.2h12M7.6 3.8h8.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-pdf" viewBox="0 0 24 24">
+    <path d="M6.4 3.8h7.4l4.6 4.6v11.4a1.8 1.8 0 0 1-1.8 1.8H6.4a1.8 1.8 0 0 1-1.8-1.8V5.6a1.8 1.8 0 0 1 1.8-1.8z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M13.8 3.8v3a1.8 1.8 0 0 0 1.8 1.8h2.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M8.2 13.6h7.6M8.2 16.8h4.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-scarica" viewBox="0 0 24 24">
+    <path d="M12 4v10.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M8.4 11.2 12 14.8l3.6-3.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+    <path d="M4.8 18.8h14.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-importa" viewBox="0 0 24 24">
+    <path d="M4.4 13.6v4a2 2 0 0 0 2 2h11.2a2 2 0 0 0 2-2v-4" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 4v8.8M8.6 9.4 12 12.8l3.4-3.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-preferito-vuoto" viewBox="0 0 24 24">
+    <path d="M12 3.6l2.7 5.5 6 .9-4.3 4.2 1 6-5.4-2.9-5.4 2.9 1-6L3.3 10l6-.9z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-bandiera" viewBox="0 0 24 24">
+    <path d="M6.8 4.8h11.4l-2.3 3.9 2.3 3.9H6.8z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M6.8 4v16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-revoca" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="8.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M6.3 17.7 17.7 6.3" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-blocca" viewBox="0 0 24 24">
+    <path d="M9 4.6h6l-1.2 3.6 2.4 3.4H7.8l2.4-3.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 11.6v8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-festa" viewBox="0 0 24 24">
+    <path d="M4.2 19.8 9 8.4l6.6 6.6-11.4 4.8z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M9 8.4l6.6 6.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <circle cx="18.4" cy="5.4" r="1.3" fill="currentColor"></circle>
+    <circle cx="20.4" cy="10.4" r="1.1" fill="currentColor"></circle>
+    <circle cx="13.6" cy="4" r="1.1" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-domanda" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="8.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M9.7 9.5a2.35 2.35 0 0 1 4.6.7c0 1.6-2.3 1.9-2.3 3.5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <circle cx="12" cy="17.1" r="1.1" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-chiave" viewBox="0 0 24 24">
+    <circle cx="7.4" cy="12" r="3.8" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></circle>
+    <circle cx="7.4" cy="12" r="1.15" fill="currentColor"></circle>
+    <path d="M11.2 12h8.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M15.6 12v2.9M18.4 12v2.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-stile" viewBox="0 0 24 24">
+    <path d="M12 4a8 8 0 0 0 0 16c1.4 0 2-.9 2-1.9 0-1.5 1.2-2.3 2.7-2.3h1.3A2 2 0 0 0 20 13.8C20 8.4 16.4 4 12 4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <circle cx="9.2" cy="9.4" r="1.1" fill="currentColor"></circle>
+    <circle cx="14.6" cy="8.8" r="1.1" fill="currentColor"></circle>
+    <circle cx="8.2" cy="14" r="1.1" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-installa" viewBox="0 0 24 24">
+    <rect x="7.2" y="3.6" width="9.6" height="16.8" rx="2.2" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></rect>
+    <path d="M12 7.8v5.6M9.8 11.2 12 13.4l2.2-2.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+    <path d="M10.6 17.4h2.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-beta" viewBox="0 0 24 24">
+    <path d="M9.6 4.4h4.8v10.4a2.4 2.4 0 0 1-4.8 0z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M8.4 4.4h7.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <circle cx="12" cy="12.4" r="1" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-bug" viewBox="0 0 24 24">
+    <path d="M12 7.8a4.8 4.8 0 0 1 4.8 4.8v2.2a4.8 4.8 0 0 1-9.6 0v-2.2A4.8 4.8 0 0 1 12 7.8z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M9.8 8.4 8.4 6M14.2 8.4 15.6 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M7.2 12.6H4.6M16.8 12.6h2.6M7.6 16.8 5.2 18.4M16.4 16.8l2.4 1.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-corona" viewBox="0 0 24 24">
+    <path d="M4.4 17.6 5.9 7.6l4 3.6L12 5.4l2.1 5.8 4-3.6 1.5 10z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M5.6 20h12.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-audio" viewBox="0 0 24 24">
+    <path d="M4.4 9.6h3.2l4.4-3.8v12.4l-4.4-3.8H4.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M15.4 9.4a3.7 3.7 0 0 1 0 5.2M18 6.8a7.3 7.3 0 0 1 0 10.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-silenzio" viewBox="0 0 24 24">
+    <path d="M4.4 9.6h3.2l4.4-3.8v12.4l-4.4-3.8H4.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M15.6 10.2l4 3.6M19.6 10.2l-4 3.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-vibrazione" viewBox="0 0 24 24">
+    <rect x="8.6" y="4.6" width="6.8" height="14.8" rx="1.8" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></rect>
+    <path d="M5 9.6v4.8M19 9.6v4.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-cerca" viewBox="0 0 24 24">
+    <circle cx="10.5" cy="10.5" r="6.5" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M15.4 15.4 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-aggiungi" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="8.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M12 8v8M8 12h8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-indietro" viewBox="0 0 24 24">
+    <path d="M14.5 4.5 7.5 12l7 7.5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-chiudi" viewBox="0 0 24 24">
+    <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-tag" viewBox="0 0 24 24">
+    <path d="M20 4h-6.4L3.6 14l6.4 6.4L20 10.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <circle cx="16.4" cy="7.6" r="1.3" fill="currentColor"></circle>
+  </symbol>
+
+  <symbol id="ic-basi" viewBox="0 0 24 24">
+    <path d="M3.6 13.6h16.8v5.8H3.6z" fill="currentColor" fill-opacity=".16" stroke="none"></path>
+    <rect x="3.6" y="7.8" width="16.8" height="5.8" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></rect>
+    <rect x="3.6" y="13.6" width="16.8" height="5.8" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></rect>
+    <path d="M9.2 7.8v5.8M15 7.8v5.8M6.4 13.6v5.8M12 13.6v5.8M17.6 13.6v5.8" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+  </symbol>
+  <symbol id="ic-salati" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="8.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M6.4 10.4c1.5-2 3.2-2 4.7 0s3.2 2 4.7 0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M6.4 14.2c1.5-2 3.2-2 4.7 0s3.2 2 4.7 0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-dolci" viewBox="0 0 24 24">
+    <path d="M4 12.6h16v7.4H4z" fill="currentColor" fill-opacity=".16" stroke="none"></path>
+    <path d="M4 20v-6.2c1.6 0 2.4-1.2 4-1.2s2.4 1.2 4 1.2 2.4-1.2 4-1.2 2.4 1.2 4 1.2V20z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 12V7.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <circle cx="12" cy="5.4" r="1.4" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-altro" viewBox="0 0 24 24">
+    <path d="M3.6 11.6h16.8v8.4H3.6z" fill="currentColor" fill-opacity=".16" stroke="none"></path>
+    <rect x="3.6" y="7.4" width="16.8" height="12.2" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></rect>
+    <path d="M3.6 11.6h16.8" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+    <path d="M9.8 15.2h4.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+
+  <symbol id="ic-sale" viewBox="0 0 24 24">
+    <path d="M8 10.6h8V20H8z" fill="currentColor" fill-opacity=".16" stroke="none"></path>
+    <path d="M8 20v-9.4a4 4 0 0 1 8 0V20z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M8.4 13.6h7.2" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+    <circle cx="9.6" cy="6.4" r=".9" fill="currentColor"></circle>
+    <circle cx="12" cy="4.4" r=".9" fill="currentColor"></circle>
+    <circle cx="14.4" cy="6.4" r=".9" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-cereali" viewBox="0 0 24 24">
+    <path d="M12 20V8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M12 8c2.2-.8 3.6-2.4 3.6-4.6C13.4 4.2 12 5.8 12 8z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 12.4c2.2-.8 3.6-2.4 3.6-4.6-2.2.8-3.6 2.4-3.6 4.6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 12.4C9.8 11.6 8.4 10 8.4 7.8c2.2.8 3.6 2.4 3.6 4.6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 16.8c-2.2-.8-3.6-2.4-3.6-4.6 2.2.8 3.6 2.4 3.6 4.6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-ortofrutta" viewBox="0 0 24 24">
+    <path d="M4 20c0-6.2 4-10.2 10.2-10.2C14.2 16 10.2 20 4 20z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M14.6 9.4 18.4 5.6M14 9c-.4-2 .2-3.6 1.6-4.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-proteine" viewBox="0 0 24 24">
+    <ellipse cx="12" cy="12" rx="8.4" ry="5.8" transform="rotate(-14 12 12)" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></ellipse>
+    <path d="M8.6 11c2.2 1.4 4.6 1.4 6.8 0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-latticini" viewBox="0 0 24 24">
+    <path d="M3.6 16.4 15.6 6.6l4.8 2.6v7.2z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <circle cx="10.6" cy="13.4" r="1.2" fill="currentColor"></circle>
+    <circle cx="15.4" cy="14.4" r="1.2" fill="currentColor"></circle>
+    <circle cx="17.4" cy="11" r="1" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-legumi" viewBox="0 0 24 24">
+    <ellipse cx="8.6" cy="8.6" rx="3.4" ry="2.3" transform="rotate(-30 8.6 8.6)" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></ellipse>
+    <ellipse cx="15.4" cy="11" rx="3.4" ry="2.3" transform="rotate(-30 15.4 11)" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></ellipse>
+    <ellipse cx="11" cy="16.4" rx="3.4" ry="2.3" transform="rotate(-30 11 16.4)" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></ellipse>
+  </symbol>
+  <symbol id="ic-grassi" viewBox="0 0 24 24">
+    <path d="M8.2 12.4a4.4 4.4 0 0 1 2.6-4V7h2.4v1.4a4.4 4.4 0 0 1 2.6 4V20H8.2z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M10.4 4h3.2v3h-3.2z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M8.2 15.6h7.6" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+  </symbol>
+  <symbol id="ic-spezie" viewBox="0 0 24 24">
+    <path d="M4.4 20 14 10.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M14 10.4c3.4 0 5.6-2.2 5.6-5.6-3.4 0-5.6 2.2-5.6 5.6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M9.4 15c-2.6 0-4.2-1.6-4.2-4.2 2.6 0 4.2 1.6 4.2 4.2z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-alcolici" viewBox="0 0 24 24">
+    <path d="M7.6 4.4h8.8v2.8a4.4 4.4 0 0 1-8.8 0z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 11.6V19M8.6 19.6h6.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-cacao" viewBox="0 0 24 24">
+    <path d="M5.4 4.4h13.2v15.2H5.4z" fill="currentColor" fill-opacity=".16" stroke="none"></path>
+    <rect x="5.4" y="4.4" width="13.2" height="15.2" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></rect>
+    <path d="M12 4.4v15.2M5.4 9.4h13.2M5.4 14.6h13.2" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+  </symbol>
+
+  <symbol id="ic-tempo" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="8.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M12 7.4V12l3.6 2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-porzioni" viewBox="0 0 24 24">
+    <circle cx="12" cy="8" r="3.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M4.8 20a7.2 7.2 0 0 1 14.4 0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-preferito" viewBox="0 0 24 24">
+    <path d="M12 3.6l2.7 5.5 6 .9-4.3 4.2 1 6-5.4-2.9-5.4 2.9 1-6L3.3 10l6-.9z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-timer" viewBox="0 0 24 24">
+    <circle cx="12" cy="13.6" r="7.4" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M12 13.6V9.4M9.6 3.4h4.8M12 3.4v2.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-nutrizione" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="8.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M9 15.4c0-3.6 2.8-6.4 6.4-6.4 0 3.6-2.8 6.4-6.4 6.4z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M9 15.4 14.4 10" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-cottura" viewBox="0 0 24 24">
+    <path d="M12 3.4c3.2 3 5.2 5.4 5.2 8.6a5.2 5.2 0 0 1-10.4 0c0-1.9.9-3.4 2.2-4.8.3 1.4 1 2.2 2 2.4-.5-2.3-.2-4.3 1-6.2z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-preparazione" viewBox="0 0 24 24">
+    <circle cx="10" cy="13.4" r="6.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <circle cx="10" cy="13.4" r="2.2" fill="currentColor"></circle>
+    <path d="M16.4 10.6 20.6 7" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+
+  <symbol id="ic-pasta" viewBox="0 0 24 24">
+    <path d="M3 14.6h18a9 9 0 0 1-18 0z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M7 12.2c1-2.4 2.2-2.4 3.2 0M12.4 12.2c1-2.4 2.2-2.4 3.2 0M9.6 8.6c1-2.4 2.2-2.4 3.2 0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-pizza" viewBox="0 0 24 24">
+    <path d="M12 3.4 20.6 19a1 1 0 0 1-1 1.4H4.4A1 1 0 0 1 3.4 19z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M6 15.4h12" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+    <circle cx="12" cy="10.4" r="1.2" fill="currentColor"></circle>
+    <circle cx="9.4" cy="17.8" r="1.2" fill="currentColor"></circle>
+    <circle cx="15" cy="18" r="1.2" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-focaccia" viewBox="0 0 24 24">
+    <rect x="2.8" y="7.6" width="18.4" height="8.8" rx="4.4" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></rect>
+    <circle cx="8" cy="11.2" r="1" fill="currentColor"></circle>
+    <circle cx="12.4" cy="13.2" r="1" fill="currentColor"></circle>
+    <circle cx="16.6" cy="10.8" r="1" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-risotto" viewBox="0 0 24 24">
+    <path d="M3.6 12.6h16.8a8.4 8.4 0 0 1-16.8 0z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M8 9.6h.01M11.6 8h.01M15.4 9.8h.01M9.8 6.4h.01M13.6 5.8h.01" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-gnocchi" viewBox="0 0 24 24">
+    <rect x="3.4" y="6.4" width="7" height="4.6" rx="2.3" transform="rotate(-16 6.9 8.7)" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></rect>
+    <rect x="13.4" y="8.4" width="7" height="4.6" rx="2.3" transform="rotate(14 16.9 10.7)" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></rect>
+    <rect x="7.4" y="14.4" width="7" height="4.6" rx="2.3" transform="rotate(-8 10.9 16.7)" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></rect>
+  </symbol>
+  <symbol id="ic-lasagna" viewBox="0 0 24 24">
+    <path d="M4 13.6h16v5.2H4z" fill="currentColor" fill-opacity=".16" stroke="none"></path>
+    <path d="M4 18.8V8.2l8-3.4 8 3.4v10.6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M4 11.6h16M4 15.2h16" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+  </symbol>
+  <symbol id="ic-olio-oliva" viewBox="0 0 24 24">
+    <path d="M8.4 20V11a4.4 4.4 0 0 1 2.4-4V4.4h2.4V7a4.4 4.4 0 0 1 2.4 4v9z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <ellipse cx="12" cy="14.6" rx="2" ry="2.6" fill="none" stroke="currentColor" stroke-width="1.75"></ellipse>
+  </symbol>
+
+  <symbol id="ic-carne" viewBox="0 0 24 24">
+    <path d="M11.4 4.6c4.8 0 8.6 3.2 8.6 7.4 0 4.4-3.6 7.4-8.6 7.4-3 0-5.4-1.2-6.8-3.2-.9-1.3-2.2-1.2-3-2.4-1-1.5-.2-3.2 1.4-3.6 1-.3 1.4-1 1.8-2 1-2.2 3.4-3.6 6.6-3.6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <circle cx="7.4" cy="12" r="2.6" fill="none" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M12.6 8.6c2.6-.6 4.6.2 6 2.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-pollo" viewBox="0 0 24 24">
+    <path d="M19.4 4.6c2 2 2 5.4 0 7.4-1.8 1.8-4.4 2-6.4.8l-1.8 1.8 1 1-4.6 4.6-2.8-.4-.4-2.8 4.6-4.6 1 1 1.8-1.8c-1.2-2-1-4.6.8-6.4 2-2 5.4-2 7.4 0z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-pesce" viewBox="0 0 24 24">
+    <path d="M7.4 12c2.8-3.8 6-5.6 9-5.6 2.6 0 4.2 2.2 4.2 5.6s-1.6 5.6-4.2 5.6c-3 0-6.2-1.8-9-5.6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M7.4 12 2.8 7.6v8.8z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M13 6.8c1-1.8 2.4-2.6 4.2-2.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <circle cx="17.4" cy="10.6" r="1.1" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-gamberi" viewBox="0 0 24 24">
+    <path d="M17.4 4.6c-6.6 0-11 3.6-11 8.4 0 3.4 2.6 5.8 6 5.8 3.2 0 5.4-2 5.4-4.6 0-2.2-1.6-3.6-3.6-3.6-1.6 0-2.8 1-2.8 2.4" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+    <path d="M17.4 4.6 20.6 3M17.4 4.6l1.4 3.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M9.2 15.6l-2.6 1.6M11 17.8l-1.4 2.6M13.6 18.2l.4 2.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-uovo" viewBox="0 0 24 24">
+    <path d="M6.6 8.4c2.4-2.6 6-2.8 8-.6 1.4 1.6 3.6.8 4.8 2.4 1.2 1.6 0 3.6-2 3.8-1 .1-1 1.2-2 2.2-1.6 1.6-4.4 1.8-6.4.4-1.4-1-1.4-2-2.8-2.4-1.8-.5-2.6-2.2-1.8-3.8.6-1.2 1.4-1.4 2.2-2z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <circle cx="14.4" cy="10.8" r="2.6" fill="currentColor" fill-opacity=".34" stroke="currentColor" stroke-width="1.75"></circle>
+  </symbol>
+  <symbol id="ic-salume" viewBox="0 0 24 24">
+    <ellipse cx="8.4" cy="12" rx="4.4" ry="7.2" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></ellipse>
+    <path d="M8.4 4.8h5.6c2.4 0 4.4 3.2 4.4 7.2s-2 7.2-4.4 7.2H8.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M18.4 8.6h2.8M18.4 12h2.8M18.4 15.4h2.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <circle cx="7.4" cy="10" r="1" fill="currentColor"></circle>
+    <circle cx="9.6" cy="13.4" r="1" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-spiedino" viewBox="0 0 24 24">
+    <path d="M3.6 20.4 20.4 3.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <rect x="5.6" y="12.4" width="4.6" height="4.6" rx="1.2" transform="rotate(-45 7.9 14.7)" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></rect>
+    <rect x="9.7" y="8.3" width="4.6" height="4.6" rx="1.2" transform="rotate(-45 12 10.6)" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></rect>
+    <rect x="13.8" y="4.2" width="4.6" height="4.6" rx="1.2" transform="rotate(-45 16.1 6.5)" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></rect>
+  </symbol>
+
+  <symbol id="ic-pomodoro" viewBox="0 0 24 24">
+    <circle cx="12" cy="14" r="7" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M12 7V4.4M12 7c-1.4-1.6-3-2.2-5-1.8.4 2 1.6 3.2 3.4 3.4M12 7c1.4-1.6 3-2.2 5-1.8-.4 2-1.6 3.2-3.4 3.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-carota" viewBox="0 0 24 24">
+    <path d="M14.8 9.2 5.2 18.8a1.4 1.4 0 0 1-2-2l9.6-9.6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M9.4 12.6l1.8 1.8M12.2 9.8l1.8 1.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M14.8 9.2c1-2.6 2.8-4 5.6-4.4-.4 2.8-1.8 4.6-4.4 5.6M12.8 7.2c-.6-2.2 0-3.8 1.6-4.8.8 1.6.8 3.2 0 4.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-insalata" viewBox="0 0 24 24">
+    <path d="M3.4 13.6h17.2a8.6 8.6 0 0 1-17.2 0z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M7.6 13.6c-1.6-2.6-1-4.8 1.8-6.6 1 1.6 1.2 3 .6 4.2M12.4 13.6c.4-3 2.2-4.6 5.4-4.8-.2 2.2-1.2 3.8-3 4.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-funghi" viewBox="0 0 24 24">
+    <path d="M4.4 12.4c0-4.2 3.4-7.4 7.6-7.4s7.6 3.2 7.6 7.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M9.6 12.4v5.2a2.4 2.4 0 0 0 4.8 0v-5.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <circle cx="9.2" cy="9" r="1" fill="currentColor"></circle>
+    <circle cx="14.4" cy="9.6" r="1" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-aglio" viewBox="0 0 24 24">
+    <path d="M12 6.6c3.4 2.4 5.2 5 5.2 7.8a5.2 5.2 0 0 1-10.4 0c0-2.8 1.8-5.4 5.2-7.8z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M9.4 13.8c0-2.4.9-4.8 2.6-7.2 1.7 2.4 2.6 4.8 2.6 7.2" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+    <path d="M12 6.6V3.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-peperoncino" viewBox="0 0 24 24">
+    <path d="M15.6 7.4c2 3.6.6 8.4-3.4 10.8-3 1.8-6.2 1.6-8.2-.4 3.4 0 5.6-1.2 7.2-3.4 1.6-2.2 2-4.6 1.2-7z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12.4 7.4h4.4M14.6 7.4c0-2 1.2-3.4 3.4-3.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-limone" viewBox="0 0 24 24">
+    <ellipse cx="12" cy="12" rx="8.6" ry="6.2" transform="rotate(-24 12 12)" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></ellipse>
+    <path d="M12 12 6.4 8.6M12 12l5.6 3.4M12 12l-2.4 5.6M12 12l2.4-5.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-uva" viewBox="0 0 24 24">
+    <circle cx="8.6" cy="12.6" r="2.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <circle cx="15.4" cy="12.6" r="2.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <circle cx="12" cy="17.4" r="2.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <circle cx="12" cy="8.4" r="2.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M12 5.8c0-1.6 1.2-2.6 3.4-2.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+
+  <symbol id="ic-zuppa" viewBox="0 0 24 24">
+    <path d="M4 13.6h16a8 8 0 0 1-16 0z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M2.6 13.6h18.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M9.6 9.6c-1.2-1.2-1.2-2.4 0-3.6M14.4 9.6c-1.2-1.2-1.2-2.4 0-3.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-panino" viewBox="0 0 24 24">
+    <path d="M3.6 9.4c0-2.8 3.8-4.8 8.4-4.8s8.4 2 8.4 4.8z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M3.6 12.4h16.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M4.6 15.4h14.8a2 2 0 0 1-2 2H6.6a2 2 0 0 1-2-2z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-bowl" viewBox="0 0 24 24">
+    <path d="M3.6 11.6h16.8c0 4.6-3.8 8.4-8.4 8.4s-8.4-3.8-8.4-8.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M8.4 8.6c1-1.6 2.2-1.6 3.2 0M13.4 7.4c1-1.6 2.2-1.6 3.2 0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-antipasto" viewBox="0 0 24 24">
+    <path d="M3.4 14.6h17.2a3 3 0 0 1-3 3H6.4a3 3 0 0 1-3-3z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <circle cx="8" cy="10.6" r="2.4" fill="none" stroke="currentColor" stroke-width="1.75"></circle>
+    <circle cx="15.8" cy="10.6" r="2.4" fill="none" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M12 6.4v4.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-contorno" viewBox="0 0 24 24">
+    <circle cx="12" cy="13.4" r="7" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M9 13.4c0-2.4 1.8-4.2 4.2-4.2 0 2.4-1.8 4.2-4.2 4.2z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12.6 16.6c1.6 0 2.6-1 2.8-3" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+
+  <symbol id="ic-torta" viewBox="0 0 24 24">
+    <path d="M4 10.6 12 4l8 6.6-8 3.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M4 10.6v6.8l8 3.4 8-3.4v-6.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 14v6.8" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+  </symbol>
+  <symbol id="ic-biscotto" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="8.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <circle cx="9.4" cy="9.8" r="1.2" fill="currentColor"></circle>
+    <circle cx="14.6" cy="11.4" r="1.2" fill="currentColor"></circle>
+    <circle cx="10.6" cy="15" r="1.2" fill="currentColor"></circle>
+    <circle cx="15" cy="15.8" r="1" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-pane" viewBox="0 0 24 24">
+    <path d="M3.4 12.6c0-3.8 3.8-6.6 8.6-6.6s8.6 2.8 8.6 6.6c0 3.4-3.8 5.4-8.6 5.4s-8.6-2-8.6-5.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M8.6 9.6 7 12.8M12 9.2l-1.6 3.2M15.4 9.6l-1.6 3.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-croissant" viewBox="0 0 24 24">
+    <path d="M3.6 16.4c0-6 4.4-10.4 10.4-10.4 3.6 0 6.4 1.6 6.4 4 0 2-1.8 3-3.6 2.6 1 1.4.4 3.2-1.4 3.6-1.6.4-2.8-.6-3-2-1 1.6-3 2-4.4 1-1-.8-1.4-2-1-3.2-2 .8-3.4 2.2-3.4 4.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-gelato" viewBox="0 0 24 24">
+    <path d="M7.4 11.6h9.2L12 20.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M6.6 11.6a5.4 5.4 0 0 1 10.8 0z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M9.4 14.4h5.2" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+  </symbol>
+  <symbol id="ic-crostata" viewBox="0 0 24 24">
+    <path d="M3.4 15.6h17.2a4 4 0 0 1-4 4H7.4a4 4 0 0 1-4-4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M5 15.6c0-3.9 3.1-7 7-7s7 3.1 7 7" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+    <path d="M8 9.8l3.4 5.8M12.6 8.8l3.6 6.4M6 12.4h11.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-marmellata" viewBox="0 0 24 24">
+    <path d="M6.6 10.6h10.8v9.4H6.6z" fill="currentColor" fill-opacity=".16" stroke="none"></path>
+    <path d="M6.6 20V10.6c0-1.6 1-2.6 2.4-3v-1h6v1c1.4.4 2.4 1.4 2.4 3V20z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M7.6 4.4h8.8v2.2H7.6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M6.6 14h10.8" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+  </symbol>
+
+  <symbol id="ic-caffe" viewBox="0 0 24 24">
+    <path d="M4.6 7.4h11.8v6a4 4 0 0 1-4 4H8.6a4 4 0 0 1-4-4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M16.4 9.4h1.6a2.4 2.4 0 0 1 0 4.8h-1.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M4 20.4h13.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M9 5c-.8-.8-.8-1.6 0-2.4M12.6 5c-.8-.8-.8-1.6 0-2.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-vino" viewBox="0 0 24 24">
+    <path d="M6.6 4h10.8v3.4a5.4 5.4 0 0 1-10.8 0z" fill="currentColor" fill-opacity=".16" stroke="none"></path>
+    <path d="M6.6 4h10.8v4a5.4 5.4 0 0 1-10.8 0z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 13.4v6M8.4 19.8h7.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-birra" viewBox="0 0 24 24">
+    <path d="M5.6 9.6h9.8v10.4H5.6z" fill="currentColor" fill-opacity=".16" stroke="none"></path>
+    <path d="M5.6 20V8.6h9.8V20z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M5.6 8.6c-.6-2.6.8-4.2 3-4 .8-1.6 3-1.8 4 0 2-.4 3.4 1.2 2.8 4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M15.4 11.4h2.4a1 1 0 0 1 1 1v3.4a1 1 0 0 1-1 1h-2.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-te" viewBox="0 0 24 24">
+    <path d="M4.6 8.6h10.8v5.2a4.6 4.6 0 0 1-4.6 4.6H9.2a4.6 4.6 0 0 1-4.6-4.6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M15.4 10.4h1.8a2.2 2.2 0 0 1 0 4.4h-1.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M11.4 8.6V5.4h4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+    <rect x="14" y="3.4" width="4.4" height="3.2" rx=".8" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></rect>
+  </symbol>
+  <symbol id="ic-succo" viewBox="0 0 24 24">
+    <path d="M6.6 8.6h10.8l-1.4 11.4H8z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M7.4 12.4h9.2" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+    <path d="M13.4 8.6 16.6 3.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-acqua" viewBox="0 0 24 24">
+    <path d="M12 3.6c3.6 3.8 5.6 6.8 5.6 9.4a5.6 5.6 0 0 1-11.2 0c0-2.6 2-5.6 5.6-9.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M9 13.4c0 1.8 1.2 3 3 3.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+
+  <symbol id="ic-forno" viewBox="0 0 24 24">
+    <path d="M4 10.6h16v9.4H4z" fill="currentColor" fill-opacity=".16" stroke="none"></path>
+    <rect x="3.6" y="4" width="16.8" height="16" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></rect>
+    <path d="M3.6 8.6h16.8" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+    <circle cx="7.4" cy="6.2" r="1" fill="currentColor"></circle>
+    <circle cx="11" cy="6.2" r="1" fill="currentColor"></circle>
+    <path d="M7.4 16.4h9.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-padella" viewBox="0 0 24 24">
+    <path d="M2.6 10.4h12.8v2.8a5.4 5.4 0 0 1-5.4 5.4H8a5.4 5.4 0 0 1-5.4-5.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M15.4 11.6h5.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M6.6 7.4c-.8-.8-.8-1.8 0-2.6M11 7.4c-.8-.8-.8-1.8 0-2.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-pentola" viewBox="0 0 24 24">
+    <path d="M4.4 10.6h15.2v4a5 5 0 0 1-5 5H9.4a5 5 0 0 1-5-5z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M3 10.6h18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M6.6 8.4h10.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M12 8.4V5.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-vapore" viewBox="0 0 24 24">
+    <path d="M4.4 13.6h15.2v1.6a4.6 4.6 0 0 1-4.6 4.6H9a4.6 4.6 0 0 1-4.6-4.6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M3 13.6h18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M8.6 10.4c-1.4-1.2-1.4-2.6 0-3.8s1.4-2.6 0-3.2M15.4 10.4c-1.4-1.2-1.4-2.6 0-3.8s1.4-2.6 0-3.2M12 10.4c-1.2-1-1.2-2.2 0-3.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-griglia" viewBox="0 0 24 24">
+    <path d="M3.4 12.6h17.2a8.6 8.6 0 0 1-17.2 0z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M8.4 20.4l1.4-3.6M15.6 20.4l-1.4-3.6M7.6 12.6v3.6M12 12.6v4.4M16.4 12.6v3.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M12 9.4c-1.6-1.4-1.6-3 0-4.6.4 1.6 1.4 2.2 2.4 2.6-.2.9-1 1.6-2.4 2z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-congelatore" viewBox="0 0 24 24">
+    <path d="M12 3.4v17.2M4.6 7.8l14.8 8.4M19.4 7.8 4.6 16.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M9.4 5.8 12 8.4l2.6-2.6M9.4 18.2 12 15.6l2.6 2.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+    <circle cx="12" cy="12" r="2.2" fill="currentColor" fill-opacity=".16" stroke="none"></circle>
+  </symbol>
+  <symbol id="ic-bilancia" viewBox="0 0 24 24">
+    <rect x="3.6" y="12.4" width="16.8" height="7.6" rx="2" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></rect>
+    <path d="M6.6 12.4V9.6a2 2 0 0 1 2-2h6.8a2 2 0 0 1 2 2v2.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M8.6 16.2h6.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-mattarello" viewBox="0 0 24 24">
+    <rect x="5.6" y="8.4" width="12.8" height="5.6" rx="2.8" transform="rotate(-30 12 11.2)" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></rect>
+    <path d="M6.6 15.4 3.6 20.4M17.4 7 20.4 3.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-frullatore" viewBox="0 0 24 24">
+    <path d="M7.4 4h9.2l-1.2 11.4H8.6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M8.6 15.4h6.8v2.2a2.4 2.4 0 0 1-2.4 2.4h-2a2.4 2.4 0 0 1-2.4-2.4z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M8.2 8.4h7.6" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+  </symbol>
+  <symbol id="ic-coltello" viewBox="0 0 24 24">
+    <path d="M3.6 14.6 15.4 3.6c2.2 2.4 3 5 2.4 7.8H6.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M6.4 11.4h11.4l-11 9.2z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+
+  <symbol id="ic-sushi" viewBox="0 0 24 24">
+    <ellipse cx="12" cy="15.4" rx="8" ry="4.2" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></ellipse>
+    <path d="M4.6 13.6c1.4-2.4 4-3.8 7.4-3.8s6 1.4 7.4 3.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M5.6 9.4c1.8-1.8 4.2-2.6 6.8-2.6s5 .8 6.8 2.6l-1.6 2.4c-1.4-1.4-3.2-2-5.2-2s-3.8.6-5.2 2z" fill="currentColor" fill-opacity=".3" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-taco" viewBox="0 0 24 24">
+    <path d="M3 17.4a9 9 0 0 1 18 0z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M3 17.4h18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M6.6 12.6c1.2-1.4 2.6-1.4 3.8 0M13.4 11.6c1.2-1.4 2.6-1.4 3.8 0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-noodles" viewBox="0 0 24 24">
+    <path d="M4 11.6h13.6c0 4.6-3 8.4-6.8 8.4S4 16.2 4 11.6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M14.4 3.6 8 10.4M17.4 5 11.6 11" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M6.6 8.4c1-1.4 2.2-1.4 3.2 0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-curry" viewBox="0 0 24 24">
+    <path d="M3.6 11.6h16.8c0 4.6-3.8 8.4-8.4 8.4s-8.4-3.8-8.4-8.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M8.4 15c1.4-2.2 3.4-2.2 4.6-.4 1 1.6 2.4 1.6 3.4 0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M9.4 8.4c0-2 1-3.4 3-4.4 1 2.4.6 4.2-1 5.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-kebab" viewBox="0 0 24 24">
+    <path d="M8 5.6c0-1.2 1.8-2 4-2s4 .8 4 2l1.4 10.8c0 1.6-2.4 2.8-5.4 2.8s-5.4-1.2-5.4-2.8z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M7.4 10.4h9.2M7 13.6h10" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+    <path d="M12 19.2v2.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-dumpling" viewBox="0 0 24 24">
+    <path d="M3.4 15.4c0-4.6 3.8-8.4 8.6-8.4s8.6 3.8 8.6 8.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M2.6 15.4h18.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M7.4 15.4c0-2 .8-3.4 2.2-4.2M12 15.4v-5.2M16.6 15.4c0-2-.8-3.4-2.2-4.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-paella" viewBox="0 0 24 24">
+    <path d="M5.4 10.6h13.2v2.6a5 5 0 0 1-5 5h-3.2a5 5 0 0 1-5-5z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M5.4 11.6H2.6M18.6 11.6h2.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <circle cx="9.6" cy="13.6" r="1.1" fill="currentColor"></circle>
+    <circle cx="14.4" cy="13.6" r="1.1" fill="currentColor"></circle>
+    <path d="M9.6 8.4c-.8-.8-.8-1.8 0-2.6M14.4 8.4c-.8-.8-.8-1.8 0-2.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-couscous" viewBox="0 0 24 24">
+    <path d="M4.4 12.6h15.2c0 4.1-3.4 7.4-7.6 7.4s-7.6-3.3-7.6-7.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M8.4 10.6h.01M11 9.4h.01M13.6 10.6h.01M9.8 7.4h.01M13.4 6.8h.01M11.8 5.2h.01" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-hamburger" viewBox="0 0 24 24">
+    <path d="M3.6 9.6c0-2.9 3.8-5.2 8.4-5.2s8.4 2.3 8.4 5.2z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M3.6 12.4h16.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M4.6 15h14.8a2.2 2.2 0 0 1-2.2 2.2H6.8A2.2 2.2 0 0 1 4.6 15z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <circle cx="9" cy="7.4" r=".9" fill="currentColor"></circle>
+    <circle cx="14.4" cy="7.8" r=".9" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-wok" viewBox="0 0 24 24">
+    <path d="M3 11.6h14.4c0 4.4-3.2 7.8-7.2 7.8S3 16 3 11.6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M17.4 11.6h3.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M10.2 8.6c-1.6-1.4-1.6-3 0-4.6.4 1.6 1.4 2.2 2.4 2.6-.2 1-1 1.6-2.4 2z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+
+  <symbol id="ic-pancake" viewBox="0 0 24 24">
+    <ellipse cx="12" cy="16.4" rx="8" ry="3.4" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></ellipse>
+    <ellipse cx="12" cy="12.6" rx="8" ry="3.4" fill="none" stroke="currentColor" stroke-width="1.75"></ellipse>
+    <ellipse cx="12" cy="8.8" rx="8" ry="3.4" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></ellipse>
+    <path d="M12 5.4V3.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-toast" viewBox="0 0 24 24">
+    <path d="M4.6 9.4c0-2.4 1.4-4 3.4-4 .8-1 1.9-1.4 4-1.4s3.2.4 4 1.4c2 0 3.4 1.6 3.4 4 0 1.4-1 2.2-2.2 2.2v6.4a2 2 0 0 1-2 2H8.8a2 2 0 0 1-2-2v-6.4c-1.2 0-2.2-.8-2.2-2.2z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <rect x="9.6" y="12.4" width="4.8" height="3.4" rx=".8" fill="none" stroke="currentColor" stroke-width="1.75"></rect>
+  </symbol>
+  <symbol id="ic-yogurt" viewBox="0 0 24 24">
+    <path d="M6.4 8.6h8.8l-1.2 10.2a1.4 1.4 0 0 1-1.4 1.2H9a1.4 1.4 0 0 1-1.4-1.2z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M5.6 8.6h10.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M18 4.4c1.6 0 2.4 1 2.4 2.4s-.8 2.4-2.4 2.4z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M18 9.2v6.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-frutta-secca" viewBox="0 0 24 24">
+    <path d="M9.4 4.4c3.2 2.4 4.8 5 4.8 7.8 0 2.8-2.2 4.8-4.8 4.8s-4.8-2-4.8-4.8c0-2.8 1.6-5.4 4.8-7.8z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M9.4 4.4v12.6" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+    <circle cx="17" cy="15" r="4.2" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M17 10.8v8.4" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+  </symbol>
+  <symbol id="ic-ciambella" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="8.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <circle cx="12" cy="12" r="2.8" fill="none" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M6.6 7.4c1.4 1 1.6 2.2.6 3.6M17.4 7.4c-1.4 1-1.6 2.2-.6 3.6M16.8 17.4c-1-1.4-.8-2.6.6-3.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-waffle" viewBox="0 0 24 24">
+    <rect x="3.6" y="3.6" width="16.8" height="16.8" rx="3.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></rect>
+    <path d="M9.2 3.6v16.8M14.8 3.6v16.8M3.6 9.2h16.8M3.6 14.8h16.8" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+  </symbol>
+  <symbol id="ic-smoothie" viewBox="0 0 24 24">
+    <path d="M6.6 10.6h10.8v6.6a3 3 0 0 1-3 3H9.6a3 3 0 0 1-3-3z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M6.6 10.6c0-3 2.4-5.4 5.4-5.4s5.4 2.4 5.4 5.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 5.2V2.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M8.4 14.4c1.2-1.4 2.6-1.4 3.8 0s2.6 1.4 3.4 0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-miele" viewBox="0 0 24 24">
+    <path d="M11 3.6h2.4v6.4H11z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <ellipse cx="12.2" cy="13" rx="4" ry="3.4" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></ellipse>
+    <path d="M8.6 11.4h7.2M8.6 14.6h7.2" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+    <path d="M12.2 16.4c0 2.4-1 3.6-1 4.4 0 .8 2 .8 2 0 0-.8-1-2-1-4.4z" fill="currentColor" stroke="none"></path>
+  </symbol>
+
+  <symbol id="ic-zucchina" viewBox="0 0 24 24">
+    <rect x="3.6" y="8.4" width="15.4" height="7.2" rx="3.6" transform="rotate(-24 11.3 12)" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></rect>
+    <path d="M17.8 6.6c.6-1.6 1.6-2.4 3.2-2.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-melanzana" viewBox="0 0 24 24">
+    <path d="M17.4 8.6c1.6 4-1.6 9.4-6.4 10.6-3.4.9-6-.9-6-4 0-4 4.4-8.4 8.6-8.4 1.8 0 3.2.6 3.8 1.8z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M13.6 6.8c-.4-2 .4-3.4 2.4-4 .6 1.4.4 2.6-.6 3.6M15.4 6.4c1.4-.8 2.6-.6 3.6.6-1 1.2-2.2 1.6-3.6 1.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-peperone" viewBox="0 0 24 24">
+    <path d="M5.4 12.6c0-2.6 2-4.4 4.4-4.4h4.4c2.4 0 4.4 1.8 4.4 4.4 0 4-2.4 7.4-4.4 7.4-1 0-1.4-.8-2.2-.8s-1.2.8-2.2.8c-2 0-4.4-3.4-4.4-7.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 8.2V5.4M12 5.4c-1.4-1-2.6-1-3.6.4M12 5.4c1.4-1 2.6-1 3.6.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-patata" viewBox="0 0 24 24">
+    <path d="M4.6 13.6c-1-3.6 1.4-6.8 5.4-7.6 4.6-.9 9 1 9.8 4.6.8 3.6-2 6.8-6.4 7.6-4 .7-7.8-1-8.8-4.6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <circle cx="9.4" cy="11.4" r="1" fill="currentColor"></circle>
+    <circle cx="14.4" cy="13.6" r="1" fill="currentColor"></circle>
+    <circle cx="13.4" cy="9.4" r=".9" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-cipolla" viewBox="0 0 24 24">
+    <path d="M12 7.6c4 2.6 6 5.4 6 8.2 0 2.6-2.6 4.6-6 4.6s-6-2-6-4.6c0-2.8 2-5.6 6-8.2z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M9.4 16c0-2.6.9-5.4 2.6-8.4 1.7 3 2.6 5.8 2.6 8.4" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+    <path d="M12 7.6c-.8-1.8-.4-3.2 1.4-4.2.6 1.8.2 3.2-1.4 4.2z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-broccolo" viewBox="0 0 24 24">
+    <path d="M6.6 11.6c-1.6 0-2.6-1.2-2.4-2.8.2-1.4 1.4-2.2 2.8-2 .2-1.8 1.6-3 3.4-3 1-1.2 3-1.2 4 .2 1.8-.2 3.2 1 3.4 2.8 1.6 0 2.6 1.2 2.4 2.8H6.6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M7.4 11.6l1.4 8.4h6.4l1.4-8.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 11.6V20" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+  </symbol>
+  <symbol id="ic-mais" viewBox="0 0 24 24">
+    <path d="M14 3.6c2.4 2.4 3.4 5.6 3.4 8.6 0 4.6-2.6 8.2-5.4 8.2S6.6 16.8 6.6 12.2c0-3 1-6.2 3.4-8.6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 4.6V20M8.6 8.6h6.8M8.2 12.6h7.6M8.6 16.4h6.8" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+  </symbol>
+  <symbol id="ic-piselli" viewBox="0 0 24 24">
+    <path d="M4.4 8.4c5-2.4 10.6-1 15.2 4-4.6 5-10.2 6.4-15.2 4 2.6-2.6 2.6-5.4 0-8z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <circle cx="8.4" cy="12.4" r="1.5" fill="none" stroke="currentColor" stroke-width="1.75"></circle>
+    <circle cx="12.4" cy="12.4" r="1.5" fill="none" stroke="currentColor" stroke-width="1.75"></circle>
+    <circle cx="16.4" cy="12.4" r="1.5" fill="none" stroke="currentColor" stroke-width="1.75"></circle>
+  </symbol>
+  <symbol id="ic-zucca" viewBox="0 0 24 24">
+    <ellipse cx="12" cy="14" rx="9" ry="6.4" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></ellipse>
+    <path d="M12 7.6v12.8M7.4 8.6c-1.4 1.6-2 3.4-2 5.4s.6 3.8 2 5.4M16.6 8.6c1.4 1.6 2 3.4 2 5.4s-.6 3.8-2 5.4" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+    <path d="M12 7.6V4.4c1.8 0 3-.4 3.6-1.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-cavolo" viewBox="0 0 24 24">
+    <path d="M4 12.4c0-4.8 3.6-8.4 8.4-8.4 4.4 0 7.6 3 7.6 7.2 0 5.2-4 9.2-9.2 9.2-4 0-6.8-3-6.8-8z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M17.6 7.4c-4.4-.6-7.6 1.6-8.4 6-.6 3.2.6 5.6 3.4 7" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M15.4 11.4c-2.6.4-4 2-4 4.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+
+  <symbol id="ic-mela" viewBox="0 0 24 24">
+    <path d="M12 8c1.4-1.2 3.4-1.4 5 0 2.2 2 2.4 6.4.2 9.4-1.4 2-3.4 2.8-5.2 2s-3.8 0-5.2-2C4.6 14.4 4.8 10 7 8c1.6-1.4 3.6-1.2 5 0z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 8V4.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M12 6c1.4-2 3-2.6 5.4-2.4-.2 2.4-1.4 3.8-3.6 4.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-pera" viewBox="0 0 24 24">
+    <path d="M12 6.6c1.8 0 2.6 1.8 2.6 3.6 0 1.6 3.2 3.2 3.2 6.4 0 2.2-2.6 3.8-5.8 3.8s-5.8-1.6-5.8-3.8c0-3.2 3.2-4.8 3.2-6.4 0-1.8.8-3.6 2.6-3.6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 6.6V3.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M12 5.4c1.6-1.6 3.2-2 5.2-1.4-.6 2-1.8 2.8-3.8 2.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-banana" viewBox="0 0 24 24">
+    <path d="M4.6 5.4c0 8.4 4.6 13.6 12 13.6 2.4 0 3.4-1.4 2.4-3-1-1.6-3-1-5.4-2.4-3.4-2-5-5-5-8.2 0-1.4-1-2-2-2s-2 .6-2 2z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M18.4 17.4c.8-.6 1.8-.4 2.6.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-arancia" viewBox="0 0 24 24">
+    <circle cx="11.4" cy="13.6" r="7.2" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M11.4 6.4V4.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M12.4 5.4c1.4-2 3.2-2.6 5.6-2-.4 2.4-1.8 3.8-4 4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M11.4 13.6 6.6 9.6M11.4 13.6l5 3.6M11.4 13.6l-2.6 6.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-fragola" viewBox="0 0 24 24">
+    <path d="M4.6 10.4c0-1.4 3.2-2.4 7.4-2.4s7.4 1 7.4 2.4c0 4.6-4 10-7.4 10s-7.4-5.4-7.4-10z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 8V4.6M8.4 8c-1-1.8-.4-3 1.6-3.6M15.6 8c1-1.8.4-3-1.6-3.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <circle cx="9.6" cy="13" r=".9" fill="currentColor"></circle>
+    <circle cx="14.4" cy="13" r=".9" fill="currentColor"></circle>
+    <circle cx="12" cy="16.4" r=".9" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-ciliegia" viewBox="0 0 24 24">
+    <circle cx="7.6" cy="16.4" r="3.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <circle cx="16.4" cy="15.4" r="3.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M7.6 12.8C8 8.4 11.4 5 15.8 4.4M16.4 11.8c0-3.4-.2-6-.6-7.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M15.8 4.4c1.6-1.4 3.2-1.6 4.8-.6-1 1.8-2.6 2.6-4.8 2.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-pesca" viewBox="0 0 24 24">
+    <circle cx="11.6" cy="13.6" r="7.4" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M11.6 6.4c-2 2.2-3 4.6-3 7.2s1 5 3 7.2" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+    <path d="M12.6 6c1.4-2.2 3.2-3 5.8-2.4-.4 2.6-2 4-4.6 4.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-anguria" viewBox="0 0 24 24">
+    <path d="M3.4 7.6h17.2c0 6.6-3.8 12-8.6 12s-8.6-5.4-8.6-12z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M3.4 7.6h17.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M6 10.6h12" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+    <circle cx="9.6" cy="13.6" r="1" fill="currentColor"></circle>
+    <circle cx="14.4" cy="13.6" r="1" fill="currentColor"></circle>
+    <circle cx="12" cy="16.6" r="1" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-ananas" viewBox="0 0 24 24">
+    <path d="M6.4 12.6c0-3.4 2.4-5.8 5.6-5.8s5.6 2.4 5.6 5.8c0 4.6-2.4 8-5.6 8s-5.6-3.4-5.6-8z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M7.6 9.4 16.4 16M16.4 9.4 7.6 16" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+    <path d="M12 6.8V3.4M12 6.8c-2-.6-3.2-1.8-3.4-3.4 2 .2 3.2 1.2 3.4 3.4M12 6.8c2-.6 3.2-1.8 3.4-3.4-2 .2-3.2 1.2-3.4 3.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-cocco" viewBox="0 0 24 24">
+    <path d="M4.4 12.6c0-4.4 3.4-8 7.6-8s7.6 3.6 7.6 8-3.4 7.4-7.6 7.4-7.6-3-7.6-7.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M4.4 12.6c2.2-1.8 4.8-2.6 7.6-2.6s5.4.8 7.6 2.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M8.6 8.6c1.6 1.8 2.2 3.8 2 6M15.4 8.6c-1.6 1.8-2.2 3.8-2 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+
+  <symbol id="ic-basilico" viewBox="0 0 24 24">
+    <path d="M12 20V11.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M12 11.6C7.6 11.6 5 9 5 4.6c4.4 0 7 2.6 7 7z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 14.4c4.4 0 7-2.6 7-7-4.4 0-7 2.6-7 7z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-rosmarino" viewBox="0 0 24 24">
+    <path d="M18.4 4 6.4 19.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M15.6 7.6h4M13.2 10.8h4.4M10.8 14h4.4M8.4 17.2h4.4M13.6 6.4l1.6-3M11.2 9.6l1.4-3M8.8 12.8l1.4-3M6.4 16l1.4-3" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-alloro" viewBox="0 0 24 24">
+    <path d="M12 2.6c3.4 3.6 5.2 7 5.2 10.2 0 4.6-2.4 8.6-5.2 8.6s-5.2-4-5.2-8.6c0-3.2 1.8-6.6 5.2-10.2z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 5.4v15M12 9.6 8.4 7.4M12 9.6l3.6-2.2M12 13.6l-3.8-2.4M12 13.6l3.8-2.4M12 17.4l-3.2-2M12 17.4l3.2-2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-pepe" viewBox="0 0 24 24">
+    <path d="M8 11.4h8V20H8z" fill="currentColor" fill-opacity=".16" stroke="none"></path>
+    <path d="M8 20v-8.6h8V20z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M8.8 11.4V8.6a3.2 3.2 0 0 1 6.4 0v2.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 5.4V3.4M8 15.4h8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-aceto" viewBox="0 0 24 24">
+    <path d="M8.4 20v-8.4c0-2 .8-3 1.8-3.8V4.4h3.6v3.4c1 .8 1.8 1.8 1.8 3.8V20z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M10.2 3.4h3.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <rect x="8.4" y="13" width="7.2" height="4" fill="none" stroke="currentColor" stroke-width="1.75"></rect>
+  </symbol>
+  <symbol id="ic-senape" viewBox="0 0 24 24">
+    <path d="M7.6 20v-8.4c0-1.8 1-2.8 2.2-3.4V6.4h4.4v1.8c1.2.6 2.2 1.6 2.2 3.4V20z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M11.4 6.4V3.6h1.2c1.4 0 2.4 1 2.4 2.4v.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M7.6 15.4h8.8" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+  </symbol>
+  <symbol id="ic-salsa" viewBox="0 0 24 24">
+    <path d="M6.4 13.6h11.2V20H6.4z" fill="currentColor" fill-opacity=".16" stroke="none"></path>
+    <path d="M6.4 20v-8c0-1.8 1.2-3 2.4-3.6V6.6h6.4v1.8c1.2.6 2.4 1.8 2.4 3.6v8z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M8.8 6.6V4h6.4v2.6M6.4 13.6h11.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-zucchero" viewBox="0 0 24 24">
+    <rect x="3.6" y="11.6" width="8" height="8" rx="1.4" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></rect>
+    <rect x="12.4" y="11.6" width="8" height="8" rx="1.4" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></rect>
+    <rect x="8" y="4.4" width="8" height="8" rx="1.4" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></rect>
+  </symbol>
+
+  <symbol id="ic-cucchiaio" viewBox="0 0 24 24">
+    <ellipse cx="12" cy="7" rx="3.6" ry="4.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></ellipse>
+    <path d="M12 11.6V20.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-forchetta" viewBox="0 0 24 24">
+    <path d="M8.6 3.6v5.2a3.4 3.4 0 0 0 6.8 0V3.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+    <path d="M12 3.6v8.6M12 12.2V20.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-frusta" viewBox="0 0 24 24">
+    <path d="M18.6 3.6 13.4 8.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M12.6 9.6c2.6 0 4.6 2 4.6 4.6 0 3.4-2.6 6.2-6 6.2s-6-2.8-6-6.2c0-2.6 2-4.6 4.6-4.6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M11.2 9.6v10.8M7.8 10.8c-1.4 3.4-1 6.6 1.2 9.2M14.6 10.8c1.4 3.4 1 6.6-1.2 9.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-colino" viewBox="0 0 24 24">
+    <path d="M3.6 11.6h13.6c0 4.4-3 8-6.8 8s-6.8-3.6-6.8-8z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M17.2 11.6h3.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <circle cx="8" cy="14.4" r=".9" fill="currentColor"></circle>
+    <circle cx="12.4" cy="14.4" r=".9" fill="currentColor"></circle>
+    <circle cx="10.2" cy="17" r=".9" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-tagliere" viewBox="0 0 24 24">
+    <path d="M4.4 5.6h11.2a2 2 0 0 1 2 2v10.8a2 2 0 0 1-2 2H4.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M17.6 9.6h2.8v6.4h-2.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M7.6 5.6v14.8" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+  </symbol>
+  <symbol id="ic-misurino" viewBox="0 0 24 24">
+    <path d="M5.4 7.6h11.2l-1.4 11a1.6 1.6 0 0 1-1.6 1.4H8.4a1.6 1.6 0 0 1-1.6-1.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M16.6 7.6h3.8l-2.4 2.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M6.6 11.6h4M7 15.4h3.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-grattugia" viewBox="0 0 24 24">
+    <path d="M7.4 7.6h9.2l1.6 11.4a1 1 0 0 1-1 1.4H6.8a1 1 0 0 1-1-1.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M9 11.4h1.4M13.6 11.4H15M8.4 15h1.4M13 15h1.4M11 13.2h1.4M11 16.8h1.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M9.4 7.6V5.4a2.6 2.6 0 0 1 5.2 0v2.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-barattolo" viewBox="0 0 24 24">
+    <path d="M6.6 8.6h10.8V20H6.6z" fill="currentColor" fill-opacity=".16" stroke="none"></path>
+    <ellipse cx="12" cy="6.6" rx="5.4" ry="2.4" fill="none" stroke="currentColor" stroke-width="1.75"></ellipse>
+    <path d="M6.6 6.6v11a5.4 2.4 0 0 0 10.8 0v-11" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+    <path d="M6.6 11.6c1.6 1.2 3.4 1.8 5.4 1.8s3.8-.6 5.4-1.8" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+  </symbol>
+  <symbol id="ic-pinza" viewBox="0 0 24 24">
+    <path d="M12 3.4c1.4 0 2.2 1 2.2 2.2 0 2.4-1.8 4.4-1.8 7.4v3.6h-.8V13c0-3-1.8-5-1.8-7.4 0-1.2.8-2.2 2.2-2.2z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M11.4 16.6H6.6a1 1 0 0 0-1 1v1.8a1 1 0 0 0 1 1h4.8zM12.6 16.6h4.8a1 1 0 0 1 1 1v1.8a1 1 0 0 1-1 1h-4.8z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <circle cx="12" cy="5.6" r="1" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-mestolo" viewBox="0 0 24 24">
+    <path d="M7.6 11.6h9.2c0 3.4-2 6-4.6 6s-4.6-2.6-4.6-6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12.2 11.6V6.6a3 3 0 0 1 3-3h2.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+  </symbol>
+
+  <symbol id="ic-vegetariano" viewBox="0 0 24 24">
+    <path d="M4.6 3.6v4.2a3 3 0 0 0 6 0V3.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+    <path d="M7.6 3.6v16.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M20.4 6.6c0 5.6-3.2 9.4-8 9.4 0-5.6 3.2-9.4 8-9.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M13.4 20.4c0-3 1.4-5.6 3.8-7.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-vegano" viewBox="0 0 24 24">
+    <path d="M12 20.4v-7.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M12 12.6C7.4 12.6 4.6 9.8 4.6 5.2c4.6 0 7.4 2.8 7.4 7.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 15.4c4.6 0 7.4-2.8 7.4-7.4-4.6 0-7.4 2.8-7.4 7.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-senza-glutine" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="8.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M12 16.6V9.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M12 12.6c-1.8-.6-2.8-1.8-2.8-3.6 1.8.6 2.8 1.8 2.8 3.6zM12 12.6c1.8-.6 2.8-1.8 2.8-3.6-1.8.6-2.8 1.8-2.8 3.6z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M5.6 18.4 18.4 5.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-piccante" viewBox="0 0 24 24">
+    <path d="M12 3.4c3.6 3.6 5.6 6.8 5.6 9.6a5.6 5.6 0 0 1-11.2 0c0-1.8.8-3.4 2.2-5 .2 1.6 1 2.4 2.2 2.6-.8-2.6-.6-4.8 1.2-7.2z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M8.6 17.6c.8-1 1.8-1 2.6 0M13 17.6c.8-1 1.8-1 2.6 0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-leggero" viewBox="0 0 24 24">
+    <path d="M19.4 4.6c1 6.8-2 11.4-8 12.6-2.4.5-4.4-.4-5-2.4 4.6-2 8-5.4 13-10.2z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M19.4 4.6 4.6 19.4M11 12.6c-1.4-.4-2.4-.2-3.4.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-proteico" viewBox="0 0 24 24">
+    <rect x="8.4" y="9.6" width="7.2" height="4.8" rx="1" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></rect>
+    <path d="M5.6 8.4h2.8v7.2H5.6zM15.6 8.4h2.8v7.2h-2.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M3.4 10.6v2.8M20.6 10.6v2.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-bio" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="8.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M8.4 15.6c0-4 2.8-6.8 7-7 0 4.2-2.8 7-7 7z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M8.4 15.6 14.6 9.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-stagionale" viewBox="0 0 24 24">
+    <rect x="3.6" y="5.6" width="16.8" height="14.8" rx="2.2" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></rect>
+    <path d="M3.6 10h16.8M8 3.6v3.4M16 3.6v3.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M9.4 17c0-2.6 1.8-4.4 4.4-4.4 0 2.6-1.8 4.4-4.4 4.4z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-veloce" viewBox="0 0 24 24">
+    <path d="M13.6 2.6 6 13.4h4.4L9.4 21.4 18 10.4h-5z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-economico" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="8.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M15.4 8.6c-2.8-1.6-5.6-.6-6.4 3.4-.8 4 1.8 5.6 4.8 4.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M7.4 11h5.6M7 13.4h5.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+
+  <symbol id="ic-mozzarella" viewBox="0 0 24 24">
+    <circle cx="12" cy="13.4" r="7" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M8 9.4c1.6-1.4 3.4-1.4 5.4 0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M12 6.4c0-1.6 1-2.6 3-2.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-parmigiano" viewBox="0 0 24 24">
+    <path d="M3.6 17.4 17.4 6.6l3 3.4-2 7.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M17.4 6.6 20.4 10M3.6 17.4h14.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M8.6 13.4h.01M12.4 10.6h.01M15 13.6h.01" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-ricotta" viewBox="0 0 24 24">
+    <path d="M5.6 10.6h12.8l-1.2 7.8a1.4 1.4 0 0 1-1.4 1.2H8.2a1.4 1.4 0 0 1-1.4-1.2z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M4.6 10.6h14.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M8.4 7.6c1.4-1.6 3-1.6 4.4 0s2.6 1.6 3.4 0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-burro" viewBox="0 0 24 24">
+    <path d="M3.6 12.6 8 8.4h11.4l-3.8 4.2z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M3.6 12.6v3.6h12v-3.6M15.6 16.2l3.8-4.2V8.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-latte" viewBox="0 0 24 24">
+    <path d="M7.4 11.6h9.2V20H7.4z" fill="currentColor" fill-opacity=".16" stroke="none"></path>
+    <path d="M7.4 20V8.4L12 3.6l4.6 4.8V20z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M7.4 11.6h9.2M7.4 8.4h9.2" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+  </symbol>
+  <symbol id="ic-panna" viewBox="0 0 24 24">
+    <path d="M6.6 12.4h10.8v6.2a1.4 1.4 0 0 1-1.4 1.4H8a1.4 1.4 0 0 1-1.4-1.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M6.6 12.4c0-1.6.8-2.6 2.2-3.2 0-2 1.4-3.4 3.2-3.4s3.2 1.4 3.2 3.4c1.4.6 2.2 1.6 2.2 3.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 5.8V3.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-formaggio-fette" viewBox="0 0 24 24">
+    <path d="M3.6 9.6h11.6v7.8H3.6z" fill="currentColor" fill-opacity=".16" stroke="none"></path>
+    <path d="M3.6 17.4V9.6l5.4-3h11.4v7.8l-5.2 3z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M3.6 9.6h11.6v7.8M15.2 9.6l5.2-3" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <circle cx="7.4" cy="13" r="1" fill="currentColor"></circle>
+    <circle cx="11.4" cy="14.4" r="1" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-mascarpone" viewBox="0 0 24 24">
+    <ellipse cx="12" cy="7.6" rx="6.4" ry="2.6" fill="none" stroke="currentColor" stroke-width="1.75"></ellipse>
+    <path d="M5.6 7.6v9.4c0 1.6 2.9 2.6 6.4 2.6s6.4-1 6.4-2.6V7.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M5.6 12.4c1.8 1.2 4 1.8 6.4 1.8s4.6-.6 6.4-1.8" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+  </symbol>
+
+  <symbol id="ic-cozze" viewBox="0 0 24 24">
+    <path d="M4.4 18.6 19.4 3.6c1.8 3.6 1.2 8-1.8 11-3 3-7.4 3.8-13.2 4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M9.6 17.4c1-4.4 3.4-8 7.2-10.8M13.4 15.4c.6-2.8 2-5.2 4.2-7.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <circle cx="4.4" cy="18.6" r="1.4" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-vongole" viewBox="0 0 24 24">
+    <path d="M12 19.4c-4.6 0-8.4-3.6-8.4-8s3.8-7.4 8.4-7.4 8.4 3 8.4 7.4-3.8 8-8.4 8z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 4v15.4M7 5.6c-.6 5.2.4 9.8 3 13.4M17 5.6c.6 5.2-.4 9.8-3 13.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-calamari" viewBox="0 0 24 24">
+    <path d="M12 3.4c3 0 5.4 2.4 5.4 5.4 0 2-1 3.4-1 4.6 0 1.4 1.4 2 1.4 3.6 0 1.4-1 2.4-2.2 2.4-1 0-1.6-.6-1.8-1.6-.2 1-.8 1.6-1.8 1.6s-1.6-.6-1.8-1.6c-.2 1-.8 1.6-1.8 1.6-1.2 0-2.2-1-2.2-2.4 0-1.6 1.4-2.2 1.4-3.6 0-1.2-1-2.6-1-4.6 0-3 2.4-5.4 5.4-5.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <circle cx="10" cy="8.6" r="1" fill="currentColor"></circle>
+    <circle cx="14" cy="8.6" r="1" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-polpo" viewBox="0 0 24 24">
+    <path d="M12 3.6c3.6 0 6.4 2.8 6.4 6.4 0 2.4-1.4 3.4-1.4 5 0 1.2.8 1.6 1.8 1.6 1 0 1.6-.6 1.6-1.6M12 3.6c-3.6 0-6.4 2.8-6.4 6.4 0 2.4 1.4 3.4 1.4 5 0 1.2-.8 1.6-1.8 1.6-1 0-1.6-.6-1.6-1.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+    <path d="M9.6 15c0 2-.6 3.4-1.8 4.4M14.4 15c0 2 .6 3.4 1.8 4.4M12 15v5.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <circle cx="9.8" cy="9" r="1" fill="currentColor"></circle>
+    <circle cx="14.2" cy="9" r="1" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-tonno" viewBox="0 0 24 24">
+    <path d="M4.6 8.6c0-1.4 1.2-2.4 3-2.4h8.8c1.8 0 3 1 3 2.4v6.8c0 1.4-1.2 2.4-3 2.4H7.6c-1.8 0-3-1-3-2.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <circle cx="12" cy="12" r="2.4" fill="none" stroke="currentColor" stroke-width="1.75"></circle>
+    <path d="M8 9.4v5.2M16 9.4v5.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-salmone" viewBox="0 0 24 24">
+    <path d="M3.4 15.6c4.6-5.4 10.2-8 17.2-8-1 6.4-5 10.4-11.6 11.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M3.4 15.6c4.6-4.6 10.2-7 17-7.4" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-opacity=".28"></path>
+    <path d="M7.6 15.4c3-2.6 6.2-4.2 9.8-4.8M9.4 18c2.6-2.2 5.4-3.6 8.4-4.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-granchio" viewBox="0 0 24 24">
+    <ellipse cx="12" cy="12.6" rx="6" ry="4.4" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></ellipse>
+    <path d="M6 11.4C4 10.4 3 8.8 3.4 6.6 5.4 7.4 6.4 9 6.4 11M18 11.4c2-1 3-2.6 2.6-4.8-2 .8-3 2.4-3 4.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M7.4 16.4 5 19.4M16.6 16.4l2.4 3M12 17v3.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <circle cx="10" cy="11.4" r="1" fill="currentColor"></circle>
+    <circle cx="14" cy="11.4" r="1" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-ostrica" viewBox="0 0 24 24">
+    <path d="M3.4 13.4c0-5 3.9-9 8.6-9s8.6 4 8.6 9c0 3.6-3.9 6.2-8.6 6.2s-8.6-2.6-8.6-6.2z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M6.2 8.4c3.8-1.4 7.6-1.4 11.6 0M4.4 11.4c5-1.6 10.2-1.6 15.2 0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <circle cx="12" cy="15.4" r="2.4" fill="none" stroke="currentColor" stroke-width="1.75"></circle>
+  </symbol>
+
+  <symbol id="ic-bistecca" viewBox="0 0 24 24">
+    <path d="M12 3.4c4.8 0 8.6 3 8.6 6.8 0 3-2 5-4.4 5.6l-1.4 3.4a1.6 1.6 0 0 1-1.4 1H12a1.6 1.6 0 0 1-1.4-1L9.2 15.8C6.6 15.2 3.4 13 3.4 10.2 3.4 6.4 7.2 3.4 12 3.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 6.6v8.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M12 7.6c-1.8 0-2.8 1-2.8 2.4s1 2.4 2.8 2.4 2.8-1 2.8-2.4-1-2.4-2.8-2.4z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-costine" viewBox="0 0 24 24">
+    <path d="M4.6 8.4c0-2 1.6-3.4 4-3.4h7.8c2.4 0 4 1.4 4 3.4 0 4-2.8 6.6-7 6.6H8.6c-2.4 0-4-1.4-4-3.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M9.4 5v10M14.2 5v10" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+    <path d="M6.6 18.4c3.6 1.6 7.4 1.6 11.4 0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-salsiccia" viewBox="0 0 24 24">
+    <path d="M5.4 4.6c4 0 5.4 3.4 5.4 7s1.4 7 5.4 7c2.4 0 4-1.4 4-3.4 0-4.6-4-4.6-4-9.2 0-2-1.6-3.4-4-3.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M5.4 4.6c-1.4 0-2.4.8-2.4 2s1 2 2.4 2M18.6 18.6c1.4 0 2.4.8 2.4 2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-prosciutto" viewBox="0 0 24 24">
+    <path d="M8.6 8.6c1.6-1.8 4-2.4 6.2-1.6 3 1 4.8 4 4.4 7.2-.4 3.4-3.2 5.8-6.6 5.8-3.6 0-6.4-2.2-7.6-5.6-.5-1.4-1.4-1.8-2.4-1.6-1 .2-1.4-1-.6-1.6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M8.6 8.6 6.4 4.6c-.4-.8.4-1.6 1.2-1.2l4 2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M9.6 13.6c2-2 4.2-2.2 6.6-.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-bacon" viewBox="0 0 24 24">
+    <path d="M3.6 7.6c3-2.6 5.4-2.6 8.4 0s5.4 2.6 8.4 0v5.2c-3 2.6-5.4 2.6-8.4 0s-5.4-2.6-8.4 0z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M3.6 12.8c3-2.6 5.4-2.6 8.4 0s5.4 2.6 8.4 0V18c-3 2.6-5.4 2.6-8.4 0s-5.4-2.6-8.4 0z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-polpette" viewBox="0 0 24 24">
+    <path d="M3.6 15.4h16.8a4 4 0 0 1-4 4H7.6a4 4 0 0 1-4-4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <circle cx="8.4" cy="11.6" r="3" fill="none" stroke="currentColor" stroke-width="1.75"></circle>
+    <circle cx="15.4" cy="11.6" r="3" fill="none" stroke="currentColor" stroke-width="1.75"></circle>
+    <circle cx="12" cy="7" r="3" fill="none" stroke="currentColor" stroke-width="1.75"></circle>
+  </symbol>
+  <symbol id="ic-coscia" viewBox="0 0 24 24">
+    <path d="M18.4 5.6c2.2 2.2 2 6-.6 8.6-2 2-4.6 2.6-6.6 1.8L9 18.2c.8.8.8 1.8 0 2.6s-2 .8-2.8 0l-2-2c-.8-.8-.8-2 0-2.8s1.8-.8 2.6 0l2.2-2.2c-.8-2-.2-4.6 1.8-6.6 2.6-2.6 6.4-2.8 8.6-.6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-wurstel" viewBox="0 0 24 24">
+    <path d="M3.6 15.4c0-2.4 1.8-4 4.4-4h8c2.6 0 4.4 1.6 4.4 4s-1.8 4-4.4 4H8c-2.6 0-4.4-1.6-4.4-4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M6.4 11.4c0-3 2.2-5.2 5.6-5.2s5.6 2.2 5.6 5.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M7 15.4h10" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+
+  <symbol id="ic-tiramisu" viewBox="0 0 24 24">
+    <path d="M4.4 9.6h15.2v8a2 2 0 0 1-2 2H6.4a2 2 0 0 1-2-2z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M4.4 13h15.2M4.4 16.4h15.2" fill="none" stroke="currentColor" stroke-width="1.75"></path>
+    <path d="M4.4 9.6c0-1.8 1.4-3 3.4-3h8.4c2 0 3.4 1.2 3.4 3" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <circle cx="9.4" cy="11.4" r=".9" fill="currentColor"></circle>
+    <circle cx="14.4" cy="11.4" r=".9" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-cannolo" viewBox="0 0 24 24">
+    <path d="M5.6 17.4 16.4 6.6a3.4 3.4 0 0 1 0 4.8l-6 6a3.4 3.4 0 0 1-4.8 0z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <ellipse cx="17.4" cy="7.6" rx="1.6" ry="2.6" transform="rotate(45 17.4 7.6)" fill="currentColor" fill-opacity=".3" stroke="currentColor" stroke-width="1.75"></ellipse>
+    <ellipse cx="6.6" cy="18.4" rx="1.6" ry="2.6" transform="rotate(45 6.6 18.4)" fill="none" stroke="currentColor" stroke-width="1.75"></ellipse>
+  </symbol>
+  <symbol id="ic-panna-cotta" viewBox="0 0 24 24">
+    <path d="M6.6 10.6h10.8v4.6c0 2.6-2.4 4.6-5.4 4.6s-5.4-2-5.4-4.6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M6.6 10.6c0-2.6 2.4-4.6 5.4-4.6s5.4 2 5.4 4.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M9 8.4c1-1.2 2.2-1.2 3.2 0s2.2 1.2 3 0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-muffin" viewBox="0 0 24 24">
+    <path d="M6.4 12.6h11.2l-1.2 6.2a1.4 1.4 0 0 1-1.4 1.2H9a1.4 1.4 0 0 1-1.4-1.2z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M5.4 12.6c0-1.6 1-2.8 2.4-3.4.2-2.4 2-4 4.2-4s4 1.6 4.2 4c1.4.6 2.4 1.8 2.4 3.4z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M9.4 15.4l-.4 3.4M14.6 15.4l.4 3.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-macaron" viewBox="0 0 24 24">
+    <path d="M4.4 9.6c0-2.4 3.4-4 7.6-4s7.6 1.6 7.6 4-1 3-2.4 3H6.8c-1.4 0-2.4-.8-2.4-3z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M4.4 14.4c0 2.4 3.4 4 7.6 4s7.6-1.6 7.6-4-1-3-2.4-3H6.8c-1.4 0-2.4.8-2.4 3z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-meringa" viewBox="0 0 24 24">
+    <path d="M5.6 19.4c0-4.6 1.6-8 4.4-10.4-.6-1.6.2-3 2-3.4 1 1.4 1 2.8 0 4 2.2 2.4 3.4 5.8 3.4 9.8z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M4.6 19.4h15.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M12 6.6c1.6-1.6 3.4-1.8 5.4-.6-1 2-2.6 2.8-4.8 2.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-budino" viewBox="0 0 24 24">
+    <path d="M5.6 16.4c0-4.6 2.8-8.4 6.4-8.4s6.4 3.8 6.4 8.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M4.6 16.4h14.8a3 3 0 0 1-3 3H7.6a3 3 0 0 1-3-3z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 8V5.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <circle cx="12" cy="4" r="1.2" fill="currentColor"></circle>
+  </symbol>
+  <symbol id="ic-cheesecake" viewBox="0 0 24 24">
+    <path d="M3.6 14.4h16.8v3.6a1.6 1.6 0 0 1-1.6 1.6H5.2a1.6 1.6 0 0 1-1.6-1.6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M3.6 14.4V9.6A1.6 1.6 0 0 1 5.2 8h13.6a1.6 1.6 0 0 1 1.6 1.6v4.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M6.4 8c0-1.6 1-2.6 2.6-2.6 1-1.2 2.6-1.2 3.6 0 1.6 0 2.6 1 2.6 2.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-panettone" viewBox="0 0 24 24">
+    <path d="M5.6 11.6h12.8v6.8a1.6 1.6 0 0 1-1.6 1.6H7.2a1.6 1.6 0 0 1-1.6-1.6z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M4.6 11.6c0-3.4 3.4-6 7.4-6s7.4 2.6 7.4 6z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M8.6 15h.01M12 16.6h.01M15.4 15h.01" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
+  </symbol>
+
+  <symbol id="ic-riso" viewBox="0 0 24 24">
+    <path d="M4.6 13.4h14.8c0 3.6-3.4 6.4-7.4 6.4s-7.4-2.8-7.4-6.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M3.6 13.4h16.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <ellipse cx="8.6" cy="9.6" rx="1.2" ry="2.2" transform="rotate(-30 8.6 9.6)" fill="none" stroke="currentColor" stroke-width="1.6"></ellipse>
+    <ellipse cx="12.4" cy="7.4" rx="1.2" ry="2.2" transform="rotate(20 12.4 7.4)" fill="none" stroke="currentColor" stroke-width="1.6"></ellipse>
+    <ellipse cx="15.6" cy="10" rx="1.2" ry="2.2" transform="rotate(-14 15.6 10)" fill="none" stroke="currentColor" stroke-width="1.6"></ellipse>
+  </symbol>
+  <symbol id="ic-farina" viewBox="0 0 24 24">
+    <path d="M6.4 8.6h11.2l1.4 9.6a1.6 1.6 0 0 1-1.6 1.8H6.6a1.6 1.6 0 0 1-1.6-1.8z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M6.4 8.6c0-1.4 1-2.4 2.4-2.4h6.4c1.4 0 2.4 1 2.4 2.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M9.6 13h4.8M9.6 16.2h4.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-polenta" viewBox="0 0 24 24">
+    <path d="M4.4 13.6h15.2c0 3.6-3.4 6.4-7.6 6.4s-7.6-2.8-7.6-6.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M3.4 13.6h17.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M8.6 10.6c1.2-1.6 2.6-1.6 3.8 0s2.4 1.6 3.2 0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M12 7.4c-.8-.8-.8-1.8 0-2.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-penne" viewBox="0 0 24 24">
+    <path d="M8.6 4.6 15.4 6l-2 13.4-6.8-1.4z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M8.6 4.6 6.6 8l6.8 1.4L15.4 6M13.4 19.4l2-3.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M18.4 8.4c1.6 3.4 1.4 6.8-.6 10" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+  <symbol id="ic-lenticchie" viewBox="0 0 24 24">
+    <circle cx="8.4" cy="9.4" r="3" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <circle cx="15.4" cy="8.6" r="3" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <circle cx="12" cy="14.6" r="3" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></circle>
+    <circle cx="6.6" cy="16.4" r="2.4" fill="none" stroke="currentColor" stroke-width="1.75"></circle>
+    <circle cx="17.4" cy="15.4" r="2.4" fill="none" stroke="currentColor" stroke-width="1.75"></circle>
+  </symbol>
+  <symbol id="ic-ceci" viewBox="0 0 24 24">
+    <path d="M9.4 4.6c2.8 0 4.6 2 4.6 4.4 0 1.6-1 2.4-1 3.6 0 1.4 1.4 1.6 1.4 3.2 0 2.2-1.8 3.6-4.4 3.6s-4.6-1.6-4.6-4c0-1.8 1.2-2.4 1.2-3.6s-1-2-1-3.4c0-2.4 1.8-3.8 3.8-3.8z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M17.4 11.6c2 0 3.4 1.4 3.4 3.4s-1.4 3.6-3.4 3.6-3.4-1.6-3.4-3.6 1.4-3.4 3.4-3.4z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-orzo" viewBox="0 0 24 24">
+    <path d="M6.6 20.4c0-4 1-7.2 3-9.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M12 3.6c2.6 2.6 3.4 6 2.4 10-.8 3.2-2.6 5.4-5.4 6.8-1.4-4.2-.8-8 1.8-11.6.4-2 .8-3.8 1.2-5.2z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M12 3.6c1.6-.8 3-.6 4.4.6-1.2 1.6-2.6 2.2-4.4 2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="ic-semi" viewBox="0 0 24 24">
+    <ellipse cx="7.6" cy="8.4" rx="1.6" ry="2.6" transform="rotate(-30 7.6 8.4)" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></ellipse>
+    <ellipse cx="14.4" cy="7.6" rx="1.6" ry="2.6" transform="rotate(24 14.4 7.6)" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></ellipse>
+    <ellipse cx="10.4" cy="14" rx="1.6" ry="2.6" transform="rotate(-10 10.4 14)" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></ellipse>
+    <ellipse cx="16.6" cy="14.6" rx="1.6" ry="2.6" transform="rotate(40 16.6 14.6)" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></ellipse>
+    <ellipse cx="6.4" cy="16.6" rx="1.6" ry="2.6" transform="rotate(60 6.4 16.6)" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75"></ellipse>
+  </symbol>
+  <symbol id="ic-lievito" viewBox="0 0 24 24">
+    <path d="M6.4 12.6c0-3.4 2.6-6 5.6-6s5.6 2.6 5.6 6c0 4-2.4 6.8-5.6 6.8s-5.6-2.8-5.6-6.8z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+    <path d="M4.6 19.4h14.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+    <path d="M12 6.6V3.6M8.6 8c-1.2-1.2-1.4-2.6-.6-4M15.4 8c1.2-1.2 1.4-2.6.6-4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+  </symbol>
+</svg>

@@ -54,6 +54,7 @@ import { auth } from "./firebase.js";
 import { signOut } from "firebase/auth";
 import AuthGate from "./components/AuthGate.jsx";
 import PwaBanners from "./components/PwaBanners.jsx";
+import IconSprite from "./components/IconSprite.jsx";
 import {
   T, F, MACRO_SECTIONS, PICKER_EMOJIS, INGREDIENT_CATEGORIES,
   TAG_GROUPS, ALL_PRESET_TAGS,
@@ -2580,6 +2581,11 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
 export default function App() {
   return (
     <ErrorBoundary>
+      {/* Sprite delle icone, una sola volta per l'intera app (anche prima
+          del login, come PwaBanners sotto): vedi IconSprite.jsx per il
+          perché — senza, ogni icona montata a un cambio schermata dovrebbe
+          risolvere un riferimento verso un file SVG esterno. */}
+      <IconSprite/>
       {/* Fuori da AuthGate apposta: visibili anche prima del login (aiuta
           chi non ha ancora installato l'app, e un aggiornamento pubblicato
           può riguardare anche la schermata di accesso stessa). */}

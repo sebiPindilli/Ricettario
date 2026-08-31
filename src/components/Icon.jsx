@@ -7,7 +7,10 @@ export default function Icon({ name, size = 20, style, title }) {
       aria-label={title}
       style={{ width: size, height: size, display: "block", flexShrink: 0, ...style }}
     >
-      <use href={`/app-icons.svg#ic-${name}`} />
+      {/* Riferimento allo stesso documento (IconSprite.jsx, montato una
+          sola volta in cima a App()): risoluzione istantanea, non un file
+          esterno da recuperare a ogni icona montata. */}
+      <use href={`#ic-${name}`} />
     </svg>
   );
 }
