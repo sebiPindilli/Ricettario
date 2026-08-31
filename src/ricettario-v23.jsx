@@ -56,13 +56,14 @@ import AuthGate from "./components/AuthGate.jsx";
 import PwaBanners from "./components/PwaBanners.jsx";
 import {
   T, F, MACRO_SECTIONS, PICKER_EMOJIS, INGREDIENT_CATEGORIES,
-  TAG_GROUPS, ALL_PRESET_TAGS, BOOK_THEMES,
+  TAG_GROUPS, ALL_PRESET_TAGS,
   EMOJI_CATEGORIES, EMOJI_OPTIONS, COLOR_OPTIONS, DEFAULT_UNIT_SUGGESTIONS,
   MOBILE_BREAKPOINT_CSS,
 } from "./data/constants.js";
 import { NUTRITION_DB } from "./data/nutrition.js";
 import { ThemeCtx, useTheme, NavCtx, useNavActions, RoleCtx, BetaEnabledCtx, IconStyleCtx, OnlineCtx, UiStyleCtx } from "./context.js";
-import { resolveUiStyle, isUiStyleId, DEFAULT_UI_STYLE_ID } from "./data/uiStyles.js";
+import { resolveUiStyle, isUiStyleId, DEFAULT_UI_STYLE_ID, buildTheme } from "./data/uiStyles.js";
+import { isPaletteId, DEFAULT_PALETTE_ID } from "./data/palettes.js";
 import OrganizeIcon from "./components/OrganizeIcon.jsx";
 import BackBtn from "./components/BackBtn.jsx";
 import Divider from "./components/Divider.jsx";
@@ -113,7 +114,6 @@ import StepsView from "./components/StepsView.jsx";
 import RecipeScreen from "./screens/RecipeScreen.jsx";
 import CoverScreen from "./screens/CoverScreen.jsx";
 import ThemePickerScreen from "./screens/ThemePickerScreen.jsx";
-import UiStylePickerScreen from "./screens/UiStylePickerScreen.jsx";
 import LandingScreen from "./screens/LandingScreen.jsx";
 import SearchScreen from "./screens/SearchScreen.jsx";
 import RecipesScreen from "./screens/RecipesScreen.jsx";
@@ -543,7 +543,34 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   // fallita) risulterà di nuovo dirty al prossimo giro — mai persa in
   // silenzio, stesso principio di lastSyncedRecipesRef sopra.
   const lastSyncedSystemRef = useRef({});
-  const [bookTheme, setBookTheme] = useState(BOOK_THEMES[0]);
+  // Aspetto dell'app — Fase 6 (PALETTE.md): colore (paletteId) e tema
+  // chiaro/scuro (temaScuro) sono preferenze PERSONALI per dispositivo
+  // (localStorage), come uiStyleId — non più il vecchio "Stile del libro"
+  // condiviso via Firestore. `bookThemeId` sotto resta solo per compatibilità
+  // col campo Firestore del documento libro: non guida più i colori.
+  const [paletteId, setPaletteId] = useState(() => {
+    try {
+      const saved = localStorage.getItem("ricettario.palette");
+      return isPaletteId(saved) ? saved : DEFAULT_PALETTE_ID;
+    } catch { return DEFAULT_PALETTE_ID; }
+  });
+  const [temaScuro, setTemaScuro] = useState(() => {
+    try { return localStorage.getItem("ricettario.temaScuro") === "1"; } catch { return false; }
+  });
+  const changePalette = (id) => {
+    if (!isPaletteId(id)) return;
+    setPaletteId(id);
+    try { localStorage.setItem("ricettario.palette", id); } catch { /* Safari privato */ }
+  };
+  const changeTemaScuro = (v) => {
+    setTemaScuro(v);
+    try { localStorage.setItem("ricettario.temaScuro", v ? "1" : "0"); } catch { /* Safari privato */ }
+  };
+  const theme = useMemo(() => buildTheme(paletteId, temaScuro), [paletteId, temaScuro]);
+  // Campo Firestore del documento libro (bookTheme): letto/scritto solo per
+  // compatibilità con backup/creazione libro esistenti (vedi restoreBackup,
+  // saveBookMeta più sotto) — non entra più nel calcolo dei colori mostrati.
+  const [bookThemeId, setBookThemeId] = useState("classic");
   // Stile di interfaccia scelto dall'utente — preferenza di dispositivo
   // (localStorage), non sincronizzata via Firestore. Vedi src/data/uiStyles.js.
   const [uiStyleId, setUiStyleId] = useState(() => {
@@ -557,7 +584,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     setUiStyleId(id);
     try { localStorage.setItem("ricettario.uiStyle", id); } catch { /* Safari privato */ }
   };
-  const ui = useMemo(() => resolveUiStyle(bookTheme, uiStyleId), [bookTheme, uiStyleId]);
+  const ui = useMemo(() => resolveUiStyle(theme, uiStyleId), [theme, uiStyleId]);
   // Custom tag groups added by user — shared across whole app
   const [extraTagGroups, setExtraTagGroups] = useState([]);
 
@@ -841,8 +868,8 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     setIngredientDict(d.ingredientDict || {});
     setSourceByIngredient(d.sourceByIngredient || {});
     setIgnoredSimilarities(d.ignoredSimilarities || []);
-    if (d.meta?.bookTheme) {
-      setBookTheme(BOOK_THEMES.find(t => t.id === d.meta.bookTheme) || BOOK_THEMES[0]);
+    if (typeof d.meta?.bookTheme === "string") {
+      setBookThemeId(d.meta.bookTheme);
     }
     // Appena caricato da Firestore = per definizione sincronizzato: base di
     // partenza per il prossimo diffSystemFields (vedi flushSystemNow).
@@ -868,7 +895,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     const payload = {
       app: "ricettario", formatVersion: 1, exportedAt: new Date().toISOString(),
       bookName: activeBook?.name || "Ricettario",
-      meta: { bookTheme: bookTheme?.id },
+      meta: { bookTheme: bookThemeId },
       data: snapshotData(),
     };
     const json = JSON.stringify(payload, null, 2);
@@ -908,14 +935,14 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     // ripristino, così identifica sempre lo stesso contenuto.
     const backupDate = payload.exportedAt ? new Date(payload.exportedAt) : new Date();
     const name = `Backup ${backupDate.toLocaleDateString("it-IT", { day:"2-digit", month:"2-digit", year:"numeric" })}`;
-    const bookThemeId = BOOK_THEMES.some(t => t.id === payload.meta?.bookTheme) ? payload.meta.bookTheme : "classic";
+    const restoredThemeId = typeof payload.meta?.bookTheme === "string" ? payload.meta.bookTheme : "classic";
     const idToken = await auth.currentUser.getIdToken();
     // isBackup/backupForBookId passati alla creazione (Admin SDK): sbloccano
     // l'eliminazione (vedi /api/delete-book.js) e determinano sotto quale
     // scheda comparire annidato. Le firestore.rules permettono di aggiornare
     // solo name/bookTheme su un libro già esistente, quindi vanno impostati
     // qui e non con un update client successivo (avrebbe dato permission-denied).
-    const id = await createBookInFirestore({ idToken, name, type: "personale", bookTheme: bookThemeId, isBackup: true, backupForBookId: targetBookId });
+    const id = await createBookInFirestore({ idToken, name, type: "personale", bookTheme: restoredThemeId, isBackup: true, backupForBookId: targetBookId });
 
     await saveBookSystem(id, {
       extraTagGroups: d.extraTagGroups, sectionList: d.sectionList, categoryList: d.categoryList,
@@ -943,7 +970,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     }
 
     setBooks(prev => [...prev, {
-      id, name, type: "personale", bookTheme: bookThemeId,
+      id, name, type: "personale", bookTheme: restoredThemeId,
       owner: me, memberEmails: [], memberRoles: {},
       isBackup: true, backupForBookId: targetBookId,
     }]);
@@ -1515,7 +1542,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   // un piccolo documento a sé.
   const flushMetaNow = async () => {
     try {
-      await saveBookMeta(activeBookId, { name: activeBook.name, type: activeBook.type, owner: activeBook.owner, memberEmails: activeBook.memberEmails || [], memberRoles: activeBook.memberRoles || {}, bookTheme: bookTheme.id });
+      await saveBookMeta(activeBookId, { name: activeBook.name, type: activeBook.type, owner: activeBook.owner, memberEmails: activeBook.memberEmails || [], memberRoles: activeBook.memberRoles || {}, bookTheme: bookThemeId });
     } catch (e) {
       console.warn("Salvataggio meta libro non riuscito, verrà ritentato", e);
     }
@@ -1525,7 +1552,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     const timer = setTimeout(() => { flushMetaNow(); }, 1500);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookLoaded, activeBookId, bookTheme]);
+  }, [bookLoaded, activeBookId, bookThemeId]);
 
   // Retry immediato alla riconnessione — senza, un salvataggio fallito da
   // offline (tipicamente: una foto, vedi resolvePhoto in bookStore.js)
@@ -2038,17 +2065,17 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     <BetaEnabledCtx.Provider value={betaEnabled}>
     <IconStyleCtx.Provider value={uiStyleId === "classico" ? iconStyle : "svg"}>
     <OnlineCtx.Provider value={isOnline}>
-    <ThemeCtx.Provider value={bookTheme}>
+    <ThemeCtx.Provider value={theme}>
     <UiStyleCtx.Provider value={ui}>
     <NavCtx.Provider value={{ onOrganize: () => openOrganize() }}>
     <div className="iphone-page-wrap" style={{
       minHeight:"100vh",
-      background:`radial-gradient(ellipse at 60% 20%, ${bookTheme.appCard} 0%, ${bookTheme.appBorder} 100%)`,
+      background:`radial-gradient(ellipse at 60% 20%, ${theme.appCard} 0%, ${theme.appBorder} 100%)`,
       display:"flex", flexDirection:"column", alignItems:"center",
       justifyContent:"center", padding:"40px 20px", gap:20,
       transition:"background 0.4s",
     }}>
-      <div className="iphone-desktop-hint" style={{ textAlign:"center", color:bookTheme.appInk }}>
+      <div className="iphone-desktop-hint" style={{ textAlign:"center", color:theme.appInk }}>
         <div style={{ fontFamily:"'Georgia',serif", fontSize:26, marginBottom:4 }}>Il mio Ricettario</div>
         <div style={{ fontFamily:"sans-serif", fontSize:12, opacity:0.6 }}>Prototipo v17 · tocca la copertina per entrare</div>
       </div>
@@ -2094,7 +2121,6 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
             onTheme={() => goTo("theme")}
-            onUiStyle={() => goTo("uiStyle")}
             onCover={() => nav.replace({ screen: "cover" })}
             onGuide={() => goTo("guide")}
             onAdminUsers={() => setScreen("adminUsers")}
@@ -2322,14 +2348,12 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
         )}
         {screen==="theme" && (
           <ThemePickerScreen
-            onBack={() => nav.back()}
-            onSelect={(t) => { setBookTheme(t); nav.replace({ screen: "cover" }); }}
-          />
-        )}
-        {screen==="uiStyle" && (
-          <UiStylePickerScreen
-            activeId={uiStyleId}
-            onSelect={changeUiStyle}
+            paletteId={paletteId}
+            temaScuro={temaScuro}
+            uiStyleId={uiStyleId}
+            onSelectPalette={changePalette}
+            onSelectTemaScuro={changeTemaScuro}
+            onSelectUiStyle={changeUiStyle}
             onBack={() => nav.back()}
           />
         )}
@@ -2469,7 +2493,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
         {pendingShopUpdate && (() => {
           const upd = pendingShopUpdate.updated;
           const entry = shoppingList.find(e => e.recipeId === upd.id);
-          const th = bookTheme;
+          const th = theme;
           return (
             <div style={{ position:"absolute", inset:0, zIndex:500, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
               <div style={{ width:"100%", background:th.appBg, borderRadius:20, padding:"22px 20px", textAlign:"center", maxHeight:"90%", overflowY:"auto" }}>
@@ -2535,7 +2559,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
         )}
       </IPhone>
 
-      <div className="iphone-desktop-hint" style={{ display:"flex", gap:16, color:bookTheme.appFaded, fontFamily:"sans-serif", fontSize:12, flexWrap:"wrap", justifyContent:"center" }}>
+      <div className="iphone-desktop-hint" style={{ display:"flex", gap:16, color:theme.appFaded, fontFamily:"sans-serif", fontSize:12, flexWrap:"wrap", justifyContent:"center" }}>
         <span>📕 Tocca la copertina</span>
         <span>🍝 Ricette · 📖 Libro · 📸 Ricordi</span>
         <span>🔍 Cerca · ⭐ Preferiti · 🎨 Temi</span>

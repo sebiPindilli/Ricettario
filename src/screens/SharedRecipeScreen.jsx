@@ -128,7 +128,7 @@ export default function SharedRecipeScreen({ shareId, me, editableBooks = [], on
   return (
     <Shell th={th} onClose={onClose}>
       <div style={{ textAlign:"center", marginBottom:14 }}>
-        <div style={{ width:64, height:64, borderRadius:16, background:recipe.color || th.appAccent, color:"#fff", margin:"0 auto 10px", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden" }}>
+        <div style={{ width:64, height:64, borderRadius:16, background:(ui.sectionColor(recipe.macroSection) ?? recipe.color) || th.appAccent, color:"#fff", margin:"0 auto 10px", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden" }}>
           {dishPhotoOf(recipe) ? <img src={dishPhotoOf(recipe)} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }}/> : <ChosenIcon emoji={recipe.emoji || "🍽️"} icon={recipe.icon} size={30} />}
         </div>
         <div style={{ fontFamily:F.display, fontSize:22, fontStyle:"italic", color:th.appInk }}>{recipe.title}</div>
@@ -198,7 +198,7 @@ export default function SharedRecipeScreen({ shareId, me, editableBooks = [], on
             ? <div key={i} style={{ fontFamily:F.ui, fontSize:10.5, fontWeight:700, textTransform:"uppercase", letterSpacing:1, color:th.appAccent, margin:"10px 0 4px" }}>{step.sectionLabel}</div>
             : (
               <div key={i} style={{ display:"flex", gap:10, marginBottom:12 }}>
-                <div style={{ width:22, height:22, borderRadius:"50%", background:recipe.color || th.appAccent, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, flexShrink:0 }}>{++n}</div>
+                <div style={{ width:22, height:22, borderRadius:"50%", background:(ui.sectionColor(recipe.macroSection) ?? recipe.color) || th.appAccent, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, flexShrink:0 }}>{++n}</div>
                 <div style={{ flex:1 }}>
                   <div style={{ fontFamily:F.body, fontSize:13.5, color:th.appInk, lineHeight:1.55 }}>{step.text}</div>
                   {step.photos && step.photos.length > 0 && (

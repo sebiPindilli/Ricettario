@@ -9,21 +9,30 @@ import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from
 import { checkWhitelist, loadBetaConfig, loadIconStyleConfig, DEFAULT_TIMER_ALERTS } from "../services/authStore.js";
 import { OfflineNoCacheError } from "../services/offlineFirst.js";
 import { withTimeout } from "../utils/helpers.js";
-import { F, BOOK_THEMES } from "../data/constants.js";
-import { resolveUiStyle, isUiStyleId, DEFAULT_UI_STYLE_ID } from "../data/uiStyles.js";
+import { F } from "../data/constants.js";
+import { resolveUiStyle, isUiStyleId, DEFAULT_UI_STYLE_ID, buildTheme } from "../data/uiStyles.js";
+import { isPaletteId, DEFAULT_PALETTE_ID } from "../data/palettes.js";
 
 const provider = new GoogleAuthProvider();
 // AuthGate è montato PRIMA di ogni provider (Theme/UiStyle vivono dentro
 // AppInner, raggiunto solo dopo l'autenticazione): nessun useTheme()/
-// useUiStyle() qui. Lo stile scelto sopravvive comunque in localStorage
-// (stessa chiave letta da AppInner), quindi lo si legge direttamente; il
-// tema libro invece non è ancora noto pre-login, si usa quello di default
-// — stessa scelta già fatta per il valore di default di UiStyleCtx.
+// useUiStyle() qui. Palette, tema chiaro/scuro e stile sono tutte preferenze
+// PERSONALI in localStorage (Fase 6, PALETTE.md) — sopravvivono al login,
+// quindi si leggono direttamente qui invece di aspettare AppInner.
 const readUiStyleId = () => {
   try {
     const saved = localStorage.getItem("ricettario.uiStyle");
     return isUiStyleId(saved) ? saved : DEFAULT_UI_STYLE_ID;
   } catch { return DEFAULT_UI_STYLE_ID; }
+};
+const readPaletteId = () => {
+  try {
+    const saved = localStorage.getItem("ricettario.palette");
+    return isPaletteId(saved) ? saved : DEFAULT_PALETTE_ID;
+  } catch { return DEFAULT_PALETTE_ID; }
+};
+const readTemaScuro = () => {
+  try { return localStorage.getItem("ricettario.temaScuro") === "1"; } catch { return false; }
 };
 const BOOT_TIMEOUT_MS = 10000;
 // Offline, il margine serve solo a coprire la lettura dalla cache locale
@@ -40,10 +49,10 @@ const pageStyle = {
 // Copertina a tutto schermo, azione in fondo su fascia scura — stessa
 // impaginazione per ogni stato (DECISIONI.md §Accesso), cambia solo il
 // testo. Solo negli stili nuovi: in classico resta pageStyle (sotto).
-const CoverShell = ({ title, sub, children: body }) => (
+const CoverShell = ({ title, sub, children: body, theme }) => (
   <div style={{
     minHeight: "100vh", display: "flex", flexDirection: "column",
-    background: BOOK_THEMES[0].coverBg, color: BOOK_THEMES[0].coverText,
+    background: theme.coverBg, color: theme.coverText,
   }}>
     <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 28px", textAlign: "center" }}>
       <div style={{ fontFamily: F.ui, fontSize: 11, letterSpacing: 4, opacity: 0.6, textTransform: "uppercase", marginBottom: 10 }}>Il mio</div>
@@ -62,8 +71,11 @@ export default function AuthGate({ children }) {
   // Calcolato una sola volta per montaggio (lazy init), non ad ogni
   // import del modulo: lo stile si cambia comunque solo da autenticati.
   const [uiStyleId] = useState(readUiStyleId);
+  const [paletteId] = useState(readPaletteId);
+  const [temaScuro] = useState(readTemaScuro);
   const isNewStyle = uiStyleId !== "classico";
-  const uiCover = resolveUiStyle(BOOK_THEMES[0], uiStyleId);
+  const theme = buildTheme(paletteId, temaScuro);
+  const uiCover = resolveUiStyle(theme, uiStyleId);
   const coverPrimaryBtn = { width: "100%", padding: "14px", borderRadius: 12, border: "none", background: uiCover.accent, color: "#fff", fontFamily: F.ui, fontSize: 14, fontWeight: 700, cursor: "pointer" };
   // loading | loggedOut | unauthorized | authorized | offlineNoCache | error
   const [status, setStatus] = useState("loading");
@@ -146,14 +158,14 @@ export default function AuthGate({ children }) {
   };
 
   if (status === "loading") {
-    if (isNewStyle) return <CoverShell title="Caricamento…" />;
+    if (isNewStyle) return <CoverShell theme={theme} title="Caricamento…" />;
     return <div style={pageStyle}>Caricamento…</div>;
   }
 
   if (status === "loggedOut") {
     if (isNewStyle) {
       return (
-        <CoverShell title="Tocca per entrare" sub="Prototipo — funziona solo per chi è stato autorizzato.">
+        <CoverShell theme={theme} title="Tocca per entrare" sub="Prototipo — funziona solo per chi è stato autorizzato.">
           <button onClick={doSignIn} style={coverPrimaryBtn}>Accedi con Google</button>
           {error && <div style={{ fontFamily: F.ui, fontSize: 12, color: "#FFD0C8", textAlign: "center" }}>{error}</div>}
         </CoverShell>
@@ -174,7 +186,7 @@ export default function AuthGate({ children }) {
     // Copy per chi non è in whitelist (DECISIONI.md §Accesso)
     if (isNewStyle) {
       return (
-        <CoverShell title="Accesso non autorizzato" sub={`L'app è ancora un prototipo e funziona solo per chi è stato autorizzato. Scrivi all'admin per farti aggiungere. (${user?.email})`}>
+        <CoverShell theme={theme} title="Accesso non autorizzato" sub={`L'app è ancora un prototipo e funziona solo per chi è stato autorizzato. Scrivi all'admin per farti aggiungere. (${user?.email})`}>
           <button onClick={doSignOut} style={coverGhostBtn}>Prova un altro account</button>
         </CoverShell>
       );
@@ -193,7 +205,7 @@ export default function AuthGate({ children }) {
   if (status === "offlineNoCache") {
     if (isNewStyle) {
       return (
-        <CoverShell title="Nessuna connessione" sub="Non ci sono ancora dati salvati su questo dispositivo: la prima apertura richiede una connessione internet.">
+        <CoverShell theme={theme} title="Nessuna connessione" sub="Non ci sono ancora dati salvati su questo dispositivo: la prima apertura richiede una connessione internet.">
           <button onClick={retry} style={coverPrimaryBtn}>Riprova</button>
           <button onClick={doSignOut} style={coverGhostBtn}>Esci e riprova</button>
         </CoverShell>
@@ -218,7 +230,7 @@ export default function AuthGate({ children }) {
   if (status === "error") {
     if (isNewStyle) {
       return (
-        <CoverShell title="Accesso non riuscito" sub="Controlla la connessione e riprova.">
+        <CoverShell theme={theme} title="Accesso non riuscito" sub="Controlla la connessione e riprova.">
           <button onClick={retry} style={coverPrimaryBtn}>Riprova</button>
           <button onClick={doSignOut} style={coverGhostBtn}>Esci e riprova</button>
         </CoverShell>

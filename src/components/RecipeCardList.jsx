@@ -1,7 +1,7 @@
 import { useTheme, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import { dishPhotoOf } from "../utils/helpers.js";
-import { sectionColor } from "../data/uiStyles.js";
+import { alpha, ICON_PILL_ALPHA } from "../data/palettes.js";
 import AppIcon from "./AppIcon.jsx";
 import ChosenIcon from "./ChosenIcon.jsx";
 import Icon from "./Icon.jsx";
@@ -43,7 +43,11 @@ export default function RecipeCardList({ recipe, onClick }) {
   }
 
   // ── quaderno / schedario — colore di sezione, non più per ricetta ──
-  const sec = sectionColor(recipe.macroSection);
+  // ui.sectionColor arriva da colori(paletteId, temaScuro).sezioni — vedi
+  // PALETTE.md. La pastiglia tenue si fa con alpha()/ICON_PILL_ALPHA, mai
+  // un secondo esadecimale scritto a mano (altrimenti il contrasto tarato
+  // per le etichette di sezione non vale più).
+  const secColor = ui.sectionColor(recipe.macroSection);
   const rule = ui.listRow === "rule"; // quaderno: riga su filetto, niente card
   const iconSize = ui.listIcon.size;
   const durationMin = recipe.prepTime + recipe.cookTime;
@@ -61,10 +65,10 @@ export default function RecipeCardList({ recipe, onClick }) {
     }}>
       <div style={{
         width:iconSize, height:iconSize, borderRadius:ui.radius.tile, flexShrink:0,
-        background: photo ? undefined : (ui.listIcon.fill === "tint" ? sec.pill : `${sec.full}20`),
+        background: photo ? undefined : alpha(secColor, ICON_PILL_ALPHA),
         overflow:"hidden", position:"relative",
         display:"flex", alignItems:"center", justifyContent:"center",
-        color: sec.full,
+        color: secColor,
       }}>
         {photo
           ? <img src={photo} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} loading="lazy"/>

@@ -1,10 +1,11 @@
 // ══════════════════════════════════════════════════════════════
 // Stili di interfaccia — struttura, densità e forma.
 //
-// I COLORI restano quelli del tema (BOOK_THEMES, vedi ThemeCtx): qui non
-// si dichiara nessun colore di marca. Uno stile decide *come* è fatta
-// l'interfaccia (card o filetto, nav in alto o in basso, filtri aperti o
-// dietro un pulsante, emoji o SVG), il tema decide di che colore è.
+// I COLORI restano quelli della palette scelta (vedi data/palettes.js e
+// buildTheme() più sotto): qui non si dichiara nessun colore di marca. Uno
+// stile decide *come* è fatta l'interfaccia (card o filetto, nav in alto o
+// in basso, filtri aperti o dietro un pulsante, emoji o SVG), la palette
+// decide di che colore è.
 //
 // Uso:
 //   const ui = useUiStyle();            // token risolti (tema + stile)
@@ -17,8 +18,12 @@
 // ui.exportFlow, ui.booksLayout, ui.tables/ui.stripe): se un componente
 // non legge il token della sua fase, quella fase non è fatta.
 //
-// Vedi design_handoff_ui_styles/README.md per la corrispondenza con i mockup.
+// Vedi design_handoff_ui_styles/README.md e PALETTE.md per la corrispondenza
+// con i mockup.
 // ══════════════════════════════════════════════════════════════
+
+import { colori } from "./palettes.js";
+import { BOOK_PAGE } from "./constants.js";
 
 // Mescola due colori esadecimali (#rrggbb) con peso t su `b`.
 const mix = (a, b, t) => {
@@ -139,26 +144,47 @@ export const UI_STYLES = [
   },
 ];
 
-// ── Colore per sezione — palette "terrosa profonda" (DECISIONI.md) ────
-// Negli stili quaderno/schedario il colore non è più una scelta libera per
-// ricetta: lo decide la sezione. Indipendente dal tema (BOOK_THEMES): è
-// una palette a sé, non "il colore del libro". In classico non si usa:
-// resta `recipe.color`, il colore libero già salvato su ogni ricetta.
-// NOTA: esportati qui SOLO per compatibilità con i chiamanti esistenti
-// finché non passano a `ui.sectionColor(id)` sotto — vedi resolveUiStyle.
-export const SECTION_COLORS = {
-  basi:   { full: "#A8906B", pill: "rgba(168,144,107,0.26)", text: "#6E5B36" },
-  salati: { full: "#A4432A", pill: "rgba(164,67,42,0.15)",   text: "#A4432A" },
-  dolci:  { full: "#9A7A21", pill: "rgba(154,122,33,0.20)",  text: "#7A6014" },
-  altro:  { full: "#5E7060", pill: "rgba(94,112,96,0.22)",   text: "#48573F" },
-};
-export const sectionColor = (macroSection) => SECTION_COLORS[macroSection] || SECTION_COLORS.altro;
-
 export const DEFAULT_UI_STYLE_ID = "classico";
 export const isUiStyleId = (id) => UI_STYLES.some(s => s.id === id);
 
+// ── Copertina cartacea — formula unica derivata dalla palette ─────────
+// Fase 6: le 12 copertine disegnate a mano di BOOK_THEMES sono state
+// assorbite nella palette (scelta utente unica: colore/tema/stile, non più
+// una copertina separata). Nessun mockup copre questo caso — è un
+// trattamento placeholder, plausibile ma da rifinire a vista in seguito
+// (come già segnalato per il PDF in Fase 9 del piano).
+function coverFromPalette(c) {
+  return {
+    coverBg: `linear-gradient(160deg, ${mix(c.ink, c.accent, 0.18)} 0%, ${mix(c.ink, "#000000", 0.55)} 45%, ${mix(c.ink, c.accent, 0.10)} 100%)`,
+    coverText: "rgba(255,255,255,0.9)",
+    coverAccent: alpha(c.accent, 0.55),
+    spineColor: "rgba(255,255,255,0.05)",
+    pageColor: c.bg,
+  };
+}
+
+// Costruisce l'oggetto "tema" completo che alimenta ThemeCtx (vedi
+// context.js/ricettario-v23.jsx): colori dell'interfaccia dalla palette
+// scelta (personale, localStorage — vedi PALETTE.md) + campi "libro" fissi
+// (BOOK_PAGE, facsimile di carta) + copertina derivata. Sostituisce
+// BOOK_THEMES: non più una voce fissa scelta dall'utente, ma il risultato
+// sempre ricalcolato di `colori(paletteId, temaScuro)`.
+export function buildTheme(paletteId, temaScuro = false) {
+  const c = colori(paletteId, temaScuro);
+  return {
+    id: c.id, name: c.nome, notturna: c.notturna,
+    appBg: c.bg, appCard: c.card, appBorder: c.border, appBorderStrong: c.borderStrong,
+    appInk: c.ink, appFaded: c.faded, appMuted: c.muted,
+    appAccent: c.accent, appOnAccent: c.onAccent, appAccent2: c.accent2,
+    navBg: c.navBg, navBorder: c.navBorder, navActive: c.navActive, navIdle: c.navIdle,
+    sezioni: c.sezioni, sezioniPiene: c.sezioniPiene,
+    ...BOOK_PAGE,
+    ...coverFromPalette(c),
+  };
+}
+
 // Unisce tema e stile nei token che i componenti leggono davvero.
-// `theme` è una voce di BOOK_THEMES (l'oggetto restituito da useTheme()).
+// `theme` è l'oggetto restituito da buildTheme() (== useTheme()).
 export function resolveUiStyle(theme, styleId = DEFAULT_UI_STYLE_ID) {
   const style = UI_STYLES.find(s => s.id === styleId) || UI_STYLES[0];
   const bg = style.bgTint ? mix(theme.appBg, "#ffffff", style.bgTint) : theme.appBg;
@@ -180,11 +206,12 @@ export function resolveUiStyle(theme, styleId = DEFAULT_UI_STYLE_ID) {
     ok: "#6B8C6E",
     danger: "#D93025",
     // riga alternata delle tabelle (vale ovunque ci siano righe lunghe) —
-    // deriva dal tema, non un rgba fisso: cambia con BOOK_THEMES diversi.
+    // deriva dal tema, non un rgba fisso: cambia con palette diverse.
     stripe: style.tables === "striped" ? alpha(theme.appBorder, 0.4) : "transparent",
     // Colore di sezione — negli stili nuovi sostituisce recipe.color.
     // Uso: pastiglia tenue in lista, pieno solo nell'hero della scheda.
-    sectionColor: (macroSection) => style.id === "classico" ? null : sectionColor(macroSection).full,
+    // `theme.sezioni` arriva da colori(paletteId, temaScuro) — vedi PALETTE.md.
+    sectionColor: (macroSection) => style.id === "classico" ? null : (theme.sezioni[macroSection] || theme.sezioni.altro),
     // superfici pronte all'uso
     cardStyle:
       style.surface === "plain"

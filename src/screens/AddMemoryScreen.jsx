@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useTheme, useOnline } from "../context.js";
+import { useTheme, useUiStyle, useOnline } from "../context.js";
 import { F } from "../data/constants.js";
 import GlobalNav from "../components/GlobalNav.jsx";
 import BackBtn from "../components/BackBtn.jsx";
@@ -11,6 +11,7 @@ import { guideNuovoRicordo } from "../data/guideContent.jsx";
 
 export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBack, onSave, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping }) {
   const th = useTheme();
+  const ui = useUiStyle();
   const isOnline = useOnline();
   const [toast, setToast] = useState({ msg:"", visible:false });
   const showToast = (msg) => {
@@ -202,21 +203,22 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
           <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
             {recipes.map(r => {
               const sel = selectedRecipeIds.includes(r.id);
+              const color = ui.sectionColor(r.macroSection) ?? r.color;
               return (
                 <button key={r.id} onClick={() => toggleRecipe(r.id)} style={{
                   display:"flex", alignItems:"center", gap:12,
                   padding:"10px 14px",
-                  background: sel ? `${r.color}15` : th.appCard,
-                  border:`1.5px solid ${sel ? r.color : th.appBorder}`,
+                  background: sel ? `${color}15` : th.appCard,
+                  border:`1.5px solid ${sel ? color : th.appBorder}`,
                   borderRadius:12, cursor:"pointer", textAlign:"left",
                   transition:"all 0.15s",
                 }}>
-                  <div style={{ width:32, height:32, borderRadius:8, background:r.color, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><ChosenIcon emoji={r.emoji} icon={r.icon} size={16} /></div>
-                  <div style={{ flex:1, fontFamily:F.ui, fontSize:13, color: sel ? r.color : th.appInk, fontWeight: sel ? 600 : 400 }}>{r.title}</div>
+                  <div style={{ width:32, height:32, borderRadius:8, background:color, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><ChosenIcon emoji={r.emoji} icon={r.icon} size={16} /></div>
+                  <div style={{ flex:1, fontFamily:F.ui, fontSize:13, color: sel ? color : th.appInk, fontWeight: sel ? 600 : 400 }}>{r.title}</div>
                   <div style={{
                     width:22, height:22, borderRadius:"50%",
-                    border:`2px solid ${sel ? r.color : th.appBorder}`,
-                    background: sel ? r.color : "transparent",
+                    border:`2px solid ${sel ? color : th.appBorder}`,
+                    background: sel ? color : "transparent",
                     display:"flex", alignItems:"center", justifyContent:"center",
                     color:"#fff", fontSize:12, flexShrink:0,
                   }}>{sel ? "✓" : ""}</div>

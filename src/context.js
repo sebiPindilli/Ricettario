@@ -1,9 +1,12 @@
 import React from "react";
-import { BOOK_THEMES } from "./data/constants.js";
-import { resolveUiStyle, DEFAULT_UI_STYLE_ID } from "./data/uiStyles.js";
+import { DEFAULT_PALETTE_ID } from "./data/palettes.js";
+import { resolveUiStyle, buildTheme, DEFAULT_UI_STYLE_ID } from "./data/uiStyles.js";
 
 // ── Theme context — avoids prop-drilling ──────────────────────
-export const ThemeCtx = React.createContext(BOOK_THEMES[0]);
+// Il valore reale arriva da buildTheme(paletteId, temaScuro) — preferenza
+// personale per dispositivo, vedi PALETTE.md e AppInner in ricettario-v23.jsx.
+// Questo default serve solo prima che il Provider monti (o in test isolati).
+export const ThemeCtx = React.createContext(buildTheme(DEFAULT_PALETTE_ID, false));
 export const useTheme = () => React.useContext(ThemeCtx);
 
 // ── Nav context — azioni globali del banner (es. Organizza) ──
@@ -33,7 +36,7 @@ export const useIconStyle = () => React.useContext(IconStyleCtx);
 // solo per lo stile "classico". Il valore esposto sono i token già
 // risolti su tema + stile (vedi data/uiStyles.js), non il solo id.
 export const UiStyleCtx = React.createContext(
-  resolveUiStyle(BOOK_THEMES[0], DEFAULT_UI_STYLE_ID)
+  resolveUiStyle(buildTheme(DEFAULT_PALETTE_ID, false), DEFAULT_UI_STYLE_ID)
 );
 export const useUiStyle = () => React.useContext(UiStyleCtx);
 

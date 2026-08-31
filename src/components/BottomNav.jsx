@@ -76,10 +76,14 @@ export default function BottomNav({
     return () => ro.disconnect();
   }, [onHeightChange]);
 
+  // Fase 6 (PALETTE.md): la barra è una superficie SOLLEVATA con i suoi
+  // quattro token (navBg/navBorder/navActive/navIdle), tarati a 4,5:1 contro
+  // navBg — non contro il fondo pagina. Quaderno è l'unico stile che non li
+  // usa: lì la barra sta sul fondo pagina e valgono accent/muted.
   const dark = ui.navTone === "dark";
-  const bg = dark ? th.appInk : ui.bg;
-  const activeColor = dark ? th.appAccent2 : th.appInk;
-  const idleColor = dark ? "rgba(255,255,255,0.5)" : ui.muted;
+  const bg = dark ? th.navBg : ui.bg;
+  const activeColor = dark ? th.navActive : ui.accent;
+  const idleColor = dark ? th.navIdle : ui.muted;
 
   const handlers = {
     recipes: onRecipes,

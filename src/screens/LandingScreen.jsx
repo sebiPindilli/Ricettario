@@ -36,7 +36,7 @@ const LandingRow = ({ ui, th, icon, label, desc, fn, swatch }) => (
   </button>
 );
 
-export default function LandingScreen({ recipes = [], bookName = "Il mio Ricettario", activeBook = null, me = null, onBooks, onRecipes, onBook, onMemories, onAdd, onAddMemory, onFridge, onShopping, onOrganize, onTheme, onUiStyle, onCover, onGuide, onAdminUsers, onMySharedLinks }) {
+export default function LandingScreen({ recipes = [], bookName = "Il mio Ricettario", activeBook = null, me = null, onBooks, onRecipes, onBook, onMemories, onAdd, onAddMemory, onFridge, onShopping, onOrganize, onTheme, onCover, onGuide, onAdminUsers, onMySharedLinks }) {
   const th = useTheme();
   const ui = useUiStyle();
   const role = useRole();
@@ -103,8 +103,7 @@ export default function LandingScreen({ recipes = [], bookName = "Il mio Ricetta
 
           <LandingGroupLabel ui={ui} text="Il libro"/>
           <div style={{ ...ui.cardStyle, overflow:"hidden" }}>
-            <LandingRow ui={ui} th={th} swatch label="Stile del libro" fn={onTheme}/>
-            <LandingRow ui={ui} th={th} icon="schede" label="Stile dell'interfaccia" fn={onUiStyle}/>
+            <LandingRow ui={ui} th={th} swatch label="Aspetto dell'app" desc="Colore, tema e stile" fn={onTheme}/>
           </div>
 
           <LandingGroupLabel ui={ui} text="Condivisione"/>
@@ -151,11 +150,7 @@ export default function LandingScreen({ recipes = [], bookName = "Il mio Ricetta
           </button>
           <button onClick={onTheme} style={{ background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:2, padding:0, width:44 }}>
             <span style={{ width:26, height:26, borderRadius:7, background:th.coverBg, border:`1.5px solid ${th.appBorder}`, display:"block", boxSizing:"border-box" }}/>
-            <span style={{ fontFamily:F.ui, fontSize:8, color:th.appFaded }}>stile libro</span>
-          </button>
-          <button onClick={onUiStyle} style={{ background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:2, padding:0, width:44 }}>
-            <span style={{ width:26, height:26, borderRadius:7, background:th.appCard, border:`1.5px solid ${th.appBorder}`, display:"flex", alignItems:"center", justifyContent:"center", color:th.appFaded, boxSizing:"border-box" }}><AppIcon emoji="🧭" icon="schede" size={15} /></span>
-            <span style={{ fontFamily:F.ui, fontSize:8, color:th.appFaded }}>stile app</span>
+            <span style={{ fontFamily:F.ui, fontSize:8, color:th.appFaded }}>aspetto</span>
           </button>
         </div>
       </div>
