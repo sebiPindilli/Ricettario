@@ -94,7 +94,7 @@ export default function RecipeConflictModal({ conflict, onKeepMine, onDiscardMin
           <div style={{ display: "flex", flexDirection: "column", gap: 8, overflowY: "auto" }}>
             <button onClick={onKeepMine} style={{
               padding: "12px 14px", borderRadius: 12, border: "none", cursor: "pointer",
-              background: th.appAccent, color: "#fff", fontFamily: F.ui, fontSize: 13, fontWeight: 700, textAlign: "left",
+              background: th.appAccent, color: th.appOnAccent, fontFamily: F.ui, fontSize: 13, fontWeight: 700, textAlign: "left",
             }}>
               {intent === "delete" ? (
                 <span style={{ display: "flex", alignItems: "center", gap: 6 }}><AppIcon emoji="🗑️" icon="elimina" size={13} /> Elimina comunque</span>

@@ -207,7 +207,7 @@ export default function EmptyFridgeScreen({
             padding:"7px 12px", borderRadius: ui.id==="classico" ? 20 : ui.radius.chip,
             border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
             background: sel ? (ui.id==="classico" ? th.appAccent : ui.ink) : "transparent",
-            color: sel ? "#fff" : th.appFaded,
+            color: sel ? (ui.id==="classico" ? th.appOnAccent : th.appBg) : th.appFaded,
             fontFamily:F.ui, fontSize:12, cursor:"pointer",
             display:"flex", alignItems:"center", gap:5,
           }}
@@ -358,7 +358,10 @@ export default function EmptyFridgeScreen({
             top: tooltipKey.below ? tooltipKey.y + 10 : tooltipKey.y - 10,
             transform: tooltipKey.below ? "translate(-50%, 0)" : "translate(-50%, -100%)",
             zIndex:601, minWidth:140, maxWidth:"min(240px, 80vw)",
-            background:th.appInk, color:"#fff",
+            // Nuvola sempre scura indipendente dal tema (th.darkChrome, come
+            // GlobalNav): appInk si inverte con temaScuro, qui serve sempre
+            // lo stesso bianco (anche trasparente) sotto.
+            background:th.darkChrome.bg, color:"#fff",
             borderRadius:12, padding:"10px 13px",
             boxShadow:"0 10px 34px rgba(0,0,0,0.5)",
             pointerEvents:"none",
@@ -369,9 +372,9 @@ export default function EmptyFridgeScreen({
             </div>
             {/* codina: sotto se il popup è sopra il pulsante, sopra se è sotto */}
             {tooltipKey.below ? (
-              <div style={{ position:"absolute", bottom:"100%", left:"50%", transform:"translateX(-50%)", width:0, height:0, borderLeft:"6px solid transparent", borderRight:"6px solid transparent", borderBottom:`6px solid ${th.appInk}` }}/>
+              <div style={{ position:"absolute", bottom:"100%", left:"50%", transform:"translateX(-50%)", width:0, height:0, borderLeft:"6px solid transparent", borderRight:"6px solid transparent", borderBottom:`6px solid ${th.darkChrome.bg}` }}/>
             ) : (
-              <div style={{ position:"absolute", top:"100%", left:"50%", transform:"translateX(-50%)", width:0, height:0, borderLeft:"6px solid transparent", borderRight:"6px solid transparent", borderTop:`6px solid ${th.appInk}` }}/>
+              <div style={{ position:"absolute", top:"100%", left:"50%", transform:"translateX(-50%)", width:0, height:0, borderLeft:"6px solid transparent", borderRight:"6px solid transparent", borderTop:`6px solid ${th.darkChrome.bg}` }}/>
             )}
           </div>
         )}
@@ -430,7 +433,7 @@ export default function EmptyFridgeScreen({
                   borderRadius:16, overflow:"hidden",
                 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px" }}>
-                    <div style={{ width:44, height:44, borderRadius:12, background: ui.sectionColor(recipe.macroSection) ?? recipe.color, color:"#fff", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>{recipe.dishPhoto ? <AppIcon emoji="📸" icon="foto" size={22} /> : <ChosenIcon emoji={recipe.emoji} icon={recipe.icon} size={22} />}</div>
+                    <div style={{ width:44, height:44, borderRadius:12, background: ui.sectionColorFull(recipe.macroSection) ?? recipe.color, color:"#fff", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>{recipe.dishPhoto ? <AppIcon emoji="📸" icon="foto" size={22} /> : <ChosenIcon emoji={recipe.emoji} icon={recipe.icon} size={22} />}</div>
                     <div style={{ flex:1 }}>
                       <div style={{ fontFamily:F.display, fontSize:16, color:th.appInk }}>{recipe.title}</div>
                       <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>{recipe.category} · {recipe.prepTime+recipe.cookTime} min</div>
@@ -515,7 +518,7 @@ export default function EmptyFridgeScreen({
                       onClick={() => setServingsDialog({ mode:"cooking", recipe, missingClean: null })}
                       style={{
                         flex:1, padding:"9px 4px", borderRadius:10, border:"none",
-                        background:th.appInk, color:"#fff",
+                        background:th.appInk, color:th.appBg,
                         fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
                         display:"flex", flexDirection:"column", alignItems:"center", gap:2,
                       }}>

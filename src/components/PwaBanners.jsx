@@ -47,7 +47,7 @@ function UpdateBanner() {
       <span style={{ flex:1, minWidth:0, fontFamily:F.ui, fontSize:12.5, display:"flex", alignItems:"center", gap:6 }}><AppIcon emoji="🔄" icon="aggiorna" size={13} /> Nuova versione disponibile.</span>
       <button onClick={() => updateServiceWorker(true)} style={{
         flexShrink:0, padding:"8px 14px", borderRadius:10, border:"none",
-        background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer",
+        background:th.appAccent, color:th.appOnAccent, fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer",
       }}>Ricarica</button>
       <button onClick={() => setNeedRefresh(false)} title="Ignora" style={{
         flexShrink:0, background:"none", border:"none", color:th.appBg, opacity:0.7,

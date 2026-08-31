@@ -51,8 +51,10 @@ export default function TimersPopup({ onClose, initialDraft = null }) {
     <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <style dangerouslySetInnerHTML={{ __html: PULSE_CSS }} />
       <div style={{ width: "100%", maxHeight: "90%", background: th.appBg, borderRadius: 20, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        {/* Header */}
-        <div style={{ background: th.appInk, padding: "14px 18px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+        {/* Header — sempre scuro indipendente dal tema (th.darkChrome, come
+            GlobalNav): appInk si inverte con temaScuro, qui servono sempre
+            gli stessi bianchi trasparenti sotto. */}
+        <div style={{ background: th.darkChrome.bg, padding: "14px 18px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
           <button onClick={onClose} style={{ background: "rgba(255,255,255,0.12)", border: "none", borderRadius: 8, padding: "6px 10px", color: "#fff", fontSize: 14, cursor: "pointer" }}>✕</button>
           <div style={{ flex: 1, fontFamily: F.display, fontSize: 15, color: "#fff", fontStyle: "italic" }}>⏱ Timer</div>
           <div style={{ fontFamily: F.ui, fontSize: 11, color: "rgba(255,255,255,0.7)" }}>{timers.length}</div>
@@ -125,7 +127,7 @@ export default function TimersPopup({ onClose, initialDraft = null }) {
             onChange={e => setDraftMinutes(Math.max(1, parseInt(e.target.value, 10) || 1))}
             style={{ width: 56, flexShrink: 0, padding: "10px 8px", border: `1.5px solid ${th.appBorder}`, borderRadius: 10, background: th.appCard, fontFamily: F.ui, fontSize: 13, color: th.appInk, outline: "none" }}
           />
-          <button onClick={handleStart} style={{ flexShrink: 0, padding: "10px 16px", border: "none", borderRadius: 10, background: th.appAccent, color: "#fff", fontFamily: F.ui, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>▶ Avvia</button>
+          <button onClick={handleStart} style={{ flexShrink: 0, padding: "10px 16px", border: "none", borderRadius: 10, background: th.appAccent, color: th.appOnAccent, fontFamily: F.ui, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>▶ Avvia</button>
         </div>
       </div>
     </div>

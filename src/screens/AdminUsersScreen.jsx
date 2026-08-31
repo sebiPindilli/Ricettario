@@ -290,7 +290,7 @@ export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemor
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={() => setLastAdded(null)} style={{ flex: 1, padding: "10px", border: `1.5px solid ${th.appBorder}`, borderRadius: 10, background: "transparent", color: th.appFaded, fontFamily: F.ui, fontSize: 12, cursor: "pointer" }}>Chiudi</button>
-              <button onClick={copyInvite} style={{ flex: 2, padding: "10px", border: "none", borderRadius: 10, background: th.appAccent, color: "#fff", fontFamily: F.ui, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><AppIcon emoji="📋" icon="copia" size={13} /> Copia messaggio d'invito</button>
+              <button onClick={copyInvite} style={{ flex: 2, padding: "10px", border: "none", borderRadius: 10, background: th.appAccent, color: th.appOnAccent, fontFamily: F.ui, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><AppIcon emoji="📋" icon="copia" size={13} /> Copia messaggio d'invito</button>
             </div>
           </div>
         )}

@@ -130,14 +130,14 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
           }}>
             <AppIcon emoji="🏷️" icon="tag" size={11} /> Filtra per tag
             {activeTags.length > 0 && (
-              <span style={{ background:th.appAccent, color:"#fff", borderRadius:10, padding:"1px 6px", fontSize:10 }}>{activeTags.length}</span>
+              <span style={{ background:th.appAccent, color:th.appOnAccent, borderRadius:10, padding:"1px 6px", fontSize:10 }}>{activeTags.length}</span>
             )}
             <span style={{ fontSize:10, opacity:0.6 }}>{openTagGroup ? "▲" : "▼"}</span>
           </button>
           {activeTags.map(tag => (
             <button key={tag} onClick={() => toggleTag(tag)} style={{
               flexShrink:0, padding:"4px 10px", borderRadius:20,
-              background:th.appAccent, color:"#fff", border:"none",
+              background:th.appAccent, color:th.appOnAccent, border:"none",
               fontFamily:F.ui, fontSize:10, cursor:"pointer",
               display:"flex", alignItems:"center", gap:4,
             }}>{tag} <span style={{ opacity:0.7 }}>×</span></button>
@@ -164,7 +164,7 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
                   <span>
                     {group.group}
                     {group.tags.filter(t => activeTags.includes(t)).length > 0 && (
-                      <span style={{ marginLeft:6, background:th.appAccent, color:"#fff", borderRadius:10, padding:"1px 6px", fontSize:10 }}>
+                      <span style={{ marginLeft:6, background:th.appAccent, color:th.appOnAccent, borderRadius:10, padding:"1px 6px", fontSize:10 }}>
                         {group.tags.filter(t => activeTags.includes(t)).length}
                       </span>
                     )}
@@ -211,7 +211,7 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
           }}>
             <AppIcon emoji="⏱️" icon="tempo" size={11} /> Tempo
             {timeActive && (
-              <span style={{ background:th.appAccent, color:"#fff", borderRadius:10, padding:"1px 7px", fontSize:9.5, fontWeight:700, display:"inline-flex", alignItems:"center", gap:5 }}>
+              <span style={{ background:th.appAccent, color:th.appOnAccent, borderRadius:10, padding:"1px 7px", fontSize:9.5, fontWeight:700, display:"inline-flex", alignItems:"center", gap:5 }}>
                 {[
                   prepActive && <span key="prep" style={{ display:"inline-flex", alignItems:"center", gap:2 }}><AppIcon emoji="🍳" icon="preparazione" size={9.5} />{prepRange[0]}–{prepRange[1] >= prepBound ? prepBound+"+" : prepRange[1]}</span>,
                   cookActive && <span key="cook" style={{ display:"inline-flex", alignItems:"center", gap:2 }}><AppIcon emoji="🔥" icon="cottura" size={9.5} />{cookRange[0]}–{cookRange[1] >= cookBound ? cookBound+"+" : cookRange[1]}</span>,
@@ -260,7 +260,7 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
             {ui.filters==="expanded" && (
               <button onClick={() => { setPrepRange(draftPrepRange); setCookRange(draftCookRange); setTimeOpen(false); }} style={{
                 padding:"9px", borderRadius:10, border:"none",
-                background:th.appAccent, color:"#fff",
+                background:th.appAccent, color:th.appOnAccent,
                 fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer",
                 display:"flex", alignItems:"center", justifyContent:"center", gap:5,
               }}><AppIcon emoji="✓" icon="fatto" size={12} /> Applica</button>
@@ -315,7 +315,7 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
             }}>
               <AppIcon emoji="🏷️" icon="filtra" size={12} /> Filtri
               {activeFilterCount>0 && (
-                <span style={{ background:th.appAccent, color:"#fff", borderRadius:9, padding:"1px 6px", fontSize:10 }}>{activeFilterCount}</span>
+                <span style={{ background:th.appAccent, color:th.appOnAccent, borderRadius:9, padding:"1px 6px", fontSize:10 }}>{activeFilterCount}</span>
               )}
             </button>
             {activeSectionLabel && filterSummaryChip(activeSectionLabel, () => setActiveSection(null))}

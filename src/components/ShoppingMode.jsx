@@ -53,8 +53,10 @@ export default function ShoppingMode({ recipe, scale, onClose, onAddToList, pres
   return (
     <div style={{ position:"fixed", inset:0, zIndex:400, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
       <div style={{ width:"100%", maxHeight:"90%", background:th.appBg, borderRadius:20, display:"flex", flexDirection:"column", overflow:"hidden" }}>
-        {/* Header — fisso in cima alla scheda */}
-        <div style={{ background:th.appInk, padding:"14px 18px", display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
+        {/* Header — fisso in cima alla scheda, sempre scuro indipendente dal
+            tema (th.darkChrome, come GlobalNav): appInk si inverte con
+            temaScuro, qui servono sempre gli stessi bianchi trasparenti sotto. */}
+        <div style={{ background:th.darkChrome.bg, padding:"14px 18px", display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
           <button onClick={onClose} style={{ background:"rgba(255,255,255,0.12)", border:"none", borderRadius:8, padding:"6px 10px", color:"#fff", fontSize:14, cursor:"pointer" }}>✕</button>
           <div style={{ flex:1 }}>
             <div style={{ fontFamily:F.display, fontSize:15, color:"#fff", fontStyle:"italic" }}>🛒 Modalità Spesa</div>

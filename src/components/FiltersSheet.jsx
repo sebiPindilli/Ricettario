@@ -82,7 +82,7 @@ export default function FiltersSheet({
             <span style={{ fontFamily: F.display, fontSize: 20, color: ui.ink }}>{title}</span>
             {activeCount > 0 && (
               <span style={{
-                fontFamily: F.ui, fontSize: 10, fontWeight: 700, color: "#fff",
+                fontFamily: F.ui, fontSize: 10, fontWeight: 700, color: ui.onAccent,
                 background: ui.accent, borderRadius: 9, padding: "2px 7px",
               }}>{activeCount}</span>
             )}
@@ -108,7 +108,7 @@ export default function FiltersSheet({
           <button onClick={() => { onApply ? onApply() : onClose(); }} style={{
             width: "100%", padding: 15, border: "none",
             borderRadius: ui.radius.control + 1,
-            background: th.appInk, color: "#fff",
+            background: th.appInk, color: th.appBg,
             fontFamily: F.ui, fontSize: 12.5, fontWeight: 700,
             letterSpacing: ui.uppercaseButtons ? 1 : 0.4,
             textTransform: ui.uppercaseButtons ? "uppercase" : "none",

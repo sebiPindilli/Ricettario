@@ -53,7 +53,7 @@ export default function SearchScreen({ recipes, onBack, onRecipe }) {
             }}>
               <span>{group.group}
                 {group.tags.filter(t => selectedTags.includes(t)).length > 0 &&
-                  <span style={{ marginLeft:8, background:th.appAccent, color:"#fff", borderRadius:10, padding:"1px 7px", fontSize:10 }}>
+                  <span style={{ marginLeft:8, background:th.appAccent, color:th.appOnAccent, borderRadius:10, padding:"1px 7px", fontSize:10 }}>
                     {group.tags.filter(t => selectedTags.includes(t)).length}
                   </span>
                 }

@@ -77,7 +77,7 @@ const Sub = ({ th, children }) => (
   <div style={{ fontFamily: F.ui, fontSize: 12, color: th.appFaded, textAlign: "center", marginBottom: 16, lineHeight: 1.5 }}>{children}</div>
 );
 const Primary = ({ th, ...props }) => (
-  <button {...props} style={{ padding: "13px", borderRadius: 12, border: "none", background: th.appAccent, color: "#fff", fontFamily: F.ui, fontSize: 13, fontWeight: 700, cursor: "pointer", ...(props.disabled ? { opacity: 0.55, cursor: "default" } : {}), ...(props.style || {}) }} />
+  <button {...props} style={{ padding: "13px", borderRadius: 12, border: "none", background: th.appAccent, color: th.appOnAccent, fontFamily: F.ui, fontSize: 13, fontWeight: 700, cursor: "pointer", ...(props.disabled ? { opacity: 0.55, cursor: "default" } : {}), ...(props.style || {}) }} />
 );
 const Ghost = ({ th, ...props }) => (
   <button {...props} style={{ padding: "13px", borderRadius: 12, border: `1.5px solid ${th.appBorder}`, background: "transparent", color: th.appInk, fontFamily: F.ui, fontSize: 13, fontWeight: 600, cursor: "pointer", ...(props.style || {}) }} />

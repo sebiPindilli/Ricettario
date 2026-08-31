@@ -216,6 +216,15 @@ function coverFromPalette(c) {
 // sempre ricalcolato di `colori(paletteId, temaScuro)`.
 export function buildTheme(paletteId, temaScuro = false) {
   const c = colori(paletteId, temaScuro);
+  // Set di colori sempre scuro della palette scelta, indipendente da
+  // `temaScuro`: per le superfici pensate per restare scure a prescindere
+  // dal tema dell'app (Modalità Cucina — schermo pensato per la cucina in
+  // penombra — e la barra di navigazione di Classico, da sempre scura).
+  // `appInk`/`appBg`/`appAccent2` si invertono con `temaScuro` e non vanno
+  // bene per questo (per le palette notturne `ink` è chiaro anche in
+  // "chiaro"): `colori(paletteId, true)` è invece un set completo e già
+  // coerente al suo interno, qualunque sia la scelta reale dell'utente.
+  const darkChrome = colori(paletteId, true);
   return {
     id: c.id, name: c.nome, notturna: c.notturna,
     appBg: c.bg, appCard: c.card, appBorder: c.border, appBorderStrong: c.borderStrong,
@@ -223,6 +232,7 @@ export function buildTheme(paletteId, temaScuro = false) {
     appAccent: c.accent, appOnAccent: c.onAccent, appAccent2: c.accent2,
     navBg: c.navBg, navBorder: c.navBorder, navActive: c.navActive, navIdle: c.navIdle,
     sezioni: c.sezioni, sezioniPiene: c.sezioniPiene,
+    darkChrome,
     ...BOOK_PAGE,
     ...coverFromPalette(c),
   };
@@ -248,6 +258,10 @@ export function resolveUiStyle(theme, styleId = DEFAULT_UI_STYLE_ID) {
     muted: mix(theme.appFaded, bg, 0.45),              // maiuscoletti tenui
     accent: theme.appAccent,
     accent2: theme.appAccent2,
+    // Testo/icona sopra un pieno di accento — MAI "#fff" scritto a mano: nei
+    // temi scuri (e nelle palette notturne) l'accento si schiarisce e serve
+    // testo scuro sopra, non chiaro. Vedi PALETTE.md.
+    onAccent: theme.appOnAccent,
     ok: "#6B8C6E",
     danger: "#D93025",
     // riga alternata delle tabelle (vale ovunque ci siano righe lunghe) —
@@ -257,6 +271,12 @@ export function resolveUiStyle(theme, styleId = DEFAULT_UI_STYLE_ID) {
     // Uso: pastiglia tenue in lista, pieno solo nell'hero della scheda.
     // `theme.sezioni` arriva da colori(paletteId, temaScuro) — vedi PALETTE.md.
     sectionColor: (macroSection) => style.id === "classico" ? null : (theme.sezioni[macroSection] || theme.sezioni.altro),
+    // Variante "piena" — per i riempimenti solidi con icona/testo bianco
+    // sopra (hero della scheda ricetta, pastiglie a colore pieno). Sono due
+    // valori diversi apposta (PALETTE.md): `sezioni` è tarato per il testo
+    // DENTRO la propria pastiglia tenue, `sezioniPiene` per il bianco SOPRA
+    // un pieno — scambiarli rompe uno dei due contrasti.
+    sectionColorFull: (macroSection) => style.id === "classico" ? null : (theme.sezioniPiene[macroSection] || theme.sezioniPiene.altro),
     // superfici pronte all'uso
     cardStyle:
       style.surface === "plain"

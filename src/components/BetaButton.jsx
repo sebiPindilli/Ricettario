@@ -230,7 +230,7 @@ export default function BetaButton() {
             : { bottom: MARGIN, right: MARGIN, top: "auto", left: "auto" }),
           zIndex: 150,
           width: BTN_SIZE, height: BTN_SIZE, borderRadius: "50%",
-          border: "none", background: th.appAccent, color: "#fff",
+          border: "none", background: th.appAccent, color: th.appOnAccent,
           fontFamily: F.display, fontSize: 22, fontWeight: 700,
           boxShadow: "0 6px 16px rgba(0,0,0,0.3)", cursor: "pointer",
           display: "flex", alignItems: "center", justifyContent: "center",

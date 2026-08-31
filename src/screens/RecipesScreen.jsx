@@ -155,7 +155,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
           >
             <AppIcon emoji="🏷️" icon="tag" size={11} /> Filtra per tag
             {activeTags.length > 0 && (
-              <span style={{ background:th.appAccent, color:"#fff", borderRadius:10, padding:"1px 6px", fontSize:10 }}>{activeTags.length}</span>
+              <span style={{ background:th.appAccent, color:th.appOnAccent, borderRadius:10, padding:"1px 6px", fontSize:10 }}>{activeTags.length}</span>
             )}
             <span style={{ fontSize:10, opacity:0.6 }}>{openTagGroup ? "▲" : "▼"}</span>
           </button>
@@ -164,7 +164,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
           {activeTags.map(tag => (
             <button key={tag} onClick={() => toggleTag(tag)} style={{
               flexShrink:0, padding:"4px 10px", borderRadius:20,
-              background:th.appAccent, color:"#fff",
+              background:th.appAccent, color:th.appOnAccent,
               border:"none", fontFamily:F.ui, fontSize:10, cursor:"pointer",
               display:"flex", alignItems:"center", gap:4,
             }}>
@@ -199,7 +199,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
                   <span>
                     {group.group}
                     {group.tags.filter(t => activeTags.includes(t)).length > 0 && (
-                      <span style={{ marginLeft:6, background:th.appAccent, color:"#fff", borderRadius:10, padding:"1px 6px", fontSize:10 }}>
+                      <span style={{ marginLeft:6, background:th.appAccent, color:th.appOnAccent, borderRadius:10, padding:"1px 6px", fontSize:10 }}>
                         {group.tags.filter(t => activeTags.includes(t)).length}
                       </span>
                     )}
@@ -250,7 +250,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
           }}>
             <AppIcon emoji="⏱️" icon="tempo" size={11} /> Tempo
             {timeActive && (
-              <span style={{ background:th.appAccent, color:"#fff", borderRadius:10, padding:"1px 7px", fontSize:9.5, fontWeight:700, display:"inline-flex", alignItems:"center", gap:5 }}>
+              <span style={{ background:th.appAccent, color:th.appOnAccent, borderRadius:10, padding:"1px 7px", fontSize:9.5, fontWeight:700, display:"inline-flex", alignItems:"center", gap:5 }}>
                 {[
                   prepActive && <span key="prep" style={{ display:"inline-flex", alignItems:"center", gap:2 }}><AppIcon emoji="🍳" icon="preparazione" size={9.5} />{prepRange[0]}–{prepRange[1] >= prepBound ? prepBound+"+" : prepRange[1]}</span>,
                   cookActive && <span key="cook" style={{ display:"inline-flex", alignItems:"center", gap:2 }}><AppIcon emoji="🔥" icon="cottura" size={9.5} />{cookRange[0]}–{cookRange[1] >= cookBound ? cookBound+"+" : cookRange[1]}</span>,
@@ -299,7 +299,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
             {ui.filters==="expanded" && (
               <button onClick={() => { setPrepRange(draftPrepRange); setCookRange(draftCookRange); setTimeOpen(false); }} style={{
                 padding:"9px", borderRadius:10, border:"none",
-                background:th.appAccent, color:"#fff",
+                background:th.appAccent, color:th.appOnAccent,
                 fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer",
                 display:"flex", alignItems:"center", justifyContent:"center", gap:5,
               }}><AppIcon emoji="✓" icon="fatto" size={12} /> Applica</button>
@@ -359,7 +359,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
           <button onClick={() => onAdd("recipe")} title="Nuova ricetta" style={{
             padding:"9px 20px", borderRadius:20,
             background:th.appAccent, border:"none", cursor:"pointer",
-            color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700,
+            color:th.appOnAccent, fontFamily:F.ui, fontSize:12, fontWeight:700,
           }}>＋ Nuova ricetta</button>
         </div>
       )}
@@ -372,7 +372,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
           <button onClick={() => onAdd("recipe")} style={{
             width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:8,
             padding:"13px", borderRadius:ui.radius.control, border:"none",
-            background:ui.accent, color:"#fff", cursor:"pointer",
+            background:ui.accent, color:ui.onAccent, cursor:"pointer",
             fontFamily:F.ui, fontSize:14, fontWeight:700,
           }}>
             <Icon name="aggiungi" size={18} /> Nuova ricetta
@@ -405,7 +405,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
           }}>
             <Icon name="filtra" size={18} />
             {activeFilterCount>0 && (
-              <span style={{ position:"absolute", top:-5, right:-5, background:th.appAccent, color:"#fff", borderRadius:8, minWidth:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 3px" }}>{activeFilterCount}</span>
+              <span style={{ position:"absolute", top:-5, right:-5, background:th.appAccent, color:th.appOnAccent, borderRadius:8, minWidth:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 3px" }}>{activeFilterCount}</span>
             )}
           </button>
         )}

@@ -286,7 +286,7 @@ export default function BooksScreen({
                     <div style={{ display:"flex", alignItems:"center", gap:7 }}>
                       <div style={{ fontFamily:F.display, fontSize:16, color:th.appInk }}>{b.name}</div>
                       {isNew && active && (
-                        <span style={{ flexShrink:0, fontFamily:F.ui, fontSize:8.5, fontWeight:700, letterSpacing:0.5, color:"#fff", background:th.appAccent, borderRadius:6, padding:"2px 6px", textTransform:"uppercase" }}>Attivo</span>
+                        <span style={{ flexShrink:0, fontFamily:F.ui, fontSize:8.5, fontWeight:700, letterSpacing:0.5, color:th.appOnAccent, background:th.appAccent, borderRadius:6, padding:"2px 6px", textTransform:"uppercase" }}>Attivo</span>
                       )}
                     </div>
                     <div style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded, display:"flex", alignItems:"center", gap:6, marginTop: isNew ? 3 : 0 }}>
@@ -312,7 +312,11 @@ export default function BooksScreen({
                                 <span key={email} title={email} style={{
                                   width:16, height:16, borderRadius:"50%", flexShrink:0,
                                   marginLeft: i === 0 ? 0 : -5,
-                                  background:th.appAccent2, color:"#fff",
+                                  // accent2 non va usato come fondo pieno di
+                                  // testo (PALETTE.md): non ha un "onAccent2"
+                                  // a contrasto garantito. Qui l'accento
+                                  // primario, che invece ce l'ha.
+                                  background:th.appAccent, color:th.appOnAccent,
                                   border:`1.5px solid ${th.appCard}`,
                                   fontSize:7.5, fontWeight:700, fontFamily:F.ui,
                                   display:"flex", alignItems:"center", justifyContent:"center",
@@ -326,12 +330,12 @@ export default function BooksScreen({
                   </div>
                 )}
                 {isRen ? (
-                  <button onClick={() => { onRename(b.id, renameVal.trim() || b.name); setRenaming(null); }} style={{ background:th.appAccent, border:"none", borderRadius:9, padding:"7px 11px", color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0 }}>✓</button>
+                  <button onClick={() => { onRename(b.id, renameVal.trim() || b.name); setRenaming(null); }} style={{ background:th.appAccent, border:"none", borderRadius:9, padding:"7px 11px", color:th.appOnAccent, fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0 }}>✓</button>
                 ) : (
                   <button onClick={() => { setRenaming(b.id); setRenameVal(b.name); }} title="Rinomina" style={{ background:"none", border:"none", fontSize:15, cursor:"pointer", color:th.appFaded, flexShrink:0, padding:"4px 6px", display:"flex" }}><AppIcon emoji="✏️" icon="modifica" size={15} /></button>
                 )}
                 {!active && !isRen && (
-                  <button onClick={() => onSwitch(b.id)} style={{ background:th.appInk, border:"none", borderRadius:9, padding:"8px 13px", color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0 }}>Apri</button>
+                  <button onClick={() => onSwitch(b.id)} style={{ background:th.appInk, border:"none", borderRadius:9, padding:"8px 13px", color:th.appBg, fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0 }}>Apri</button>
                 )}
               </div>
 
@@ -401,7 +405,7 @@ export default function BooksScreen({
                       pendingTransferTarget === ob.id ? (
                         <div key={ob.id} style={{ display:"flex", alignItems:"center", gap:6, background:th.appBg, border:`1.5px solid ${th.appAccent}`, borderRadius:11, padding:"6px 8px" }}>
                           <span style={{ fontFamily:F.ui, fontSize:10.5, color:th.appInk }}>Confermi in "{ob.name}"?</span>
-                          <button disabled={transferBusy} onClick={() => doTransferAll(ob.id, ob.name)} style={{ padding:"5px 9px", borderRadius:8, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:10.5, fontWeight:700, cursor:"pointer" }}>{transferBusy ? "…" : "✓ Conferma"}</button>
+                          <button disabled={transferBusy} onClick={() => doTransferAll(ob.id, ob.name)} style={{ padding:"5px 9px", borderRadius:8, border:"none", background:th.appAccent, color:th.appOnAccent, fontFamily:F.ui, fontSize:10.5, fontWeight:700, cursor:"pointer" }}>{transferBusy ? "…" : "✓ Conferma"}</button>
                           <button disabled={transferBusy} onClick={() => setPendingTransferTarget(null)} style={{ padding:"5px 9px", borderRadius:8, border:`1px solid ${th.appBorder}`, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:10.5, cursor:"pointer" }}>Annulla</button>
                         </div>
                       ) : (
@@ -430,12 +434,12 @@ export default function BooksScreen({
                         ) : pendingBackupCopyId === bk.id ? (
                           <>
                             <span style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded }}>Copiare tutto in "{b.name}"?</span>
-                            <button disabled={backupCopyBusyId === bk.id} onClick={() => doBackupCopy(bk.id, b.id, b.name)} style={{ padding:"5px 9px", borderRadius:8, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:10.5, fontWeight:700, cursor:"pointer" }}>{backupCopyBusyId === bk.id ? "…" : "✓ Conferma"}</button>
+                            <button disabled={backupCopyBusyId === bk.id} onClick={() => doBackupCopy(bk.id, b.id, b.name)} style={{ padding:"5px 9px", borderRadius:8, border:"none", background:th.appAccent, color:th.appOnAccent, fontFamily:F.ui, fontSize:10.5, fontWeight:700, cursor:"pointer" }}>{backupCopyBusyId === bk.id ? "…" : "✓ Conferma"}</button>
                             <button disabled={backupCopyBusyId === bk.id} onClick={() => setPendingBackupCopyId(null)} style={{ padding:"5px 9px", borderRadius:8, border:`1px solid ${th.appBorder}`, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:10.5, cursor:"pointer" }}>Annulla</button>
                           </>
                         ) : (
                           <>
-                            <button onClick={() => setPendingBackupCopyId(bk.id)} style={{ padding:"5px 9px", borderRadius:8, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:10.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}><AppIcon emoji="🔀" icon="trasferisci" size={11} /> Copia tutto qui</button>
+                            <button onClick={() => setPendingBackupCopyId(bk.id)} style={{ padding:"5px 9px", borderRadius:8, border:"none", background:th.appAccent, color:th.appOnAccent, fontFamily:F.ui, fontSize:10.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}><AppIcon emoji="🔀" icon="trasferisci" size={11} /> Copia tutto qui</button>
                             <button onClick={() => setPendingDelete(bk.id)} title="Elimina backup" style={{ padding:"5px 9px", borderRadius:8, border:`1px solid ${th.appBorder}`, background:"transparent", color:DANGER, fontFamily:F.ui, fontSize:10.5, cursor:"pointer", display:"flex", alignItems:"center" }}><AppIcon emoji="🗑️" icon="elimina" size={13} /></button>
                           </>
                         )}

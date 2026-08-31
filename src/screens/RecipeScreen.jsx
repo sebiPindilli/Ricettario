@@ -29,7 +29,10 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
   // Colore per ricetta (classico) → colore di sezione (quaderno/schedario,
   // vedi DECISIONI.md: "il colore per ricetta sparisce, lo decide la
   // sezione"). Un solo punto di derivazione, riusato ovunque nella scheda.
-  const heroColor = ui.sectionColor(recipe.macroSection) ?? recipe.color;
+  // sectionColorFull (sezioniPiene), non sectionColor (sezioni): qui è
+  // sempre un riempimento pieno con icona/testo bianco sopra — le due
+  // varianti hanno contrasti tarati per usi diversi (PALETTE.md).
+  const heroColor = ui.sectionColorFull(recipe.macroSection) ?? recipe.color;
   const isOnline = useOnline();
   const [tab, setTab] = useState("ingredienti");
   const [toast, setToast] = useState({ msg:"", visible:false });
@@ -437,14 +440,14 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
             <button onClick={() => setActiveMode({ mode:"shopping", scale: doseScale })} style={{
               flex:1, padding:"12px 8px",
               border:"none", borderRadius:12,
-              background:th.appAccent, color:"#fff",
+              background:th.appAccent, color:th.appOnAccent,
               fontFamily:F.ui, fontSize:13, fontWeight:700,
               cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6,
             }}>🛒 Spesa</button>
             <button onClick={() => setActiveMode({ mode:"cooking", scale: doseScale })} style={{
               flex:1, padding:"12px 8px",
               border:"none", borderRadius:12,
-              background:th.appInk, color:"#fff",
+              background:th.appInk, color:th.appBg,
               fontFamily:F.ui, fontSize:13, fontWeight:700,
               cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6,
             }}>👨‍🍳 Cucina</button>

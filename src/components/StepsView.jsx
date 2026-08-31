@@ -14,8 +14,10 @@ export default function StepsView({ steps, recipeColor }) {
   const numbers = stepNumbers(steps);
   let flatI = 0;
   // quaderno: pastiglia del numero passo in appInk (non nel colore di
-  // sezione), come da README §Screens 7.
+  // sezione), come da README §Screens 7. appInk si inverte con temaScuro
+  // (chiaro nei temi scuri) — il testo sopra deve seguirlo, mai bianco fisso.
   const badgeColor = ui.id === "quaderno" ? th.appInk : recipeColor;
+  const badgeTextColor = ui.id === "quaderno" ? th.appBg : "#fff";
 
   const renderStep = (step, key, label, color) => {
     const text = typeof step === "string" ? step : step.text;
@@ -26,7 +28,7 @@ export default function StepsView({ steps, recipeColor }) {
           <div style={{
             minWidth:26, height:26, padding:"0 5px", borderRadius:13,
             background: color || badgeColor,
-            color:"#fff",
+            color:badgeTextColor,
             display:"flex", alignItems:"center", justifyContent:"center",
             fontFamily:F.ui, fontSize:12, fontWeight:700,
             flexShrink:0, marginTop:2,

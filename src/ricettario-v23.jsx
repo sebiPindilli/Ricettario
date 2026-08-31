@@ -2505,7 +2505,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
                 <div style={{ display:"flex", flexDirection:"column", gap:9 }}>
                   <button onClick={() => resolveShopUpdate("update")} style={{
                     padding:"13px", borderRadius:12, border:"none", background:th.appAccent,
-                    color:"#fff", fontFamily:F.ui, fontSize:13, fontWeight:700, cursor:"pointer",
+                    color:th.appOnAccent, fontFamily:F.ui, fontSize:13, fontWeight:700, cursor:"pointer",
                     display:"flex", alignItems:"center", justifyContent:"center", gap:6,
                   }}><AppIcon emoji="🔄" icon="aggiorna" size={14} /> Aggiorna le quantità nella spesa</button>
                   <button onClick={() => resolveShopUpdate("keep")} style={{

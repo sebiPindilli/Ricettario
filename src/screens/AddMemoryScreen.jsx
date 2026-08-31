@@ -203,7 +203,11 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
           <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
             {recipes.map(r => {
               const sel = selectedRecipeIds.includes(r.id);
+              // sezioni (testo/tenue) e sezioniPiene (riempimento pieno con
+              // icona/spunta bianca) sono due colori diversi apposta — vedi
+              // PALETTE.md, e ui.sectionColorFull in data/uiStyles.js.
               const color = ui.sectionColor(r.macroSection) ?? r.color;
+              const fillColor = ui.sectionColorFull(r.macroSection) ?? r.color;
               return (
                 <button key={r.id} onClick={() => toggleRecipe(r.id)} style={{
                   display:"flex", alignItems:"center", gap:12,
@@ -213,12 +217,12 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
                   borderRadius:12, cursor:"pointer", textAlign:"left",
                   transition:"all 0.15s",
                 }}>
-                  <div style={{ width:32, height:32, borderRadius:8, background:color, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><ChosenIcon emoji={r.emoji} icon={r.icon} size={16} /></div>
+                  <div style={{ width:32, height:32, borderRadius:8, background:fillColor, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><ChosenIcon emoji={r.emoji} icon={r.icon} size={16} /></div>
                   <div style={{ flex:1, fontFamily:F.ui, fontSize:13, color: sel ? color : th.appInk, fontWeight: sel ? 600 : 400 }}>{r.title}</div>
                   <div style={{
                     width:22, height:22, borderRadius:"50%",
                     border:`2px solid ${sel ? color : th.appBorder}`,
-                    background: sel ? color : "transparent",
+                    background: sel ? fillColor : "transparent",
                     display:"flex", alignItems:"center", justifyContent:"center",
                     color:"#fff", fontSize:12, flexShrink:0,
                   }}>{sel ? "✓" : ""}</div>

@@ -179,7 +179,7 @@ export default function OrganizeIngredientsScreen({
         {subtitle}
       </div>
       <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-        <button onClick={onAdd} style={{ background:th.appAccent, border:"none", borderRadius:9, padding:"7px 11px", color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer" }}>{addLabel}</button>
+        <button onClick={onAdd} style={{ background:th.appAccent, border:"none", borderRadius:9, padding:"7px 11px", color:th.appOnAccent, fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer" }}>{addLabel}</button>
         <button onClick={onIgnore} style={{ background:"transparent", border:`1.5px solid ${th.appBorder}`, borderRadius:9, padding:"7px 11px", color:th.appFaded, fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer" }}>Ignora</button>
       </div>
     </div>
@@ -223,7 +223,7 @@ export default function OrganizeIngredientsScreen({
                       <div style={{ fontFamily:F.body, fontSize:14.5, fontWeight:700, color:th.appInk }}>⊕ {agg.name}</div>
                       <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:2 }}>{(agg.members||[]).map(dictName).join(" · ")}</div>
                     </div>
-                    <button onClick={() => { setManageAggs(false); setEditingFrom("manageAggs"); setEditing({ kind:"aggregate", id:agg.id, name:agg.name, members:[...(agg.members||[])], categories:[...(agg.categories||[])] }); }} style={{ background:th.appInk, border:"none", borderRadius:9, padding:"7px 11px", color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0, display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="✏️" icon="modifica" size={11} /> Modifica</button>
+                    <button onClick={() => { setManageAggs(false); setEditingFrom("manageAggs"); setEditing({ kind:"aggregate", id:agg.id, name:agg.name, members:[...(agg.members||[])], categories:[...(agg.categories||[])] }); }} style={{ background:th.appInk, border:"none", borderRadius:9, padding:"7px 11px", color:th.appBg, fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0, display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="✏️" icon="modifica" size={11} /> Modifica</button>
                   </div>
                 </div>
               ))}
@@ -417,17 +417,20 @@ export default function OrganizeIngredientsScreen({
         <div style={{ padding:"12px 20px 8px", display:"flex", alignItems:"center", gap:10 }}>
           <button onClick={() => { setManageNutri(false); setDbSearch(""); }} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
           <div style={{ flex:1 }}>
-            <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>📖 Database alimenti</div>
+            <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk, display:"flex", alignItems:"center", gap:6 }}><AppIcon emoji="📖" icon="libro" size={16}/> Database alimenti</div>
             <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>{NUTRITION_DB.length} voci · valori per 100 g</div>
           </div>
         </div>
         <div style={{ padding:"0 18px 8px" }}>
-          <input
-            value={dbSearch}
-            onChange={e => setDbSearch(e.target.value)}
-            placeholder="🔍 Cerca un alimento…"
-            style={{ width:"100%", padding:"10px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:11, background:th.appCard, fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none", boxSizing:"border-box" }}
-          />
+          <div style={{ display:"flex", gap:8, alignItems:"center", background:th.appCard, border:`1.5px solid ${th.appBorder}`, borderRadius:11, padding:"10px 12px" }}>
+            <AppIcon emoji="🔍" icon="cerca" size={14} style={{ color:th.appFaded, flexShrink:0 }}/>
+            <input
+              value={dbSearch}
+              onChange={e => setDbSearch(e.target.value)}
+              placeholder="Cerca un alimento…"
+              style={{ flex:1, border:"none", background:"transparent", fontFamily:F.body, fontSize:13, color:th.appInk, outline:"none", minWidth:0 }}
+            />
+          </div>
         </div>
         <div style={{ flex:1, overflowY:"auto", padding:"0 18px 40px" }}>
           {/* Personalizzati */}
@@ -530,7 +533,7 @@ export default function OrganizeIngredientsScreen({
         <div style={{ padding:"12px 20px 8px", display:"flex", alignItems:"center", gap:10 }}>
           <button onClick={() => setManageEq(false)} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
           <div style={{ flex:1 }}>
-            <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}>⚖️ Conversioni di sistema</div>
+            <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk, display:"flex", alignItems:"center", gap:6 }}><AppIcon emoji="⚖️" icon="bilancia" size={16}/> Conversioni di sistema</div>
             <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>unità di peso e volume, applicate sempre di default</div>
           </div>
         </div>
@@ -550,7 +553,7 @@ export default function OrganizeIngredientsScreen({
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:24, marginBottom:8 }}>
             <div style={{ fontFamily:F.display, fontSize:15, color:th.appInk }}>➕ Le tue conversioni</div>
             {!customUnitForm && (
-              <button onClick={startAdd} style={{ background:th.appAccent, border:"none", borderRadius:9, padding:"6px 12px", color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer" }}>+ Aggiungi</button>
+              <button onClick={startAdd} style={{ background:th.appAccent, border:"none", borderRadius:9, padding:"6px 12px", color:th.appOnAccent, fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer" }}>+ Aggiungi</button>
             )}
           </div>
           <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5, marginBottom:12 }}>
@@ -584,7 +587,7 @@ export default function OrganizeIngredientsScreen({
               </div>
               {customUnitForm.error && <div style={{ fontFamily:F.ui, fontSize:10.5, color:"#C4593A", marginTop:8 }}>{customUnitForm.error}</div>}
               <div style={{ display:"flex", gap:8, marginTop:10 }}>
-                <button onClick={submitForm} style={{ padding:"7px 14px", borderRadius:9, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="💾" icon="salva" size={12} /> Salva</button>
+                <button onClick={submitForm} style={{ padding:"7px 14px", borderRadius:9, border:"none", background:th.appAccent, color:th.appOnAccent, fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="💾" icon="salva" size={12} /> Salva</button>
                 <button onClick={cancelForm} style={{ padding:"7px 14px", borderRadius:9, border:`1px solid ${th.appBorder}`, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:11.5, cursor:"pointer" }}>Annulla</button>
               </div>
             </div>
@@ -1036,7 +1039,7 @@ export default function OrganizeIngredientsScreen({
             );
           })}
         </div>
-        <button onClick={save} style={{ marginTop:9, padding:"7px 14px", borderRadius:9, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="💾" icon="salva" size={12} /> Salva</button>
+        <button onClick={save} style={{ marginTop:9, padding:"7px 14px", borderRadius:9, border:"none", background:th.appAccent, color:th.appOnAccent, fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="💾" icon="salva" size={12} /> Salva</button>
       </div>
     );
   };
@@ -1109,7 +1112,7 @@ export default function OrganizeIngredientsScreen({
             )}
           </div>
         )}
-        <button onClick={save} style={{ marginTop:9, padding:"7px 14px", borderRadius:9, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="💾" icon="salva" size={12} /> Salva</button>
+        <button onClick={save} style={{ marginTop:9, padding:"7px 14px", borderRadius:9, border:"none", background:th.appAccent, color:th.appOnAccent, fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="💾" icon="salva" size={12} /> Salva</button>
       </div>
     );
   };
@@ -1169,7 +1172,7 @@ export default function OrganizeIngredientsScreen({
             </div>
           );
         })}
-        <button onClick={save} style={{ marginTop:3, padding:"7px 14px", borderRadius:9, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="💾" icon="salva" size={12} /> Salva</button>
+        <button onClick={save} style={{ marginTop:3, padding:"7px 14px", borderRadius:9, border:"none", background:th.appAccent, color:th.appOnAccent, fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="💾" icon="salva" size={12} /> Salva</button>
       </div>
     );
   };
@@ -1223,14 +1226,15 @@ export default function OrganizeIngredientsScreen({
     const eqUnits = nonWeightUnitsFor(memberIds);
     const eqFactors = equivalences[dataKey]?.factors || {};
 
-    const attrBtn = (label, kind, active) => (
+    const attrBtn = (emoji, icon, label, kind) => (
       <button onClick={() => toggleExpand(key, kind)} style={{
         padding:"6px 10px", borderRadius:10,
         border:`1.5px solid ${exp === kind ? th.appAccent : th.appBorder}`,
         background: exp === kind ? th.appAccent + "18" : "transparent",
         color: exp === kind ? th.appAccent : th.appFaded,
         fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer",
-      }}>{label}</button>
+        display:"flex", alignItems:"center", gap:4,
+      }}><AppIcon emoji={emoji} icon={icon} size={10.5}/> {label}</button>
     );
 
     return (
@@ -1330,7 +1334,7 @@ export default function OrganizeIngredientsScreen({
             ) : "senza categoria — assegnane una"}
           </div>
           <div style={{ fontFamily:F.ui, fontSize:10.5, color: nutri.ok ? th.appFaded : RED, fontWeight: nutri.ok ? 400 : 600 }}>
-            🍎 {nutri.ok ? (
+            <AppIcon emoji="🍎" icon="nutrizione" size={10.5} /> {nutri.ok ? (
               nutriInheritedFrom ? (
                 <>eredita da «{nutriInheritedFrom.name}» · <span style={{ opacity:0.8 }}>{macroLine(nutri.values, {fib:false})}</span></>
               ) : (
@@ -1339,7 +1343,7 @@ export default function OrganizeIngredientsScreen({
             ) : "non collegato al database valori nutrizionali"}
           </div>
           <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded }}>
-            ⚖️ {eqUnits.length === 0 ? "nessuna equivalenza da definire" : eqUnits.map((u, i) => {
+            <AppIcon emoji="⚖️" icon="bilancia" size={10.5} /> {eqUnits.length === 0 ? "nessuna equivalenza da definire" : eqUnits.map((u, i) => {
               const overridden = eqFactors[u] > 0;
               const f = overridden ? eqFactors[u] : customUnits[u]?.grams;
               return (
@@ -1350,15 +1354,15 @@ export default function OrganizeIngredientsScreen({
             })}
           </div>
           <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded }}>
-            📖 {linked.length > 0 ? linked.map(r => r.title).join(", ") : "in nessuna ricetta"}
+            <AppIcon emoji="📖" icon="libro" size={10.5} /> {linked.length > 0 ? linked.map(r => r.title).join(", ") : "in nessuna ricetta"}
           </div>
         </div>
 
         {/* Pulsanti modifica */}
         <div style={{ display:"flex", gap:6, marginTop:9, flexWrap:"wrap" }}>
-          {attrBtn("🏷️ Categorie", "cat")}
-          {attrBtn("🍎 Nutrizione", "nutri")}
-          {attrBtn("⚖️ Equivalenze", "eq")}
+          {attrBtn("🏷️", "tag", "Categorie", "cat")}
+          {attrBtn("🍎", "nutrizione", "Nutrizione", "nutri")}
+          {attrBtn("⚖️", "bilancia", "Equivalenze", "eq")}
         </div>
 
         {exp === "cat" && CatEditor({ draftKey:key, dataKey, current:cats, isAgg, agg })}
@@ -1384,7 +1388,7 @@ export default function OrganizeIngredientsScreen({
                   if (onRenameIngredient(name, renameDraft[name] ?? display)) toggleExpand(key, "rename");
                   else setRenameErr(name);
                 }}
-                style={{ padding:"9px 14px", borderRadius:9, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer", flexShrink:0 }}
+                style={{ padding:"9px 14px", borderRadius:9, border:"none", background:th.appAccent, color:th.appOnAccent, fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer", flexShrink:0 }}
               >Salva</button>
             </div>
             {renameErr === name && (
@@ -1532,11 +1536,11 @@ export default function OrganizeIngredientsScreen({
       {ui.id === "classico" ? (
         <div style={{ padding:"0 18px 4px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
           {[
-            ["🍇", "Database aggregati", "#5A8C3A", () => { setManageAggs(true); setOpenAggSections({ existing:true, suggested:false }); }],
-            ["🏷️", "Database categorie", "#5A3A9A", () => setManageCats(true)],
-            ["⚖️", "Conversioni di sistema", "#2D8C6B", () => setManageEq(true)],
-            ["🍎", "Database valori nutrizionali", "#C4593A", () => setManageNutri(true)],
-          ].map(([icon, title, color, go]) => (
+            ["🍇", "uva", "Database aggregati", "#5A8C3A", () => { setManageAggs(true); setOpenAggSections({ existing:true, suggested:false }); }],
+            ["🏷️", "tag", "Database categorie", "#5A3A9A", () => setManageCats(true)],
+            ["⚖️", "bilancia", "Conversioni di sistema", "#2D8C6B", () => setManageEq(true)],
+            ["🍎", "nutrizione", "Database valori nutrizionali", "#C4593A", () => setManageNutri(true)],
+          ].map(([emoji, icon, title, color, go]) => (
             <button key={title} onClick={go} style={{
               background:th.appCard, border:`1.5px solid ${th.appBorder}`, borderRadius:14,
               padding:"13px 8px", cursor:"pointer",
@@ -1546,8 +1550,8 @@ export default function OrganizeIngredientsScreen({
                 width:40, height:40, borderRadius:"50%",
                 border:`1.5px solid ${color}55`, background:`${color}1C`,
                 display:"flex", alignItems:"center", justifyContent:"center",
-                fontSize:20, lineHeight:1,
-              }}>{icon}</span>
+                fontSize:20, lineHeight:1, color,
+              }}><AppIcon emoji={emoji} icon={icon} size={20}/></span>
               <span style={{ fontFamily:F.ui, fontSize:10.5, fontWeight:700, color:th.appInk, textAlign:"center", lineHeight:1.3 }}>{title}</span>
             </button>
           ))}
@@ -1600,7 +1604,7 @@ export default function OrganizeIngredientsScreen({
       {/* Ricerca */}
       <div style={{ padding:"0 18px 0" }}>
         <div style={{ display:"flex", gap:8, alignItems:"center", background:th.appCard, border:`1.5px solid ${search ? th.appAccent : th.appBorder}`, borderRadius:12, padding:"9px 14px" }}>
-          <span style={{ fontSize:15 }}>🔍</span>
+          <AppIcon emoji="🔍" icon="cerca" size={15} style={{ color:th.appFaded, flexShrink:0 }}/>
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -1614,7 +1618,7 @@ export default function OrganizeIngredientsScreen({
       {/* Filtro per fonte: una ricetta specifica, o la lista spesa corrente */}
       <div style={{ padding:"8px 18px 0" }}>
         <div style={{ display:"flex", gap:8, alignItems:"center", background:th.appCard, border:`1.5px solid ${filterRecipeId ? th.appAccent : th.appBorder}`, borderRadius:12, padding:"9px 14px" }}>
-          <span style={{ fontSize:15 }}>{filterIsShopping ? "🛒" : "📖"}</span>
+          <AppIcon emoji={filterIsShopping ? "🛒" : "📖"} icon={filterIsShopping ? "spesa" : "libro"} size={15} style={{ color:th.appFaded, flexShrink:0 }}/>
           <select
             value={filterRecipeId}
             onChange={e => setFilterRecipeId(e.target.value)}
@@ -1657,7 +1661,7 @@ export default function OrganizeIngredientsScreen({
       {/* Filtro per tipo di alert — visibile solo in "Da gestire" */}
       {issueMode && (
         <div style={{ padding:"8px 18px 0", display:"flex", gap:6, flexWrap:"wrap", alignItems:"center", justifyContent:"center" }}>
-          {[["cat","🏷️ Categoria"],["nutri","🍎 Nutrizione"],["eq","⚖️ Equivalenze"]].map(([type, label]) => {
+          {[["cat","🏷️","tag","Categoria"],["nutri","🍎","nutrizione","Nutrizione"],["eq","⚖️","bilancia","Equivalenze"]].map(([type, emoji, icon, label]) => {
             const on = alertFilter.includes(type);
             return (
               <button
@@ -1665,12 +1669,13 @@ export default function OrganizeIngredientsScreen({
                 onClick={() => setAlertFilter(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type])}
                 style={{
                   flexShrink:0, padding:"7px 11px", borderRadius:20,
-                  border:`1.5px solid ${on ? "#C4593A" : th.appBorder}`,
-                  background: on ? "#C4593A18" : "transparent",
-                  color: on ? "#C4593A" : th.appFaded,
+                  border:`1.5px solid ${on ? th.appAccent : th.appBorder}`,
+                  background: on ? th.appAccent + "18" : "transparent",
+                  color: on ? th.appAccent : th.appFaded,
                   fontFamily:F.ui, fontSize:11.5, fontWeight:600, cursor:"pointer",
+                  display:"inline-flex", alignItems:"center", gap:4,
                 }}
-              >{label}</button>
+              ><AppIcon emoji={emoji} icon={icon} size={11.5}/> {label}</button>
             );
           })}
         </div>

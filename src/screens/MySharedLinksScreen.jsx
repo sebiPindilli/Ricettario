@@ -135,7 +135,7 @@ export default function MySharedLinksScreen({ me, nav, onBack }) {
                 )}
                 <div style={{ display:"flex", gap:6 }}>
                   <button onClick={() => setEditingId(null)} disabled={busyId === item.id} style={{ flex:1, padding:"8px", borderRadius:9, border:`1.5px solid ${th.appBorder}`, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:11.5, cursor:"pointer" }}>Annulla</button>
-                  <button onClick={() => saveEdit(item.id)} disabled={busyId === item.id || (editVisibility === "restricted" && !editEmailsText.trim())} style={{ flex:2, padding:"8px", borderRadius:9, border:"none", background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer" }}>
+                  <button onClick={() => saveEdit(item.id)} disabled={busyId === item.id || (editVisibility === "restricted" && !editEmailsText.trim())} style={{ flex:2, padding:"8px", borderRadius:9, border:"none", background:th.appAccent, color:th.appOnAccent, fontFamily:F.ui, fontSize:11.5, fontWeight:700, cursor:"pointer" }}>
                     {busyId === item.id ? "Salvataggio…" : "Salva"}
                   </button>
                 </div>

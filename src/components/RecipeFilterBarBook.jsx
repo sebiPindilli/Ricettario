@@ -54,7 +54,7 @@ export default function RecipeFilterBarBook({ recipes, extraTagGroups, sectionLi
           <button onClick={() => onAdd("recipe")} title="Nuova ricetta" style={{
             padding:"9px 20px", borderRadius:20,
             background:th.appAccent, border:"none", cursor:"pointer",
-            color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700,
+            color:th.appOnAccent, fontFamily:F.ui, fontSize:12, fontWeight:700,
           }}>＋ Nuova ricetta</button>
         </div>
       )}
@@ -146,8 +146,10 @@ export default function RecipeFilterBarBook({ recipes, extraTagGroups, sectionLi
             ) : null}
           </div>
 
-          {/* Bottom prev/next with titles */}
-          <div style={{ display:"flex", background:th.appInk, flexShrink:0 }}>
+          {/* Bottom prev/next with titles — barra sempre scura, indipendente
+              dal tema (th.darkChrome, come GlobalNav): appInk si inverte con
+              temaScuro, qui servono sempre gli stessi bianchi trasparenti sotto. */}
+          <div style={{ display:"flex", background:th.darkChrome.bg, flexShrink:0 }}>
             <button
               onClick={() => turnPage("prev")}
               disabled={safeIndex===0}

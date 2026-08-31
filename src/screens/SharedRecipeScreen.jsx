@@ -125,10 +125,18 @@ export default function SharedRecipeScreen({ shareId, me, editableBooks = [], on
       })
     : recipe.steps.map(st => ({ text: typeof st === "string" ? st : st.text, photos: stepPhotosOf(st) }));
 
+  // Colore di sezione (sezioniPiene: riempimento pieno con icona/numero
+  // bianco sopra) → colore libero della ricetta → accento del tema come
+  // ultimo fallback. Il testo bianco è sicuro solo sui primi due; se si
+  // ricade sull'accento serve il suo onAccent, non bianco fisso.
+  const badgeSource = ui.sectionColorFull(recipe.macroSection) ?? recipe.color;
+  const badgeColor = badgeSource || th.appAccent;
+  const badgeTextColor = badgeSource ? "#fff" : th.appOnAccent;
+
   return (
     <Shell th={th} onClose={onClose}>
       <div style={{ textAlign:"center", marginBottom:14 }}>
-        <div style={{ width:64, height:64, borderRadius:16, background:(ui.sectionColor(recipe.macroSection) ?? recipe.color) || th.appAccent, color:"#fff", margin:"0 auto 10px", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden" }}>
+        <div style={{ width:64, height:64, borderRadius:16, background:badgeColor, color:badgeTextColor, margin:"0 auto 10px", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden" }}>
           {dishPhotoOf(recipe) ? <img src={dishPhotoOf(recipe)} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }}/> : <ChosenIcon emoji={recipe.emoji || "🍽️"} icon={recipe.icon} size={30} />}
         </div>
         <div style={{ fontFamily:F.display, fontSize:22, fontStyle:"italic", color:th.appInk }}>{recipe.title}</div>
@@ -142,7 +150,7 @@ export default function SharedRecipeScreen({ shareId, me, editableBooks = [], on
         {isNew && editableBooks.length > 0 && (
           <button onClick={() => saveSectionRef.current?.scrollIntoView({ behavior:"smooth", block:"start" })} style={{
             marginTop:12, padding:"10px 18px", borderRadius:20, border:"none",
-            background:th.appAccent, color:"#fff", fontFamily:F.ui, fontSize:12.5, fontWeight:700, cursor:"pointer",
+            background:th.appAccent, color:th.appOnAccent, fontFamily:F.ui, fontSize:12.5, fontWeight:700, cursor:"pointer",
           }}>＋ Salva nel mio ricettario</button>
         )}
       </div>
@@ -198,7 +206,7 @@ export default function SharedRecipeScreen({ shareId, me, editableBooks = [], on
             ? <div key={i} style={{ fontFamily:F.ui, fontSize:10.5, fontWeight:700, textTransform:"uppercase", letterSpacing:1, color:th.appAccent, margin:"10px 0 4px" }}>{step.sectionLabel}</div>
             : (
               <div key={i} style={{ display:"flex", gap:10, marginBottom:12 }}>
-                <div style={{ width:22, height:22, borderRadius:"50%", background:(ui.sectionColor(recipe.macroSection) ?? recipe.color) || th.appAccent, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, flexShrink:0 }}>{++n}</div>
+                <div style={{ width:22, height:22, borderRadius:"50%", background:badgeColor, color:badgeTextColor, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, flexShrink:0 }}>{++n}</div>
                 <div style={{ flex:1 }}>
                   <div style={{ fontFamily:F.body, fontSize:13.5, color:th.appInk, lineHeight:1.55 }}>{step.text}</div>
                   {step.photos && step.photos.length > 0 && (

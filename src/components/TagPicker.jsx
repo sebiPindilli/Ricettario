@@ -55,7 +55,7 @@ export default function TagPicker({ selectedTags, onChange, extraGroups = [], on
           {selectedTags.map(tag => (
             <button key={tag} onClick={() => toggle(tag)} style={{
               padding:"4px 10px", borderRadius:20,
-              background:th.appAccent, color:"#fff",
+              background:th.appAccent, color:th.appOnAccent,
               border:"none", fontFamily:F.ui, fontSize:11, cursor:"pointer",
               display:"flex", alignItems:"center", gap:4,
             }}>
@@ -90,7 +90,7 @@ export default function TagPicker({ selectedTags, onChange, extraGroups = [], on
               <span style={{ fontWeight:600 }}>
                 {group.group}
                 {totalActive > 0 && (
-                  <span style={{ marginLeft:8, background:th.appAccent, color:"#fff", borderRadius:10, padding:"1px 7px", fontSize:10 }}>
+                  <span style={{ marginLeft:8, background:th.appAccent, color:th.appOnAccent, borderRadius:10, padding:"1px 7px", fontSize:10 }}>
                     {totalActive}
                   </span>
                 )}
@@ -117,7 +117,7 @@ export default function TagPicker({ selectedTags, onChange, extraGroups = [], on
                     <button key={tag} onClick={() => toggle(tag)} style={{
                       padding:"5px 12px", borderRadius:20,
                       border:`1.5px solid ${th.appAccent}`,
-                      background:th.appAccent, color:"#fff",
+                      background:th.appAccent, color:th.appOnAccent,
                       fontFamily:F.ui, fontSize:11, cursor:"pointer",
                       display:"flex", alignItems:"center", gap:4,
                     }}>{tag} <span style={{ opacity:0.7 }}>×</span></button>
@@ -131,7 +131,7 @@ export default function TagPicker({ selectedTags, onChange, extraGroups = [], on
                     placeholder={`Aggiungi tag a "${group.group}"…`}
                     style={{ flex:1, padding:"8px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appBg, fontFamily:F.ui, fontSize:12, color:th.appInk, outline:"none" }}
                   />
-                  <button onClick={() => addCustomTag(group.group)} style={{ padding:"8px 14px", borderRadius:10, background:th.appAccent, color:"#fff", border:"none", fontFamily:F.ui, fontSize:12, cursor:"pointer", fontWeight:700 }}>＋</button>
+                  <button onClick={() => addCustomTag(group.group)} style={{ padding:"8px 14px", borderRadius:10, background:th.appAccent, color:th.appOnAccent, border:"none", fontFamily:F.ui, fontSize:12, cursor:"pointer", fontWeight:700 }}>＋</button>
                 </div>
               </div>
             )}
@@ -153,7 +153,7 @@ export default function TagPicker({ selectedTags, onChange, extraGroups = [], on
               placeholder="es. Intolleranze, Occasione speciale…"
               style={{ flex:1, padding:"8px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appBg, fontFamily:F.ui, fontSize:12, color:th.appInk, outline:"none" }}
             />
-            <button onClick={addNewGroup} style={{ padding:"8px 14px", borderRadius:10, background:th.appInk, color:"#fff", border:"none", fontFamily:F.ui, fontSize:12, cursor:"pointer", fontWeight:700 }}>＋ Categoria</button>
+            <button onClick={addNewGroup} style={{ padding:"8px 14px", borderRadius:10, background:th.appInk, color:th.appBg, border:"none", fontFamily:F.ui, fontSize:12, cursor:"pointer", fontWeight:700 }}>＋ Categoria</button>
           </div>
         </div>
       )}

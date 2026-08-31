@@ -168,7 +168,7 @@ export default function MemoriesBookScreen({ recipes, onBack, onRecipe, onRecipe
           <button onClick={() => onAdd("memory")} style={{
             padding:"9px 20px", borderRadius:20,
             background:th.appAccent, border:"none", cursor:"pointer",
-            color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700,
+            color:th.appOnAccent, fontFamily:F.ui, fontSize:12, fontWeight:700,
           }}>＋ Nuovo ricordo</button>
         </div>
       )}
@@ -180,7 +180,7 @@ export default function MemoriesBookScreen({ recipes, onBack, onRecipe, onRecipe
           <button onClick={() => onAdd("memory")} style={{
             width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:8,
             padding:"13px", borderRadius:ui.radius.control, border:"none",
-            background:ui.accent, color:"#fff", cursor:"pointer",
+            background:ui.accent, color:ui.onAccent, cursor:"pointer",
             fontFamily:F.ui, fontSize:14, fontWeight:700,
           }}>
             <Icon name="aggiungi" size={18} /> Nuovo ricordo

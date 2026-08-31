@@ -129,7 +129,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
             width:30, height:30, borderRadius:"50%", flexShrink:0, cursor:"pointer",
             border: isIntro ? `2px solid ${th.appAccent2}` : "2px solid rgba(255,255,255,0.2)",
             background: isIntro ? th.appAccent2 : "rgba(255,255,255,0.08)",
-            color:"#fff", fontSize:13,
+            color: isIntro ? th.appOnAccent : "#fff", fontSize:13,
             display:"flex", alignItems:"center", justifyContent:"center",
           }}
         >🧾</button>
@@ -158,7 +158,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
                     minWidth:30, height:30, padding:"0 6px", borderRadius:15, flexShrink:0, cursor:"pointer",
                     border: active || done ? `2px solid ${th.appAccent2}` : "2px solid rgba(255,255,255,0.2)",
                     background: active ? th.appAccent : done ? `${th.appAccent2}33` : "rgba(255,255,255,0.08)",
-                    color: done && !active ? th.appAccent2 : "#fff", fontFamily:F.ui, fontSize:12, fontWeight:700,
+                    color: done && !active ? th.appAccent2 : active ? th.appOnAccent : "#fff", fontFamily:F.ui, fontSize:12, fontWeight:700,
                     display:"flex", alignItems:"center", justifyContent:"center",
                     transition:"all 0.2s",
                   }}
@@ -176,7 +176,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
             width:30, height:30, borderRadius:"50%", flexShrink:0, cursor:"pointer",
             border: isDone ? `2px solid ${th.appAccent2}` : "2px solid rgba(255,255,255,0.2)",
             background: isDone ? th.appAccent2 : "rgba(255,255,255,0.08)",
-            color:"#fff", fontSize:13,
+            color: isDone ? th.appOnAccent : "#fff", fontSize:13,
             display:"flex", alignItems:"center", justifyContent:"center",
           }}
         ><AppIcon emoji="🏁" icon="bandiera" size={13} /></button>
@@ -185,7 +185,10 @@ export default function CookingMode({ recipe, scale, onClose }) {
   );
 
   return (
-    <div className="cooking-mode-shell" style={{ position:"fixed", inset:0, zIndex:400, background:th.appInk, display:"flex", flexDirection:"column", color:"#fff" }}>
+    // Sfondo sempre scuro (th.darkChrome.bg), indipendente dal tema
+    // chiaro/scuro scelto: pensata per la cucina in penombra, non deve
+    // invertirsi — vedi buildTheme() in data/uiStyles.js.
+    <div className="cooking-mode-shell" style={{ position:"fixed", inset:0, zIndex:400, background:th.darkChrome.bg, display:"flex", flexDirection:"column", color:"#fff" }}>
       {/* Header */}
       <div style={{ padding:"14px 18px 10px", display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.12)", border:"none", borderRadius:8, padding:"6px 10px", color:"#fff", fontSize:14, cursor:"pointer" }}>✕</button>
@@ -250,10 +253,10 @@ export default function CookingMode({ recipe, scale, onClose }) {
         ) : (
           <div>
             {step.section && (
-              <div style={{ fontFamily:F.ui, fontSize:11, letterSpacing:2, color:th.appAccent2, textTransform:"uppercase", marginBottom:10 }}>{step.section}</div>
+              <div style={{ fontFamily:F.ui, fontSize:11, letterSpacing:2, color:th.darkChrome.accent2, textTransform:"uppercase", marginBottom:10 }}>{step.section}</div>
             )}
             <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:16 }}>
-              <div style={{ minWidth:44, height:44, padding:"0 8px", borderRadius:22, background:th.appAccent, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:F.ui, fontSize:18, fontWeight:700, flexShrink:0 }}>{stepNumberLabel(step.sectionIndex, step.indexInSection)}</div>
+              <div style={{ minWidth:44, height:44, padding:"0 8px", borderRadius:22, background:th.appAccent, color:th.appOnAccent, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:F.ui, fontSize:18, fontWeight:700, flexShrink:0 }}>{stepNumberLabel(step.sectionIndex, step.indexInSection)}</div>
               {step.photos && step.photos.length > 0 && (
                 <div style={{ display:"flex", gap:8, overflowX:"auto" }}>
                   {step.photos.map((photo, pi) => (
@@ -277,7 +280,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
                 }}
                 style={{
                   marginTop:18, display:"flex", alignItems:"center", gap:8, background:th.appAccent, border:"none",
-                  borderRadius:10, padding:"10px 16px", color:"#fff", fontFamily:F.ui, fontSize:14, fontWeight:700, cursor:"pointer",
+                  borderRadius:10, padding:"10px 16px", color:th.appOnAccent, fontFamily:F.ui, fontSize:14, fontWeight:700, cursor:"pointer",
                 }}
               >▶ Timer {step.duration} min</button>
             )}
@@ -320,7 +323,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
       {!isDone && (
         <div ref={navRef} style={{ display:"flex", flexShrink:0, borderTop:"1px solid rgba(255,255,255,0.1)" }}>
           <button onClick={(e) => { e.stopPropagation(); prev(); }} disabled={isIntro} style={{ flex:1, padding:"16px", background:"none", border:"none", color: isIntro ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.75)", fontFamily:F.ui, fontSize:14, cursor: isIntro ? "default" : "pointer", borderRight:"1px solid rgba(255,255,255,0.1)" }}>‹ Indietro</button>
-          <button onClick={(e) => { e.stopPropagation(); next(); }} style={{ flex:1, padding:"16px", background:"none", border:"none", color:th.appAccent2, fontFamily:F.ui, fontSize:14, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>{isIntro ? "Inizia →" : idx === steps.length-1 ? <>Fine <AppIcon emoji="✓" icon="fatto" size={13} /></> : "Avanti ›"}</button>
+          <button onClick={(e) => { e.stopPropagation(); next(); }} style={{ flex:1, padding:"16px", background:"none", border:"none", color:th.darkChrome.accent2, fontFamily:F.ui, fontSize:14, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>{isIntro ? "Inizia →" : idx === steps.length-1 ? <>Fine <AppIcon emoji="✓" icon="fatto" size={13} /></> : "Avanti ›"}</button>
         </div>
       )}
 
