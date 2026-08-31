@@ -1,8 +1,19 @@
 import { describe, it, expect } from "vitest";
 import { resolveUiStyle, buildTheme, UI_STYLES, DEFAULT_UI_STYLE_ID, isUiStyleId, alpha, navPadBottom } from "../src/data/uiStyles.js";
-import { DEFAULT_PALETTE_ID } from "../src/data/palettes.js";
+import { PALETTES, DEFAULT_PALETTE_ID } from "../src/data/palettes.js";
 
 const theme = buildTheme(DEFAULT_PALETTE_ID, false);
+
+// WCAG 2.1 — rapporto di contrasto fra due colori esadecimali.
+function relLum(hex) {
+  const v = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map(c => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+}
+function contrast(a, b) {
+  const [x, y] = [relLum(a), relLum(b)].sort((p, q) => q - p);
+  return (x + 0.05) / (y + 0.05);
+}
 
 describe("isUiStyleId", () => {
   it("riconosce i tre stili validi", () => {
@@ -53,6 +64,35 @@ describe("resolveUiStyle — quaderno/schedario", () => {
   it("id sconosciuto ricade su classico (default)", () => {
     const ui = resolveUiStyle(theme, "inesistente");
     expect(ui.id).toBe(DEFAULT_UI_STYLE_ID);
+  });
+});
+
+describe("resolveUiStyle — bgTint/cardTint non rompono il contrasto (regressione temi scuri)", () => {
+  // Bug reale: bgTint/cardTint mescolavano bg/card verso il bianco a
+  // percentuale fissa — su un tema scuro la card diventava grigio chiaro e
+  // il testo/gli accenti sopra sparivano. La correzione usa un ΔL di
+  // luminosità percettuale fisso: qui si verifica che non regredisca su
+  // NESSUNA delle dieci palette, chiaro e scuro.
+  it("card di schedario: il testo (ink) e l'accento restano leggibili su ogni palette", () => {
+    PALETTES.forEach(p => {
+      [false, true].forEach(scuro => {
+        const t = buildTheme(p.id, scuro);
+        const ui = resolveUiStyle(t, "schedario");
+        expect(contrast(t.appInk, ui.card)).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(t.appAccent, ui.card)).toBeGreaterThanOrEqual(4.5);
+      });
+    });
+  });
+  it("sfondo di quaderno/schedario: il testo (ink) resta leggibile su ogni palette", () => {
+    PALETTES.forEach(p => {
+      [false, true].forEach(scuro => {
+        const t = buildTheme(p.id, scuro);
+        ["quaderno", "schedario"].forEach(styleId => {
+          const ui = resolveUiStyle(t, styleId);
+          expect(contrast(t.appInk, ui.bg)).toBeGreaterThanOrEqual(4.5);
+        });
+      });
+    });
   });
 });
 

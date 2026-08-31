@@ -33,6 +33,46 @@ const mix = (a, b, t) => {
   return `#${c(ar, br)}${c(ag, bg)}${c(ab, bb)}`;
 };
 
+// Schiarisce un colore di un numero fisso di punti di luminosità percettuale
+// (scala HSL 0-100), non di una percentuale verso il bianco: una percentuale
+// fissa sposta pochissimo un colore già quasi bianco ma stravolge un colore
+// scuro (bug corretto in Fase 6 — vedi bgTint/cardTint sotto). Un ΔL fisso
+// ha invece un effetto proporzionato in entrambe le direzioni, stessa logica
+// già usata per navBg in PALETTE.md ("ΔL −11 chiaro / +9 scuro").
+const hexToHsl = (hex) => {
+  const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2;
+  if (max === min) return [0, 0, l * 100];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h;
+  if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+  else if (max === g) h = (b - r) / d + 2;
+  else h = (r - g) / d + 4;
+  return [h * 60, s * 100, l * 100];
+};
+const hslToHex = (h, s, l) => {
+  h /= 360; s /= 100; l /= 100;
+  const hue2rgb = (p, q, t) => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  const toHex = (x) => Math.round(x * 255).toString(16).padStart(2, "0");
+  return s === 0
+    ? `#${toHex(l)}${toHex(l)}${toHex(l)}`
+    : `#${toHex(hue2rgb(p, q, h + 1 / 3))}${toHex(hue2rgb(p, q, h))}${toHex(hue2rgb(p, q, h - 1 / 3))}`;
+};
+const lighten = (hex, deltaL) => {
+  const [h, s, l] = hexToHsl(hex);
+  return hslToHex(h, s, Math.max(0, Math.min(100, l + deltaL)));
+};
+
 // Trasparenza su un colore pieno del tema (per pastiglie e riempimenti tenui).
 export const alpha = (hex, a) => {
   const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
@@ -105,8 +145,9 @@ export const UI_STYLES = [
     sectionLabel: { size: 9.5, spacing: 2, weight: 700 },
     uppercaseButtons: true,
     // Ritocchi di fondo: schiarisce lo sfondo del tema per dare aria.
-    bgTint: 0.35,             // verso il bianco
-    cardTint: 0,
+    // Punti di luminosità (ΔL, scala HSL), non percentuale — vedi lighten().
+    bgTint: 3,
+    cardTint: 0,              // quaderno non ha card (surface:"plain")
   },
   {
     id: "schedario",
@@ -139,8 +180,12 @@ export const UI_STYLES = [
     booksLayout: "list",
     sectionLabel: { size: 9.5, spacing: 1.8, weight: 700 },
     uppercaseButtons: false,
-    bgTint: 0.15,
-    cardTint: 0.6,            // card più chiare del fondo
+    // Punti di luminosità (ΔL, scala HSL), non percentuale — vedi lighten().
+    // Verificato su tutte e 10 le palette, chiaro e scuro: peggior contrasto
+    // accento/card a cardTint=3 resta ≥ 4,5:1 (ardesia chiaro, il caso più
+    // stretto: le notturne hanno un "chiaro" che è già un fondo scuro).
+    bgTint: 1,
+    cardTint: 3,              // card più chiare del fondo
   },
 ];
 
@@ -187,8 +232,8 @@ export function buildTheme(paletteId, temaScuro = false) {
 // `theme` è l'oggetto restituito da buildTheme() (== useTheme()).
 export function resolveUiStyle(theme, styleId = DEFAULT_UI_STYLE_ID) {
   const style = UI_STYLES.find(s => s.id === styleId) || UI_STYLES[0];
-  const bg = style.bgTint ? mix(theme.appBg, "#ffffff", style.bgTint) : theme.appBg;
-  const card = style.cardTint ? mix(theme.appCard, "#ffffff", style.cardTint) : theme.appCard;
+  const bg = style.bgTint ? lighten(theme.appBg, style.bgTint) : theme.appBg;
+  const card = style.cardTint ? lighten(theme.appCard, style.cardTint) : theme.appCard;
   return {
     ...style,
     // colori risolti — usare QUESTI nei componenti, non theme.* direttamente,
