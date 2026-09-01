@@ -131,7 +131,7 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
       <div style={{ padding:"10px 20px 0" }}>
         <EmojiColorPicker
           emoji={draft.emoji}
-          color={draft.color}
+          color={heroColor}
           icon={draft.icon}
           onEmoji={e => set("emoji", e)}
           onColor={c => set("color", c)}
@@ -204,7 +204,7 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
             </div>
             <EditSectionedList
               data={toSectioned(draft.ingredients)}
-              color={draft.color}
+              color={heroColor}
               itemType="ingredient"
               onUpdate={(sections) => set("ingredients", fromSectioned(sections))}
               nameSuggestions={nameSuggestions}
@@ -216,7 +216,7 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
         const preparazioneSection = (
           <EditSectionedSteps
             data={toSectioned(draft.steps || [])}
-            color={draft.color}
+            color={heroColor}
             onUpdate={(sections) => {
               const flat = fromSectioned(sections);
               if (Array.isArray(flat) && flat.length > 0 && !("section" in flat[0])) {

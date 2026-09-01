@@ -135,7 +135,7 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
       <div style={{ padding:"10px 20px 0" }}>
         <EmojiColorPicker
           emoji={draft.emoji}
-          color={draft.color}
+          color={heroColor}
           icon={draft.icon}
           onEmoji={e => set("emoji", e)}
           onColor={c => set("color", c)}
@@ -199,7 +199,7 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
             </div>
             <EditSectionedList
               data={toSectioned(draft.ingredients)}
-              color={draft.color}
+              color={heroColor}
               itemType="ingredient"
               onUpdate={(sections) => set("ingredients", fromSectioned(sections))}
               nameSuggestions={nameSuggestions}
@@ -211,7 +211,7 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
         const preparazioneSection = (
           <EditSectionedSteps
             data={toSectioned(draft.steps)}
-            color={draft.color}
+            color={heroColor}
             onUpdate={(sections) => {
               const flat = fromSectioned(sections);
               // if flat array, strip photo-less steps back to strings
@@ -238,10 +238,10 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
               placeholder="Aggiungi note, varianti, consigli…"
               style={{
                 width:"100%", padding:"12px 14px",
-                border:`1.5px solid #EDE6D4`,
-                borderRadius:12, background:"#F7F2E8",
+                border:`1.5px solid ${ui.border}`,
+                borderRadius:ui.radius.control, background:ui.card,
                 fontFamily:F.body, fontStyle:"italic",
-                fontSize:14, color:"#2C2416",
+                fontSize:14, color:th.appInk,
                 outline:"none", resize:"none", lineHeight:1.6,
                 boxSizing:"border-box",
               }}
@@ -253,9 +253,9 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
               placeholder="es. Nonna Maria, Giallo Zafferano…"
               style={{
                 width:"100%", padding:"10px 14px",
-                border:`1.5px solid #EDE6D4`,
-                borderRadius:10, background:"#F7F2E8",
-                fontFamily:F.ui, fontSize:13, color:"#2C2416",
+                border:`1.5px solid ${ui.border}`,
+                borderRadius:ui.radius.control, background:ui.card,
+                fontFamily:F.ui, fontSize:13, color:th.appInk,
                 outline:"none", boxSizing:"border-box",
               }}
             />
