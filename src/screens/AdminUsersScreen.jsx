@@ -285,7 +285,7 @@ export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemor
         )}
 
         {!loading && !loadError && lastAdded && (
-          <div style={{ background: `${th.appAccent}12`, border: `1.5px solid ${th.appAccent}`, borderRadius: ui.radius.card, padding: "12px 14px", marginBottom: 10 }}>
+          <div style={{ background: th.appPillBg, border: `1.5px solid ${th.appAccent}`, borderRadius: ui.radius.card, padding: "12px 14px", marginBottom: 10 }}>
             <div style={{ fontFamily: F.ui, fontSize: 12, color: th.appInk, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
               <AppIcon emoji="✅" icon="fatto" size={13} /> <b>{lastAdded}</b> aggiunto. Invito pronto da inviare:
             </div>
@@ -305,7 +305,7 @@ export default function AdminUsersScreen({ onLanding, onRecipes, onBook, onMemor
 function RoleBadge({ role, th }) {
   const styles = {
     admin: { bg: th.appBorder, color: th.appFaded },
-    tester: { bg: `${th.appAccent}22`, color: th.appAccent },
+    tester: { bg: th.appPillBg, color: th.appAccent },
     base: { bg: th.appBorder, color: th.appInk },
   };
   const s = styles[role] || styles.base;

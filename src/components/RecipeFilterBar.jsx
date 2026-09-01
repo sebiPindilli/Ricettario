@@ -123,7 +123,7 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
           <button onClick={() => setOpenTagGroup(g => g ? null : "open")} style={{
             flexShrink:0, padding:"5px 12px", borderRadius:20,
             border:`1.5px solid ${activeTags.length > 0 ? th.appAccent : th.appBorder}`,
-            background: activeTags.length > 0 ? `${th.appAccent}15` : "transparent",
+            background: activeTags.length > 0 ? th.appPillBg : "transparent",
             color: activeTags.length > 0 ? th.appAccent : th.appFaded,
             fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
             display:"flex", alignItems:"center", gap:5,
@@ -204,7 +204,7 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
           })} style={{
             flexShrink:0, padding:"5px 12px", borderRadius:20,
             border:`1.5px solid ${timeActive ? th.appAccent : th.appBorder}`,
-            background: timeActive ? `${th.appAccent}15` : "transparent",
+            background: timeActive ? th.appPillBg : "transparent",
             color: timeActive ? th.appAccent : th.appFaded,
             fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
             display:"flex", alignItems:"center", gap:5,
@@ -277,7 +277,7 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
       padding: ui.id==="quaderno" ? "2px 0" : "4px 10px",
       borderRadius: ui.id==="quaderno" ? 0 : 20,
       border: ui.id==="quaderno" ? "none" : `1px solid ${th.appAccent}`,
-      background: ui.id==="quaderno" ? "none" : `${th.appAccent}12`,
+      background: ui.id==="quaderno" ? "none" : th.appPillBg,
       color: th.appAccent, cursor:"pointer",
       fontFamily:F.ui, fontSize: ui.id==="quaderno" ? 10 : 10.5, fontWeight:700,
       textTransform: ui.id==="quaderno" ? "uppercase" : "none", letterSpacing: ui.id==="quaderno" ? 0.6 : 0,
@@ -309,7 +309,7 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
               flexShrink:0, display:"flex", alignItems:"center", gap:6,
               padding:"7px 13px", borderRadius: ui.radius.chip,
               border:`1.5px solid ${activeFilterCount>0 ? th.appAccent : ui.hairlineStrong}`,
-              background: activeFilterCount>0 ? `${th.appAccent}12` : "transparent",
+              background: activeFilterCount>0 ? th.appPillBg : "transparent",
               color: activeFilterCount>0 ? th.appAccent : ui.faded,
               fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
             }}>

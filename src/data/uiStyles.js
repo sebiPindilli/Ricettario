@@ -79,6 +79,12 @@ export const alpha = (hex, a) => {
   return `rgba(${r},${g},${b},${a})`;
 };
 
+// "Bianco" per le chrome sempre scure (th.darkChrome.bg): mai 255,255,255
+// puro (legge "argento", piatto in ogni palette) — darkChrome.ink è già il
+// chiaro del set scuro della palette scelta, quindi è la tinta giusta da
+// usare per icone/etichette/separatori semi-trasparenti su quelle barre.
+export const chromeWhite = (theme, a) => alpha(theme.darkChrome.ink, a);
+
 export const UI_STYLES = [
   {
     id: "classico",
@@ -198,13 +204,20 @@ export const isUiStyleId = (id) => UI_STYLES.some(s => s.id === id);
 // una copertina separata). Nessun mockup copre questo caso — è un
 // trattamento placeholder, plausibile ma da rifinire a vista in seguito
 // (come già segnalato per il PDF in Fase 9 del piano).
-function coverFromPalette(c) {
+//
+// La copertina è un oggetto fisico (facsimile di libro rilegato): resta
+// SEMPRE scura e identica, indipendente da temaScuro — riceve sempre il set
+// CHIARO della palette (`coverBase`, mai il set scuro dove `ink` sarebbe
+// chiaro e la copertina diventerebbe grigia invece che scura) e anche il
+// suo accento resta fisso (`coverBase.accent`), non quello dell'utente.
+function coverFromPalette(coverBase, accent) {
+  const tintedWhite = mix(coverBase.ink, "#FFFFFF", 0.88); // mai bianco puro ("argento"): tinto dell'ink della palette
   return {
-    coverBg: `linear-gradient(160deg, ${mix(c.ink, c.accent, 0.18)} 0%, ${mix(c.ink, "#000000", 0.55)} 45%, ${mix(c.ink, c.accent, 0.10)} 100%)`,
-    coverText: "rgba(255,255,255,0.9)",
-    coverAccent: alpha(c.accent, 0.55),
-    spineColor: "rgba(255,255,255,0.05)",
-    pageColor: c.bg,
+    coverBg: `linear-gradient(160deg, ${mix(coverBase.ink, accent, 0.18)} 0%, ${mix(coverBase.ink, "#000000", 0.55)} 45%, ${mix(coverBase.ink, accent, 0.10)} 100%)`,
+    coverText: alpha(tintedWhite, 0.9),
+    coverAccent: alpha(accent, 0.55),
+    spineColor: alpha(tintedWhite, 0.06),
+    pageColor: coverBase.bg,
   };
 }
 
@@ -225,16 +238,33 @@ export function buildTheme(paletteId, temaScuro = false) {
   // "chiaro"): `colori(paletteId, true)` è invece un set completo e già
   // coerente al suo interno, qualunque sia la scelta reale dell'utente.
   const darkChrome = colori(paletteId, true);
+  // Copertina: sempre il set CHIARO, mai quello scelto dall'utente — vedi
+  // coverFromPalette() sopra.
+  const coverBase = colori(paletteId, false);
   return {
     id: c.id, name: c.nome, notturna: c.notturna,
-    appBg: c.bg, appCard: c.card, appBorder: c.border, appBorderStrong: c.borderStrong,
-    appInk: c.ink, appFaded: c.faded, appMuted: c.muted,
+    // Nei temi chiari il fondo pagina è bianco puro fisso (mai tinto dalla
+    // palette) e cinque ruoli colore distinti sostituiscono l'unica
+    // velatura uniforme di th.appAccent usata finora: campo di testo, pill,
+    // tasto secondario (=appAccent, invariato) e tasto primario. Nei temi
+    // scuri questi nuovi campi restano equivalenti al comportamento di
+    // sempre — nessuna modifica visiva lì.
+    appBg: temaScuro ? c.bg : "#FFFFFF",
+    appCard: c.card, appBorder: c.border, appBorderStrong: c.borderStrong,
+    appInk: temaScuro ? c.ink : mix("#1A1A1A", c.accent, 0.10),
+    appFaded: temaScuro ? c.faded : mix(c.faded, c.accent, 0.20),
+    appMuted: c.muted,
     appAccent: c.accent, appOnAccent: c.onAccent, appAccent2: c.accent2,
+    appFieldBg: temaScuro ? c.card : mix(c.accent, "#FFFFFF", 0.93),
+    appFieldBorder: temaScuro ? c.border : mix(c.accent, "#FFFFFF", 0.78),
+    appPillBg: temaScuro ? alpha(c.accent, 0.15) : mix(c.accent, "#FFFFFF", 0.80),
+    appPrimaryBg: temaScuro ? c.accent : mix(c.accent, "#000000", 0.35),
+    appPrimaryText: temaScuro ? c.onAccent : "#FFFFFF",
     navBg: c.navBg, navBorder: c.navBorder, navActive: c.navActive, navIdle: c.navIdle,
     sezioni: c.sezioni, sezioniPiene: c.sezioniPiene,
     darkChrome,
     ...BOOK_PAGE,
-    ...coverFromPalette(c),
+    ...coverFromPalette(coverBase, coverBase.accent),
   };
 }
 

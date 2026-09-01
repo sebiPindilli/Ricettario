@@ -8,7 +8,7 @@ export default function MemoryPhoto({ mem, height, fontSize = 44, rounded = fals
     return <img src={mem.photo} alt={mem.caption || "ricordo"} style={{ width:"100%", height, objectFit:"cover", display:"block", borderRadius: rounded ? 12 : 0 }}/>;
   }
   return (
-    <div style={{ height, display:"flex", alignItems:"center", justifyContent:"center", fontSize, background:`${th.appAccent}15`, borderRadius: rounded ? 12 : 0 }}>
+    <div style={{ height, display:"flex", alignItems:"center", justifyContent:"center", fontSize, background:th.appPillBg, borderRadius: rounded ? 12 : 0 }}>
       {mem.photo || <AppIcon emoji="📸" icon="foto" size={fontSize} />}
     </div>
   );

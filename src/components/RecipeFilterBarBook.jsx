@@ -1,5 +1,6 @@
 import React from "react";
 import { useTheme, useUiStyle } from "../context.js";
+import { chromeWhite } from "../data/uiStyles.js";
 import { F } from "../data/constants.js";
 import GlobalNav from "./GlobalNav.jsx";
 import BottomNav from "./BottomNav.jsx";
@@ -148,7 +149,8 @@ export default function RecipeFilterBarBook({ recipes, extraTagGroups, sectionLi
 
           {/* Bottom prev/next with titles — barra sempre scura, indipendente
               dal tema (th.darkChrome, come GlobalNav): appInk si inverte con
-              temaScuro, qui servono sempre gli stessi bianchi trasparenti sotto. */}
+              temaScuro, qui serve un bianco fisso ma tinto dell'ink della
+              palette (chromeWhite), mai 255,255,255 puro. */}
           <div style={{ display:"flex", background:th.darkChrome.bg, flexShrink:0 }}>
             <button
               onClick={() => turnPage("prev")}
@@ -156,10 +158,10 @@ export default function RecipeFilterBarBook({ recipes, extraTagGroups, sectionLi
               style={{
                 flex:1, padding:"12px",
                 background:"none", border:"none",
-                color: safeIndex===0 ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.75)",
+                color: safeIndex===0 ? chromeWhite(th,0.2) : chromeWhite(th,0.75),
                 fontFamily:F.ui, fontSize:12,
                 cursor: safeIndex===0 ? "default" : "pointer",
-                borderRight:"1px solid rgba(255,255,255,0.1)",
+                borderRight:`1px solid ${chromeWhite(th,0.1)}`,
               }}
             >‹ {safeIndex>0 ? sectionRecipes[safeIndex-1]?.title.substring(0,20)+"…" : "—"}</button>
             <button
@@ -168,7 +170,7 @@ export default function RecipeFilterBarBook({ recipes, extraTagGroups, sectionLi
               style={{
                 flex:1, padding:"12px",
                 background:"none", border:"none",
-                color: safeIndex===totalPages-1 ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.75)",
+                color: safeIndex===totalPages-1 ? chromeWhite(th,0.2) : chromeWhite(th,0.75),
                 fontFamily:F.ui, fontSize:12,
                 cursor: safeIndex===totalPages-1 ? "default" : "pointer",
               }}

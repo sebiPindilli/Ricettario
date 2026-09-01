@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useTheme, useUiStyle } from "../context.js";
+import { chromeWhite } from "../data/uiStyles.js";
 import { F, INGREDIENT_CATEGORIES, MACRO_SECTIONS } from "../data/constants.js";
 import {
   buildFridgeItems, ingDictIndex, flattenIngredients, ingredientToText,
@@ -366,7 +367,7 @@ export default function EmptyFridgeScreen({
             boxShadow:"0 10px 34px rgba(0,0,0,0.5)",
             pointerEvents:"none",
           }}>
-            <div style={{ fontFamily:F.ui, fontSize:9, letterSpacing:1, color:"rgba(255,255,255,0.5)", textTransform:"uppercase", marginBottom:4 }}>Include</div>
+            <div style={{ fontFamily:F.ui, fontSize:9, letterSpacing:1, color:chromeWhite(th,0.5), textTransform:"uppercase", marginBottom:4 }}>Include</div>
             <div style={{ fontFamily:F.body, fontSize:12, lineHeight:1.5 }}>
               {tooltipKey.members.length > 0 ? tooltipKey.members.join(", ") : "nessun ingrediente"}
             </div>
@@ -505,7 +506,7 @@ export default function EmptyFridgeScreen({
                         style={{
                           flex:1, padding:"9px 4px", borderRadius:10,
                           border:`1.5px solid ${th.appAccent}`,
-                          background:`${th.appAccent}12`, color:th.appAccent,
+                          background:th.appPillBg, color:th.appAccent,
                           fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
                           display:"flex", flexDirection:"column", alignItems:"center", gap:2,
                         }}>

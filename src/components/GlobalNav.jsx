@@ -1,5 +1,6 @@
 import { useState, useRef, useLayoutEffect } from "react";
 import { useTheme, useNavActions, useCookingTimers, useUiStyle } from "../context.js";
+import { chromeWhite } from "../data/uiStyles.js";
 import { F, MOBILE_BREAKPOINT_CSS } from "../data/constants.js";
 import OrganizeIcon from "./OrganizeIcon.jsx";
 import InfoButton from "./InfoButton.jsx";
@@ -92,10 +93,11 @@ export default function GlobalNav({
     <div ref={barRef} className="globalnav-bar" style={{ position:"sticky", top:topStackHeight, zIndex:100, boxShadow:"0 2px 16px rgba(0,0,0,0.2)" }}>
       {/* Da sempre una barra scura, indipendente dal tema chiaro/scuro
           scelto (th.darkChrome — vedi buildTheme() in data/uiStyles.js):
-          appInk si inverte con temaScuro, qui servono sempre gli stessi
-          bianchi trasparenti sotto. */}
+          appInk si inverte con temaScuro, qui serve un bianco fisso — ma
+          tinto dell'ink della palette (chromeWhite), mai 255,255,255 puro:
+          altrimenti la barra legge "argento" piatto in ogni palette. */}
       {/* Row 1 — 4 tabs */}
-      <div style={{ display:"flex", background:th.darkChrome.bg, borderBottom:"1px solid rgba(255,255,255,0.08)" }}>
+      <div style={{ display:"flex", background:th.darkChrome.bg, borderBottom:`1px solid ${chromeWhite(th,0.08)}` }}>
         {NAV_ITEMS.map(item => {
           const active = activeScreen === item.id
             || (item.id==="recipes" && inRecipes)
@@ -106,7 +108,7 @@ export default function GlobalNav({
               onClick={handlers[item.id]}
               style={{
                 flex:1, padding:"10px 4px 8px",
-                background: active ? "rgba(255,255,255,0.15)" : "none",
+                background: active ? chromeWhite(th,0.15) : "none",
                 border:"none",
                 borderBottom: active ? `2px solid ${th.darkChrome.accent2}` : "2px solid transparent",
                 cursor:"pointer",
@@ -116,12 +118,12 @@ export default function GlobalNav({
             >
               {/* color: solo per l'icona SVG (currentColor) — un'emoji lo ignora,
                   è sempre a colore pieno, quindi non cambia nulla in quel caso. */}
-              <span style={{ color: active ? th.darkChrome.accent2 : "rgba(255,255,255,0.55)", background: item.id==="add" && !active ? `${th.darkChrome.accent}55` : "none", borderRadius: item.id==="add" ? "50%" : 0, width: item.id==="add" ? 32 : "auto", height: item.id==="add" ? 32 : "auto", display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <span style={{ color: active ? th.darkChrome.accent2 : chromeWhite(th,0.55), background: item.id==="add" && !active ? `${th.darkChrome.accent}55` : "none", borderRadius: item.id==="add" ? "50%" : 0, width: item.id==="add" ? 32 : "auto", height: item.id==="add" ? 32 : "auto", display:"flex", alignItems:"center", justifyContent:"center" }}>
                 <AppIcon emoji={item.emoji} icon={item.icon} size={item.id==="add" ? 24 : 18} />
               </span>
               <span style={{
                 fontFamily:F.ui, fontSize:9, fontWeight:600,
-                color: active ? th.darkChrome.accent2 : "rgba(255,255,255,0.5)",
+                color: active ? th.darkChrome.accent2 : chromeWhite(th,0.5),
                 letterSpacing:0.5,
               }}>{item.label}</span>
             </button>
@@ -136,9 +138,9 @@ export default function GlobalNav({
         padding:"6px 12px", gap:8,
       }}>
         <button onClick={onLanding} style={{
-          background:"rgba(255,255,255,0.1)", border:"none",
+          background:chromeWhite(th,0.1), border:"none",
           borderRadius:8, padding:"5px 8px", cursor:"pointer",
-          color:"rgba(255,255,255,0.85)", flexShrink:0,
+          color:chromeWhite(th,0.85), flexShrink:0,
         }}><AppIcon emoji="🏠" icon="home" size={14} /></button>
 
         {/* Spaziatore sinistro: 🏠(≈34) + questo ≈ larghezza interruttore/export a destra, così il titolo è centrato */}
@@ -147,7 +149,7 @@ export default function GlobalNav({
         <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6, minWidth:0 }}>
           <span style={{
             fontFamily:F.display, fontSize:13, fontStyle:"italic",
-            color:"rgba(255,255,255,0.8)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+            color:chromeWhite(th,0.8), overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
           }}>{activeLabel || "Il mio Ricettario"}</span>
           <InfoButton dark>
             {infoContent || (
@@ -161,21 +163,21 @@ export default function GlobalNav({
           <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
             {showExport && (
               <button onClick={onExport} title="Esporta ricettario" style={{
-                background:"rgba(255,255,255,0.1)", border:"none",
+                background:chromeWhite(th,0.1), border:"none",
                 borderRadius:8, padding:"5px 8px", cursor:"pointer",
-                color:"rgba(255,255,255,0.85)", flexShrink:0,
+                color:chromeWhite(th,0.85), flexShrink:0,
               }}><AppIcon emoji="📤" icon="esporta" size={14} /></button>
             )}
-            <div style={{ display:"flex", borderRadius:8, overflow:"hidden", border:"1px solid rgba(255,255,255,0.2)", flexShrink:0 }}>
+            <div style={{ display:"flex", borderRadius:8, overflow:"hidden", border:`1px solid ${chromeWhite(th,0.2)}`, flexShrink:0 }}>
               <button onClick={viewToggle ? viewToggle.onCards : onRecipes} title="Vista schede" style={{
                 padding:"5px 9px", border:"none", cursor:"pointer",
-                background: (viewToggle ? !viewToggle.isBook : !bookView) ? th.darkChrome.accent : "rgba(255,255,255,0.08)",
-                color: (viewToggle ? !viewToggle.isBook : !bookView) ? th.darkChrome.onAccent : "rgba(255,255,255,0.7)",
+                background: (viewToggle ? !viewToggle.isBook : !bookView) ? th.darkChrome.accent : chromeWhite(th,0.08),
+                color: (viewToggle ? !viewToggle.isBook : !bookView) ? th.darkChrome.onAccent : chromeWhite(th,0.7),
               }}><AppIcon emoji="▦" icon="schede" size={13} /></button>
               <button onClick={viewToggle ? viewToggle.onBook : onBook} title="Sfoglia come libro" style={{
                 padding:"5px 9px", border:"none", cursor:"pointer",
-                background: (viewToggle ? viewToggle.isBook : bookView) ? th.darkChrome.accent : "rgba(255,255,255,0.08)",
-                color: (viewToggle ? viewToggle.isBook : bookView) ? th.darkChrome.onAccent : "rgba(255,255,255,0.7)",
+                background: (viewToggle ? viewToggle.isBook : bookView) ? th.darkChrome.accent : chromeWhite(th,0.08),
+                color: (viewToggle ? viewToggle.isBook : bookView) ? th.darkChrome.onAccent : chromeWhite(th,0.7),
               }}><AppIcon emoji="📖" icon="libro" size={13} /></button>
             </div>
           </div>

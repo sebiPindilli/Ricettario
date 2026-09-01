@@ -277,14 +277,14 @@ export default function ScanScreen({ onBack, onSave, mode = "camera", onLanding 
                   padding: "12px 16px",
                   borderRadius: ui.radius.control,
                   border: "none",
-                  background: otherRunning ? th.appBorder : th.appAccent,
-                  color: otherRunning ? th.appFaded : th.appOnAccent,
+                  background: otherRunning ? th.appBorder : th.appPrimaryBg,
+                  color: otherRunning ? th.appFaded : th.appPrimaryText,
                   fontFamily: F.ui,
                   fontSize: 13,
                   fontWeight: 700,
                   textTransform: ui.uppercaseButtons ? "uppercase" : "none",
                   cursor: otherRunning ? "default" : "pointer",
-                  boxShadow: otherRunning ? "none" : `0 4px 12px ${th.appAccent}40`
+                  boxShadow: otherRunning ? "none" : `0 4px 12px ${th.appPrimaryBg}40`
                 }}
               >
                 Analizza Foto ({images.length}) 🍳

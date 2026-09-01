@@ -207,7 +207,7 @@ export default function ThemePickerScreen({ paletteId, temaScuro, uiStyleId, onS
                   onClick={() => { onSelectUiStyle(style.id); showToast("Aspetto aggiornato"); }}
                   style={{ background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left", display: "flex", flexDirection: "column", gap: 8 }}
                 >
-                  <div style={{ borderRadius: 14, padding: 8, background: isActive ? `${th.appAccent}12` : "transparent", boxShadow: isActive ? `0 0 0 2px ${th.appAccent}` : "none" }}>
+                  <div style={{ borderRadius: 14, padding: 8, background: isActive ? th.appPillBg : "transparent", boxShadow: isActive ? `0 0 0 2px ${th.appAccent}` : "none" }}>
                     <StylePreview styleId={style.id} th={th}/>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 2px" }}>

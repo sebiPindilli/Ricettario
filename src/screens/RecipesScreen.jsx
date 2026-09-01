@@ -15,8 +15,15 @@ import SectionCategoryIcon from "../components/SectionCategoryIcon.jsx";
 export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, onMemories, onAdd, onFridge, onShopping, onExport, extraTagGroups=[], sectionList=MACRO_SECTIONS }) {
   const th = useTheme();
   const ui = useUiStyle();
-  const [activeSection, setActiveSection] = useState(null);
   const [activeTags, setActiveTags] = useState([]);
+  // Sezioni collassate nella lista raggruppata sotto — non persistito,
+  // torna tutto espanso ad ogni apertura della scheda (Set di macroSection id).
+  const [collapsedSections, setCollapsedSections] = useState(() => new Set());
+  const toggleSectionCollapsed = (id) => setCollapsedSections(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
   const [openTagGroup, setOpenTagGroup] = useState(null);
   const [showFavorites, setShowFavorites] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,11 +40,6 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
   const [draftPrepRange, setDraftPrepRange] = useState(prepRange);
   const [draftCookRange, setDraftCookRange] = useState(cookRange);
 
-  const goSection = (id) => {
-    setActiveSection(id === activeSection ? null : id);
-    setOpenTagGroup(null);
-    setShowFavorites(false);
-  };
   const goFavorites = () => setShowFavorites(f => !f);
   const toggleTag = (tag) => setActiveTags(prev =>
     prev.includes(tag) ? prev.filter(t=>t!==tag) : [...prev, tag]
@@ -47,19 +49,14 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
     setDraftPrepRange([0, prepBound]); setDraftCookRange([0, cookBound]);
   };
   const resetAllFilters = () => {
-    setActiveSection(null); setActiveTags([]); setShowFavorites(false); resetTime();
+    setActiveTags([]); setShowFavorites(false); resetTime();
   };
 
   // ── Hierarchical filter ──────────────────────────────────────
-  // Level 1: section (macroSection)
-  const sectionFiltered = activeSection
-    ? recipes.filter(r => r.macroSection === activeSection)
-    : recipes;
-
-  // Level 2: tags (within section)
+  // Level 2: tags
   const tagFiltered = activeTags.length > 0
-    ? sectionFiltered.filter(r => activeTags.every(t => r.tags.includes(t)))
-    : sectionFiltered;
+    ? recipes.filter(r => activeTags.every(t => r.tags.includes(t)))
+    : recipes;
 
   // Level 2b: tempo di preparazione/cottura
   const prepActive = prepRange[0] > 0 || prepRange[1] < prepBound;
@@ -85,49 +82,35 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
   ];
   const relevantTagGroups = allTagGroupsWithExtra.map(g => ({
     ...g,
-    tags: g.tags.filter(t => sectionFiltered.some(r => r.tags.includes(t)))
+    tags: g.tags.filter(t => recipes.some(r => r.tags.includes(t)))
   })).filter(g => g.tags.length > 0);
 
-  const activeSectionLabel = activeSection ? MACRO_SECTIONS.find(s=>s.id===activeSection)?.label : null;
-  const activeFilterCount = (activeSection?1:0) + activeTags.length + (timeActive?1:0) + (showFavorites?1:0);
+  const activeFilterCount = activeTags.length + (timeActive?1:0) + (showFavorites?1:0);
+
+  // Lista raggruppata per sezione (stesso ordine di sortSectionsAltroLast/
+  // MACRO_SECTIONS, "altro" per ultimo), alfabetica per titolo dentro ogni
+  // gruppo — sostituisce il vecchio ordine cronologico + filtro sezione.
+  const groupedRecipes = sortSectionsAltroLast(sectionList)
+    .map(sec => ({
+      sec,
+      items: displayRecipes
+        .filter(r => r.macroSection === sec.id)
+        .sort((a, b) => a.title.localeCompare(b.title, "it")),
+    }))
+    .filter(g => g.items.length > 0);
 
   // ── Controlli filtro — stesso markup/stessa logica in ogni stile: in
   // "classico" restano aperti sotto la ricerca (com'era), negli stili
   // nuovi si spostano dentro <FiltersSheet> invariati (vedi in fondo).
   const filterControls = (
     <>
-      {/* ── Level 1: Section filter pills ── */}
+      {/* Preferiti — il filtro sezione è stato tolto da qui: la lista ora
+          raggruppa già per sezione (vedi il rendering più sotto), la
+          pillola sarebbe ridondante col raggruppamento. */}
       <div style={{
         display:"flex", flexWrap:"wrap", gap:6, padding: ui.filters==="expanded" ? "8px 16px 8px" : "0 0 12px",
         borderBottom: ui.filters==="expanded" ? `1px solid ${th.appBorder}` : "none", flexShrink:0,
       }}>
-        <button
-          onClick={() => goSection(null)}
-          style={{
-            padding:"6px 14px", borderRadius:20, border:"none", flexShrink:0,
-            background: !activeSection && !showFavorites ? th.appInk : th.appBorder,
-            color: !activeSection && !showFavorites ? th.appBg : th.appFaded,
-            fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
-          }}
-        >Tutte</button>
-        {sortSectionsAltroLast(sectionList).map(sec => {
-          const active = activeSection === sec.id;
-          const count = recipes.filter(r => r.macroSection === sec.id).length;
-          return (
-            <button key={sec.id} onClick={() => goSection(sec.id)} style={{
-              padding:"6px 12px", borderRadius:20, flexShrink:0,
-              border:`1.5px solid ${active ? th.appAccent : th.appBorder}`,
-              background: active ? th.appAccent : "transparent",
-              color: active ? th.appOnAccent : th.appFaded,
-              fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
-              display:"flex", alignItems:"center", gap:4, transition:"all 0.2s",
-            }}>
-              <SectionCategoryIcon item={sec} size={13} />
-              <span>{sec.label.split(" ").slice(-1)[0]}</span>
-              <span style={{ fontSize:10, background: active ? `${th.appOnAccent}40` : th.appBorder, borderRadius:10, padding:"1px 5px", color: active ? th.appOnAccent : th.appFaded }}>{count}</span>
-            </button>
-          );
-        })}
         <button onClick={goFavorites} style={{
           padding:"6px 12px", borderRadius:20, flexShrink:0,
           border:`1.5px solid ${showFavorites ? th.appAccent : th.appBorder}`,
@@ -147,7 +130,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
             style={{
               flexShrink:0, padding:"5px 12px", borderRadius:20,
               border:`1.5px solid ${activeTags.length > 0 ? th.appAccent : th.appBorder}`,
-              background: activeTags.length > 0 ? `${th.appAccent}15` : "transparent",
+              background: activeTags.length > 0 ? th.appPillBg : "transparent",
               color: activeTags.length > 0 ? th.appAccent : th.appFaded,
               fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
               display:"flex", alignItems:"center", gap:5,
@@ -211,7 +194,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
                   <div style={{ display:"flex", flexWrap:"wrap", gap:5, padding:"6px 4px 2px" }}>
                     {group.tags.map(tag => {
                       const sel = activeTags.includes(tag);
-                      const count = sectionFiltered.filter(r => r.tags.includes(tag)).length;
+                      const count = recipes.filter(r => r.tags.includes(tag)).length;
                       return (
                         <button key={tag} onClick={() => toggleTag(tag)} style={{
                           padding:"5px 10px", borderRadius:20,
@@ -243,7 +226,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
           })} style={{
             flexShrink:0, padding:"5px 12px", borderRadius:20,
             border:`1.5px solid ${timeActive ? th.appAccent : th.appBorder}`,
-            background: timeActive ? `${th.appAccent}15` : "transparent",
+            background: timeActive ? th.appPillBg : "transparent",
             color: timeActive ? th.appAccent : th.appFaded,
             fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
             display:"flex", alignItems:"center", gap:5,
@@ -317,7 +300,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
       padding: ui.id==="quaderno" ? "2px 0" : "4px 10px",
       borderRadius: ui.id==="quaderno" ? 0 : 20,
       border: ui.id==="quaderno" ? "none" : `1px solid ${th.appAccent}`,
-      background: ui.id==="quaderno" ? "none" : `${th.appAccent}12`,
+      background: ui.id==="quaderno" ? "none" : th.appPillBg,
       color: th.appAccent, cursor:"pointer",
       fontFamily:F.ui, fontSize: ui.id==="quaderno" ? 10 : 10.5, fontWeight:700,
       textTransform: ui.id==="quaderno" ? "uppercase" : "none", letterSpacing: ui.id==="quaderno" ? 0.6 : 0,
@@ -336,14 +319,14 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
         onShopping={onShopping}
         onLanding={onLanding}
         onExport={onExport}
-        activeLabel={activeSectionLabel || "Libro Ricette"}
+        activeLabel="Libro Ricette"
         infoContent={guideRicette}
         bottomNavActive
       />
 
       <ScreenHeader
         section="ricette"
-        title={activeSectionLabel || "Libro Ricette"}
+        title="Libro Ricette"
         subtitle={`${displayRecipes.length} ricett${displayRecipes.length===1?"a":"e"}`}
         onHome={onLanding}
         infoContent={guideRicette}
@@ -399,7 +382,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
             display:"flex", alignItems:"center", justifyContent:"center",
             border:`1.5px solid ${activeFilterCount>0 ? th.appAccent : th.appBorder}`,
             borderRadius: ui.radius.control,
-            background: activeFilterCount>0 ? `${th.appAccent}12` : th.appCard,
+            background: activeFilterCount>0 ? th.appPillBg : th.appCard,
             color: activeFilterCount>0 ? th.appAccent : ui.faded,
             cursor:"pointer",
           }}>
@@ -416,9 +399,8 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
       ) : (
         <>
           {/* Riepilogo filtri attivi — il pulsante Filtri è sulla riga della ricerca, qui sopra */}
-          {(activeSectionLabel || showFavorites || activeTags.length > 0 || timeActive) && (
+          {(showFavorites || activeTags.length > 0 || timeActive) && (
             <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", padding:`2px ${ui.padX}px 10px` }}>
-              {activeSectionLabel && filterSummaryChip(activeSectionLabel, () => setActiveSection(null))}
               {showFavorites && filterSummaryChip("Preferiti", () => setShowFavorites(false))}
               {activeTags.map(tag => filterSummaryChip(tag, () => toggleTag(tag)))}
               {timeActive && filterSummaryChip("Tempo", resetTime)}
@@ -448,7 +430,6 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
       {ui.navPosition !== "bottom" && (
         <div style={{ padding:"6px 20px 2px", fontFamily:F.ui, fontSize:11, color:th.appFaded }}>
           {displayRecipes.length} ricett{displayRecipes.length===1?"a":"e"}
-          {activeSectionLabel && ` · ${activeSectionLabel}`}
           {activeTags.length > 0 && ` · ${activeTags.length} tag`}
           {timeActive && <> · <AppIcon emoji="⏱️" icon="tempo" size={11} style={{ verticalAlign:"-1px" }} /> tempo</>}
           {showFavorites && <> · <AppIcon emoji="⭐" icon="preferito" size={11} style={{ verticalAlign:"-1px" }} /> Preferiti</>}
@@ -466,13 +447,34 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
         display:"flex", flexDirection:"column", gap:10,
         ...(ui.navPosition==="bottom" ? { flex:1, overflowY:"auto" } : {}),
       }}>
-        {displayRecipes.length === 0
+        {groupedRecipes.length === 0
           ? <div style={{ textAlign:"center", padding:"40px 0", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>
               Nessuna ricetta trovata
             </div>
-          : displayRecipes.map(r => (
-              <RecipeCardList key={r.id} recipe={r} onClick={() => onRecipe(r)}/>
-            ))
+          : groupedRecipes.map(({ sec, items }) => {
+              const collapsed = collapsedSections.has(sec.id);
+              return (
+                <div key={sec.id}>
+                  <button onClick={() => toggleSectionCollapsed(sec.id)} style={{
+                    width:"100%", display:"flex", alignItems:"center", gap:8,
+                    padding:"4px 0", marginBottom: collapsed ? 0 : 8,
+                    background:"none", border:"none", cursor:"pointer", textAlign:"left",
+                  }}>
+                    <SectionCategoryIcon item={sec} size={14} />
+                    <span style={{ flex:1, fontFamily:F.ui, fontSize:12, fontWeight:700, color:th.appInk, textTransform:"uppercase", letterSpacing:0.6 }}>{sec.label}</span>
+                    <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>{items.length}</span>
+                    <span style={{ color:th.appFaded, fontSize:12, transform: collapsed ? "rotate(-90deg)" : "none", transition:"transform 0.15s" }}>▾</span>
+                  </button>
+                  {!collapsed && (
+                    <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                      {items.map(r => (
+                        <RecipeCardList key={r.id} recipe={r} onClick={() => onRecipe(r)}/>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })
         }
       </div>
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { useTheme, useCookingTimers, useUiStyle } from "../context.js";
+import { chromeWhite } from "../data/uiStyles.js";
 import { F } from "../data/constants.js";
 import { flattenSteps, flattenIngredients, ingredientToText, scaleIngredient, stepNumberLabel } from "../utils/helpers.js";
 import { remainingMs, isExpired, formatRemaining, formatOverdue } from "../utils/timers.js";
@@ -119,7 +120,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
 
   // ── Barra di progressione interattiva ──
   const ProgressBar = () => (
-    <div style={{ padding:"10px 14px", borderBottom:"1px solid rgba(255,255,255,0.1)", flexShrink:0, overflowX:"auto" }}>
+    <div style={{ padding:"10px 14px", borderBottom:`1px solid ${chromeWhite(th,0.1)}`, flexShrink:0, overflowX:"auto" }}>
       <div style={{ display:"flex", alignItems:"center", gap:6, minWidth:"min-content" }}>
         {/* Icona ingredienti (intro) */}
         <button
@@ -127,8 +128,8 @@ export default function CookingMode({ recipe, scale, onClose }) {
           title="Ingredienti"
           style={{
             width:30, height:30, borderRadius:"50%", flexShrink:0, cursor:"pointer",
-            border: isIntro ? `2px solid ${th.appAccent2}` : "2px solid rgba(255,255,255,0.2)",
-            background: isIntro ? th.appAccent2 : "rgba(255,255,255,0.08)",
+            border: isIntro ? `2px solid ${th.appAccent2}` : `2px solid ${chromeWhite(th,0.2)}`,
+            background: isIntro ? th.appAccent2 : chromeWhite(th,0.08),
             color: isIntro ? th.appOnAccent : "#fff", fontSize:13,
             display:"flex", alignItems:"center", justifyContent:"center",
           }}
@@ -139,7 +140,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
             {/* Separatore sezione */}
             {group.section !== "__nosec__" && (
               <div style={{ display:"flex", flexDirection:"column", alignItems:"center", flexShrink:0, marginLeft:4 }}>
-                <div style={{ fontFamily:F.ui, fontSize:8, letterSpacing:0.5, color:"rgba(255,255,255,0.4)", textTransform:"uppercase", whiteSpace:"nowrap", marginBottom:2, maxWidth:70, overflow:"hidden", textOverflow:"ellipsis" }}>{group.section}</div>
+                <div style={{ fontFamily:F.ui, fontSize:8, letterSpacing:0.5, color:chromeWhite(th,0.4), textTransform:"uppercase", whiteSpace:"nowrap", marginBottom:2, maxWidth:70, overflow:"hidden", textOverflow:"ellipsis" }}>{group.section}</div>
               </div>
             )}
             {group.items.map(it => {
@@ -156,8 +157,8 @@ export default function CookingMode({ recipe, scale, onClose }) {
                   title={`Passo ${label}`}
                   style={{
                     minWidth:30, height:30, padding:"0 6px", borderRadius:15, flexShrink:0, cursor:"pointer",
-                    border: active || done ? `2px solid ${th.appAccent2}` : "2px solid rgba(255,255,255,0.2)",
-                    background: active ? th.appAccent : done ? `${th.appAccent2}33` : "rgba(255,255,255,0.08)",
+                    border: active || done ? `2px solid ${th.appAccent2}` : `2px solid ${chromeWhite(th,0.2)}`,
+                    background: active ? th.appAccent : done ? `${th.appAccent2}33` : chromeWhite(th,0.08),
                     color: done && !active ? th.appAccent2 : active ? th.appOnAccent : "#fff", fontFamily:F.ui, fontSize:12, fontWeight:700,
                     display:"flex", alignItems:"center", justifyContent:"center",
                     transition:"all 0.2s",
@@ -174,8 +175,8 @@ export default function CookingMode({ recipe, scale, onClose }) {
           title="Fine"
           style={{
             width:30, height:30, borderRadius:"50%", flexShrink:0, cursor:"pointer",
-            border: isDone ? `2px solid ${th.appAccent2}` : "2px solid rgba(255,255,255,0.2)",
-            background: isDone ? th.appAccent2 : "rgba(255,255,255,0.08)",
+            border: isDone ? `2px solid ${th.appAccent2}` : `2px solid ${chromeWhite(th,0.2)}`,
+            background: isDone ? th.appAccent2 : chromeWhite(th,0.08),
             color: isDone ? th.appOnAccent : "#fff", fontSize:13,
             display:"flex", alignItems:"center", justifyContent:"center",
           }}
@@ -191,15 +192,15 @@ export default function CookingMode({ recipe, scale, onClose }) {
     <div className="cooking-mode-shell" style={{ position:"fixed", inset:0, zIndex:400, background:th.darkChrome.bg, display:"flex", flexDirection:"column", color:"#fff" }}>
       {/* Header */}
       <div style={{ padding:"14px 18px 10px", display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
-        <button onClick={onClose} style={{ background:"rgba(255,255,255,0.12)", border:"none", borderRadius:8, padding:"6px 10px", color:"#fff", fontSize:14, cursor:"pointer" }}>✕</button>
+        <button onClick={onClose} style={{ background:chromeWhite(th,0.12), border:"none", borderRadius:8, padding:"6px 10px", color:"#fff", fontSize:14, cursor:"pointer" }}>✕</button>
         <div style={{ flex:1 }}>
-          <div style={{ fontFamily:F.display, fontSize:14, fontStyle:"italic", color:"rgba(255,255,255,0.9)" }}>👨‍🍳 {recipe.title}</div>
-          <div style={{ fontFamily:F.ui, fontSize:10, color:"rgba(255,255,255,0.5)" }}>
+          <div style={{ fontFamily:F.display, fontSize:14, fontStyle:"italic", color:chromeWhite(th,0.9) }}>👨‍🍳 {recipe.title}</div>
+          <div style={{ fontFamily:F.ui, fontSize:10, color:chromeWhite(th,0.5) }}>
             {scale?.label || "dosi originali"}
           </div>
         </div>
         {!isIntro && !isDone && (
-          <div style={{ fontFamily:F.ui, fontSize:12, color:"rgba(255,255,255,0.6)" }}>{idx+1}/{steps.length}</div>
+          <div style={{ fontFamily:F.ui, fontSize:12, color:chromeWhite(th,0.6) }}>{idx+1}/{steps.length}</div>
         )}
         <InfoButton dark>{guideCucina}</InfoButton>
       </div>
@@ -214,15 +215,15 @@ export default function CookingMode({ recipe, scale, onClose }) {
             <div style={{ fontFamily:F.ui, fontSize:11, letterSpacing:2, color:th.appAccent2, textTransform:"uppercase", marginBottom:12 }}>Prima di iniziare — ingredienti</div>
 
             <div style={{
-              background:"rgba(255,255,255,0.08)",
-              border:"1px solid rgba(255,255,255,0.12)",
+              background:chromeWhite(th,0.08),
+              border:`1px solid ${chromeWhite(th,0.12)}`,
               borderRadius:12, padding:"10px 14px", marginBottom:16,
-              fontFamily:F.ui, fontSize:12, color:"rgba(255,255,255,0.85)", lineHeight:1.5,
+              fontFamily:F.ui, fontSize:12, color:chromeWhite(th,0.85), lineHeight:1.5,
             }}>
               {scaled ? (
                 <>
                   Dosi ricalcolate: <b>{scale?.label}</b>
-                  <div style={{ fontSize:11, color:"rgba(255,255,255,0.5)", marginTop:3 }}>
+                  <div style={{ fontSize:11, color:chromeWhite(th,0.5), marginTop:3 }}>
                     tra parentesi trovi le dosi originali
                   </div>
                 </>
@@ -232,15 +233,15 @@ export default function CookingMode({ recipe, scale, onClose }) {
             </div>
 
             {ingredients.map((ing, i) => (
-              <div key={i} style={{ fontFamily:F.body, fontSize:16, lineHeight:1.5, padding:"7px 0", borderBottom:"1px solid rgba(255,255,255,0.08)", color:"rgba(255,255,255,0.9)" }}>
+              <div key={i} style={{ fontFamily:F.body, fontSize:16, lineHeight:1.5, padding:"7px 0", borderBottom:`1px solid ${chromeWhite(th,0.08)}`, color:chromeWhite(th,0.9) }}>
                 {ing.scaled}
                 {scaled && ing.original !== ing.scaled && (
-                  <span style={{ color:"rgba(255,255,255,0.45)", fontSize:13, fontStyle:"italic" }}> ({ing.original})</span>
+                  <span style={{ color:chromeWhite(th,0.45), fontSize:13, fontStyle:"italic" }}> ({ing.original})</span>
                 )}
               </div>
             ))}
-            <div style={{ fontFamily:F.ui, fontSize:12, color:"rgba(255,255,255,0.4)", marginTop:20, textAlign:"center" }}>tocca a destra per iniziare →</div>
-            <div style={{ fontFamily:F.ui, fontSize:10.5, color:"rgba(255,255,255,0.3)", marginTop:6, textAlign:"center", lineHeight:1.6 }}>
+            <div style={{ fontFamily:F.ui, fontSize:12, color:chromeWhite(th,0.4), marginTop:20, textAlign:"center" }}>tocca a destra per iniziare →</div>
+            <div style={{ fontFamily:F.ui, fontSize:10.5, color:chromeWhite(th,0.3), marginTop:6, textAlign:"center", lineHeight:1.6 }}>
               ‹ tocca a sinistra per tornare indietro · tocca a destra per avanzare ›
             </div>
           </div>
@@ -248,7 +249,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
           <div style={{ textAlign:"center" }}>
             <div style={{ marginBottom:16, display:"flex", justifyContent:"center" }}><AppIcon emoji="🎉" icon="festa" size={64} /></div>
             <div style={{ fontFamily:F.display, fontSize:26, fontStyle:"italic", marginBottom:8 }}>Buon appetito!</div>
-            <div style={{ fontFamily:F.ui, fontSize:13, color:"rgba(255,255,255,0.5)" }}>tocca per chiudere</div>
+            <div style={{ fontFamily:F.ui, fontSize:13, color:chromeWhite(th,0.5) }}>tocca per chiudere</div>
           </div>
         ) : (
           <div>
@@ -271,7 +272,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
                 </div>
               )}
             </div>
-            <div style={{ fontFamily:F.body, fontSize:22, lineHeight:1.6, color:"rgba(255,255,255,0.95)" }}>{step.text}</div>
+            <div style={{ fontFamily:F.body, fontSize:22, lineHeight:1.6, color:chromeWhite(th,0.95) }}>{step.text}</div>
             {step.duration != null && (
               <button
                 onClick={(e) => {
@@ -284,7 +285,7 @@ export default function CookingMode({ recipe, scale, onClose }) {
                 }}
               >▶ Timer {step.duration} min</button>
             )}
-            <div style={{ fontFamily:F.ui, fontSize:11, color:"rgba(255,255,255,0.3)", marginTop:28, textAlign:"center", lineHeight:1.6 }}>
+            <div style={{ fontFamily:F.ui, fontSize:11, color:chromeWhite(th,0.3), marginTop:28, textAlign:"center", lineHeight:1.6 }}>
               ‹ sinistra: indietro · destra: avanti ›
             </div>
           </div>
@@ -308,8 +309,8 @@ export default function CookingMode({ recipe, scale, onClose }) {
         return (
           <button onClick={() => setTimerPopup({})} style={{
             display:"flex", alignItems:"center", gap:8, width:"100%",
-            padding:"7px 16px", flexShrink:0, border:"none", borderTop:"1px solid rgba(255,255,255,0.1)",
-            background: anyExpired ? "#C0524A" : "rgba(255,255,255,0.06)",
+            padding:"7px 16px", flexShrink:0, border:"none", borderTop:`1px solid ${chromeWhite(th,0.1)}`,
+            background: anyExpired ? ui.danger : chromeWhite(th,0.06),
             color:"#fff", fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
             textAlign:"left", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
           }}>
@@ -321,8 +322,8 @@ export default function CookingMode({ recipe, scale, onClose }) {
 
       {/* Bottom nav */}
       {!isDone && (
-        <div ref={navRef} style={{ display:"flex", flexShrink:0, borderTop:"1px solid rgba(255,255,255,0.1)" }}>
-          <button onClick={(e) => { e.stopPropagation(); prev(); }} disabled={isIntro} style={{ flex:1, padding:"16px", background:"none", border:"none", color: isIntro ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.75)", fontFamily:F.ui, fontSize:14, cursor: isIntro ? "default" : "pointer", borderRight:"1px solid rgba(255,255,255,0.1)" }}>‹ Indietro</button>
+        <div ref={navRef} style={{ display:"flex", flexShrink:0, borderTop:`1px solid ${chromeWhite(th,0.1)}` }}>
+          <button onClick={(e) => { e.stopPropagation(); prev(); }} disabled={isIntro} style={{ flex:1, padding:"16px", background:"none", border:"none", color: isIntro ? chromeWhite(th,0.2) : chromeWhite(th,0.75), fontFamily:F.ui, fontSize:14, cursor: isIntro ? "default" : "pointer", borderRight:`1px solid ${chromeWhite(th,0.1)}` }}>‹ Indietro</button>
           <button onClick={(e) => { e.stopPropagation(); next(); }} style={{ flex:1, padding:"16px", background:"none", border:"none", color:th.darkChrome.accent2, fontFamily:F.ui, fontSize:14, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>{isIntro ? "Inizia →" : idx === steps.length-1 ? <>Fine <AppIcon emoji="✓" icon="fatto" size={13} /></> : "Avanti ›"}</button>
         </div>
       )}

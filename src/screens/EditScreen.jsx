@@ -341,12 +341,12 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
         }}>Annulla</button>
         <button onClick={handleSave} style={{
           flex:2, padding:"12px",
-          background:th.appAccent, color:th.appOnAccent,
+          background:th.appPrimaryBg, color:th.appPrimaryText,
           border:"none", borderRadius:ui.radius.control,
           fontFamily:F.ui, fontSize:14, fontWeight:700,
           textTransform: ui.uppercaseButtons ? "uppercase" : "none",
           cursor:"pointer",
-          boxShadow:`0 4px 16px ${th.appAccent}55`,
+          boxShadow:`0 4px 16px ${th.appPrimaryBg}55`,
           display:"flex", alignItems:"center", justifyContent:"center", gap:6,
         }}>Salva modifiche <AppIcon emoji="✓" icon="fatto" size={13} /></button>
       </div>

@@ -254,7 +254,7 @@ export default function OrganizeIngredientsScreen({
                       <button key={val} onClick={() => setAggSuggestionScope(val)} style={{
                         flex:1, padding:"7px 10px", borderRadius:20,
                         border:`1.5px solid ${on ? th.appAccent : th.appBorder}`,
-                        background: on ? th.appAccent + "18" : "transparent",
+                        background: on ? th.appPillBg : "transparent",
                         color: on ? th.appAccent : th.appFaded,
                         fontFamily:F.ui, fontSize:11.5, fontWeight:600, cursor:"pointer",
                       }}>{label}</button>
@@ -1230,7 +1230,7 @@ export default function OrganizeIngredientsScreen({
       <button onClick={() => toggleExpand(key, kind)} style={{
         padding:"6px 10px", borderRadius:10,
         border:`1.5px solid ${exp === kind ? th.appAccent : th.appBorder}`,
-        background: exp === kind ? th.appAccent + "18" : "transparent",
+        background: exp === kind ? th.appPillBg : "transparent",
         color: exp === kind ? th.appAccent : th.appFaded,
         fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer",
         display:"flex", alignItems:"center", gap:4,
@@ -1647,9 +1647,9 @@ export default function OrganizeIngredientsScreen({
               }}
               style={{
                 flex:1, padding:"8px 10px", borderRadius:20,
-                border:`1.5px solid ${on ? (val ? "#C4593A" : th.appAccent) : th.appBorder}`,
-                background: on ? (val ? "#C4593A18" : th.appAccent + "18") : "transparent",
-                color: on ? (val ? "#C4593A" : th.appAccent) : th.appFaded,
+                border:`1.5px solid ${on ? (val ? ui.danger : th.appAccent) : th.appBorder}`,
+                background: on ? (val ? `${ui.danger}18` : th.appPillBg) : "transparent",
+                color: on ? (val ? ui.danger : th.appAccent) : th.appFaded,
                 fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
                 display:"flex", alignItems:"center", justifyContent:"center", gap:5,
               }}
@@ -1670,7 +1670,7 @@ export default function OrganizeIngredientsScreen({
                 style={{
                   flexShrink:0, padding:"7px 11px", borderRadius:20,
                   border:`1.5px solid ${on ? th.appAccent : th.appBorder}`,
-                  background: on ? th.appAccent + "18" : "transparent",
+                  background: on ? th.appPillBg : "transparent",
                   color: on ? th.appAccent : th.appFaded,
                   fontFamily:F.ui, fontSize:11.5, fontWeight:600, cursor:"pointer",
                   display:"inline-flex", alignItems:"center", gap:4,

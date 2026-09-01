@@ -236,7 +236,7 @@ export default function UnifiedExportFlow({
                     <button key={r.id} onClick={() => toggleSel(r.id)} style={{
                       width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 11px",
                       borderRadius: 10, marginBottom: 4, cursor: "pointer", textAlign: "left",
-                      background: sel ? `${th.appAccent}18` : th.appCard,
+                      background: sel ? th.appPillBg : th.appCard,
                       border: `1.5px solid ${sel ? th.appAccent : th.appBorder}`,
                     }}>
                       <span style={{
@@ -300,7 +300,7 @@ export default function UnifiedExportFlow({
                 <button key={b.id} onClick={() => toggleTargetBook(b.id)} style={{
                   width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
                   borderRadius: 10, marginBottom: 6, cursor: "pointer", textAlign: "left",
-                  background: sel ? `${th.appAccent}18` : th.appCard,
+                  background: sel ? th.appPillBg : th.appCard,
                   border: `1.5px solid ${sel ? th.appAccent : th.appBorder}`,
                 }}>
                   <span style={{
@@ -451,7 +451,7 @@ export default function UnifiedExportFlow({
               <button key={id} onClick={() => setEditingTemplate(prev => ({ ...prev, [key]: id }))} style={{
                 flex: 1, padding: "8px 4px", borderRadius: 8, cursor: "pointer", fontFamily: F.ui, fontSize: 11.5, fontWeight: 700,
                 border: `1.5px solid ${draft[key] === id ? th.appAccent : th.appBorder}`,
-                background: draft[key] === id ? `${th.appAccent}18` : th.appCard, color: th.appInk,
+                background: draft[key] === id ? th.appPillBg : th.appCard, color: th.appInk,
               }}>{opt.label}</button>
             ))}
           </div>
@@ -470,7 +470,7 @@ export default function UnifiedExportFlow({
               <button key={f.id} onClick={() => setFont(role, f.id)} style={{
                 textAlign: "left", padding: "8px 12px", borderRadius: 8, cursor: "pointer",
                 border: `1.5px solid ${draft.fontIds?.[role] === f.id ? th.appAccent : th.appBorder}`,
-                background: draft.fontIds?.[role] === f.id ? `${th.appAccent}18` : th.appCard,
+                background: draft.fontIds?.[role] === f.id ? th.appPillBg : th.appCard,
                 fontFamily: f.stack, fontSize: 14, color: th.appInk,
               }}>{f.label}</button>
             ))}
@@ -520,7 +520,7 @@ export default function UnifiedExportFlow({
                 <button key={l.id} onClick={() => setEditingTemplate(prev => ({ ...prev, layoutId: l.id }))} style={{
                   flex: 1, padding: "8px 6px", borderRadius: 8, cursor: "pointer", fontFamily: F.ui, fontSize: 11.5, fontWeight: 700,
                   border: `1.5px solid ${draft.layoutId === l.id ? th.appAccent : th.appBorder}`,
-                  background: draft.layoutId === l.id ? `${th.appAccent}18` : th.appCard, color: th.appInk,
+                  background: draft.layoutId === l.id ? th.appPillBg : th.appCard, color: th.appInk,
                 }}>{l.label}</button>
               ))}
             </div>
@@ -614,7 +614,7 @@ export default function UnifiedExportFlow({
                       textAlign: "left", padding: "9px 12px", borderRadius: 10, cursor: "pointer",
                       display: "flex", alignItems: "center", gap: 10,
                       border: `1.5px solid ${pdfPrefs.templateId === s.id ? th.appAccent : th.appBorder}`,
-                      background: pdfPrefs.templateId === s.id ? `${th.appAccent}18` : th.appCard,
+                      background: pdfPrefs.templateId === s.id ? th.appPillBg : th.appCard,
                     }}>
                       <div style={{
                         width: 44, height: 34, borderRadius: 8, flexShrink: 0,
@@ -639,7 +639,7 @@ export default function UnifiedExportFlow({
                     textAlign: "left", padding: "9px 12px", borderRadius: 10, cursor: "pointer",
                     display: "flex", alignItems: "center", gap: 10,
                     border: `1.5px solid ${pdfPrefs.templateId === tpl.id ? th.appAccent : th.appBorder}`,
-                    background: pdfPrefs.templateId === tpl.id ? `${th.appAccent}18` : th.appCard,
+                    background: pdfPrefs.templateId === tpl.id ? th.appPillBg : th.appCard,
                   }}>
                     <div style={{
                       width: 44, height: 34, borderRadius: 8, flexShrink: 0,
@@ -681,7 +681,7 @@ export default function UnifiedExportFlow({
                   textAlign: "left", padding: "9px 12px", borderRadius: 10, cursor: "pointer",
                   display: "flex", alignItems: "center", gap: 10,
                   border: `1.5px solid ${pdfPrefs.layout === l.id ? th.appAccent : th.appBorder}`,
-                  background: pdfPrefs.layout === l.id ? `${th.appAccent}18` : th.appCard,
+                  background: pdfPrefs.layout === l.id ? th.appPillBg : th.appCard,
                 }}>
                   <div style={{
                     width: 52, height: 40, borderRadius: 8, flexShrink: 0, padding: 5,

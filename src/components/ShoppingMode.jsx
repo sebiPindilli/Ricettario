@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useTheme, useUiStyle } from "../context.js";
+import { chromeWhite } from "../data/uiStyles.js";
 import { F } from "../data/constants.js";
 import { flattenIngredients, scaleIngredient, normName, fmtQty } from "../utils/helpers.js";
 import InfoButton from "./InfoButton.jsx";
@@ -55,14 +56,15 @@ export default function ShoppingMode({ recipe, scale, onClose, onAddToList, pres
       <div style={{ width:"100%", maxHeight:"90%", background:th.appBg, borderRadius:20, display:"flex", flexDirection:"column", overflow:"hidden" }}>
         {/* Header — fisso in cima alla scheda, sempre scuro indipendente dal
             tema (th.darkChrome, come GlobalNav): appInk si inverte con
-            temaScuro, qui servono sempre gli stessi bianchi trasparenti sotto. */}
+            temaScuro, qui serve un bianco fisso ma tinto dell'ink della
+            palette (chromeWhite), mai 255,255,255 puro. */}
         <div style={{ background:th.darkChrome.bg, padding:"14px 18px", display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
-          <button onClick={onClose} style={{ background:"rgba(255,255,255,0.12)", border:"none", borderRadius:8, padding:"6px 10px", color:"#fff", fontSize:14, cursor:"pointer" }}>✕</button>
+          <button onClick={onClose} style={{ background:chromeWhite(th,0.12), border:"none", borderRadius:8, padding:"6px 10px", color:"#fff", fontSize:14, cursor:"pointer" }}>✕</button>
           <div style={{ flex:1 }}>
             <div style={{ fontFamily:F.display, fontSize:15, color:"#fff", fontStyle:"italic" }}>🛒 Modalità Spesa</div>
-            <div style={{ fontFamily:F.ui, fontSize:10, color:"rgba(255,255,255,0.55)" }}>{recipe.title} · {scale?.label || "dosi originali"}</div>
+            <div style={{ fontFamily:F.ui, fontSize:10, color:chromeWhite(th,0.55) }}>{recipe.title} · {scale?.label || "dosi originali"}</div>
           </div>
-          <div style={{ fontFamily: isNew ? F.mono : F.ui, fontSize:11, color:"rgba(255,255,255,0.7)" }}>{checked.length}/{items.length}</div>
+          <div style={{ fontFamily: isNew ? F.mono : F.ui, fontSize:11, color:chromeWhite(th,0.7) }}>{checked.length}/{items.length}</div>
           <InfoButton dark>{guideModalitaSpesa}</InfoButton>
         </div>
 
@@ -77,7 +79,7 @@ export default function ShoppingMode({ recipe, scale, onClose, onAddToList, pres
         <div style={{ flex:"1 1 auto", minHeight:0, overflowY:"auto", padding:"12px 18px" }}>
           {/* Instruction banner */}
           <div style={{
-            background:`${th.appAccent}12`, border:`1px solid ${th.appAccent}44`,
+            background:th.appPillBg, border:`1px solid ${th.appFieldBorder}`,
             borderRadius:12, padding:"11px 14px", marginBottom:14,
             fontFamily:F.ui, fontSize:12, color:th.appInk, lineHeight:1.5,
             display:"flex", alignItems:"flex-start", gap:6,

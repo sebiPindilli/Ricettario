@@ -317,13 +317,13 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
         }}>Annulla</button>
         <button onClick={() => canSave && onSave(draft)} style={{
           flex:2, padding:"12px",
-          background: canSave ? th.appAccent : th.appBorder,
-          color: canSave ? th.appOnAccent : th.appFaded,
+          background: canSave ? th.appPrimaryBg : th.appBorder,
+          color: canSave ? th.appPrimaryText : th.appFaded,
           border:"none", borderRadius:ui.radius.control,
           fontFamily:F.ui, fontSize:14, fontWeight:700,
           textTransform: ui.uppercaseButtons ? "uppercase" : "none",
           cursor: canSave ? "pointer" : "default",
-          boxShadow: canSave ? `0 4px 16px ${th.appAccent}55` : "none",
+          boxShadow: canSave ? `0 4px 16px ${th.appPrimaryBg}55` : "none",
           transition:"all 0.2s",
           display:"flex", alignItems:"center", justifyContent:"center", gap:6,
         }}>

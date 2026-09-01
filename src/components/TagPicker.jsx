@@ -81,7 +81,7 @@ export default function TagPicker({ selectedTags, onChange, extraGroups = [], on
               style={{
                 width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
                 padding:"9px 12px",
-                background: totalActive > 0 ? `${th.appAccent}12` : th.appCard,
+                background: totalActive > 0 ? th.appPillBg : th.appCard,
                 border:`1.5px solid ${totalActive > 0 ? th.appAccent : th.appBorder}`,
                 borderRadius:10, cursor:"pointer",
                 fontFamily:F.ui, fontSize:12, color:th.appInk,

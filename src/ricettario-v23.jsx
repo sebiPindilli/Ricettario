@@ -2125,6 +2125,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             onCover={() => nav.replace({ screen: "cover" })}
             onGuide={() => goTo("guide")}
             onAdminUsers={() => setScreen("adminUsers")}
+            onExport={() => openExport(null)}
           />
         )}
         {screen==="adminUsers" && (

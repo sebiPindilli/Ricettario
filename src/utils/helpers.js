@@ -19,6 +19,16 @@ export const sortSectionsAltroLast = (list) => [
   ...list.filter(s => s.id === "altro"),
 ];
 
+// Sceglie un elemento di `ids` in modo pseudo-casuale ma stabile per `id`
+// (stesso risultato ad ogni render, mai Math.random()) — usata per il
+// colore decorativo per-ricetta di RecipeCardList quando la lista è già
+// raggruppata per sezione e il vero colore di sezione sarebbe ridondante.
+export const hashPick = (id, ids) => {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  return ids[Math.abs(h) % ids.length];
+};
+
 // "Ingredienti base" resta sempre in cima e "Altro" sempre in fondo (stesso
 // principio di sortSectionsAltroLast per le sezioni ricetta); per il resto
 // l'ordine della lista non viene alterato.

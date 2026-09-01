@@ -174,7 +174,7 @@ export default function SharedRecipeScreen({ shareId, me, editableBooks = [], on
       )}
 
       {(status.includedData?.ingredients || status.includedData?.photos || status.includedData?.memories) && (
-        <div style={{ background:`${th.appAccent}10`, border:`1px dashed ${th.appAccent}55`, borderRadius:10, padding:"9px 12px", marginBottom:14, fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5, display:"flex", gap:6 }}>
+        <div style={{ background:th.appPillBg, border:`1px dashed ${th.appFieldBorder}`, borderRadius:10, padding:"9px 12px", marginBottom:14, fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5, display:"flex", gap:6 }}>
           <span style={{ flexShrink:0 }}><AppIcon emoji="💡" icon="suggerimento" size={11} /></span>
           <span>Questa condivisione include anche {[
             status.includedData.ingredients && "i dati ingredienti (categorie, nutrizione, equivalenze)",

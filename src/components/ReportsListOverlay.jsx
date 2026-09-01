@@ -113,7 +113,7 @@ export default function ReportsListOverlay({ role, me, onClose }) {
                   <span style={{ fontFamily: F.ui, fontSize: 13, fontWeight: 700, color: th.appInk }}>{r.title}</span>
                   <span style={{
                     marginLeft: "auto", flexShrink: 0, fontFamily: F.ui, fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 10,
-                    background: resolved ? `${th.appAccent}22` : th.appBorder,
+                    background: resolved ? th.appPillBg : th.appBorder,
                     color: resolved ? th.appAccent : th.appFaded,
                   }}>{resolved ? "RISOLTA" : "APERTA"}</span>
                 </div>

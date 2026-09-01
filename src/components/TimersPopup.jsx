@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTheme, useCookingTimers } from "../context.js";
+import { chromeWhite } from "../data/uiStyles.js";
 import { F } from "../data/constants.js";
 import { remainingMs, isExpired, formatRemaining, formatOverdue } from "../utils/timers.js";
 import AppIcon from "./AppIcon.jsx";
@@ -21,7 +22,7 @@ const canVibrate = "vibrate" in navigator;
 const toggleBtnStyle = (th, active) => ({
   display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 8,
   border: `1.5px solid ${active ? th.appAccent : th.appBorder}`,
-  background: active ? `${th.appAccent}22` : "transparent",
+  background: active ? th.appPillBg : "transparent",
   color: active ? th.appAccent : th.appFaded,
   fontFamily: F.ui, fontSize: 11, fontWeight: 700, cursor: "pointer",
 });
@@ -52,12 +53,13 @@ export default function TimersPopup({ onClose, initialDraft = null }) {
       <style dangerouslySetInnerHTML={{ __html: PULSE_CSS }} />
       <div style={{ width: "100%", maxHeight: "90%", background: th.appBg, borderRadius: 20, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {/* Header — sempre scuro indipendente dal tema (th.darkChrome, come
-            GlobalNav): appInk si inverte con temaScuro, qui servono sempre
-            gli stessi bianchi trasparenti sotto. */}
+            GlobalNav): appInk si inverte con temaScuro, qui serve un bianco
+            fisso ma tinto dell'ink della palette (chromeWhite), mai
+            255,255,255 puro. */}
         <div style={{ background: th.darkChrome.bg, padding: "14px 18px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.12)", border: "none", borderRadius: 8, padding: "6px 10px", color: "#fff", fontSize: 14, cursor: "pointer" }}>✕</button>
+          <button onClick={onClose} style={{ background: chromeWhite(th,0.12), border: "none", borderRadius: 8, padding: "6px 10px", color: "#fff", fontSize: 14, cursor: "pointer" }}>✕</button>
           <div style={{ flex: 1, fontFamily: F.display, fontSize: 15, color: "#fff", fontStyle: "italic" }}>⏱ Timer</div>
-          <div style={{ fontFamily: F.ui, fontSize: 11, color: "rgba(255,255,255,0.7)" }}>{timers.length}</div>
+          <div style={{ fontFamily: F.ui, fontSize: 11, color: chromeWhite(th,0.7) }}>{timers.length}</div>
         </div>
 
         {/* Preferenze avviso — combinabili, co-locate con ciò che controllano */}

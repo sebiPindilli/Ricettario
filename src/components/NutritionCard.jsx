@@ -158,7 +158,7 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
               </div>
 
               {/* Copertura sempre dichiarata */}
-              <div style={{ fontFamily:F.ui, fontSize:11, color:ui.faded, marginBottom:10, lineHeight:1.5, padding:"8px 10px", background:`${th.appAccent}0d`, borderRadius:ui.radius.control }}>
+              <div style={{ fontFamily:F.ui, fontSize:11, color:ui.faded, marginBottom:10, lineHeight:1.5, padding:"8px 10px", background:th.appPillBg, borderRadius:ui.radius.control }}>
                 Calcolato su {mappedCount} ingredient{mappedCount===1?"e":"i"} su {totalIngCount}.
                 {missingNames.length > 0 && <> Mancano: {missingNames.join(", ")}.</>}
               </div>
@@ -211,7 +211,7 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
                     <span style={{
                       display:"inline-block", marginLeft:5, padding:"0 5px", borderRadius:6,
                       fontSize:8.5, fontWeight:700, verticalAlign:"middle",
-                      background: d.pct < 100 ? `${th.appAccent}22` : `${th.appBorder}66`,
+                      background: d.pct < 100 ? th.appPillBg : `${th.appBorder}66`,
                       color: d.pct < 100 ? th.appAccent : th.appFaded,
                     }} title="Pesatura nel calcolo nutrizionale">{d.pct != null ? d.pct : 100}%</span>
                   )}

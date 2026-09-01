@@ -147,14 +147,14 @@ export default function AddFromLinkScreen({ onBack, onSave, onLanding }) {
                 padding: "12px 16px",
                 borderRadius: ui.radius.control,
                 border: "none",
-                background: canSubmit ? th.appAccent : th.appBorder,
-                color: canSubmit ? th.appOnAccent : th.appFaded,
+                background: canSubmit ? th.appPrimaryBg : th.appBorder,
+                color: canSubmit ? th.appPrimaryText : th.appFaded,
                 fontFamily: F.ui,
                 fontSize: 13,
                 fontWeight: 700,
                 textTransform: ui.uppercaseButtons ? "uppercase" : "none",
                 cursor: canSubmit ? "pointer" : "default",
-                boxShadow: canSubmit ? `0 4px 12px ${th.appAccent}40` : "none",
+                boxShadow: canSubmit ? `0 4px 12px ${th.appPrimaryBg}40` : "none",
                 marginTop: 4
               }}
             >

@@ -1,7 +1,10 @@
 import { useTheme, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
-import { dishPhotoOf } from "../utils/helpers.js";
+import { dishPhotoOf, hashPick } from "../utils/helpers.js";
 import { alpha, ICON_PILL_ALPHA } from "../data/palettes.js";
+
+// Le 4 chiavi di ui.sectionColor()/sectionColorFull() — vedi sotto.
+const RANDOM_SECTION_IDS = ["basi", "salati", "dolci", "altro"];
 import AppIcon from "./AppIcon.jsx";
 import ChosenIcon from "./ChosenIcon.jsx";
 import Icon from "./Icon.jsx";
@@ -42,12 +45,17 @@ export default function RecipeCardList({ recipe, onClick }) {
     );
   }
 
-  // ── quaderno / schedario — colore di sezione, non più per ricetta ──
-  // ui.sectionColor arriva da colori(paletteId, temaScuro).sezioni — vedi
+  // ── quaderno / schedario — colore decorativo, pseudo-casuale ma stabile
+  // per ricetta (hashPick su recipe.id) ──
+  // La lista (RecipesScreen) raggruppa già le ricette per la loro vera
+  // macroSection: usarla anche qui per il colore sarebbe ridondante, quindi
+  // ogni ricetta pesca uno dei 4 colori di sezione dello stile attivo in
+  // base al proprio id, non alla propria sezione reale. ui.sectionColor
+  // arriva comunque da colori(paletteId, temaScuro).sezioni — vedi
   // PALETTE.md. La pastiglia tenue si fa con alpha()/ICON_PILL_ALPHA, mai
   // un secondo esadecimale scritto a mano (altrimenti il contrasto tarato
   // per le etichette di sezione non vale più).
-  const secColor = ui.sectionColor(recipe.macroSection);
+  const secColor = ui.sectionColor(hashPick(recipe.id, RANDOM_SECTION_IDS));
   const rule = ui.listRow === "rule"; // quaderno: riga su filetto, niente card
   const iconSize = ui.listIcon.size;
   const durationMin = recipe.prepTime + recipe.cookTime;

@@ -7,9 +7,10 @@
 // Il difetto dei temi precedenti era l'opposto: ogni superficie prendeva
 // una velatura dell'accento, e il colore perdeva forza proprio dove serve.
 //
-// Dieci palette × chiaro/scuro × tre stili = 60 combinazioni, tutte
-// disegnate in designs/Palette per stile.html. Prima di inventare una
-// regola per un caso, cercarlo lì.
+// Otto palette (nomi di pietre preziose: sette legate ai colori
+// dell'arcobaleno più un tema neutro) × chiaro/scuro × tre stili = 48
+// combinazioni, tutte disegnate in designs/Palette per stile.html. Prima
+// di inventare una regola per un caso, cercarlo lì.
 //
 // ── La barra di navigazione ───────────────────────────────────────────
 // navBg è una superficie SOLLEVATA: scurisce di poco sul fondo chiaro
@@ -41,7 +42,26 @@
 
 export const PALETTES = [
   {
-    id: "terracotta", nome: "Terracotta", desc: "la predefinita", notturna: false,
+    id: "rubino", nome: "Rubino", desc: "nuovo, rosso puro", notturna: false,
+    chiaro: {
+      bg: "#FBF7F4", card: "#FFFFFF", border: "#EAE1DB", borderStrong: "#9E9189",
+      ink: "#2E2622", faded: "#736962", muted: "#958982",
+      accent: "#B52E26", onAccent: "#FFFFFF", accent2: "#8A6A18",
+      navBg: "#DCD8D5", navBorder: "#C8C5C2", navActive: "#971E15", navIdle: "#655C55",
+      sezioni:      { basi: "#646271", salati: "#994E33", dolci: "#6B661F", altro: "#006F6E" },
+      sezioniPiene: { basi: "#646271", salati: "#994E33", dolci: "#6B661F", altro: "#006F6E" },
+    },
+    scuro: {
+      bg: "#25201D", card: "#312B28", border: "#3D3734", borderStrong: "#8D827B",
+      ink: "#F6EFEC", faded: "#B5A9A2", muted: "#9A8F88",
+      accent: "#E87E73", onAccent: "#4C0400", accent2: "#CFAC67",
+      navBg: "#383330", navBorder: "#4D4744", navActive: "#E87E73", navIdle: "#B5A9A2",
+      sezioni:      { basi: "#B1AFBF", salati: "#F19B7A", dolci: "#B9B368", altro: "#4BC1C1" },
+      sezioniPiene: { basi: "#9290A0", salati: "#D07E5E", dolci: "#9B964C", altro: "#21A3A3" },
+    },
+  },
+  {
+    id: "corniola", nome: "Corniola", desc: "la predefinita", notturna: false,
     chiaro: {
       bg: "#FBF7F4", card: "#FFFFFF", border: "#EAE1DB", borderStrong: "#9E9189",
       ink: "#2E2622", faded: "#736962", muted: "#958982",
@@ -60,7 +80,7 @@ export const PALETTES = [
     },
   },
   {
-    id: "zafferano", nome: "Zafferano", desc: "ambra e spezie", notturna: false,
+    id: "citrino", nome: "Citrino", desc: "ambra e spezie", notturna: false,
     chiaro: {
       bg: "#FBF7F4", card: "#FFFFFF", border: "#E9E1DA", borderStrong: "#9C9287",
       ink: "#2D2721", faded: "#726961", muted: "#938A82",
@@ -79,7 +99,7 @@ export const PALETTES = [
     },
   },
   {
-    id: "oliva", nome: "Oliva", desc: "erbe e orto", notturna: false,
+    id: "smeraldo", nome: "Smeraldo", desc: "erbe e orto", notturna: false,
     chiaro: {
       bg: "#F8F8F4", card: "#FFFFFF", border: "#E3E3DA", borderStrong: "#959487",
       ink: "#282821", faded: "#6B6B61", muted: "#8C8C81",
@@ -98,7 +118,7 @@ export const PALETTES = [
     },
   },
   {
-    id: "laguna", nome: "Laguna", desc: "acqua e sale", notturna: false,
+    id: "acquamarina", nome: "Acquamarina", desc: "acqua e sale", notturna: false,
     chiaro: {
       bg: "#F3F9F9", card: "#FFFFFF", border: "#D8E5E5", borderStrong: "#849797",
       ink: "#1F2A2A", faded: "#5E6D6D", muted: "#7F8F8E",
@@ -117,7 +137,7 @@ export const PALETTES = [
     },
   },
   {
-    id: "indaco", nome: "Indaco", desc: "ceramica dipinta", notturna: false,
+    id: "zaffiro", nome: "Zaffiro", desc: "ceramica dipinta", notturna: false,
     chiaro: {
       bg: "#F5F8FB", card: "#FFFFFF", border: "#DBE4EA", borderStrong: "#89959E",
       ink: "#21292E", faded: "#626C74", muted: "#828D95",
@@ -136,7 +156,7 @@ export const PALETTES = [
     },
   },
   {
-    id: "prugna", nome: "Prugna", desc: "vinaccia e fichi", notturna: false,
+    id: "ametista", nome: "Ametista", desc: "vinaccia e fichi", notturna: false,
     chiaro: {
       bg: "#FBF7F9", card: "#FFFFFF", border: "#E9E0E5", borderStrong: "#9D9098",
       ink: "#2D262A", faded: "#73676E", muted: "#94888F",
@@ -155,7 +175,7 @@ export const PALETTES = [
     },
   },
   {
-    id: "inchiostro", nome: "Inchiostro", desc: "senza colore", notturna: false,
+    id: "onice", nome: "Onice", desc: "chiaro-scuro, senza colore", notturna: false,
     chiaro: {
       bg: "#F5F8FC", card: "#FFFFFF", border: "#DDE3EB", borderStrong: "#8A939E",
       ink: "#23282F", faded: "#646B74", muted: "#858C96",
@@ -173,66 +193,9 @@ export const PALETTES = [
       sezioniPiene: { basi: "#88978B", salati: "#329BDB", dolci: "#AD83C5", altro: "#C68367" },
     },
   },
-  {
-    id: "notte", nome: "Notte", desc: "notturna, calda", notturna: true,
-    chiaro: {
-      bg: "#27231F", card: "#332F2A", border: "#3F3B36", borderStrong: "#8C827A",
-      ink: "#F6F0EB", faded: "#B4A9A1", muted: "#998F87",
-      accent: "#E09068", onAccent: "#480C00", accent2: "#D0AC62",
-      navBg: "#3B3632", navBorder: "#504A46", navActive: "#E09068", navIdle: "#B4A9A1",
-      sezioni:      { basi: "#B3AEBE", salati: "#EE9D75", dolci: "#B2B56A", altro: "#47C1C7" },
-      sezioniPiene: { basi: "#9691A0", salati: "#CD805A", dolci: "#94984E", altro: "#17A3A9" },
-    },
-    scuro: {
-      bg: "#24201C", card: "#302B27", border: "#3C3733", borderStrong: "#8C827A",
-      ink: "#F6F0EB", faded: "#B4A9A1", muted: "#998F87",
-      accent: "#E09068", onAccent: "#480C00", accent2: "#CFAC63",
-      navBg: "#37332F", navBorder: "#4B4743", navActive: "#E09068", navIdle: "#B4A9A1",
-      sezioni:      { basi: "#B3AEBE", salati: "#EE9D76", dolci: "#B2B56A", altro: "#47C1C7" },
-      sezioniPiene: { basi: "#9691A0", salati: "#CD805B", dolci: "#94984E", altro: "#17A3A9" },
-    },
-  },
-  {
-    id: "ardesia", nome: "Ardesia", desc: "notturna, fredda", notturna: true,
-    chiaro: {
-      bg: "#1F2528", card: "#2B3134", border: "#363D40", borderStrong: "#79868C",
-      ink: "#EBF2F5", faded: "#A0ADB4", muted: "#869399",
-      accent: "#7CA8CF", onAccent: "#002544", accent2: "#CDAC6D",
-      navBg: "#32383C", navBorder: "#464C51", navActive: "#7CA8CF", navIdle: "#A0ADB4",
-      sezioni:      { basi: "#A5B4A8", salati: "#5BB8FB", dolci: "#CCA0E4", altro: "#E6A083" },
-      sezioniPiene: { basi: "#88978B", salati: "#329BDB", dolci: "#AD83C5", altro: "#C68367" },
-    },
-    scuro: {
-      bg: "#1C2124", card: "#272D30", border: "#33383C", borderStrong: "#79868C",
-      ink: "#EBF2F5", faded: "#A0ADB4", muted: "#869399",
-      accent: "#7CA7CF", onAccent: "#002544", accent2: "#CDAC6D",
-      navBg: "#2F3437", navBorder: "#43484B", navActive: "#7CA7CF", navIdle: "#A0ADB4",
-      sezioni:      { basi: "#A5B4A8", salati: "#5CB8FB", dolci: "#CDA0E4", altro: "#E5A182" },
-      sezioniPiene: { basi: "#88978B", salati: "#339BDB", dolci: "#AE83C5", altro: "#C58466" },
-    },
-  },
-  {
-    id: "brace", nome: "Brace", desc: "notturna, brace", notturna: true,
-    chiaro: {
-      bg: "#292221", card: "#352E2D", border: "#413A38", borderStrong: "#8F807F",
-      ink: "#F7EFEE", faded: "#B7A8A6", muted: "#9C8D8C",
-      accent: "#E88A7B", onAccent: "#4E0000", accent2: "#D7A86C",
-      navBg: "#3D3534", navBorder: "#524948", navActive: "#E88A7B", navIdle: "#B7A8A6",
-      sezioni:      { basi: "#ADB0C0", salati: "#F89787", dolci: "#C8AE67", altro: "#57C1B4" },
-      sezioniPiene: { basi: "#9093A2", salati: "#D5796A", dolci: "#A9914C", altro: "#34A397" },
-    },
-    scuro: {
-      bg: "#261F1E", card: "#322A29", border: "#3E3635", borderStrong: "#8F807F",
-      ink: "#F7EFEE", faded: "#B7A8A6", muted: "#9C8D8C",
-      accent: "#E58B7D", onAccent: "#4C0100", accent2: "#D7A86B",
-      navBg: "#3A3231", navBorder: "#4F4645", navActive: "#E58B7D", navIdle: "#B7A8A6",
-      sezioni:      { basi: "#ADB0C0", salati: "#F89787", dolci: "#C8AE67", altro: "#57C1B4" },
-      sezioniPiene: { basi: "#9093A2", salati: "#D5796A", dolci: "#A9914C", altro: "#34A397" },
-    },
-  },
 ];
 
-export const DEFAULT_PALETTE_ID = "terracotta";
+export const DEFAULT_PALETTE_ID = "corniola";
 export const isPaletteId = (id) => PALETTES.some(p => p.id === id);
 
 // Opacità delle pastiglie tenui. Alzarla scurisce il fondo della pastiglia e

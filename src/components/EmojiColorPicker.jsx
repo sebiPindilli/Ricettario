@@ -152,7 +152,7 @@ function EmojiColorPickerNew({ emoji, icon, onEmoji, onIcon, title }) {
       }}>
         <div style={{
           width:40, height:40, borderRadius:ui.radius.tile, flexShrink:0,
-          background:`${th.appAccent}18`, color:th.appAccent,
+          background:th.appPillBg, color:th.appAccent,
           display:"flex", alignItems:"center", justifyContent:"center",
         }}><ChosenIcon emoji={emoji} icon={icon} size={20} /></div>
         <span style={{ flex:1, fontFamily:F.ui, fontSize:12.5, color:ui.ink, fontWeight:600 }}>Icona della ricetta</span>
@@ -199,7 +199,7 @@ function EmojiColorPickerNew({ emoji, icon, onEmoji, onIcon, title }) {
                       <span style={{
                         width:44, height:44, borderRadius:ui.radius.control-1,
                         border:`1.5px solid ${icon===name ? th.appAccent : ui.border}`,
-                        background: icon===name ? `${th.appAccent}18` : ui.card,
+                        background: icon===name ? th.appPillBg : ui.card,
                         color: icon===name ? th.appAccent : ui.ink,
                         display:"flex", alignItems:"center", justifyContent:"center",
                       }}><Icon name={name} size={19} /></span>
@@ -235,7 +235,7 @@ function EmojiColorPickerNew({ emoji, icon, onEmoji, onIcon, title }) {
                         <button key={name} onClick={() => chooseSvg(name)} title={name} style={{
                           aspectRatio:"1", borderRadius:ui.radius.control-1, cursor:"pointer",
                           border:`1.5px solid ${icon===name ? th.appAccent : ui.border}`,
-                          background: icon===name ? `${th.appAccent}18` : ui.card,
+                          background: icon===name ? th.appPillBg : ui.card,
                           color: icon===name ? th.appAccent : ui.ink,
                           display:"flex", alignItems:"center", justifyContent:"center",
                         }}><Icon name={name} size={19} /></button>
@@ -264,7 +264,7 @@ function EmojiColorPickerNew({ emoji, icon, onEmoji, onIcon, title }) {
                     {cat.emojis.map(e => (
                       <button key={e} onClick={() => chooseEmoji(e)} style={{
                         width:36, height:36, borderRadius:8,
-                        background: !icon && emoji===e ? `${th.appAccent}18` : "transparent",
+                        background: !icon && emoji===e ? th.appPillBg : "transparent",
                         border:`1.5px solid ${!icon && emoji===e ? th.appAccent : "transparent"}`,
                         cursor:"pointer", fontSize:20,
                         display:"flex", alignItems:"center", justifyContent:"center",

@@ -62,7 +62,7 @@ export default function ServingsDialog({ recipe, title, emoji, onConfirm, onClos
     <button onClick={() => setMode(id)} style={{
       flex:1, padding:"10px 8px", borderRadius:12, cursor:"pointer",
       border:`1.5px solid ${mode===id ? th.appAccent : th.appBorder}`,
-      background: mode===id ? `${th.appAccent}12` : "transparent",
+      background: mode===id ? th.appPillBg : "transparent",
       display:"flex", flexDirection:"column", alignItems:"center", gap:3,
     }}>
       <span style={{ fontSize:18 }}>{icon}</span>
@@ -119,7 +119,7 @@ export default function ServingsDialog({ recipe, title, emoji, onConfirm, onClos
                   <button key={label} onClick={() => setDoseFactor(factor)} style={{
                     padding:"6px 14px", borderRadius:ui.radius.chip,
                     border:`1.5px solid ${doseFactor===factor ? th.appAccent : th.appBorder}`,
-                    background: doseFactor===factor ? `${th.appAccent}12` : "transparent",
+                    background: doseFactor===factor ? th.appPillBg : "transparent",
                     color: doseFactor===factor ? th.appAccent : th.appFaded,
                     fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
                   }}>{label}</button>
@@ -145,7 +145,7 @@ export default function ServingsDialog({ recipe, title, emoji, onConfirm, onClos
                   <button key={n} onClick={() => setPeople(n)} style={{
                     padding:"5px 12px", borderRadius:14,
                     border:`1.5px solid ${people===n ? th.appAccent : th.appBorder}`,
-                    background: people===n ? `${th.appAccent}12` : "transparent",
+                    background: people===n ? th.appPillBg : "transparent",
                     color: people===n ? th.appAccent : th.appFaded,
                     fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
                   }}>{n === baseServings ? "standard" : n}</button>
@@ -178,7 +178,7 @@ export default function ServingsDialog({ recipe, title, emoji, onConfirm, onClos
                         display:"flex", justifyContent:"space-between", alignItems:"center", gap:10,
                         padding:"9px 12px", borderRadius:ui.radius.control,
                         border:`1.5px solid ${limIdx===i ? th.appAccent : ui.border}`,
-                        background: limIdx===i ? `${th.appAccent}12` : ui.card,
+                        background: limIdx===i ? th.appPillBg : ui.card,
                         cursor:"pointer", textAlign:"left", width:"100%",
                       }}>
                         <span style={{ fontFamily:F.body, fontSize:13, color:ui.ink }}>{parts.name}</span>

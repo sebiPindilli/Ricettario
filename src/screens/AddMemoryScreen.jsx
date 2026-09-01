@@ -140,7 +140,7 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
               <button key={e} onClick={() => { setChosenPhoto(e); setPhotoIsImage(false); }} style={{
                 width:38, height:38, borderRadius:10,
                 border:`1.5px solid ${!photoIsImage && chosenPhoto===e ? th.appAccent : th.appBorder}`,
-                background: !photoIsImage && chosenPhoto===e ? `${th.appAccent}15` : "transparent",
+                background: !photoIsImage && chosenPhoto===e ? th.appPillBg : "transparent",
                 fontSize:20, cursor:"pointer",
                 display:"flex", alignItems:"center", justifyContent:"center",
               }}>{e}</button>
@@ -213,13 +213,13 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
           onClick={() => canSave && onSave({ photo:chosenPhoto, photoIsImage, caption, story, date:today, dateISO:selectedDate, recipeIds:selectedRecipeIds })}
           style={{
             width:"100%", padding:"15px",
-            background: canSave ? th.appAccent : th.appBorder,
-            color: canSave ? th.appOnAccent : th.appFaded,
+            background: canSave ? th.appPrimaryBg : th.appBorder,
+            color: canSave ? th.appPrimaryText : th.appFaded,
             border:"none", borderRadius:ui.radius.control,
             fontFamily:F.ui, fontSize:14, fontWeight:700,
             textTransform: ui.uppercaseButtons ? "uppercase" : "none",
             cursor: canSave ? "pointer" : "default",
-            boxShadow: canSave ? `0 4px 16px ${th.appAccent}44` : "none",
+            boxShadow: canSave ? `0 4px 16px ${th.appPrimaryBg}44` : "none",
             transition:"all 0.2s",
             display:"flex", alignItems:"center", justifyContent:"center", gap:6,
           }}

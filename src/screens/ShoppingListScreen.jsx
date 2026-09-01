@@ -248,7 +248,7 @@ export default function ShoppingListScreen({
             )}
             {/* Unità non tutte convertibili tra loro: alert invece del selettore */}
             {info.multiUnit && !info.allConvertible && (
-              <div style={{ marginTop:6, padding:"8px 10px", background:`${th.appAccent}10`, border:`1px dashed ${th.appAccent}55`, borderRadius:9 }}>
+              <div style={{ marginTop:6, padding:"8px 10px", background:th.appPillBg, border:`1px dashed ${th.appFieldBorder}`, borderRadius:9 }}>
                 <span style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, lineHeight:1.5 }}>
                   ⚖️ Unità diverse senza un'equivalenza in grammi che le colleghi tutte: per un funzionamento ottimale{" "}
                   <span onClick={() => onManageEquivalences && onManageEquivalences()} style={{ color:th.appAccent, fontWeight:700, cursor:"pointer", textDecoration:"underline" }}>gestisci le equivalenze mancanti</span>.

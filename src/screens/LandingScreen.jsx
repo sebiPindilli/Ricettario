@@ -1,7 +1,7 @@
 import React from "react";
 import { useTheme, useRole, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
-import { normalizeRole, roleLabelLong } from "../utils/bookRoles.js";
+import { normalizeRole, roleLabelLong, assignableRoles } from "../utils/bookRoles.js";
 import OrganizeIcon from "../components/OrganizeIcon.jsx";
 import AppIcon from "../components/AppIcon.jsx";
 import Icon from "../components/Icon.jsx";
@@ -35,8 +35,29 @@ const LandingRow = ({ ui, th, icon, label, desc, fn, swatch }) => (
     <span style={{ color:ui.faded, fontSize:16, flexShrink:0 }}>›</span>
   </button>
 );
+// Card enfatizzata per le funzioni principali nel blocco "Cosa puoi fare"
+// (Quaderno/Schedario) — stessa resa delle card del ramo classico più sotto,
+// duplicata apposta invece di condivisa: il ramo classico non va toccato.
+const LandingItemCard = ({ th, item }) => (
+  <button onClick={item.fn} style={{
+    width:"100%", padding:"16px 18px",
+    background:th.appCard, border:`1px solid ${th.appBorder}`,
+    borderRadius:18, cursor:"pointer", textAlign:"left",
+    display:"flex", alignItems:"center", gap:14,
+    boxShadow:`0 2px 12px rgba(0,0,0,0.05)`,
+  }}>
+    <div style={{ width:48, height:48, borderRadius:13, background:item.color, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+      <AppIcon emoji={item.emoji} icon={item.icon} size={24} />
+    </div>
+    <div>
+      <div style={{ fontFamily:F.display, fontSize:16, color:th.appInk, marginBottom:2 }}>{item.label}</div>
+      <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>{item.desc}</div>
+    </div>
+    <span style={{ marginLeft:"auto", color:th.appFaded, fontSize:18 }}>›</span>
+  </button>
+);
 
-export default function LandingScreen({ recipes = [], bookName = "Il mio Ricettario", activeBook = null, me = null, onBooks, onRecipes, onBook, onMemories, onAdd, onAddMemory, onFridge, onShopping, onOrganize, onTheme, onCover, onGuide, onAdminUsers, onMySharedLinks }) {
+export default function LandingScreen({ recipes = [], bookName = "Il mio Ricettario", activeBook = null, me = null, onBooks, onRecipes, onBook, onMemories, onAdd, onAddMemory, onFridge, onShopping, onOrganize, onTheme, onCover, onGuide, onAdminUsers, onMySharedLinks, onExport }) {
   const th = useTheme();
   const ui = useUiStyle();
   const role = useRole();
@@ -66,6 +87,11 @@ export default function LandingScreen({ recipes = [], bookName = "Il mio Ricetta
       ? (activeBook.owner === me ? "proprietario" : normalizeRole((activeBook.memberRoles || {})[me]))
       : null;
     const roleText = activeBook?.type === "condiviso" && bookRole ? roleLabelLong(bookRole) : null;
+    // Azione rapida "Aggiungi persona": solo su un ricettario condiviso e
+    // solo se il mio ruolo può davvero invitare/assegnare ruoli (stessa
+    // regola del server, vedi bookRoles.js) — altrimenti il pulsante
+    // porterebbe a un modulo membri che non posso comunque usare.
+    const canInvite = activeBook?.type === "condiviso" && bookRole && assignableRoles(bookRole).length > 0;
 
     return (
       <div style={{ background:ui.bg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
@@ -75,45 +101,64 @@ export default function LandingScreen({ recipes = [], bookName = "Il mio Ricetta
         </div>
 
         <div style={{ padding:"0 20px 40px", flex:1, overflowY:"auto" }}>
-          {/* Ricettario attivo — card con dorso, non una riga come le altre */}
-          <button onClick={onBooks} style={{
-            width:"100%", marginTop:14, display:"flex", alignItems:"center", gap:12,
-            padding:"10px 12px", ...ui.cardStyle, cursor:"pointer", textAlign:"left",
-          }}>
-            <span style={{ width:44, height:58, borderRadius:4, background:th.coverBg, position:"relative", overflow:"hidden", flexShrink:0 }}>
-              <span style={{ position:"absolute", left:6, top:0, bottom:0, width:1, background:th.spineColor }}/>
-            </span>
-            <span style={{ flex:1, minWidth:0 }}>
-              <span style={{ display:"block", fontFamily:F.display, fontSize:16, color:ui.ink, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{bookName}</span>
-              <span style={{ display:"block", fontFamily:F.ui, fontSize:11, color:ui.faded, marginTop:2 }}>
-                {recipes.length} ricett{recipes.length===1?"a":"e"}{roleText ? ` · ${roleText}` : ""}
+          {/* a) Ricettario attivo — card con dorso, nome/membri/ruolo, più le
+              due azioni rapide (cambia ricettario, aggiungi persona). Il
+              modulo membri/invito vero e proprio resta in BooksScreen (già
+              inline per libro): qui si apre solo la stessa schermata. */}
+          <div style={{ marginTop:14, ...ui.cardStyle, padding:"12px" }}>
+            <button onClick={onBooks} style={{
+              width:"100%", display:"flex", alignItems:"center", gap:12,
+              background:"none", border:"none", padding:0, cursor:"pointer", textAlign:"left",
+            }}>
+              <span style={{ width:44, height:58, borderRadius:4, background:th.coverBg, position:"relative", overflow:"hidden", flexShrink:0 }}>
+                <span style={{ position:"absolute", left:6, top:0, bottom:0, width:1, background:th.spineColor }}/>
               </span>
-            </span>
-            <span style={{ color:ui.faded, fontSize:16 }}>›</span>
-          </button>
-
-          <LandingGroupLabel ui={ui} text="Da qui puoi"/>
-          <div style={{ ...ui.cardStyle, overflow:"hidden" }}>
-            <LandingRow ui={ui} th={th} icon="ricette" label="Ricette" desc="Sfoglia, modifica o cucina una ricetta" fn={onRecipes}/>
-            <LandingRow ui={ui} th={th} icon="ricordi" label="Ricordi" desc="Rivedi i ricordi legati alle tue ricette" fn={onMemories}/>
-            <LandingRow ui={ui} th={th} icon="frigo" label="Frigo" desc="Scegli cosa cucinare con quello che hai in casa" fn={onFridge}/>
-            <LandingRow ui={ui} th={th} icon="spesa" label="Spesa" desc="Tieni pronta la lista della spesa" fn={onShopping}/>
-            <LandingRow ui={ui} th={th} icon="organizza" label="Organizza" desc="Metti ordine tra ingredienti e dati dell'app" fn={onOrganize}/>
+              <span style={{ flex:1, minWidth:0 }}>
+                <span style={{ display:"block", fontFamily:F.display, fontSize:16, color:ui.ink, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{bookName}</span>
+                <span style={{ display:"block", fontFamily:F.ui, fontSize:11, color:ui.faded, marginTop:2 }}>
+                  {recipes.length} ricett{recipes.length===1?"a":"e"}{roleText ? ` · ${roleText}` : ""}
+                </span>
+              </span>
+              <span style={{ color:ui.faded, fontSize:16 }}>›</span>
+            </button>
+            <div style={{ display:"flex", gap:8, marginTop:10, paddingTop:10, borderTop:`1px solid ${ui.hairline}` }}>
+              {canInvite && (
+                <button onClick={onBooks} style={{
+                  flex:1, padding:"8px 10px", borderRadius:ui.radius.control, border:"none",
+                  background:th.appPillBg, color:th.appAccent,
+                  fontFamily:F.ui, fontSize:11.5, fontWeight:600, cursor:"pointer",
+                  display:"flex", alignItems:"center", justifyContent:"center", gap:5,
+                }}><AppIcon emoji="➕" icon="persona" size={12} /> Aggiungi persona</button>
+              )}
+              <button onClick={onBooks} style={{
+                flex:1, padding:"8px 10px", borderRadius:ui.radius.control,
+                border:`1px solid ${ui.border}`, background:"transparent", color:ui.faded,
+                fontFamily:F.ui, fontSize:11.5, fontWeight:600, cursor:"pointer",
+                display:"flex", alignItems:"center", justifyContent:"center", gap:5,
+              }}><AppIcon emoji="🔀" icon="ricettari" size={12} /> Cambia ricettario</button>
+            </div>
           </div>
 
-          <LandingGroupLabel ui={ui} text="Il libro"/>
-          <div style={{ ...ui.cardStyle, overflow:"hidden" }}>
-            <LandingRow ui={ui} th={th} swatch label="Aspetto dell'app" desc="Colore, tema e stile" fn={onTheme}/>
+          {/* b) Cosa puoi fare — le 5 funzioni principali, presentate come le
+              card del ramo classico (icona 48px, titolo, descrizione): sono
+              già raggiungibili dalla nav in basso, qui sono presentazione. */}
+          <LandingGroupLabel ui={ui} text="Cosa puoi fare"/>
+          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+            {primaryItems.map(item => <LandingItemCard key={item.label} th={th} item={item}/>)}
           </div>
 
+          {/* c) Condivisione */}
           <LandingGroupLabel ui={ui} text="Condivisione"/>
           <div style={{ ...ui.cardStyle, overflow:"hidden" }}>
             <LandingRow ui={ui} th={th} icon="libro" label="I miei ricettari" fn={onBooks}/>
             <LandingRow ui={ui} th={th} icon="esporta" label="Link condivisi da me" fn={onMySharedLinks}/>
+            {onExport && <LandingRow ui={ui} th={th} icon="esporta" label="Esporta ricettario" fn={onExport}/>}
           </div>
 
-          <LandingGroupLabel ui={ui} text="Aiuto"/>
+          {/* d) Altro */}
+          <LandingGroupLabel ui={ui} text="Altro"/>
           <div style={{ ...ui.cardStyle, overflow:"hidden" }}>
+            <LandingRow ui={ui} th={th} swatch label="Aspetto dell'app" desc="Colore, tema e stile" fn={onTheme}/>
             <LandingRow ui={ui} th={th} icon="info" label="Guida" fn={onGuide}/>
             {role === "admin" && <LandingRow ui={ui} th={th} icon="chiave" label="Gestione utenti" fn={onAdminUsers}/>}
           </div>

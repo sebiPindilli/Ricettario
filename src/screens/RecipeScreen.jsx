@@ -423,7 +423,7 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
             <button onClick={() => setServingsDialog("dose")} style={{
               width:"100%", padding:"11px 14px",
               border:`1.5px solid ${doseScale.factor !== 1 ? th.appAccent : th.appBorder}`,
-              borderRadius:12, background: doseScale.factor !== 1 ? `${th.appAccent}10` : th.appCard,
+              borderRadius:12, background: doseScale.factor !== 1 ? th.appPillBg : th.appCard,
               cursor:"pointer", display:"flex", alignItems:"center", gap:10, textAlign:"left",
             }}>
               <span style={{ fontSize:20 }}>⚖️</span>
@@ -497,7 +497,7 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
 
           <div style={{ padding:"8px 24px 40px" }}>
             {doseScale.factor !== 1 && tab !== "nutrizione" && (
-              <div style={{ margin:"0 20px 10px", padding:"8px 12px", borderRadius:10, background:`${th.appAccent}12`, border:`1px solid ${th.appAccent}55`, display:"flex", alignItems:"center", gap:8 }}>
+              <div style={{ margin:"0 20px 10px", padding:"8px 12px", borderRadius:10, background:th.appPillBg, border:`1px solid ${th.appFieldBorder}`, display:"flex", alignItems:"center", gap:8 }}>
                 <span style={{ fontSize:15 }}>⚖️</span>
                 <span style={{ fontFamily:F.ui, fontSize:11, color:th.appInk, lineHeight:1.35 }}>
                   Dosi in scala <b>×{Math.round(doseScale.factor*100)/100}</b> — {doseScale.label}. Le quantità mostrate sono già ricalcolate.
