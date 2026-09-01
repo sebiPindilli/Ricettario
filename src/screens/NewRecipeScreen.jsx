@@ -73,8 +73,12 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
   }, [allRecipes]);
 
 
+  // Colore per ricetta (classico) → colore di sezione (quaderno/schedario),
+  // stesso punto di derivazione di RecipeScreen.jsx/EditScreen.jsx.
+  const heroColor = ui.sectionColorFull(draft.macroSection) ?? draft.color;
+
   return (
-    <div style={{ background:"#FAF7F0", minHeight:"100%", display:"flex", flexDirection:"column" }}>
+    <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
 
       {/* Header */}
       <div style={{ padding:"8px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
@@ -82,11 +86,12 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
         <div style={{ display:"flex", gap:8, alignItems:"center" }}>
           <InfoButton>{guideNuovaModificaRicetta}</InfoButton>
           <button onClick={() => canSave && onSave(draft)} style={{
-            background: canSave ? "#C4593A" : "#EDE6D4",
-            color: canSave ? "#fff" : "#7A6E5F",
-            border:"none", borderRadius:10,
+            background: canSave ? th.appAccent : th.appBorder,
+            color: canSave ? th.appOnAccent : th.appFaded,
+            border:"none", borderRadius:ui.radius.control,
             padding:"8px 18px",
             fontFamily:F.ui, fontSize:13, fontWeight:700,
+            textTransform: ui.uppercaseButtons ? "uppercase" : "none",
             cursor: canSave ? "pointer" : "default",
             transition:"all 0.2s",
             display:"flex", alignItems:"center", gap:5,
@@ -97,15 +102,15 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
       {/* Preview hero — updates live */}
       <div style={{
         margin:"12px 20px 0",
-        background: draft.color,
-        borderRadius:16,
+        background: heroColor,
+        borderRadius:ui.radius.card,
         padding:"18px 20px",
         display:"flex", alignItems:"center", gap:14,
       }}>
         {/* Emoji picker */}
         <div style={{ position:"relative" }}>
           <div style={{
-            width:52, height:52, borderRadius:12,
+            width:52, height:52, borderRadius:ui.radius.tile,
             background:"rgba(255,255,255,0.2)", color:"#fff",
             display:"flex", alignItems:"center", justifyContent:"center",
             cursor:"pointer",
@@ -147,9 +152,9 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
                 autoFocus={ui.id==="classico"}
                 style={{
                   width:"100%", padding:"12px 14px",
-                  border:`1.5px solid ${draft.title ? "#C4593A" : "#EDE6D4"}`,
-                  borderRadius:10, background:"#F7F2E8",
-                  fontFamily:F.display, fontSize:16, color:"#2C2416",
+                  border:`1.5px solid ${draft.title ? th.appAccent : ui.border}`,
+                  borderRadius:ui.radius.control, background:ui.card,
+                  fontFamily:F.display, fontSize:16, color:th.appInk,
                   outline:"none", boxSizing:"border-box",
                   transition:"border-color 0.2s",
                 }}
@@ -231,7 +236,7 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
             <EditLabel text="Note e consigli"/>
             <textarea value={draft.note} onChange={e=>set("note",e.target.value)}
               rows={5} placeholder="Aggiungi note, varianti, consigli…"
-              style={{ width:"100%", padding:"12px 14px", border:`1.5px solid #EDE6D4`, borderRadius:12, background:"#F7F2E8", fontFamily:F.body, fontStyle:"italic", fontSize:14, color:"#2C2416", outline:"none", resize:"none", lineHeight:1.6, boxSizing:"border-box" }}/>
+              style={{ width:"100%", padding:"12px 14px", border:`1.5px solid ${ui.border}`, borderRadius:ui.radius.control, background:ui.card, fontFamily:F.body, fontStyle:"italic", fontSize:14, color:th.appInk, outline:"none", resize:"none", lineHeight:1.6, boxSizing:"border-box" }}/>
           </div>
         );
 
@@ -300,23 +305,25 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
       {/* Floating save bar */}
       <div style={{
         position:"sticky", bottom:0,
-        background:"#FAF7F0", borderTop:`1px solid ${"#EDE6D4"}`,
+        background:th.appBg, borderTop:`1px solid ${ui.hairlineStrong}`,
         padding:"12px 20px", display:"flex", gap:10,
       }}>
         <button onClick={onBack} style={{
           flex:1, padding:"12px",
-          border:`1.5px solid #EDE6D4`, borderRadius:12,
-          background:"transparent", color:"#7A6E5F",
+          border:`1.5px solid ${ui.border}`, borderRadius:ui.radius.control,
+          background:"transparent", color:th.appFaded,
           fontFamily:F.ui, fontSize:14, cursor:"pointer",
+          textTransform: ui.uppercaseButtons ? "uppercase" : "none",
         }}>Annulla</button>
         <button onClick={() => canSave && onSave(draft)} style={{
           flex:2, padding:"12px",
-          background: canSave ? "#C4593A" : "#EDE6D4",
-          color: canSave ? "#fff" : "#7A6E5F",
-          border:"none", borderRadius:12,
+          background: canSave ? th.appAccent : th.appBorder,
+          color: canSave ? th.appOnAccent : th.appFaded,
+          border:"none", borderRadius:ui.radius.control,
           fontFamily:F.ui, fontSize:14, fontWeight:700,
+          textTransform: ui.uppercaseButtons ? "uppercase" : "none",
           cursor: canSave ? "pointer" : "default",
-          boxShadow: canSave ? "0 4px 16px rgba(196,89,58,0.35)" : "none",
+          boxShadow: canSave ? `0 4px 16px ${th.appAccent}55` : "none",
           transition:"all 0.2s",
           display:"flex", alignItems:"center", justifyContent:"center", gap:6,
         }}>

@@ -80,17 +80,23 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
 
   const sections = ["info","ingredienti","preparazione","note"];
 
+  // Colore per ricetta (classico) → colore di sezione (quaderno/schedario),
+  // stesso punto di derivazione di RecipeScreen.jsx: sectionColorFull
+  // (sezioniPiene) perché qui è un riempimento pieno con icona/testo bianco.
+  const heroColor = ui.sectionColorFull(draft.macroSection) ?? draft.color;
+
   return (
-    <div style={{ background:"#FAF7F0", minHeight:"100%", display:"flex", flexDirection:"column" }}>
+    <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
       <div style={{ padding:"8px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
         <BackBtn onBack={onBack} label="Annulla"/>
         <div style={{ display:"flex", gap:8, alignItems:"center" }}>
           <InfoButton>{guideNuovaModificaRicetta}</InfoButton>
           <button onClick={handleSave} style={{
-            background:"#C4593A", color:"#fff",
-            border:"none", borderRadius:10,
+            background:th.appAccent, color:th.appOnAccent,
+            border:"none", borderRadius:ui.radius.control,
             padding:"8px 18px",
             fontFamily:F.ui, fontSize:13, fontWeight:700,
+            textTransform: ui.uppercaseButtons ? "uppercase" : "none",
             cursor:"pointer",
             display:"flex", alignItems:"center", gap:5,
           }}>Salva <AppIcon emoji="✓" icon="fatto" size={12} /></button>
@@ -98,19 +104,19 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
       </div>
 
       <div style={{ padding:"12px 20px 4px" }}>
-        <div style={{ fontFamily:F.display, fontSize:20, color:"#2C2416" }}>Modifica Ricetta</div>
+        <div style={{ fontFamily:F.display, fontSize:20, color:th.appInk }}>Modifica Ricetta</div>
       </div>
 
       {/* Preview hero — updates live */}
       <div style={{
         margin:"12px 20px 0",
-        background: draft.color,
-        borderRadius:16,
+        background: heroColor,
+        borderRadius:ui.radius.card,
         padding:"18px 20px",
         display:"flex", alignItems:"center", gap:14,
       }}>
         <div style={{
-          width:52, height:52, borderRadius:12,
+          width:52, height:52, borderRadius:ui.radius.tile,
           background:"rgba(255,255,255,0.2)", color:"#fff",
           display:"flex", alignItems:"center", justifyContent:"center",
         }}><ChosenIcon emoji={draft.emoji} icon={draft.icon} size={26} /></div>
@@ -320,25 +326,27 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
       {/* Floating save bar */}
       <div style={{
         position:"sticky", bottom:0,
-        background:"#FAF7F0",
-        borderTop:`1px solid ${"#EDE6D4"}`,
+        background:th.appBg,
+        borderTop:`1px solid ${ui.hairlineStrong}`,
         padding:"12px 20px",
         display:"flex", gap:10,
       }}>
         <button onClick={onBack} style={{
           flex:1, padding:"12px",
-          border:`1.5px solid #EDE6D4`,
-          borderRadius:12, background:"transparent",
-          color:"#7A6E5F", fontFamily:F.ui, fontSize:14,
+          border:`1.5px solid ${ui.border}`,
+          borderRadius:ui.radius.control, background:"transparent",
+          color:th.appFaded, fontFamily:F.ui, fontSize:14,
+          textTransform: ui.uppercaseButtons ? "uppercase" : "none",
           cursor:"pointer",
         }}>Annulla</button>
         <button onClick={handleSave} style={{
           flex:2, padding:"12px",
-          background:"#C4593A", color:"#fff",
-          border:"none", borderRadius:12,
+          background:th.appAccent, color:th.appOnAccent,
+          border:"none", borderRadius:ui.radius.control,
           fontFamily:F.ui, fontSize:14, fontWeight:700,
+          textTransform: ui.uppercaseButtons ? "uppercase" : "none",
           cursor:"pointer",
-          boxShadow:"0 4px 16px rgba(196,89,58,0.35)",
+          boxShadow:`0 4px 16px ${th.appAccent}55`,
           display:"flex", alignItems:"center", justifyContent:"center", gap:6,
         }}>Salva modifiche <AppIcon emoji="✓" icon="fatto" size={13} /></button>
       </div>

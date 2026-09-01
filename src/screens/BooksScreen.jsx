@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { useTheme, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import GlobalNav from "../components/GlobalNav.jsx";
+import ScreenHeader from "../components/ScreenHeader.jsx";
 import AppIcon from "../components/AppIcon.jsx";
 import MySharedLinksScreen from "./MySharedLinksScreen.jsx";
 import SuggestionHint from "../components/SuggestionHint.jsx";
@@ -12,7 +13,6 @@ import {
   canAddMember, MAX_MEMBERS,
 } from "../utils/bookRoles.js";
 
-const DANGER = "#C4593A";
 // Etichette per i 4 ruoli — i nomi interni (bookRoles.js/firestore.rules,
 // invariati per non richiedere migrazioni dati) restano "collaboratore" e
 // "redattore"; a schermo diventano "co-proprietario" e "collaboratore",
@@ -175,6 +175,7 @@ export default function BooksScreen({
       showFavorites={false}
       activeLabel="I miei Ricettari"
       infoContent={guideLibri}
+      bottomNavActive
     />
   );
 
@@ -187,21 +188,29 @@ export default function BooksScreen({
   return (
     <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
       {nav}
-      <div style={{ padding:"14px 20px 6px", display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10 }}>
-        <div>
-          <div style={{ fontFamily:F.display, fontSize:22, color:th.appInk }}>📚 I miei Ricettari</div>
-          <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginTop:3 }}>
-            account: {me}
+      {ui.header === "legacy" && (
+        <div style={{ padding:"14px 20px 6px", display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10 }}>
+          <div>
+            <div style={{ fontFamily:F.display, fontSize:22, color:th.appInk }}>📚 I miei Ricettari</div>
+            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginTop:3 }}>
+              account: {me}
+            </div>
+          </div>
+          <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+            <button onClick={() => setPhase("sharedLinks")} style={{
+              background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10,
+              padding:"7px 11px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:11, fontWeight:600,
+              display:"flex", alignItems:"center", gap:5,
+            }}><AppIcon emoji="🔗" icon="link" size={13} /> Link condivisi</button>
           </div>
         </div>
-        <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-          <button onClick={() => setPhase("sharedLinks")} style={{
-            background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10,
-            padding:"7px 11px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:11, fontWeight:600,
-            display:"flex", alignItems:"center", gap:5,
-          }}><AppIcon emoji="🔗" icon="link" size={13} /> Link condivisi</button>
-        </div>
-      </div>
+      )}
+      <ScreenHeader
+        title="I miei Ricettari"
+        subtitle={`account: ${me}`}
+        onHome={onLanding}
+        actions={[{ icon:"link", label:"Link condivisi", onClick:() => setPhase("sharedLinks") }]}
+      />
 
       {/* Input file nascosto e condiviso da tutte le schede: quale libro
           riceve il ripristino è deciso da restoreTargetId, impostato dal
@@ -224,7 +233,7 @@ export default function BooksScreen({
             <button key={opt.label} onClick={() => setRoleFilter(opt.id)} style={{
               padding:"5px 11px", borderRadius:20, border:`1.5px solid ${roleFilter === opt.id ? th.appAccent : th.appBorder}`,
               background: roleFilter === opt.id ? th.appAccent : "transparent",
-              color: roleFilter === opt.id ? "#fff" : th.appFaded,
+              color: roleFilter === opt.id ? th.appOnAccent : th.appFaded,
               fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
             }}>{opt.label}</button>
           ))}
@@ -359,13 +368,13 @@ export default function BooksScreen({
                   più): resta comunque eliminabile, stesso overlay di conferma
                   usato per gli altri ricettari (vedi confirmingDelete sotto). */}
               {b.isBackup && (
-                <button onClick={() => setPendingDelete(b.id)} style={{ marginTop:8, background:"none", border:"none", color:DANGER, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="🗑️" icon="elimina" size={12} /> Elimina ricettario di backup</button>
+                <button onClick={() => setPendingDelete(b.id)} style={{ marginTop:8, background:"none", border:"none", color:ui.danger, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="🗑️" icon="elimina" size={12} /> Elimina ricettario di backup</button>
               )}
 
               {/* Libro personale vero: eliminabile come i condivisi, stesso
                   overlay di conferma (confirmingDelete sotto). */}
               {canDeletePersonal && (
-                <button onClick={() => setPendingDelete(b.id)} style={{ marginTop:8, background:"none", border:"none", color:DANGER, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="🗑️" icon="elimina" size={12} /> Elimina ricettario</button>
+                <button onClick={() => setPendingDelete(b.id)} style={{ marginTop:8, background:"none", border:"none", color:ui.danger, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="🗑️" icon="elimina" size={12} /> Elimina ricettario</button>
               )}
 
               {/* Backup: scarica (solo libro attivo) e ripristina-qui (tutti i
@@ -385,7 +394,7 @@ export default function BooksScreen({
                 </div>
               )}
               {restoreTargetId === b.id && restoreError && (
-                <div style={{ fontFamily:F.ui, fontSize:10.5, color:DANGER, marginTop:5 }}>{restoreError}</div>
+                <div style={{ fontFamily:F.ui, fontSize:10.5, color:ui.danger, marginTop:5 }}>{restoreError}</div>
               )}
               {restoreTargetId === b.id && restoreSuccess && (
                 <div style={{ fontFamily:F.ui, fontSize:10.5, color:"#6B8C6E", marginTop:5, display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="✓" icon="fatto" size={11} /> {restoreSuccess}</div>
@@ -413,7 +422,7 @@ export default function BooksScreen({
                       )
                     ))}
                   </div>
-                  {transferMsg && <div style={{ fontFamily:F.ui, fontSize:10.5, color: transferMsg.ok ? "#6B8C6E" : DANGER, marginTop:6, display:"flex", alignItems:"center", gap:5 }}>{transferMsg.ok && <AppIcon emoji="✓" icon="fatto" size={11} />} {transferMsg.text}</div>}
+                  {transferMsg && <div style={{ fontFamily:F.ui, fontSize:10.5, color: transferMsg.ok ? "#6B8C6E" : ui.danger, marginTop:6, display:"flex", alignItems:"center", gap:5 }}>{transferMsg.ok && <AppIcon emoji="✓" icon="fatto" size={11} />} {transferMsg.text}</div>}
                 </div>
               )}
 
@@ -428,7 +437,7 @@ export default function BooksScreen({
                         {pendingDelete === bk.id ? (
                           <>
                             <span style={{ fontFamily:F.ui, fontSize:10, color:th.appFaded }}>Eliminare?</span>
-                            <button onClick={() => { onDelete(bk.id); setPendingDelete(null); }} style={{ padding:"5px 9px", borderRadius:8, border:"none", background:DANGER, color:"#fff", fontFamily:F.ui, fontSize:10.5, fontWeight:700, cursor:"pointer" }}>Sì</button>
+                            <button onClick={() => { onDelete(bk.id); setPendingDelete(null); }} style={{ padding:"5px 9px", borderRadius:8, border:"none", background:ui.danger, color:"#fff", fontFamily:F.ui, fontSize:10.5, fontWeight:700, cursor:"pointer" }}>Sì</button>
                             <button onClick={() => setPendingDelete(null)} style={{ padding:"5px 9px", borderRadius:8, border:`1px solid ${th.appBorder}`, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:10.5, cursor:"pointer" }}>No</button>
                           </>
                         ) : pendingBackupCopyId === bk.id ? (
@@ -440,12 +449,12 @@ export default function BooksScreen({
                         ) : (
                           <>
                             <button onClick={() => setPendingBackupCopyId(bk.id)} style={{ padding:"5px 9px", borderRadius:8, border:"none", background:th.appAccent, color:th.appOnAccent, fontFamily:F.ui, fontSize:10.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}><AppIcon emoji="🔀" icon="trasferisci" size={11} /> Copia tutto qui</button>
-                            <button onClick={() => setPendingDelete(bk.id)} title="Elimina backup" style={{ padding:"5px 9px", borderRadius:8, border:`1px solid ${th.appBorder}`, background:"transparent", color:DANGER, fontFamily:F.ui, fontSize:10.5, cursor:"pointer", display:"flex", alignItems:"center" }}><AppIcon emoji="🗑️" icon="elimina" size={13} /></button>
+                            <button onClick={() => setPendingDelete(bk.id)} title="Elimina backup" style={{ padding:"5px 9px", borderRadius:8, border:`1px solid ${th.appBorder}`, background:"transparent", color:ui.danger, fontFamily:F.ui, fontSize:10.5, cursor:"pointer", display:"flex", alignItems:"center" }}><AppIcon emoji="🗑️" icon="elimina" size={13} /></button>
                           </>
                         )}
                       </div>
                       {backupCopyMsg[bk.id] && (
-                        <div style={{ fontFamily:F.ui, fontSize:10, color: backupCopyMsg[bk.id].ok ? "#6B8C6E" : DANGER, marginTop:3, display:"flex", alignItems:"center", gap:4 }}>{backupCopyMsg[bk.id].ok && <AppIcon emoji="✓" icon="fatto" size={10} />} {backupCopyMsg[bk.id].text}</div>
+                        <div style={{ fontFamily:F.ui, fontSize:10, color: backupCopyMsg[bk.id].ok ? "#6B8C6E" : ui.danger, marginTop:3, display:"flex", alignItems:"center", gap:4 }}>{backupCopyMsg[bk.id].ok && <AppIcon emoji="✓" icon="fatto" size={10} />} {backupCopyMsg[bk.id].text}</div>
                       )}
                     </div>
                   ))}
@@ -487,13 +496,13 @@ export default function BooksScreen({
                                 <button key={p} disabled={busy || targetRole === p} onClick={() => withMemberBusy(b.id, () => onChangeMemberPermission(b.id, m, p))} style={{
                                   padding:"4px 8px", border:"none", cursor: (busy || targetRole === p) ? "default" : "pointer",
                                   background: targetRole === p ? th.appAccent : "transparent",
-                                  color: targetRole === p ? "#fff" : th.appFaded,
+                                  color: targetRole === p ? th.appOnAccent : th.appFaded,
                                   fontFamily:F.ui, fontSize:9.5, fontWeight:600,
                                 }}>{roleLabel(p)}</button>
                               ))}
                             </div>
                             {iCanRemove && (
-                              <button disabled={busy} onClick={() => withMemberBusy(b.id, () => onRemoveMember(b.id, m))} style={{ background:"none", border:"none", color:DANGER, cursor: busy ? "default" : "pointer", fontSize:14, padding:0, flexShrink:0 }}>×</button>
+                              <button disabled={busy} onClick={() => withMemberBusy(b.id, () => onRemoveMember(b.id, m))} style={{ background:"none", border:"none", color:ui.danger, cursor: busy ? "default" : "pointer", fontSize:14, padding:0, flexShrink:0 }}>×</button>
                             )}
                           </div>
                         ) : (
@@ -504,7 +513,7 @@ export default function BooksScreen({
                     })}
                   </div>
                   {memberError[b.id] && (
-                    <div style={{ fontFamily:F.ui, fontSize:10.5, color:DANGER, marginBottom:8 }}>{memberError[b.id]}</div>
+                    <div style={{ fontFamily:F.ui, fontSize:10.5, color:ui.danger, marginBottom:8 }}>{memberError[b.id]}</div>
                   )}
                   {canManageMembers && (
                     <>
@@ -513,7 +522,7 @@ export default function BooksScreen({
                           <button key={r} onClick={() => setInviteRole(p => ({ ...p, [b.id]: r }))} style={{
                             padding:"4px 9px", borderRadius:20, border:`1.5px solid ${selectedInviteRole === r ? th.appAccent : th.appBorder}`,
                             background: selectedInviteRole === r ? th.appAccent : "transparent",
-                            color: selectedInviteRole === r ? "#fff" : th.appFaded,
+                            color: selectedInviteRole === r ? th.appOnAccent : th.appFaded,
                             fontFamily:F.ui, fontSize:9.5, fontWeight:600, cursor:"pointer",
                           }}>{roleLabel(r)}</button>
                         ))}
@@ -529,7 +538,7 @@ export default function BooksScreen({
                         />
                         <button disabled={atMemberCap || busy} onClick={() => { withMemberBusy(b.id, () => onAddMember(b.id, memberInput[b.id] || "", selectedInviteRole)); setMemberInput(p => ({ ...p, [b.id]: "" })); }} style={{
                           background: (atMemberCap || busy) ? th.appBorder : th.appAccent, border:"none", borderRadius:9, padding:"8px 12px",
-                          color: atMemberCap ? th.appFaded : "#fff", fontFamily:F.ui, fontSize:12, fontWeight:700,
+                          color: atMemberCap ? th.appFaded : th.appOnAccent, fontFamily:F.ui, fontSize:12, fontWeight:700,
                           cursor: (atMemberCap || busy) ? "default" : "pointer", flexShrink:0,
                         }}>＋ Invita</button>
                       </div>
@@ -560,7 +569,7 @@ export default function BooksScreen({
                     </>
                   )}
                   {isOwner && (
-                    <button onClick={() => setPendingDelete(b.id)} style={{ marginTop:10, background:"none", border:"none", color:DANGER, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="🗑️" icon="elimina" size={12} /> Elimina ricettario</button>
+                    <button onClick={() => setPendingDelete(b.id)} style={{ marginTop:10, background:"none", border:"none", color:ui.danger, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="🗑️" icon="elimina" size={12} /> Elimina ricettario</button>
                   )}
                 </div>
                 );
@@ -571,7 +580,7 @@ export default function BooksScreen({
                   <div style={{ fontFamily:F.ui, fontSize:12, color:th.appInk, textAlign:"center" }}>Eliminare <b>{b.name}</b>?<br/>Ricette e dati andranno persi per sempre.</div>
                   <div style={{ display:"flex", gap:8 }}>
                     <button onClick={() => setPendingDelete(null)} style={{ padding:"8px 14px", borderRadius:9, border:`1.5px solid ${th.appBorder}`, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:12, cursor:"pointer" }}>Annulla</button>
-                    <button onClick={() => { onDelete(b.id); setPendingDelete(null); }} style={{ padding:"8px 14px", borderRadius:9, border:"none", background:DANGER, color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer" }}>Elimina definitivamente</button>
+                    <button onClick={() => { onDelete(b.id); setPendingDelete(null); }} style={{ padding:"8px 14px", borderRadius:9, border:"none", background:ui.danger, color:"#fff", fontFamily:F.ui, fontSize:12, fontWeight:700, cursor:"pointer" }}>Elimina definitivamente</button>
                   </div>
                 </div>
               )}
@@ -596,7 +605,7 @@ export default function BooksScreen({
               placeholder="Email membri, separate da virgola (opzionale)"
               style={{ width:"100%", padding:"9px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appBg, fontFamily:F.body, fontSize:12, color:th.appInk, outline:"none", boxSizing:"border-box", marginBottom:10 }}
             />
-            {createError && <div style={{ fontFamily:F.ui, fontSize:11, color:DANGER, marginBottom:8 }}>{createError}</div>}
+            {createError && <div style={{ fontFamily:F.ui, fontSize:11, color:ui.danger, marginBottom:8 }}>{createError}</div>}
             <div style={{ display:"flex", gap:8 }}>
               <button onClick={() => { setCreating(false); setNewName(""); setNewEmails(""); setCreateError(null); }} style={{ flex:1, padding:"11px", border:`1.5px solid ${th.appBorder}`, borderRadius:11, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:12, cursor:"pointer" }}>Annulla</button>
               <button onClick={async () => {
@@ -609,7 +618,7 @@ export default function BooksScreen({
                 } finally {
                   setCreateBusy(false);
                 }
-              }} disabled={!newName.trim() || createBusy} style={{ flex:2, padding:"11px", border:"none", borderRadius:11, background: newName.trim() ? th.appAccent : th.appBorder, color: newName.trim() ? "#fff" : th.appFaded, fontFamily:F.ui, fontSize:12, fontWeight:700, cursor: newName.trim() ? "pointer" : "default" }}>
+              }} disabled={!newName.trim() || createBusy} style={{ flex:2, padding:"11px", border:"none", borderRadius:11, background: newName.trim() ? th.appAccent : th.appBorder, color: newName.trim() ? th.appOnAccent : th.appFaded, fontFamily:F.ui, fontSize:12, fontWeight:700, cursor: newName.trim() ? "pointer" : "default" }}>
                 {createBusy ? "Creazione…" : "Crea ricettario"}
               </button>
             </div>
