@@ -235,7 +235,7 @@ export default function ServingsDialog({ recipe, title, emoji, onConfirm, onClos
 
         <div style={{ display:"flex", gap:10 }}>
           <button onClick={onClose} style={{ flex:1, padding:"13px", border:`1.5px solid ${th.appBorder}`, borderRadius:12, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:13, cursor:"pointer" }}>Annulla</button>
-          <button onClick={confirm} disabled={!canConfirm} style={{ flex:2, padding:"13px", border:"none", borderRadius:12, background: canConfirm ? th.appAccent : th.appBorder, color: canConfirm ? "#fff" : th.appFaded, fontFamily:F.ui, fontSize:13, fontWeight:700, cursor: canConfirm ? "pointer" : "default", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>Applica <AppIcon emoji="✓" icon="fatto" size={13} /></button>
+          <button onClick={confirm} disabled={!canConfirm} style={{ flex:2, padding:"13px", border:"none", borderRadius:12, background: canConfirm ? th.appAccent : th.appBorder, color: canConfirm ? th.appOnAccent : th.appFaded, fontFamily:F.ui, fontSize:13, fontWeight:700, cursor: canConfirm ? "pointer" : "default", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>Applica <AppIcon emoji="✓" icon="fatto" size={13} /></button>
         </div>
       </div>
     </div>

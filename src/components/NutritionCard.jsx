@@ -133,7 +133,7 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
                   padding:"5px 11px", borderRadius:14,
                   border:`1.5px solid ${view === v ? th.appAccent : th.appBorder}`,
                   background: view === v ? th.appAccent : "transparent",
-                  color: view === v ? "#fff" : th.appFaded,
+                  color: view === v ? th.appOnAccent : th.appFaded,
                   fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer",
                 }}>{label}</button>
               ))}

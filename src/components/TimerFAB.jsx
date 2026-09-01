@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useTheme, useCookingTimers } from "../context.js";
+import { useTheme, useUiStyle, useCookingTimers } from "../context.js";
 import { F, MOBILE_BREAKPOINT_CSS } from "../data/constants.js";
 import { isExpired } from "../utils/timers.js";
 import TimersPopup from "./TimersPopup.jsx";
@@ -29,6 +29,7 @@ const DRAG_THRESHOLD = 8; // px sotto cui il gesto resta un tap (apre il popup),
 // bottom nav).
 export default function TimerFAB({ anchorSelector = ".iphone-shell", bottomOffset = MARGIN }) {
   const th = useTheme();
+  const ui = useUiStyle();
   const { timers, now, prefs } = useCookingTimers();
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState(null); // {top, left} px, relativi all'ancora — null = posizione di default
@@ -88,7 +89,7 @@ export default function TimerFAB({ anchorSelector = ".iphone-shell", bottomOffse
             : { bottom: bottomOffset, left: MARGIN, top: "auto", right: "auto" }),
           zIndex: 150,
           width: BTN_SIZE, height: BTN_SIZE, borderRadius: "50%",
-          border: "none", background: anyExpired ? "#C0524A" : th.appAccent, color: "#fff",
+          border: "none", background: anyExpired ? ui.danger : th.appAccent, color: anyExpired ? "#fff" : th.appOnAccent,
           fontFamily: F.display, fontSize: 20, fontWeight: 700,
           boxShadow: "0 6px 16px rgba(0,0,0,0.3)", cursor: "pointer",
           display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", lineHeight: 1,

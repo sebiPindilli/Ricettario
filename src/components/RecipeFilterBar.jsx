@@ -86,7 +86,7 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
         <button onClick={() => goSection(null)} style={{
           padding:"6px 14px", borderRadius:20, border:"none", flexShrink:0,
           background: !activeSection && !showFavorites ? th.appInk : th.appBorder,
-          color: !activeSection && !showFavorites ? "#fff" : th.appFaded,
+          color: !activeSection && !showFavorites ? th.appBg : th.appFaded,
           fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
         }}>Tutte</button>
         {sortSectionsAltroLast(sectionList).map(sec => {
@@ -97,13 +97,13 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
               padding:"6px 12px", borderRadius:20, flexShrink:0,
               border:`1.5px solid ${active ? th.appAccent : th.appBorder}`,
               background: active ? th.appAccent : "transparent",
-              color: active ? "#fff" : th.appFaded,
+              color: active ? th.appOnAccent : th.appFaded,
               fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
               display:"flex", alignItems:"center", gap:4, transition:"all 0.2s",
             }}>
               <SectionCategoryIcon item={sec} size={13} />
               <span>{sec.label.split(" ").slice(-1)[0]}</span>
-              <span style={{ fontSize:10, background: active ? "rgba(255,255,255,0.25)" : th.appBorder, borderRadius:10, padding:"1px 5px", color: active ? "#fff" : th.appFaded }}>{count}</span>
+              <span style={{ fontSize:10, background: active ? `${th.appOnAccent}40` : th.appBorder, borderRadius:10, padding:"1px 5px", color: active ? th.appOnAccent : th.appFaded }}>{count}</span>
             </button>
           );
         })}
@@ -111,7 +111,7 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
           padding:"6px 12px", borderRadius:20, flexShrink:0,
           border:`1.5px solid ${showFavorites ? th.appAccent : th.appBorder}`,
           background: showFavorites ? th.appAccent : "transparent",
-          color: showFavorites ? "#fff" : th.appFaded,
+          color: showFavorites ? th.appOnAccent : th.appFaded,
           fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
           display:"flex", alignItems:"center", gap:4,
         }}><AppIcon emoji="⭐" icon="preferito" size={12} /> Preferiti</button>
@@ -181,7 +181,7 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
                           padding:"5px 10px", borderRadius:20,
                           border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
                           background: sel ? th.appAccent : "transparent",
-                          color: sel ? "#fff" : th.appFaded,
+                          color: sel ? th.appOnAccent : th.appFaded,
                           fontFamily:F.ui, fontSize:11, cursor:"pointer",
                           display:"flex", alignItems:"center", gap:4,
                         }}>{tag} <span style={{ fontSize:9, opacity:0.7 }}>({count})</span></button>

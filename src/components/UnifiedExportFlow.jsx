@@ -219,7 +219,7 @@ export default function UnifiedExportFlow({
         <button onClick={toggleAll} style={{
           padding: "9px", borderRadius: 10, border: `1.5px solid ${th.appAccent}`,
           background: allSelected ? th.appAccent : "transparent",
-          color: allSelected ? "#fff" : th.appAccent,
+          color: allSelected ? th.appOnAccent : th.appAccent,
           fontFamily: F.ui, fontSize: 12, fontWeight: 700, cursor: "pointer", marginBottom: 10, flexShrink: 0,
           display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
         }}>{allSelected ? <><AppIcon emoji="✓" icon="fatto" size={13} /> Tutto il ricettario selezionato</> : "Seleziona tutto"}</button>

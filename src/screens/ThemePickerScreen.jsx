@@ -181,7 +181,7 @@ export default function ThemePickerScreen({ paletteId, temaScuro, uiStyleId, onS
                     flex: 1, padding: "10px 0", borderRadius: 12, cursor: "pointer",
                     fontFamily: F.ui, fontSize: 13, fontWeight: 700,
                     background: isActive ? th.appAccent : th.appCard,
-                    color: isActive ? "#fff" : th.appInk,
+                    color: isActive ? th.appOnAccent : th.appInk,
                     border: `1px solid ${isActive ? th.appAccent : th.appBorder}`,
                   }}
                 >{opt.label}</button>

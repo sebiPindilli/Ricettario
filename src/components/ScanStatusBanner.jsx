@@ -1,4 +1,4 @@
-import { useScanExtraction } from "../context.js";
+import { useScanExtraction, useTheme, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import AppIcon from "./AppIcon.jsx";
 
@@ -10,6 +10,8 @@ import AppIcon from "./AppIcon.jsx";
 // Tre stati: in corso (non cliccabile, il risultato non c'è ancora),
 // pronta (tocca per rivedere), fallita (tocca per i dettagli).
 export default function ScanStatusBanner({ isOnExtractionScreen, onOpenResult, onOpenScreen }) {
+  const th = useTheme();
+  const ui = useUiStyle();
   const { job, dismissJob } = useScanExtraction();
 
   if (!job || isOnExtractionScreen) return null;
@@ -31,7 +33,7 @@ export default function ScanStatusBanner({ isOnExtractionScreen, onOpenResult, o
   };
 
   return (
-    <div style={{ display:"flex", alignItems:"stretch", background: isRunning ? "#6B6355" : isDone ? "#4A7A6B" : "#C0524A", color:"#fff", height:30 }}>
+    <div style={{ display:"flex", alignItems:"stretch", background: isRunning ? th.darkChrome.bg : isDone ? "#4A7A6B" : ui.danger, color:"#fff", height:30 }}>
       <button onClick={handleTap} disabled={isRunning} style={{
         flex:1, minWidth:0, border:"none", background:"none", color:"#fff",
         fontFamily:F.ui, fontSize:11, fontWeight:600, textAlign:"left",

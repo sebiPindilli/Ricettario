@@ -86,7 +86,7 @@ export default function ReportsListOverlay({ role, me, onClose }) {
           <button onClick={copySelected} disabled={selected.length === 0} style={{
             padding: "8px 14px", borderRadius: 10, border: "none",
             background: selected.length ? th.appAccent : th.appBorder,
-            color: selected.length ? "#fff" : th.appFaded,
+            color: selected.length ? th.appOnAccent : th.appFaded,
             fontFamily: F.ui, fontSize: 12, fontWeight: 700, cursor: selected.length ? "pointer" : "default",
           }}>Copia selezionate ({selected.length})</button>
         </div>
@@ -149,7 +149,7 @@ function FilterPill({ th, active, onClick, children }) {
       padding: "6px 12px", borderRadius: 20, flexShrink: 0,
       border: `1.5px solid ${active ? th.appAccent : th.appBorder}`,
       background: active ? th.appAccent : "transparent",
-      color: active ? "#fff" : th.appFaded,
+      color: active ? th.appOnAccent : th.appFaded,
       fontFamily: F.ui, fontSize: 11, fontWeight: 600, cursor: "pointer",
       display: "inline-flex", alignItems: "center", gap: 5,
     }}>{children}</button>

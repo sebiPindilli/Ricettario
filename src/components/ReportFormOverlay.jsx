@@ -86,7 +86,7 @@ export default function ReportFormOverlay({ type, me, onClose, initialScreenshot
 
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={onClose} style={{ flex: 1, padding: "13px", border: `1.5px solid ${th.appBorder}`, borderRadius: 12, background: "transparent", color: th.appFaded, fontFamily: F.ui, fontSize: 13, cursor: "pointer" }}>Annulla</button>
-          <button onClick={submit} disabled={!canSubmit} style={{ flex: 2, padding: "13px", border: "none", borderRadius: 12, background: canSubmit ? th.appAccent : th.appBorder, color: canSubmit ? "#fff" : th.appFaded, fontFamily: F.ui, fontSize: 13, fontWeight: 700, cursor: canSubmit ? "pointer" : "default" }}>
+          <button onClick={submit} disabled={!canSubmit} style={{ flex: 2, padding: "13px", border: "none", borderRadius: 12, background: canSubmit ? th.appAccent : th.appBorder, color: canSubmit ? th.appOnAccent : th.appFaded, fontFamily: F.ui, fontSize: 13, fontWeight: 700, cursor: canSubmit ? "pointer" : "default" }}>
             {submitting ? "Invio…" : "Invia segnalazione"}
           </button>
         </div>

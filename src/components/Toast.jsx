@@ -1,11 +1,15 @@
+import { useTheme } from "../context.js";
 import { F } from "../data/constants.js";
 
 // ── Toast notification ─────────────────────────────────────────
 export default function Toast({ msg, visible }) {
+  const th = useTheme();
   return (
     <div style={{
       position:"fixed", bottom:100, left:"50%", transform:`translateX(-50%) translateY(${visible?0:20}px)`,
-      background:"#2C2416", color:"#fff",
+      // Sempre scuro indipendente dal tema (th.darkChrome, come GlobalNav):
+      // una notifica flottante deve leggersi come "chip scuro" in ogni caso.
+      background:th.darkChrome.bg, color:"#fff",
       padding:"10px 20px", borderRadius:20,
       fontFamily:F.ui, fontSize:13,
       opacity: visible ? 1 : 0,

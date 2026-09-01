@@ -165,7 +165,7 @@ function EmojiColorPickerNew({ emoji, icon, onEmoji, onIcon, title }) {
             <button key={id} onClick={() => setMode(id)} style={{
               padding:"6px 16px", border:"none", cursor:"pointer",
               background: mode===id ? th.appInk : "transparent",
-              color: mode===id ? "#fff" : ui.faded,
+              color: mode===id ? th.appBg : ui.faded,
               fontFamily:F.ui, fontSize:11, fontWeight:700,
             }}>{label}</button>
           ))}

@@ -1,5 +1,5 @@
 import { useState, useRef, useLayoutEffect } from "react";
-import { useCookingTimers } from "../context.js";
+import { useCookingTimers, useTheme, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import { remainingMs, isExpired, formatRemaining, formatOverdue } from "../utils/timers.js";
 import TimersPopup from "./TimersPopup.jsx";
@@ -17,6 +17,8 @@ const MARQUEE_CSS = `
 // testo che ci starebbe già. Tap in fondo apre lo stesso TimersPopup già
 // usato ovunque, nessuna nuova logica di stato timer.
 export default function CookingTimerBar() {
+  const th = useTheme();
+  const ui = useUiStyle();
   const { timers, now, cancelTimer } = useCookingTimers();
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
@@ -48,7 +50,7 @@ export default function CookingTimerBar() {
   }, [text]);
 
   return (
-    <div style={{ display:"flex", alignItems:"stretch", background: anyExpired ? "#C0524A" : "#2C2416", color:"#fff", height:30 }}>
+    <div style={{ display:"flex", alignItems:"stretch", background: anyExpired ? ui.danger : th.darkChrome.bg, color:"#fff", height:30 }}>
       <style dangerouslySetInnerHTML={{ __html: MARQUEE_CSS }} />
       <div ref={containerRef} onClick={() => setOpen(true)} style={{ flex:1, minWidth:0, overflow:"hidden", position:"relative", cursor:"pointer" }}>
         <div

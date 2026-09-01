@@ -129,7 +129,7 @@ export default function SectionPicker({ value, onChange, sections = MACRO_SECTIO
                     ))}
                   </div>
                 ) : (
-                  <FoodIconGrid value={newIcon} onSelect={name => { setNewIcon(name); setPickEmoji(false); }} />
+                  <FoodIconGrid value={newIcon} onSelect={name => { setNewIcon(name); setPickEmoji(false); }} accent={th.appAccent} inkColor={th.appInk} fadedColor={th.appFaded} borderColor={ui.border} bgColor={ui.card} />
                 )}
                 <button onClick={() => setPickEmoji(false)} style={{ width:"100%", marginTop:12, padding:"11px", border:`1.5px solid ${ui.border}`, borderRadius:12, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:12, cursor:"pointer" }}>‹ Indietro</button>
               </>
@@ -171,7 +171,7 @@ export default function SectionPicker({ value, onChange, sections = MACRO_SECTIO
                     const sec = sections.find(s => s.id === editEmojiFor);
                     if (sec) onUpdateSection({ ...sec, icon: name });
                     setEditEmojiFor(null); setEditMode("emoji");
-                  }} />
+                  }} accent={th.appAccent} inkColor={th.appInk} fadedColor={th.appFaded} borderColor={ui.border} bgColor={ui.card} />
                 )}
                 <button onClick={() => { setEditEmojiFor(null); setEditMode("emoji"); }} style={{ width:"100%", marginTop:12, padding:"11px", border:`1.5px solid ${ui.border}`, borderRadius:12, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:12, cursor:"pointer" }}>‹ Indietro</button>
               </>
