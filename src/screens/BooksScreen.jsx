@@ -4,13 +4,12 @@ import { F } from "../data/constants.js";
 import GlobalNav from "../components/GlobalNav.jsx";
 import ScreenHeader from "../components/ScreenHeader.jsx";
 import AppIcon from "../components/AppIcon.jsx";
-import MySharedLinksScreen from "./MySharedLinksScreen.jsx";
+import BookMembersPanel from "../components/BookMembersPanel.jsx";
 import SuggestionHint from "../components/SuggestionHint.jsx";
 import { guideLibri } from "../data/guideContent.jsx";
 import { shouldRemindBackup } from "../utils/backupReminder.js";
 import {
-  ROLES, normalizeRole, roleLabelLong, assignableRoles, canAssignRole, canRemoveMember,
-  canAddMember, MAX_MEMBERS,
+  ROLES, normalizeRole, roleLabelLong, MAX_MEMBERS,
 } from "../utils/bookRoles.js";
 
 // Etichette per i 4 ruoli — i nomi interni (bookRoles.js/firestore.rules,
@@ -34,7 +33,6 @@ export default function BooksScreen({
   const th = useTheme();
   const ui = useUiStyle();
   const isNew = ui.booksLayout === "list";
-  const [phase, setPhase] = useState("list"); // "list" | "sharedLinks"
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmails, setNewEmails] = useState("");
@@ -42,10 +40,6 @@ export default function BooksScreen({
   const [createBusy, setCreateBusy] = useState(false);
   const [renaming, setRenaming] = useState(null); // book id
   const [renameVal, setRenameVal] = useState("");
-  const [memberInput, setMemberInput] = useState({}); // bookId → email
-  const [inviteRole, setInviteRole] = useState({}); // bookId → ruolo scelto per il prossimo invito
-  const [memberError, setMemberError] = useState({}); // bookId → messaggio d'errore
-  const [memberBusy, setMemberBusy] = useState({}); // bookId → true mentre una chiamata è in corso
   const [roleFilter, setRoleFilter] = useState(null); // null = tutti i libri
   // Azioni non permesse dal ruolo, visibili ma spente: mostra il perché al
   // tocco invece di sparire del tutto (IMPLEMENTATION_PLAN Fase 10, bullet
@@ -88,19 +82,6 @@ export default function BooksScreen({
   const visibleBooks = books
     .filter(b => b.id === "b1" || !roleFilter || myRoleInBook(b, me) === roleFilter)
     .filter(b => !b.isBackup || isOrphanBackup(b));
-
-  const setMemberErr = (bookId, msg) => setMemberError(p => ({ ...p, [bookId]: msg }));
-  const withMemberBusy = async (bookId, fn) => {
-    setMemberBusy(p => ({ ...p, [bookId]: true }));
-    setMemberErr(bookId, null);
-    try {
-      await fn();
-    } catch (err) {
-      setMemberErr(bookId, err.message || "Operazione non riuscita.");
-    } finally {
-      setMemberBusy(p => ({ ...p, [bookId]: false }));
-    }
-  };
 
   const handleDownloadBackup = () => {
     onDownloadBackup();
@@ -179,29 +160,14 @@ export default function BooksScreen({
     />
   );
 
-  // ══ FASE "I MIEI LINK CONDIVISI" ══
-  if (phase === "sharedLinks") {
-    return <MySharedLinksScreen me={me} nav={nav} onBack={() => setPhase("list")} />;
-  }
-
-  // ══ FASE LISTA RICETTARI ══
   return (
     <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
       {nav}
       {ui.header === "legacy" && (
-        <div style={{ padding:"14px 20px 6px", display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10 }}>
-          <div>
-            <div style={{ fontFamily:F.display, fontSize:22, color:th.appInk }}>📚 I miei Ricettari</div>
-            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginTop:3 }}>
-              account: {me}
-            </div>
-          </div>
-          <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-            <button onClick={() => setPhase("sharedLinks")} style={{
-              background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10,
-              padding:"7px 11px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:11, fontWeight:600,
-              display:"flex", alignItems:"center", gap:5,
-            }}><AppIcon emoji="🔗" icon="link" size={13} /> Link condivisi</button>
+        <div style={{ padding:"14px 20px 6px" }}>
+          <div style={{ fontFamily:F.display, fontSize:22, color:th.appInk }}>📚 I miei Ricettari</div>
+          <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginTop:3 }}>
+            account: {me}
           </div>
         </div>
       )}
@@ -209,7 +175,6 @@ export default function BooksScreen({
         title="I miei Ricettari"
         subtitle={`account: ${me}`}
         onHome={onLanding}
-        actions={[{ icon:"link", label:"Link condivisi", onClick:() => setPhase("sharedLinks") }]}
       />
 
       {/* Input file nascosto e condiviso da tutte le schede: quale libro
@@ -469,84 +434,9 @@ export default function BooksScreen({
               )}
 
               {/* Membri (solo condivisi, non Beta) */}
-              {!isBeta && b.type === "condiviso" && (() => {
-                const roles = b.memberRoles || {};
-                const memberCount = (b.memberEmails || []).length;
-                const atMemberCap = !canAddMember(memberCount);
-                const busy = !!memberBusy[b.id];
-                const myInviteOptions = assignableRoles(myRole);
-                const selectedInviteRole = myInviteOptions.includes(inviteRole[b.id]) ? inviteRole[b.id] : myInviteOptions[myInviteOptions.length - 1];
-                return (
+              {!isBeta && b.type === "condiviso" && (
                 <div style={{ marginTop:10, paddingTop:10, borderTop:`1px dashed ${th.appBorder}` }}>
-                  <div style={{ fontFamily:F.ui, fontSize:9, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:6 }}>Membri</div>
-                  <div style={{ display:"flex", flexDirection:"column", gap:4, marginBottom:8 }}>
-                    <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appInk }}>{b.owner} <span style={{ color:th.appFaded, display:"inline-flex", alignItems:"center", gap:3 }}><AppIcon emoji="👑" icon="corona" size={10} /> proprietario</span></div>
-                    {(b.memberEmails || []).map(m => {
-                      const targetRole = normalizeRole(roles[m]);
-                      const emails = { actorEmail: me, targetEmail: m };
-                      const assignablePills = canManageMembers ? myInviteOptions.filter(r => canAssignRole(myRole, targetRole, r, emails)) : [];
-                      const iCanRemove = canManageMembers && canRemoveMember(myRole, targetRole, emails);
-                      return (
-                      <div key={m} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
-                        <span style={{ fontFamily:F.ui, fontSize:10.5, color:th.appInk, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{m}</span>
-                        {assignablePills.length > 0 ? (
-                          <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
-                            <div style={{ display:"flex", borderRadius:8, overflow:"hidden", border:`1px solid ${th.appBorder}` }}>
-                              {assignablePills.map(p => (
-                                <button key={p} disabled={busy || targetRole === p} onClick={() => withMemberBusy(b.id, () => onChangeMemberPermission(b.id, m, p))} style={{
-                                  padding:"4px 8px", border:"none", cursor: (busy || targetRole === p) ? "default" : "pointer",
-                                  background: targetRole === p ? th.appAccent : "transparent",
-                                  color: targetRole === p ? th.appOnAccent : th.appFaded,
-                                  fontFamily:F.ui, fontSize:9.5, fontWeight:600,
-                                }}>{roleLabel(p)}</button>
-                              ))}
-                            </div>
-                            {iCanRemove && (
-                              <button disabled={busy} onClick={() => withMemberBusy(b.id, () => onRemoveMember(b.id, m))} style={{ background:"none", border:"none", color:ui.danger, cursor: busy ? "default" : "pointer", fontSize:14, padding:0, flexShrink:0 }}>×</button>
-                            )}
-                          </div>
-                        ) : (
-                          <span style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, flexShrink:0 }}>{roleLabel(targetRole)}</span>
-                        )}
-                      </div>
-                      );
-                    })}
-                  </div>
-                  {memberError[b.id] && (
-                    <div style={{ fontFamily:F.ui, fontSize:10.5, color:ui.danger, marginBottom:8 }}>{memberError[b.id]}</div>
-                  )}
-                  {canManageMembers && (
-                    <>
-                      <div style={{ display:"flex", gap:6, marginBottom:6 }}>
-                        {myInviteOptions.map(r => (
-                          <button key={r} onClick={() => setInviteRole(p => ({ ...p, [b.id]: r }))} style={{
-                            padding:"4px 9px", borderRadius:20, border:`1.5px solid ${selectedInviteRole === r ? th.appAccent : th.appBorder}`,
-                            background: selectedInviteRole === r ? th.appAccent : "transparent",
-                            color: selectedInviteRole === r ? th.appOnAccent : th.appFaded,
-                            fontFamily:F.ui, fontSize:9.5, fontWeight:600, cursor:"pointer",
-                          }}>{roleLabel(r)}</button>
-                        ))}
-                      </div>
-                      <div style={{ display:"flex", gap:6 }}>
-                        <input
-                          value={memberInput[b.id] || ""}
-                          disabled={atMemberCap || busy}
-                          onChange={e => setMemberInput(p => ({ ...p, [b.id]: e.target.value }))}
-                          onKeyDown={e => { if (e.key === "Enter" && !atMemberCap) { withMemberBusy(b.id, () => onAddMember(b.id, memberInput[b.id] || "", selectedInviteRole)); setMemberInput(p => ({ ...p, [b.id]: "" })); } }}
-                          placeholder={atMemberCap ? "limite membri raggiunto" : "email@esempio.it"}
-                          style={{ flex:1, padding:"8px 11px", border:`1.5px solid ${th.appBorder}`, borderRadius:9, background:th.appBg, fontFamily:F.body, fontSize:12, color:th.appInk, outline:"none", minWidth:0 }}
-                        />
-                        <button disabled={atMemberCap || busy} onClick={() => { withMemberBusy(b.id, () => onAddMember(b.id, memberInput[b.id] || "", selectedInviteRole)); setMemberInput(p => ({ ...p, [b.id]: "" })); }} style={{
-                          background: (atMemberCap || busy) ? th.appBorder : th.appAccent, border:"none", borderRadius:9, padding:"8px 12px",
-                          color: atMemberCap ? th.appFaded : th.appOnAccent, fontFamily:F.ui, fontSize:12, fontWeight:700,
-                          cursor: (atMemberCap || busy) ? "default" : "pointer", flexShrink:0,
-                        }}>＋ Invita</button>
-                      </div>
-                      <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:6, fontStyle:"italic" }}>
-                        {atMemberCap ? `Limite di ${MAX_MEMBERS} membri raggiunto.` : "Puoi invitare solo email già abilitate da un admin in \"Gestione utenti\"."}
-                      </div>
-                    </>
-                  )}
+                  <BookMembersPanel book={b} me={me} onAddMember={onAddMember} onRemoveMember={onRemoveMember} onChangeMemberPermission={onChangeMemberPermission}/>
                   {/* Ruolo che non permette di invitare: visibile ma spenta,
                       il perché compare al tocco invece di sparire del tutto
                       (IMPLEMENTATION_PLAN Fase 10, bullet 42) — solo stili nuovi. */}
@@ -572,8 +462,7 @@ export default function BooksScreen({
                     <button onClick={() => setPendingDelete(b.id)} style={{ marginTop:10, background:"none", border:"none", color:ui.danger, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="🗑️" icon="elimina" size={12} /> Elimina ricettario</button>
                   )}
                 </div>
-                );
-              })()}
+              )}
 
               {confirmingDelete && (
                 <div style={{ position:"absolute", inset:0, background:`${th.appBg}f2`, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10, padding:12 }}>

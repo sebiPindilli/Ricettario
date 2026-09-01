@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useTheme, useRole, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import { normalizeRole, roleLabelLong, assignableRoles } from "../utils/bookRoles.js";
@@ -6,6 +6,8 @@ import OrganizeIcon from "../components/OrganizeIcon.jsx";
 import AppIcon from "../components/AppIcon.jsx";
 import Icon from "../components/Icon.jsx";
 import BottomNav from "../components/BottomNav.jsx";
+import AddMemberOverlay from "../components/AddMemberOverlay.jsx";
+import SwitchBookOverlay from "../components/SwitchBookOverlay.jsx";
 
 // Menù del contorno (Fase 11) — componenti a livello di modulo, non
 // dichiarati dentro il render: react-hooks/static-components li rifiuta
@@ -57,10 +59,12 @@ const LandingItemCard = ({ th, item }) => (
   </button>
 );
 
-export default function LandingScreen({ recipes = [], bookName = "Il mio Ricettario", activeBook = null, me = null, onBooks, onRecipes, onBook, onMemories, onAdd, onAddMemory, onFridge, onShopping, onOrganize, onTheme, onCover, onGuide, onAdminUsers, onMySharedLinks, onExport }) {
+export default function LandingScreen({ recipes = [], bookName = "Il mio Ricettario", activeBook = null, books = [], me = null, onBooks, onSwitch, onAddMember, onRemoveMember, onChangeMemberPermission, onRecipes, onBook, onMemories, onAdd, onAddMemory, onFridge, onShopping, onOrganize, onTheme, onCover, onGuide, onAdminUsers, onMySharedLinks, onExport }) {
   const th = useTheme();
   const ui = useUiStyle();
   const role = useRole();
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [showSwitchBook, setShowSwitchBook] = useState(false);
   // Negli stili nuovi la Landing si riduce al menù del contorno (DECISIONI.md
   // §Navigazione e chrome): le cinque destinazioni principali non si
   // duplicano più, sono già nella barra in basso — restano solo le voci di
@@ -101,10 +105,12 @@ export default function LandingScreen({ recipes = [], bookName = "Il mio Ricetta
         </div>
 
         <div style={{ padding:"0 20px 40px", flex:1, overflowY:"auto" }}>
-          {/* a) Ricettario attivo — card con dorso, nome/membri/ruolo, più le
-              due azioni rapide (cambia ricettario, aggiungi persona). Il
-              modulo membri/invito vero e proprio resta in BooksScreen (già
-              inline per libro): qui si apre solo la stessa schermata. */}
+          {/* a) Ricettario attivo — card con dorso, nome/membri/ruolo. Il tap
+              sulla card apre "I miei ricettari" (rinomina/backup/elimina/
+              dorso); "Aggiungi persona" e "Cambia ricettario" aprono invece
+              due popup leggeri qui sulla Landing (AddMemberOverlay.jsx/
+              SwitchBookOverlay.jsx), che riusano la stessa logica membri/
+              cambio libro già scritta per BooksScreen.jsx. */}
           <div style={{ marginTop:14, ...ui.cardStyle, padding:"12px" }}>
             <button onClick={onBooks} style={{
               width:"100%", display:"flex", alignItems:"center", gap:12,
@@ -123,14 +129,14 @@ export default function LandingScreen({ recipes = [], bookName = "Il mio Ricetta
             </button>
             <div style={{ display:"flex", gap:8, marginTop:10, paddingTop:10, borderTop:`1px solid ${ui.hairline}` }}>
               {canInvite && (
-                <button onClick={onBooks} style={{
+                <button onClick={() => setShowAddMember(true)} style={{
                   flex:1, padding:"8px 10px", borderRadius:ui.radius.control, border:"none",
                   background:th.appPillBg, color:th.appAccent,
                   fontFamily:F.ui, fontSize:11.5, fontWeight:600, cursor:"pointer",
                   display:"flex", alignItems:"center", justifyContent:"center", gap:5,
                 }}><AppIcon emoji="➕" icon="persona" size={12} /> Aggiungi persona</button>
               )}
-              <button onClick={onBooks} style={{
+              <button onClick={() => setShowSwitchBook(true)} style={{
                 flex:1, padding:"8px 10px", borderRadius:ui.radius.control,
                 border:`1px solid ${ui.border}`, background:"transparent", color:ui.faded,
                 fontFamily:F.ui, fontSize:11.5, fontWeight:600, cursor:"pointer",
@@ -151,7 +157,7 @@ export default function LandingScreen({ recipes = [], bookName = "Il mio Ricetta
           <LandingGroupLabel ui={ui} text="Condivisione"/>
           <div style={{ ...ui.cardStyle, overflow:"hidden" }}>
             <LandingRow ui={ui} th={th} icon="libro" label="I miei ricettari" fn={onBooks}/>
-            <LandingRow ui={ui} th={th} icon="esporta" label="Link condivisi da me" fn={onMySharedLinks}/>
+            <LandingRow ui={ui} th={th} icon="link" label="Link condivisi da me" fn={onMySharedLinks}/>
             {onExport && <LandingRow ui={ui} th={th} icon="esporta" label="Esporta ricettario" fn={onExport}/>}
           </div>
 
@@ -175,6 +181,25 @@ export default function LandingScreen({ recipes = [], bookName = "Il mio Ricetta
           onFridge={onFridge}
           onShopping={onShopping}
         />
+
+        {showAddMember && (
+          <AddMemberOverlay
+            book={activeBook}
+            me={me}
+            onAddMember={onAddMember}
+            onRemoveMember={onRemoveMember}
+            onChangeMemberPermission={onChangeMemberPermission}
+            onClose={() => setShowAddMember(false)}
+          />
+        )}
+        {showSwitchBook && (
+          <SwitchBookOverlay
+            books={books}
+            activeBookId={activeBook?.id}
+            onSwitch={onSwitch}
+            onClose={() => setShowSwitchBook(false)}
+          />
+        )}
       </div>
     );
   }

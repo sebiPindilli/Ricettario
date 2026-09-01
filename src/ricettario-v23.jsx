@@ -2109,8 +2109,13 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             recipes={recipes}
             bookName={activeBook?.name}
             activeBook={activeBook}
+            books={books}
             me={me}
             onBooks={() => goTo("books")}
+            onSwitch={switchBook}
+            onAddMember={addMember}
+            onRemoveMember={removeMember}
+            onChangeMemberPermission={changeMemberPermission}
             onMySharedLinks={() => goTo("mySharedLinks")}
             onOrganize={() => openOrganize()}
             onRecipes={() => setScreen("recipes")}
