@@ -118,6 +118,15 @@ export default function OrganizeIngredientsScreen({
   // sono stati aggregati e C no, "A · B · C" diventa "Aggregato AB · C".
   const aggregateNameFor = (id) => aggregates.find(a => (a.members || []).includes(id))?.name;
   const memberOrAggName = (id) => aggregateNameFor(id) || dictName(id);
+  // Un membro di un'allergia può essere un id ingrediente o un id
+  // aggregato (collegamento vivo, vedi expandAllergenMembers): qui si
+  // distingue solo per la resa testuale (⊕ NomeAggregato vs nome
+  // ingrediente), la risoluzione "vera" ai fini del filtro/dei
+  // suggerimenti resta sempre expandAllergenMembers.
+  const allergenMemberLabel = (id) => {
+    const agg = aggregates.find(a => a.id === id);
+    return agg ? `⊕ ${agg.name}` : dictName(id);
+  };
   // Suggerimenti aggregati: quelli attivi arrivano già pronti come prop
   // (suggestedAggregates); qui calcoliamo anche l'insieme completo, senza
   // filtro sugli ignorati, per poter mostrare le card "ignorate" attenuate
@@ -139,8 +148,8 @@ export default function OrganizeIngredientsScreen({
   // ignoredSuggestedGroups sopra, ma senza scarto per ambiguità (un
   // ingrediente può comparire in più suggerimenti, uno per gruppo).
   const allAllergenSuggestions = React.useMemo(
-    () => findAllergenSuggestions(dictM, allergenGroups, []),
-    [dictM, allergenGroups]
+    () => findAllergenSuggestions(dictM, allergenGroups, [], aggregates),
+    [dictM, allergenGroups, aggregates]
   );
   const ignoredAllergenSuggestionCards = React.useMemo(() => {
     const isIgnored = (ingId, groupId) => ignoredAllergenSuggestions.some(([i, g]) => i === ingId && g === groupId);
@@ -174,6 +183,21 @@ export default function OrganizeIngredientsScreen({
 
   const catLabel = (id) => categoryList.find(c => c.id === id);
   const orderedCats = sortCategoriesBaseFirst(categoryList);
+  // Ingredienti raggruppati per categoria per la griglia "Ingredienti
+  // inclusi" dell'editor allergia — stesso schema di byCategory/
+  // uncategorizedItems in EmptyFridgeScreen.jsx (base-first, alfabetico
+  // dentro ogni categoria, "Senza categoria" a parte in fondo).
+  const allDictEntriesByCategory = React.useMemo(
+    () => orderedCats.map(cat => ({
+      ...cat,
+      items: allDictEntries.filter(e => (ingredientCategories[e.name] || []).includes(cat.id)),
+    })).filter(c => c.items.length > 0),
+    [orderedCats, allDictEntries, ingredientCategories]
+  );
+  const allDictEntriesUncategorized = React.useMemo(
+    () => allDictEntries.filter(e => !(ingredientCategories[e.name] || []).length),
+    [allDictEntries, ingredientCategories]
+  );
   // Ingredienti referenziati da almeno una ricetta del libro attivo — il
   // resto del dizionario (accumulato nel tempo da buildIngredientDict, che
   // non rimuove mai le voci diventate orfane) finisce nella sezione
@@ -384,7 +408,7 @@ export default function OrganizeIngredientsScreen({
                   <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontFamily:F.body, fontSize:14.5, fontWeight:700, color:th.appInk }}>⚠️ {group.label}</div>
-                      <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:2 }}>{(group.members||[]).map(dictName).join(" · ")}</div>
+                      <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:2 }}>{(group.members||[]).map(allergenMemberLabel).join(" · ")}</div>
                     </div>
                     <button onClick={() => { setManageAllergens(false); setEditingAllergen({ id:group.id, label:group.label, members:[...(group.members||[])] }); }} style={{ background:th.appInk, border:"none", borderRadius:9, padding:"7px 11px", color:th.appBg, fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0, display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="✏️" icon="modifica" size={11} /> Modifica</button>
                   </div>
@@ -492,24 +516,76 @@ export default function OrganizeIngredientsScreen({
             />
           </div>
 
+          {aggregates.length > 0 && (
+            <>
+              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:8 }}>
+                Aggregati inclusi — tutti i loro ingredienti attuali contano per questa allergia
+              </div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:20 }}>
+                {aggregates.map(agg => {
+                  const sel = (editingAllergen.members || []).includes(agg.id);
+                  return (
+                    <button key={agg.id} onClick={() => toggleAllergenMember(agg.id)} style={{
+                      padding:"6px 12px", borderRadius:20,
+                      border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
+                      background: sel ? th.appAccent : "transparent",
+                      color: sel ? "#fff" : th.appFaded,
+                      fontFamily:F.ui, fontSize:11, cursor:"pointer",
+                      display:"flex", alignItems:"center", gap:4,
+                    }}>{sel && <span style={{ fontSize:10 }}>✓</span>}⊕ {agg.name}</button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
           <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:8 }}>
-            Ingredienti inclusi ({(editingAllergen.members || []).length})
+            Ingredienti inclusi singolarmente ({(editingAllergen.members || []).filter(m => !aggregates.some(a => a.id === m)).length})
           </div>
-          <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-            {allDictEntries.map(({ name, display }) => {
-              const sel = (editingAllergen.members || []).includes(name);
-              return (
-                <button key={name} onClick={() => toggleAllergenMember(name)} style={{
-                  padding:"6px 12px", borderRadius:20,
-                  border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
-                  background: sel ? th.appAccent : "transparent",
-                  color: sel ? "#fff" : th.appFaded,
-                  fontFamily:F.ui, fontSize:11, cursor:"pointer",
-                  display:"flex", alignItems:"center", gap:4,
-                }}>{sel && <span style={{ fontSize:10 }}>✓</span>}{display}</button>
-              );
-            })}
-          </div>
+          {allDictEntriesByCategory.map(cat => (
+            <div key={cat.id} style={{ marginBottom:14 }}>
+              <div style={{ fontFamily:F.ui, fontSize:9.5, letterSpacing:1.2, color:th.appAccent, textTransform:"uppercase", margin:"0 0 6px", fontWeight:700, display:"flex", alignItems:"center", gap:5 }}>
+                <SectionCategoryIcon item={cat} size={10} /> {cat.label}
+              </div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                {cat.items.map(({ name, display }) => {
+                  const sel = (editingAllergen.members || []).includes(name);
+                  return (
+                    <button key={name} onClick={() => toggleAllergenMember(name)} style={{
+                      padding:"6px 12px", borderRadius:20,
+                      border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
+                      background: sel ? th.appAccent : "transparent",
+                      color: sel ? "#fff" : th.appFaded,
+                      fontFamily:F.ui, fontSize:11, cursor:"pointer",
+                      display:"flex", alignItems:"center", gap:4,
+                    }}>{sel && <span style={{ fontSize:10 }}>✓</span>}{display}</button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          {allDictEntriesUncategorized.length > 0 && (
+            <div style={{ marginBottom:14 }}>
+              <div style={{ fontFamily:F.ui, fontSize:9.5, letterSpacing:1.2, color:th.appAccent, textTransform:"uppercase", margin:"0 0 6px", fontWeight:700, display:"flex", alignItems:"center", gap:4 }}>
+                <AppIcon emoji="❓" icon="domanda" size={10} /> Senza categoria
+              </div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                {allDictEntriesUncategorized.map(({ name, display }) => {
+                  const sel = (editingAllergen.members || []).includes(name);
+                  return (
+                    <button key={name} onClick={() => toggleAllergenMember(name)} style={{
+                      padding:"6px 12px", borderRadius:20,
+                      border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
+                      background: sel ? th.appAccent : "transparent",
+                      color: sel ? "#fff" : th.appFaded,
+                      fontFamily:F.ui, fontSize:11, cursor:"pointer",
+                      display:"flex", alignItems:"center", gap:4,
+                    }}>{sel && <span style={{ fontSize:10 }}>✓</span>}{display}</button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         <div style={{ padding:"12px 18px 22px", display:"flex", gap:8, borderTop:`1px solid ${th.appBorder}` }}>

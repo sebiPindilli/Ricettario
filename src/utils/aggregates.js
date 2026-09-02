@@ -237,18 +237,38 @@ export const findSimilarIngredients = (ingredientDict, aggregates = [], ignoredP
 // allergenGroups: [{id, label, members:[ingId,...], ...}]
 // ignoredPairs: [[ingId, groupId], ...] — ORDINATE (ingrediente poi
 // gruppo), non simmetriche come le coppie di findSimilarIngredients.
-export const findAllergenSuggestions = (ingredientDict, allergenGroups = [], ignoredPairs = []) => {
+export const findAllergenSuggestions = (ingredientDict, allergenGroups = [], ignoredPairs = [], aggregates = []) => {
   const isIgnored = (ingId, groupId) => (ignoredPairs || []).some(([i, g]) => i === ingId && g === groupId);
   const suggestions = [];
   Object.keys(ingredientDict || {}).forEach(ingId => {
     (allergenGroups || []).forEach(group => {
-      if ((group.members || []).includes(ingId)) return; // già membro di questo gruppo
+      const expanded = expandAllergenMembers(group.members, aggregates);
+      if (expanded.has(ingId)) return; // già membro (diretto o via aggregato) di questo gruppo
       if (isIgnored(ingId, group.id)) return;
-      const similar = (group.members || []).some(memberId =>
+      const similar = [...expanded].some(memberId =>
         ingredientDict[memberId] && namesAreSimilar(ingredientDict[ingId], ingredientDict[memberId])
       );
       if (similar) suggestions.push({ ingredientId: ingId, groupId: group.id, groupLabel: group.label });
     });
   });
   return suggestions;
+};
+
+// Un membro di un'allergia/intolleranza può essere un id ingrediente
+// diretto o un id aggregato (collegamento "vivo": vedi punto 1 del piano
+// allergie) — i due spazi di id non collidono mai per costruzione (vedi
+// commento in cima al file su agg.id/uid("agg")). Risolve members
+// nell'insieme REALE di ingredienti esclusi in questo momento, seguendo
+// la composizione attuale di ogni aggregato referenziato (se un aggregato
+// cambia membri più tardi, l'allergia lo segue automaticamente perché
+// questa funzione viene richiamata ad ogni render, mai una copia salvata).
+export const expandAllergenMembers = (members, aggregates = []) => {
+  const aggById = new Map((aggregates || []).map(a => [a.id, a]));
+  const out = new Set();
+  (members || []).forEach(id => {
+    const agg = aggById.get(id);
+    if (agg) (agg.members || []).forEach(m => out.add(m));
+    else out.add(id);
+  });
+  return out;
 };

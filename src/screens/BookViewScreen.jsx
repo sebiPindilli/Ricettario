@@ -8,7 +8,7 @@ import RecipeFilterBarBook from "../components/RecipeFilterBarBook.jsx";
 // "classico" (lo si faceva prima Fase 11): la nav segue lo stile reale come
 // ovunque — vedi RecipeFilterBarBook.jsx — e così la ricerca/i filtri
 // (RecipeFilterBar, non nella lista degli esenti di DECISIONI.md).
-export default function BookViewScreen({ recipes, onLanding, onRecipe, onRecipes, onMemories, onAdd, onFridge, onShopping, onExport, extraTagGroups=[], sectionList=MACRO_SECTIONS, ingredientDict=null, allergenGroups=[] }) {
+export default function BookViewScreen({ recipes, onLanding, onRecipe, onRecipes, onMemories, onAdd, onFridge, onShopping, onExport, extraTagGroups=[], sectionList=MACRO_SECTIONS, ingredientDict=null, allergenGroups=[], aggregates=[] }) {
   const [pageIndex, setPageIndex] = useState(0);
   const [turning, setTurning] = useState(null);
 
@@ -19,6 +19,7 @@ export default function BookViewScreen({ recipes, onLanding, onRecipe, onRecipes
       sectionList={sectionList}
       ingredientDict={ingredientDict}
       allergenGroups={allergenGroups}
+      aggregates={aggregates}
       pageIndex={pageIndex}
       setPageIndex={setPageIndex}
       turning={turning}

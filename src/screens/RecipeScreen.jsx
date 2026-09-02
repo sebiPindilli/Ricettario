@@ -3,7 +3,7 @@ import { useTheme, useOnline, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import { NUTRITION_DB } from "../data/nutrition.js";
 import { uid, dishPhotoOf, readImageFile, normName, ingDictIndex, resolveIngId, flattenIngredients } from "../utils/helpers.js";
-import { effectiveNutritionKey } from "../utils/aggregates.js";
+import { effectiveNutritionKey, expandAllergenMembers } from "../utils/aggregates.js";
 import BackBtn from "../components/BackBtn.jsx";
 import Toast from "../components/Toast.jsx";
 import PhotoLightbox from "../components/PhotoLightbox.jsx";
@@ -23,7 +23,7 @@ import CookingMode from "./CookingMode.jsx";
 import InfoButton from "../components/InfoButton.jsx";
 import { guideDettaglioRicetta } from "../data/guideContent.jsx";
 
-export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemory, onAddMemory, onManageIngredients, onManageEquivalences, onAddToShoppingList, nutritionMap = {}, equivalences = {}, customUnits = {}, customFoods = [], ingredientDict = null, aggregates = [], sourceByIngredient = {}, onOpenExport }) {
+export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelete, onDeleteMemory, onAddMemory, onManageIngredients, onManageEquivalences, onAddToShoppingList, nutritionMap = {}, equivalences = {}, customUnits = {}, customFoods = [], ingredientDict = null, aggregates = [], allergenGroups = [], sourceByIngredient = {}, onOpenExport }) {
   const th = useTheme();
   const ui = useUiStyle();
   // Colore per ricetta (classico) → colore di sezione (quaderno/schedario,
@@ -60,6 +60,18 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
     });
     return { anyMapped };
   }, [recipe.ingredients, nutritionMap, customFoods, ingredientDict, aggregates, sourceByIngredient]);
+
+  // Allergie/intolleranze i cui membri (diretti o via aggregato collegato,
+  // vedi expandAllergenMembers) intersecano gli ingredienti di questa
+  // ricetta — stesso calcolo del filtro di esclusione in RecipeFilterBar.jsx/
+  // RecipesScreen.jsx, qui solo per segnalare, non per filtrare.
+  const matchedAllergenGroups = React.useMemo(() => {
+    const idx = ingredientDict ? ingDictIndex(ingredientDict) : null;
+    const ids = new Set(flattenIngredients(recipe.ingredients).map(ing => resolveIngId(idx, ing.name)));
+    return allergenGroups.filter(group =>
+      [...expandAllergenMembers(group.members, aggregates)].some(m => ids.has(m))
+    );
+  }, [recipe.ingredients, ingredientDict, aggregates, allergenGroups]);
 
   const addComment = () => {
     const text = commentInput.trim();
@@ -477,7 +489,17 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
               </div>
             )}
             {tab === "ingredienti" && (
-              <IngredientsView ingredients={recipe.ingredients} recipeColor={heroColor} scaleFactor={doseScale.factor}/>
+              <>
+                <IngredientsView ingredients={recipe.ingredients} recipeColor={heroColor} scaleFactor={doseScale.factor}/>
+                {matchedAllergenGroups.length > 0 && (
+                  <div style={{ marginTop:14, padding:"8px 12px", borderRadius:10, background:th.appPillBg, border:`1px solid ${th.appFieldBorder}`, display:"flex", alignItems:"flex-start", gap:8 }}>
+                    <AppIcon emoji="⚠️" icon="avviso" size={15} style={{ marginTop:1, flexShrink:0 }}/>
+                    <span style={{ fontFamily:F.ui, fontSize:11, color:th.appInk, lineHeight:1.35 }}>
+                      Contiene ingredienti di: <b>{matchedAllergenGroups.map(g => g.label).join(", ")}</b>
+                    </span>
+                  </div>
+                )}
+              </>
             )}
             {tab === "preparazione" && (
               <StepsView steps={recipe.steps} recipeColor={heroColor}/>

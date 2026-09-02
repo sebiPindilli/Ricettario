@@ -804,8 +804,8 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     setIgnoredAllergenSuggestions(prev => prev.filter(([i, g]) => !(i === ingId && g === groupId)));
   };
   const suggestedAllergenAdditions = React.useMemo(
-    () => findAllergenSuggestions(ingredientDict, allergenGroups, ignoredAllergenSuggestions),
-    [ingredientDict, allergenGroups, ignoredAllergenSuggestions]
+    () => findAllergenSuggestions(ingredientDict, allergenGroups, ignoredAllergenSuggestions, aggregates),
+    [ingredientDict, allergenGroups, ignoredAllergenSuggestions, aggregates]
   );
 
   // ── Lista Spesa globale ──
@@ -1950,7 +1950,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
       const id = resolveIngId(dictIdx, ing.name);
       if (!fullDict[id]) fullDict[id] = ing.name.trim();
     });
-    const suggestions = findAllergenSuggestions(fullDict, allergenGroups, ignoredAllergenSuggestions)
+    const suggestions = findAllergenSuggestions(fullDict, allergenGroups, ignoredAllergenSuggestions, aggregates)
       .filter(s => recipeIds.has(s.ingredientId));
     if (suggestions.length > 0) {
       setPendingAllergenSuggestion({ ...suggestions[0], ingredientName: fullDict[suggestions[0].ingredientId] });
@@ -2417,6 +2417,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             extraTagGroups={extraTagGroups}
             ingredientDict={ingredientDict}
             allergenGroups={allergenGroups}
+            aggregates={aggregates}
             onExport={() => openExport(null)}
           />
         )}
@@ -2427,6 +2428,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             extraTagGroups={extraTagGroups}
             ingredientDict={ingredientDict}
             allergenGroups={allergenGroups}
+            aggregates={aggregates}
             onLanding={() => setScreen("landing")}
             onRecipe={openRecipe}
             onRecipes={() => setScreen("recipes")}
@@ -2530,6 +2532,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             customFoods={customFoods}
             ingredientDict={ingredientDict}
             aggregates={aggregates}
+            allergenGroups={allergenGroups}
             sourceByIngredient={sourceByIngredient}
             onBack={() => nav.back()}
             onUpdate={updateRecipe}

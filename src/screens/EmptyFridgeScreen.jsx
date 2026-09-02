@@ -397,6 +397,7 @@ export default function EmptyFridgeScreen({
         sectionList={sectionList}
         ingredientDict={ingredientDict}
         allergenGroups={allergenGroups}
+        aggregates={aggregates}
         renderNav={() => (
           <>
             {nav}

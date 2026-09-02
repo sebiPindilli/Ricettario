@@ -1,18 +1,26 @@
 import React, { useState } from "react";
 import { useTheme, useUiStyle } from "../context.js";
 import { sortSectionsAltroLast, ingDictIndex, resolveIngId, flattenIngredients, collectAllIngredients } from "../utils/helpers.js";
+import { expandAllergenMembers } from "../utils/aggregates.js";
 import { F, MACRO_SECTIONS, TAG_GROUPS } from "../data/constants.js";
 import AppIcon from "./AppIcon.jsx";
 import SectionCategoryIcon from "./SectionCategoryIcon.jsx";
 import FiltersSheet from "./FiltersSheet.jsx";
 import AutocompleteInput from "./AutocompleteInput.jsx";
+import { chromeWhite } from "../data/uiStyles.js";
 
 // COMPONENT: RecipeFilterBar — barra filtri condivisa (schede + libro)
 // Gestisce ricerca, sezioni, tag, preferiti, allergie/intolleranze; espone
 // la lista filtrata tramite render-prop: <RecipeFilterBar ...>{(list) => (...)}</RecipeFilterBar>
-export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionList = MACRO_SECTIONS, ingredientDict = null, allergenGroups = [], compact = false, bookMode = false, renderNav = null, topAction = null, children }) {
+export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionList = MACRO_SECTIONS, ingredientDict = null, allergenGroups = [], aggregates = [], compact = false, bookMode = false, renderNav = null, topAction = null, children }) {
   const th = useTheme();
   const ui = useUiStyle();
+  // Popup "Include" a lungo-pressione su una pillola allergia — stessa
+  // meccanica (pressTimer/suppressClick, 350ms) del tooltip aggregati di
+  // EmptyFridgeScreen.jsx.
+  const [allergenTooltip, setAllergenTooltip] = useState(null); // null | {members:[label,...], x, y, below}
+  const allergenPressTimer = React.useRef(null);
+  const allergenSuppressClick = React.useRef(false);
   const [activeSection, setActiveSection] = useState(null);
   const [activeTags, setActiveTags] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -80,9 +88,10 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
   const allergenFiltered = allergenActive
     ? tagFiltered.filter(r => {
         const ids = new Set(flattenIngredients(r.ingredients).map(ing => resolveIngId(dictIdx, ing.name)));
-        const hitsGroup = activeAllergenGroupIds.some(gid =>
-          allergenGroups.find(g => g.id === gid)?.members?.some(m => ids.has(m))
-        );
+        const hitsGroup = activeAllergenGroupIds.some(gid => {
+          const group = allergenGroups.find(g => g.id === gid);
+          return group && [...expandAllergenMembers(group.members, aggregates)].some(m => ids.has(m));
+        });
         const hitsExcluded = excludedIngredientIds.some(id => ids.has(id));
         return !(hitsGroup || hitsExcluded);
       })
@@ -327,15 +336,42 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
               <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginBottom:10 }}>
                 {allergenGroups.map(group => {
                   const sel = activeAllergenGroupIds.includes(group.id);
+                  const openTip = (el) => {
+                    if (!el) return;
+                    const r = el.getBoundingClientRect();
+                    const vw = window.innerWidth || 400;
+                    const below = r.top < 110;
+                    setAllergenTooltip({
+                      members: [...expandAllergenMembers(group.members, aggregates)].map(dictName),
+                      x: Math.min(Math.max(r.left + r.width / 2, 95), vw - 95),
+                      y: below ? r.bottom : r.top,
+                      below,
+                    });
+                    allergenSuppressClick.current = true; // il rilascio dopo long-press non deve attivare/disattivare il filtro
+                  };
+                  const startPress = (e) => {
+                    allergenSuppressClick.current = false;
+                    const el = e.currentTarget;
+                    allergenPressTimer.current = setTimeout(() => openTip(el), 350);
+                  };
+                  const endPress = () => {
+                    if (allergenPressTimer.current) { clearTimeout(allergenPressTimer.current); allergenPressTimer.current = null; }
+                    setAllergenTooltip(null);
+                  };
                   return (
-                    <button key={group.id} onClick={() => toggleAllergenGroup(group.id)} style={{
-                      padding:"5px 10px", borderRadius:20,
-                      border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
-                      background: sel ? th.appAccent : "transparent",
-                      color: sel ? th.appOnAccent : th.appFaded,
-                      fontFamily:F.ui, fontSize:11, cursor:"pointer",
-                      display:"flex", alignItems:"center", gap:4,
-                    }}>{group.label}</button>
+                    <button
+                      key={group.id}
+                      onClick={() => { if (allergenSuppressClick.current) { allergenSuppressClick.current = false; return; } toggleAllergenGroup(group.id); }}
+                      onMouseDown={startPress} onMouseUp={endPress} onMouseLeave={endPress}
+                      onTouchStart={startPress} onTouchEnd={endPress} onTouchMove={endPress} onTouchCancel={endPress}
+                      style={{
+                        padding:"5px 10px", borderRadius:20,
+                        border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
+                        background: sel ? th.appAccent : "transparent",
+                        color: sel ? th.appOnAccent : th.appFaded,
+                        fontFamily:F.ui, fontSize:11, cursor:"pointer",
+                        display:"flex", alignItems:"center", gap:4,
+                      }}>{group.label}</button>
                   );
                 })}
               </div>
@@ -454,6 +490,31 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
 
       {/* Render-prop: la lista filtrata */}
       {children(displayRecipes, { activeSection, activeTags, showFavorites, searchQuery })}
+
+      {/* Popup nuvola "Include" a lungo-pressione — stesso stile di EmptyFridgeScreen.jsx */}
+      {allergenTooltip && (
+        <div style={{
+          position:"fixed",
+          left: allergenTooltip.x,
+          top: allergenTooltip.below ? allergenTooltip.y + 10 : allergenTooltip.y - 10,
+          transform: allergenTooltip.below ? "translate(-50%, 0)" : "translate(-50%, -100%)",
+          zIndex:601, minWidth:140, maxWidth:"min(240px, 80vw)",
+          background:th.darkChrome.bg, color:"#fff",
+          borderRadius:12, padding:"10px 13px",
+          boxShadow:"0 10px 34px rgba(0,0,0,0.5)",
+          pointerEvents:"none",
+        }}>
+          <div style={{ fontFamily:F.ui, fontSize:9, letterSpacing:1, color:chromeWhite(th,0.5), textTransform:"uppercase", marginBottom:4 }}>Include</div>
+          <div style={{ fontFamily:F.body, fontSize:12, lineHeight:1.5 }}>
+            {allergenTooltip.members.length > 0 ? allergenTooltip.members.join(", ") : "nessun ingrediente"}
+          </div>
+          {allergenTooltip.below ? (
+            <div style={{ position:"absolute", bottom:"100%", left:"50%", transform:"translateX(-50%)", width:0, height:0, borderLeft:"6px solid transparent", borderRight:"6px solid transparent", borderBottom:`6px solid ${th.darkChrome.bg}` }}/>
+          ) : (
+            <div style={{ position:"absolute", top:"100%", left:"50%", transform:"translateX(-50%)", width:0, height:0, borderLeft:"6px solid transparent", borderRight:"6px solid transparent", borderTop:`6px solid ${th.darkChrome.bg}` }}/>
+          )}
+        </div>
+      )}
     </>
   );
 }
