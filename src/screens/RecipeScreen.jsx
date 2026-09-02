@@ -35,6 +35,7 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
   const heroColor = ui.sectionColorFull(recipe.macroSection) ?? recipe.color;
   const isOnline = useOnline();
   const [tab, setTab] = useState("ingredienti");
+  const [allergenBoxOpen, setAllergenBoxOpen] = useState(false); // avviso allergie/preferenze in fondo agli ingredienti: da chiuso solo l'avviso, da aperto l'elenco
   const [toast, setToast] = useState({ msg:"", visible:false });
   const [viewMode, setViewMode] = useState("app");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -501,15 +502,27 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
               <>
                 <IngredientsView ingredients={recipe.ingredients} recipeColor={heroColor} scaleFactor={doseScale.factor}/>
                 {matchedAllergens.length > 0 && (
-                  <div style={{ marginTop:14, padding:"8px 12px", borderRadius:10, background:th.appPillBg, border:`1px solid ${th.appFieldBorder}`, display:"flex", alignItems:"flex-start", gap:8 }}>
+                  <button onClick={() => setAllergenBoxOpen(o => !o)} style={{
+                    marginTop:14, padding:"8px 12px", borderRadius:10,
+                    background:th.appPillBg, border:`1px solid ${th.appFieldBorder}`,
+                    display:"flex", alignItems:"flex-start", gap:8,
+                    width:"100%", boxSizing:"border-box", textAlign:"left", cursor:"pointer",
+                  }}>
                     <AppIcon emoji="⚠️" icon="avviso" size={15} style={{ marginTop:1, flexShrink:0 }}/>
-                    <div style={{ fontFamily:F.ui, fontSize:11, color:th.appInk, lineHeight:1.35 }}>
-                      <div style={{ marginBottom:3 }}>Contiene ingredienti in conflitto con le allergie, intolleranze o preferenze alimentari che hai definito:</div>
-                      {matchedAllergens.map(({ group, hitNames }) => (
-                        <div key={group.id}><b>{group.label}</b>: {hitNames.join(", ")}</div>
-                      ))}
+                    <div style={{ flex:1, fontFamily:F.ui, fontSize:11, color:th.appInk, lineHeight:1.35 }}>
+                      {allergenBoxOpen ? (
+                        <>
+                          <div style={{ marginBottom:3 }}>Contiene ingredienti in conflitto con le allergie, intolleranze o preferenze alimentari che hai definito:</div>
+                          {matchedAllergens.map(({ group, hitNames }) => (
+                            <div key={group.id}><b>{group.label}</b>: {hitNames.join(", ")}</div>
+                          ))}
+                        </>
+                      ) : (
+                        "Contiene ingredienti in conflitto con allergie, intolleranze o preferenze alimentari"
+                      )}
                     </div>
-                  </div>
+                    <span style={{ fontSize:10, color:th.appFaded, flexShrink:0, marginTop:2 }}>{allergenBoxOpen ? "▾" : "▸"}</span>
+                  </button>
                 )}
               </>
             )}
