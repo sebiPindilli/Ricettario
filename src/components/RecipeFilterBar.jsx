@@ -428,9 +428,11 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
     <>
       {renderNav && renderNav({ activeSectionLabel, resultCount: displayRecipes.length })}
       {topAction}
-      {/* Ricerca — condivide la riga col pulsante Filtri, stesso pattern di RecipesScreen.jsx. */}
-      <div style={{ padding:"8px 16px 4px", display:"flex", gap:8 }}>
-        <div style={{ flex:1, minWidth:0, display:"flex", gap:8, alignItems:"center", background:th.appCard, border:`1.5px solid ${searchQuery ? th.appAccent : th.appBorder}`, borderRadius:12, padding:"9px 14px" }}>
+      {/* Ricerca — condivide la riga col pulsante Filtri, stesso pattern di RecipesScreen.jsx
+          (stesso padding/raggio dipendenti dallo stile, non valori fissi: altrimenti
+          passando da scheda a libro la barra si sposta di pochi pixel). */}
+      <div style={{ padding: ui.navPosition==="bottom" ? `4px ${ui.padX}px 4px` : "8px 16px 4px", display:"flex", gap:8 }}>
+        <div style={{ flex:1, minWidth:0, display:"flex", gap:8, alignItems:"center", background:th.appCard, border:`1.5px solid ${searchQuery ? th.appAccent : th.appBorder}`, borderRadius: ui.radius.control, padding:"9px 14px" }}>
           <span style={{ color:th.appFaded }}><AppIcon emoji="🔍" icon="cerca" size={15} /></span>
           <input
             value={searchQuery}
@@ -445,7 +447,7 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
             position:"relative", flexShrink:0, width:44,
             display:"flex", alignItems:"center", justifyContent:"center",
             border:`1.5px solid ${activeFilterCount>0 ? th.appAccent : th.appBorder}`,
-            borderRadius:12,
+            borderRadius: ui.radius.control,
             background: activeFilterCount>0 ? th.appPillBg : th.appCard,
             color: activeFilterCount>0 ? th.appAccent : ui.faded,
             cursor:"pointer",
