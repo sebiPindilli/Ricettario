@@ -52,7 +52,7 @@ export default function FiltersSheet({
     <div
       onClick={onClose}
       style={{
-        position: "absolute", inset: 0, zIndex: 300,
+        position: "fixed", inset: 0, zIndex: 300,
         background: "rgba(0,0,0,0.45)",
         backdropFilter: "blur(4px)",
         display: "flex", alignItems: "flex-end",

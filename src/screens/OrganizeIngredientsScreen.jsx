@@ -361,7 +361,7 @@ export default function OrganizeIngredientsScreen({
           <InfoButton>{guideAllergie}</InfoButton>
         </div>
         <div style={{ flex:1, overflowY:"auto", padding:"4px 18px 40px" }}>
-          <button onClick={() => setEditingAllergen({ label:"", members:[] })} style={{
+          <button onClick={() => { setManageAllergens(false); setEditingAllergen({ label:"", members:[] }); }} style={{
             width:"100%", padding:"12px", borderRadius:12, border:`1.5px dashed ${th.appBorder}`,
             background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:12.5, fontWeight:600, cursor:"pointer", marginBottom:18,
           }}>＋ Nuova allergia/intolleranza</button>
@@ -386,7 +386,7 @@ export default function OrganizeIngredientsScreen({
                       <div style={{ fontFamily:F.body, fontSize:14.5, fontWeight:700, color:th.appInk }}>⚠️ {group.label}</div>
                       <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:2 }}>{(group.members||[]).map(dictName).join(" · ")}</div>
                     </div>
-                    <button onClick={() => setEditingAllergen({ id:group.id, label:group.label, members:[...(group.members||[])] })} style={{ background:th.appInk, border:"none", borderRadius:9, padding:"7px 11px", color:th.appBg, fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0, display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="✏️" icon="modifica" size={11} /> Modifica</button>
+                    <button onClick={() => { setManageAllergens(false); setEditingAllergen({ id:group.id, label:group.label, members:[...(group.members||[])] }); }} style={{ background:th.appInk, border:"none", borderRadius:9, padding:"7px 11px", color:th.appBg, fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0, display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="✏️" icon="modifica" size={11} /> Modifica</button>
                   </div>
                 </div>
               ))}
@@ -461,6 +461,7 @@ export default function OrganizeIngredientsScreen({
       const next = members.includes(id) ? members.filter(m => m !== id) : [...members, id];
       setEditingAllergen({ ...editingAllergen, members: next });
     };
+    const closeAllergenEditor = () => { setEditingAllergen(null); setManageAllergens(true); };
     const saveAllergen = () => {
       if (!canSaveAllergen) return;
       onSaveAllergenGroup && onSaveAllergenGroup({
@@ -468,13 +469,13 @@ export default function OrganizeIngredientsScreen({
         label: (editingAllergen.label || "").trim(),
         members: editingAllergen.members || [],
       });
-      setEditingAllergen(null);
+      closeAllergenEditor();
     };
     return (
       <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
         {nav}
         <div style={{ padding:"12px 20px 8px", display:"flex", alignItems:"center", gap:10 }}>
-          <button onClick={() => setEditingAllergen(null)} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
+          <button onClick={closeAllergenEditor} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
           <div style={{ flex:1, fontFamily:F.display, fontSize:18, color:th.appInk }}>
             {editingAllergen.id ? "Modifica allergia" : "Nuova allergia/intolleranza"}
           </div>
@@ -513,7 +514,7 @@ export default function OrganizeIngredientsScreen({
 
         <div style={{ padding:"12px 18px 22px", display:"flex", gap:8, borderTop:`1px solid ${th.appBorder}` }}>
           {editingAllergen.id && (
-            <button onClick={() => { onDeleteAllergenGroup && onDeleteAllergenGroup(editingAllergen.id); setEditingAllergen(null); }} style={{
+            <button onClick={() => { onDeleteAllergenGroup && onDeleteAllergenGroup(editingAllergen.id); closeAllergenEditor(); }} style={{
               padding:"14px 16px", borderRadius:12, border:`1.5px solid #C4593A`,
               background:"transparent", color:"#C4593A",
               fontFamily:F.ui, fontSize:13, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center",

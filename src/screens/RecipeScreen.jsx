@@ -137,17 +137,17 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
   };
 
   return (
-    <div style={{ background: viewMode==="book" ? th.bookBg : th.appBg, minHeight:"100%" }}>
+    <div style={{ background: th.appBg, minHeight:"100%" }}>
       <div style={{ padding:"8px 20px 0", display:"flex", justifyContent:"center", alignItems:"center", gap:8 }}>
         <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-          <span style={{ fontFamily:F.ui, fontSize:12, fontWeight:700, color: viewMode==="book" ? "#555" : "#7A6E5F" }}>Scheda Ricetta</span>
+          <span style={{ fontFamily:F.ui, fontSize:12, fontWeight:700, color: viewMode==="book" ? th.appFaded : "#7A6E5F" }}>Scheda Ricetta</span>
           <InfoButton>{guideDettaglioRicetta}</InfoButton>
         </div>
       </div>
       {ui.id === "classico" ? (
         <div style={{ padding:"8px 20px 0", display:"flex", justifyContent:"flex-end", alignItems:"center", gap:6 }}>
           <div style={{ marginRight:"auto" }}>
-            <BackBtn onBack={onBack} dark={viewMode==="book"}/>
+            <BackBtn onBack={onBack}/>
           </div>
           {/* View toggle */}
           <div style={{ display:"flex", gap:0 }}>
