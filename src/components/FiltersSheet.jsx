@@ -105,10 +105,10 @@ export default function FiltersSheet({
         </div>
 
         <div style={{ padding: `12px ${ui.padX}px 26px`, borderTop: `1px solid ${ui.hairlineStrong}` }}>
-          <button onClick={() => { onApply ? onApply() : onClose(); }} style={{
+          <button onClick={() => { onApply && onApply(); onClose(); }} style={{
             width: "100%", padding: 15, border: "none",
             borderRadius: ui.radius.control + 1,
-            background: th.appInk, color: th.appBg,
+            background: th.appAccent, color: th.appOnAccent,
             fontFamily: F.ui, fontSize: 12.5, fontWeight: 700,
             letterSpacing: ui.uppercaseButtons ? 1 : 0.4,
             textTransform: ui.uppercaseButtons ? "uppercase" : "none",
