@@ -124,8 +124,9 @@ const levenshteinThreshold = (len) => (len <= 5 ? 1 : len <= 10 ? 2 : 3);
 
 // Due nomi sono "simili" se condividono la prima parola significativa,
 // oppure 2+ parole significative, oppure sono a distanza di Levenshtein
-// entro soglia sul nome intero (case-insensitive).
-const namesAreSimilar = (nameA, nameB) => {
+// entro soglia sul nome intero (case-insensitive). Esportata: riusata anche
+// da findAllergenSuggestions qui sotto, stessa euristica.
+export const namesAreSimilar = (nameA, nameB) => {
   const wordsA = significantWords(nameA), wordsB = significantWords(nameB);
   if (wordsA.length && wordsB.length && wordsA[0] === wordsB[0]) return true;
   const common = wordsA.filter(w => wordsB.includes(w));
@@ -218,4 +219,36 @@ export const findSimilarIngredients = (ingredientDict, aggregates = [], ignoredP
     wordCounts.forEach((count, w) => { if (count > bestCount) { bestCount = count; label = w; } });
     return { key, type: "create", label: label.charAt(0).toUpperCase() + label.slice(1), members: memberIds, pairs };
   }).filter(Boolean).sort((a, b) => b.members.length - a.members.length);
+};
+
+// ══════════════════════════════════════════════════════════════
+// Suggerimenti allergie/intolleranze — stessa euristica di nome-simile di
+// findSimilarIngredients sopra, ma un solo caso: "questo ingrediente non
+// ancora classificato somiglia a un membro di un'allergia già definita".
+//
+// Differenza voluta rispetto agli aggregati: NON esiste un caso "create"
+// (non ha senso suggerire di creare un'allergia dalla sola somiglianza di
+// nome — è una scelta sempre iniziata dall'utente), e NON si scarta come
+// "ambiguo" un ingrediente simile a membri di 2+ gruppi diversi: un
+// aggregato è un'unica classe di equivalenza, un'allergia no — lo stesso
+// ingrediente può avere più allergie/intolleranze insieme. Ogni coppia
+// (ingrediente, gruppo) simile produce un suggerimento a sé.
+//
+// allergenGroups: [{id, label, members:[ingId,...], ...}]
+// ignoredPairs: [[ingId, groupId], ...] — ORDINATE (ingrediente poi
+// gruppo), non simmetriche come le coppie di findSimilarIngredients.
+export const findAllergenSuggestions = (ingredientDict, allergenGroups = [], ignoredPairs = []) => {
+  const isIgnored = (ingId, groupId) => (ignoredPairs || []).some(([i, g]) => i === ingId && g === groupId);
+  const suggestions = [];
+  Object.keys(ingredientDict || {}).forEach(ingId => {
+    (allergenGroups || []).forEach(group => {
+      if ((group.members || []).includes(ingId)) return; // già membro di questo gruppo
+      if (isIgnored(ingId, group.id)) return;
+      const similar = (group.members || []).some(memberId =>
+        ingredientDict[memberId] && namesAreSimilar(ingredientDict[ingId], ingredientDict[memberId])
+      );
+      if (similar) suggestions.push({ ingredientId: ingId, groupId: group.id, groupLabel: group.label });
+    });
+  });
+  return suggestions;
 };

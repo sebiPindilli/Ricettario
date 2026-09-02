@@ -1,15 +1,16 @@
 import React, { useState } from "react";
 import { useTheme, useUiStyle } from "../context.js";
-import { sortSectionsAltroLast } from "../utils/helpers.js";
+import { sortSectionsAltroLast, ingDictIndex, resolveIngId, flattenIngredients, collectAllIngredients } from "../utils/helpers.js";
 import { F, MACRO_SECTIONS, TAG_GROUPS } from "../data/constants.js";
 import AppIcon from "./AppIcon.jsx";
 import SectionCategoryIcon from "./SectionCategoryIcon.jsx";
 import FiltersSheet from "./FiltersSheet.jsx";
+import AutocompleteInput from "./AutocompleteInput.jsx";
 
 // COMPONENT: RecipeFilterBar — barra filtri condivisa (schede + libro)
-// Gestisce ricerca, sezioni, tag, preferiti; espone la lista filtrata
-// tramite render-prop: <RecipeFilterBar ...>{(list) => (...)}</RecipeFilterBar>
-export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionList = MACRO_SECTIONS, compact = false, bookMode = false, renderNav = null, topAction = null, children }) {
+// Gestisce ricerca, sezioni, tag, preferiti, allergie/intolleranze; espone
+// la lista filtrata tramite render-prop: <RecipeFilterBar ...>{(list) => (...)}</RecipeFilterBar>
+export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionList = MACRO_SECTIONS, ingredientDict = null, allergenGroups = [], compact = false, bookMode = false, renderNav = null, topAction = null, children }) {
   const th = useTheme();
   const ui = useUiStyle();
   const [activeSection, setActiveSection] = useState(null);
@@ -19,6 +20,13 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
   const [openTagGroup, setOpenTagGroup] = useState(null);
   const [timeOpen, setTimeOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [activeAllergenGroupIds, setActiveAllergenGroupIds] = useState([]);
+  const [excludedIngredientIds, setExcludedIngredientIds] = useState([]);
+  const [excludeDraft, setExcludeDraft] = useState("");
+  const [openAllergenFilter, setOpenAllergenFilter] = useState(false);
+  const dictIdx = React.useMemo(() => ingDictIndex(ingredientDict || {}), [ingredientDict]);
+  const dictName = (id) => (ingredientDict && ingredientDict[id]) || id;
+  const nameSuggestions = React.useMemo(() => collectAllIngredients(recipes).map(i => i.display), [recipes]);
   const prepBound = Math.max(180, ...recipes.map(r => r.prepTime || 0));
   const cookBound = Math.max(180, ...recipes.map(r => r.cookTime || 0));
   // prepRange/cookRange sono i valori APPLICATI (usati per filtrare); gli
@@ -43,8 +51,20 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
     setPrepRange([0, prepBound]); setCookRange([0, cookBound]);
     setDraftPrepRange([0, prepBound]); setDraftCookRange([0, cookBound]);
   };
+  const toggleAllergenGroup = (gid) => setActiveAllergenGroupIds(prev =>
+    prev.includes(gid) ? prev.filter(g => g !== gid) : [...prev, gid]
+  );
+  const addExcludedIngredient = () => {
+    const name = excludeDraft.trim();
+    if (!name) return;
+    const id = resolveIngId(dictIdx, name);
+    setExcludedIngredientIds(prev => prev.includes(id) ? prev : [...prev, id]);
+    setExcludeDraft("");
+  };
+  const removeExcludedIngredient = (id) => setExcludedIngredientIds(prev => prev.filter(x => x !== id));
   const resetAllFilters = () => {
     setActiveSection(null); setActiveTags([]); setShowFavorites(false); resetTime();
+    setActiveAllergenGroupIds([]); setExcludedIngredientIds([]); setExcludeDraft("");
   };
 
   const sectionFiltered = activeSection
@@ -53,15 +73,29 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
   const tagFiltered = activeTags.length > 0
     ? sectionFiltered.filter(r => activeTags.every(t => r.tags.includes(t)))
     : sectionFiltered;
+  // Allergie/intolleranze — filtro di ESCLUSIONE (non inclusione come i tag):
+  // una ricetta sparisce se contiene almeno un ingrediente di un gruppo
+  // selezionato o uno degli ingredienti esclusi ad-hoc.
+  const allergenActive = activeAllergenGroupIds.length > 0 || excludedIngredientIds.length > 0;
+  const allergenFiltered = allergenActive
+    ? tagFiltered.filter(r => {
+        const ids = new Set(flattenIngredients(r.ingredients).map(ing => resolveIngId(dictIdx, ing.name)));
+        const hitsGroup = activeAllergenGroupIds.some(gid =>
+          allergenGroups.find(g => g.id === gid)?.members?.some(m => ids.has(m))
+        );
+        const hitsExcluded = excludedIngredientIds.some(id => ids.has(id));
+        return !(hitsGroup || hitsExcluded);
+      })
+    : tagFiltered;
   const prepActive = prepRange[0] > 0 || prepRange[1] < prepBound;
   const cookActive = cookRange[0] > 0 || cookRange[1] < cookBound;
   const timeActive = prepActive || cookActive;
   const timeFiltered = timeActive
-    ? tagFiltered.filter(r => {
+    ? allergenFiltered.filter(r => {
         const p = r.prepTime || 0, c = r.cookTime || 0;
         return p >= prepRange[0] && p <= prepRange[1] && c >= cookRange[0] && c <= cookRange[1];
       })
-    : tagFiltered;
+    : allergenFiltered;
   const favFiltered = showFavorites ? timeFiltered.filter(r => r.favorite) : timeFiltered;
   const displayRecipes = searchQuery.trim()
     ? favFiltered.filter(r => r.title.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -74,7 +108,7 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
   })).filter(g => g.tags.length > 0);
 
   const activeSectionLabel = activeSection ? MACRO_SECTIONS.find(s=>s.id===activeSection)?.label : null;
-  const activeFilterCount = (activeSection?1:0) + activeTags.length + (timeActive?1:0) + (showFavorites?1:0);
+  const activeFilterCount = (activeSection?1:0) + activeTags.length + (timeActive?1:0) + (showFavorites?1:0) + activeAllergenGroupIds.length + excludedIngredientIds.length;
 
   // ── Controlli filtro — stesso markup/stessa logica in ogni stile: in
   // "classico" restano aperti sotto la ricerca (com'era), negli stili
@@ -268,6 +302,76 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
           </div>
         )}
       </div>
+
+      {/* Allergie e intolleranze (accordion, filtro di esclusione) */}
+      <div style={{ borderBottom: ui.filters==="expanded" ? `1px solid ${th.appBorder}` : "none", flexShrink:0 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:6, padding: ui.filters==="expanded" ? "6px 16px" : "0 0 10px", overflowX:"auto", scrollbarWidth:"none" }}>
+          <button onClick={() => setOpenAllergenFilter(o => !o)} style={{
+            flexShrink:0, padding:"5px 12px", borderRadius:20,
+            border:`1.5px solid ${allergenActive ? th.appAccent : th.appBorder}`,
+            background: allergenActive ? th.appPillBg : "transparent",
+            color: allergenActive ? th.appAccent : th.appFaded,
+            fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
+            display:"flex", alignItems:"center", gap:5,
+          }}>
+            <AppIcon emoji="⚠️" icon="avviso" size={11} /> Allergie e intolleranze
+            {allergenActive && (
+              <span style={{ background:th.appAccent, color:th.appOnAccent, borderRadius:10, padding:"1px 6px", fontSize:10 }}>{activeAllergenGroupIds.length + excludedIngredientIds.length}</span>
+            )}
+            <span style={{ fontSize:10, opacity:0.6 }}>{openAllergenFilter ? "▲" : "▼"}</span>
+          </button>
+        </div>
+        {openAllergenFilter && (
+          <div style={{ padding: ui.filters==="expanded" ? "0 16px 10px" : "0 0 10px" }}>
+            {allergenGroups.length > 0 && (
+              <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginBottom:10 }}>
+                {allergenGroups.map(group => {
+                  const sel = activeAllergenGroupIds.includes(group.id);
+                  return (
+                    <button key={group.id} onClick={() => toggleAllergenGroup(group.id)} style={{
+                      padding:"5px 10px", borderRadius:20,
+                      border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
+                      background: sel ? th.appAccent : "transparent",
+                      color: sel ? th.appOnAccent : th.appFaded,
+                      fontFamily:F.ui, fontSize:11, cursor:"pointer",
+                      display:"flex", alignItems:"center", gap:4,
+                    }}>{group.label}</button>
+                  );
+                })}
+              </div>
+            )}
+            <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+              <div style={{ flex:1, minWidth:0 }} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addExcludedIngredient(); } }}>
+                <AutocompleteInput
+                  value={excludeDraft}
+                  onChange={setExcludeDraft}
+                  suggestions={nameSuggestions}
+                  placeholder="Escludi un ingrediente…"
+                  inputStyle={{ padding:"8px 12px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appCard, fontFamily:F.body, fontSize:12.5, color:th.appInk, outline:"none" }}
+                />
+              </div>
+              <button onClick={addExcludedIngredient} disabled={!excludeDraft.trim()} style={{
+                flexShrink:0, padding:"8px 12px", borderRadius:10, border:"none",
+                background: excludeDraft.trim() ? th.appAccent : th.appBorder,
+                color: excludeDraft.trim() ? th.appOnAccent : th.appFaded,
+                fontFamily:F.ui, fontSize:14, fontWeight:700, cursor: excludeDraft.trim() ? "pointer" : "default",
+              }}>＋</button>
+            </div>
+            {excludedIngredientIds.length > 0 && (
+              <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginTop:8 }}>
+                {excludedIngredientIds.map(id => (
+                  <button key={id} onClick={() => removeExcludedIngredient(id)} style={{
+                    padding:"4px 10px", borderRadius:20,
+                    background:th.appAccent, color:th.appOnAccent, border:"none",
+                    fontFamily:F.ui, fontSize:10, cursor:"pointer",
+                    display:"flex", alignItems:"center", gap:4,
+                  }}>{dictName(id)} <span style={{ opacity:0.7 }}>×</span></button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </>
   );
 
@@ -325,6 +429,8 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
             {showFavorites && filterSummaryChip("Preferiti", () => setShowFavorites(false))}
             {activeTags.map(tag => filterSummaryChip(tag, () => toggleTag(tag)))}
             {timeActive && filterSummaryChip("Tempo", resetTime)}
+            {activeAllergenGroupIds.map(gid => filterSummaryChip(allergenGroups.find(g => g.id === gid)?.label || gid, () => toggleAllergenGroup(gid)))}
+            {excludedIngredientIds.map(id => filterSummaryChip(`No ${dictName(id)}`, () => removeExcludedIngredient(id)))}
             {activeFilterCount > 0 && (
               <button onClick={resetAllFilters} style={{
                 background:"none", border:"none", cursor:"pointer",

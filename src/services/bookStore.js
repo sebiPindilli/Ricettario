@@ -49,6 +49,8 @@ export const emptySystemData = () => ({
   ingredientDict: {},
   sourceByIngredient: {},
   ignoredSimilarities: [],
+  allergenGroups: [],
+  ignoredAllergenSuggestions: [],
 });
 
 export const saveBookMeta = (bookId, meta) =>
@@ -641,11 +643,12 @@ export const loadAllRecipes = async (bookId) => {
 };
 
 // ── Checkpoint 1.3: round-trip completo di un libro ──
-// I 12 campi del documento "system" (stesso ordine di emptySystemData).
+// I campi del documento "system" (stesso ordine di emptySystemData).
 const SYSTEM_FIELDS = [
   "extraTagGroups", "sectionList", "categoryList", "ingredientCategories",
   "aggregates", "equivalences", "customUnits", "nutritionMap",
   "customFoods", "ingredientDict", "sourceByIngredient", "ignoredSimilarities",
+  "allergenGroups", "ignoredAllergenSuggestions",
 ];
 
 // data = { meta, recipes, shoppingList, ...i 12 campi system } — stessa

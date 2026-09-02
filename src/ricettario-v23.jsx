@@ -20,7 +20,7 @@ import {
   memoryPeriodLabel, memorySortKey, buildFridgeItems, withTimeout,
   isSystemDataEmpty, applyImportedSystemData,
 } from "./utils/helpers.js";
-import { effectiveNutritionKey, findSimilarIngredients } from "./utils/aggregates.js";
+import { effectiveNutritionKey, findSimilarIngredients, findAllergenSuggestions } from "./utils/aggregates.js";
 import {
   loadFullBook, saveRecipe, deleteRecipe as deleteRecipeDoc,
   saveBookSystem, saveBookMeta, saveShoppingList, loadBookSystem,
@@ -31,6 +31,7 @@ import {
   addBookMember as addBookMemberFs, removeBookMember as removeBookMemberFs, setBookMemberPermission as setBookMemberPermissionFs,
 } from "./services/bookStore.js";
 import RecipeConflictModal from "./components/RecipeConflictModal.jsx";
+import AllergenSuggestionModal from "./components/AllergenSuggestionModal.jsx";
 import {
   diffRecipes, recipesToMap, diffSystemFields,
   diffShoppingEntries, shoppingEntriesToMap,
@@ -517,6 +518,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   const [pendingExtractions, setPendingExtractions] = useState(() => listPendingExtractions());
   const refreshPendingExtractions = () => setPendingExtractions(listPendingExtractions());
   const [pendingShopUpdate, setPendingShopUpdate] = useState(null); // {updated} ricetta modificata già in lista spesa
+  const [pendingAllergenSuggestion, setPendingAllergenSuggestion] = useState(null); // {ingredientId, groupId, groupLabel} — un ingrediente della ricetta appena salvata somiglia a un membro di un'allergia già definita
   // Popup di esportazione unificato (UnifiedExportFlow.jsx), montato una
   // volta come overlay globale (vedi fondo del render) invece che annidato
   // in ogni schermata che può aprirlo — scheda ricetta e libro ricette
@@ -674,6 +676,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   useEffect(() => {
     setIngredientDict(d => buildIngredientDict(recipes, d));
   }, [recipes]);
+  const dictIdx = React.useMemo(() => ingDictIndex(ingredientDict), [ingredientDict]);
   // Rinomina: aggiorna il nome nel dizionario E in tutte le ricette.
   // Le mappe keyed per id restano intatte. Ritorna false se il nome è già in uso.
   const renameIngredient = (ingId, newName) => {
@@ -753,6 +756,22 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     setAggregates(prev => prev.filter(a => a.id !== id));
   };
 
+  // ── Allergie e intolleranze: gruppo {id, label, emoji, icon, members:[ingId]} —
+  // stessa forma/stesso pattern upsert di saveAggregate/deleteAggregate, ma
+  // collezione separata: un ingrediente può appartenere a più allergie insieme
+  // (a differenza degli aggregati, che sono un'unica classe di equivalenza).
+  const [allergenGroups, setAllergenGroups] = useState([]);
+  const saveAllergenGroup = (group) => {
+    setAllergenGroups(prev => {
+      const exists = prev.find(g => g.id === group.id);
+      if (exists) return prev.map(g => g.id === group.id ? group : g);
+      return [...prev, group];
+    });
+  };
+  const deleteAllergenGroup = (id) => {
+    setAllergenGroups(prev => prev.filter(g => g.id !== id));
+  };
+
   // ── Suggerimenti aggregati (ingredienti dal nome simile) ──
   // ignoredSimilarities: [[ingIdA, ingIdB], ...] coppie che l'utente ha
   // scelto di non raggruppare — persistite come tutto il resto per-libro.
@@ -770,6 +789,23 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   const suggestedAggregates = React.useMemo(
     () => findSimilarIngredients(ingredientDict, aggregates, ignoredSimilarities),
     [ingredientDict, aggregates, ignoredSimilarities]
+  );
+
+  // ── Suggerimenti allergie (stesso motore di somiglianza, coppia
+  // ingrediente→gruppo invece che ingrediente↔ingrediente: vedi
+  // findAllergenSuggestions in utils/aggregates.js). ──
+  // ignoredAllergenSuggestions: [[ingId, groupId], ...] — ordinate (non
+  // simmetriche come ignoredSimilarities), quindi confrontate senza sort().
+  const [ignoredAllergenSuggestions, setIgnoredAllergenSuggestions] = useState([]);
+  const ignoreAllergenSuggestion = (ingId, groupId) => {
+    setIgnoredAllergenSuggestions(prev => prev.some(([i, g]) => i === ingId && g === groupId) ? prev : [...prev, [ingId, groupId]]);
+  };
+  const restoreAllergenSuggestion = (ingId, groupId) => {
+    setIgnoredAllergenSuggestions(prev => prev.filter(([i, g]) => !(i === ingId && g === groupId)));
+  };
+  const suggestedAllergenAdditions = React.useMemo(
+    () => findAllergenSuggestions(ingredientDict, allergenGroups, ignoredAllergenSuggestions),
+    [ingredientDict, allergenGroups, ignoredAllergenSuggestions]
   );
 
   // ── Lista Spesa globale ──
@@ -858,6 +894,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   const snapshotData = () => ({
     recipes, extraTagGroups, sectionList, categoryList,
     ingredientCategories, aggregates, shoppingList, equivalences, customUnits, nutritionMap, customFoods, ingredientDict, sourceByIngredient, ignoredSimilarities,
+    allergenGroups, ignoredAllergenSuggestions,
   });
   const loadData = (d) => {
     setRecipes(d.recipes); setExtraTagGroups(d.extraTagGroups);
@@ -870,6 +907,8 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     setIngredientDict(d.ingredientDict || {});
     setSourceByIngredient(d.sourceByIngredient || {});
     setIgnoredSimilarities(d.ignoredSimilarities || []);
+    setAllergenGroups(d.allergenGroups || []);
+    setIgnoredAllergenSuggestions(d.ignoredAllergenSuggestions || []);
     if (typeof d.meta?.bookTheme === "string") {
       setBookThemeId(d.meta.bookTheme);
     }
@@ -882,6 +921,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
       nutritionMap: d.nutritionMap || {}, customFoods: d.customFoods || [],
       ingredientDict: d.ingredientDict || {}, sourceByIngredient: d.sourceByIngredient || {},
       ignoredSimilarities: d.ignoredSimilarities || [],
+      allergenGroups: d.allergenGroups || [], ignoredAllergenSuggestions: d.ignoredAllergenSuggestions || [],
     };
     lastSyncedRecipesRef.current = recipesToMap(d.recipes || []);
     lastSyncedShoppingListRef.current = shoppingEntriesToMap(d.shoppingList || []);
@@ -1000,6 +1040,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
           recipes, extraTagGroups, sectionList, categoryList, ingredientCategories,
           aggregates, equivalences, customUnits, nutritionMap, customFoods,
           ingredientDict, sourceByIngredient, ignoredSimilarities,
+          allergenGroups, ignoredAllergenSuggestions,
         }
       : await loadFullBook(sourceId);
     const targetSystem = (await loadBookSystem(targetId)) || {};
@@ -1015,6 +1056,8 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
       aggregates: unionByKey(targetSystem.aggregates, source.aggregates, (a) => a.id),
       customFoods: unionByKey(targetSystem.customFoods, source.customFoods, (f) => f.name),
       ignoredSimilarities: unionByKey(targetSystem.ignoredSimilarities, source.ignoredSimilarities, (p) => JSON.stringify([...p].sort())),
+      allergenGroups: unionByKey(targetSystem.allergenGroups, source.allergenGroups, (a) => a.id),
+      ignoredAllergenSuggestions: unionByKey(targetSystem.ignoredAllergenSuggestions, source.ignoredAllergenSuggestions, (p) => JSON.stringify(p)),
       ingredientCategories: { ...source.ingredientCategories, ...(targetSystem.ingredientCategories || {}) },
       equivalences: { ...source.equivalences, ...(targetSystem.equivalences || {}) },
       customUnits: { ...source.customUnits, ...(targetSystem.customUnits || {}) },
@@ -1238,12 +1281,14 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     equivalences: setEquivalences, customUnits: setCustomUnits, nutritionMap: setNutritionMap,
     customFoods: setCustomFoods, ingredientDict: setIngredientDict, sourceByIngredient: setSourceByIngredient,
     ignoredSimilarities: setIgnoredSimilarities,
+    allergenGroups: setAllergenGroups, ignoredAllergenSuggestions: setIgnoredAllergenSuggestions,
   };
   const flushSystemNow = async () => {
     const current = {
       extraTagGroups, sectionList, categoryList, ingredientCategories, aggregates,
       equivalences, customUnits, nutritionMap, customFoods, ingredientDict,
       sourceByIngredient, ignoredSimilarities,
+      allergenGroups, ignoredAllergenSuggestions,
     };
     const { mapChanges, changedArrayFields } = diffSystemFields(lastSyncedSystemRef.current, current);
     if (Object.keys(mapChanges).length === 0 && changedArrayFields.length === 0) return;
@@ -1329,6 +1374,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     extraTagGroups, sectionList, categoryList, ingredientCategories, aggregates,
     equivalences, customUnits, nutritionMap, customFoods, ingredientDict,
     sourceByIngredient, ignoredSimilarities,
+    allergenGroups, ignoredAllergenSuggestions,
   ]);
 
   // Ascolto in tempo reale del documento system — prevenzione, non difesa
@@ -1349,7 +1395,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     const current = {
       extraTagGroups, sectionList, categoryList, ingredientCategories, aggregates,
       equivalences, customUnits, nutritionMap, customFoods, ingredientDict,
-      sourceByIngredient, ignoredSimilarities,
+      sourceByIngredient, ignoredSimilarities, allergenGroups, ignoredAllergenSuggestions,
     };
 
     MAP_SYSTEM_FIELDS.forEach((field) => {
@@ -1724,6 +1770,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             ...(targetSystem || {}),
             ingredientCategories, aggregates, equivalences, customUnits, nutritionMap,
             customFoods, ingredientDict, sourceByIngredient, ignoredSimilarities,
+            allergenGroups, ignoredAllergenSuggestions,
           });
         }
       }
@@ -1871,6 +1918,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     if (shoppingList.some(e => e.recipeId === updated.id)) {
       setPendingShopUpdate({ updated });
     }
+    checkRecipeAllergenSuggestions(updated);
   };
   // Applica la scelta del dialogo R6
   const resolveShopUpdate = (action) => {
@@ -1885,6 +1933,41 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     setPendingShopUpdate(null);
   };
 
+  // Allergie suggerite al salvataggio (vedi punto 5 del piano): se un
+  // ingrediente della ricetta appena salvata somiglia a un membro di
+  // un'allergia già definita ma non ne fa ancora parte, propone di
+  // aggiungerlo — stesso motore di "Allergie suggerite" in Organizza
+  // Ingredienti (findAllergenSuggestions), ma filtrato ai soli ingredienti
+  // di questa ricetta. Il dizionario passato include anche gli ingredienti
+  // nuovi non ancora presenti in ingredientDict (buildIngredientDict li
+  // aggiunge solo dopo, nell'effetto su "recipes"): senza, un ingrediente
+  // appena scritto per la prima volta non verrebbe mai controllato.
+  const checkRecipeAllergenSuggestions = (recipe) => {
+    const ingList = flattenIngredients(recipe.ingredients);
+    const recipeIds = new Set(ingList.map(ing => resolveIngId(dictIdx, ing.name)));
+    const fullDict = { ...ingredientDict };
+    ingList.forEach(ing => {
+      const id = resolveIngId(dictIdx, ing.name);
+      if (!fullDict[id]) fullDict[id] = ing.name.trim();
+    });
+    const suggestions = findAllergenSuggestions(fullDict, allergenGroups, ignoredAllergenSuggestions)
+      .filter(s => recipeIds.has(s.ingredientId));
+    if (suggestions.length > 0) {
+      setPendingAllergenSuggestion({ ...suggestions[0], ingredientName: fullDict[suggestions[0].ingredientId] });
+    }
+  };
+  const resolvePendingAllergenSuggestion = (accept) => {
+    const s = pendingAllergenSuggestion;
+    if (s) {
+      if (accept) {
+        const group = allergenGroups.find(g => g.id === s.groupId);
+        if (group) saveAllergenGroup({ ...group, members:[...(group.members||[]), s.ingredientId] });
+      } else {
+        ignoreAllergenSuggestion(s.ingredientId, s.groupId);
+      }
+    }
+    setPendingAllergenSuggestion(null);
+  };
 
   // Normalizza gli ingredienti del form: qty stringa → numero|null, scarta righe senza nome
   const normalizeIngredients = (ings) => {
@@ -1933,6 +2016,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     setRecipes(prev => [...prev, newR]);
     setSelected(newR);
     setScreen("recipe");
+    checkRecipeAllergenSuggestions(newR);
   };
 
   // Dopo la scansione: NON salva subito, ma apre il form manuale precompilato
@@ -2206,6 +2290,13 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             customFoods={customFoods}
             onSaveCustomFood={saveCustomFood}
             onDeleteCustomFood={deleteCustomFood}
+            allergenGroups={allergenGroups}
+            onSaveAllergenGroup={saveAllergenGroup}
+            onDeleteAllergenGroup={deleteAllergenGroup}
+            suggestedAllergenAdditions={suggestedAllergenAdditions}
+            ignoredAllergenSuggestions={ignoredAllergenSuggestions}
+            onIgnoreAllergenSuggestion={ignoreAllergenSuggestion}
+            onRestoreAllergenSuggestion={restoreAllergenSuggestion}
           />
         )}
         {screen==="books" && (
@@ -2309,6 +2400,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             ingredientCategories={ingredientCategories}
             categoryList={categoryList}
             ingredientDict={ingredientDict}
+            allergenGroups={allergenGroups}
           />
         )}
         {screen==="recipes" && (
@@ -2323,6 +2415,8 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             onFridge={() => setScreen("fridge")}
             onShopping={() => setScreen("shoppingList")}
             extraTagGroups={extraTagGroups}
+            ingredientDict={ingredientDict}
+            allergenGroups={allergenGroups}
             onExport={() => openExport(null)}
           />
         )}
@@ -2331,6 +2425,8 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             recipes={recipes}
             sectionList={sectionList}
             extraTagGroups={extraTagGroups}
+            ingredientDict={ingredientDict}
+            allergenGroups={allergenGroups}
             onLanding={() => setScreen("landing")}
             onRecipe={openRecipe}
             onRecipes={() => setScreen("recipes")}
@@ -2534,6 +2630,15 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             </div>
           );
         })()}
+
+        {pendingAllergenSuggestion && (
+          <AllergenSuggestionModal
+            suggestion={pendingAllergenSuggestion}
+            ingredientName={pendingAllergenSuggestion.ingredientName || pendingAllergenSuggestion.ingredientId}
+            onAccept={() => resolvePendingAllergenSuggestion(true)}
+            onIgnore={() => resolvePendingAllergenSuggestion(false)}
+          />
+        )}
 
         {/* Conflitto di modifica ricetta (Fase D) — overlay globale, come
             il dialogo R6 sopra: un conflitto può emergere dal salvataggio

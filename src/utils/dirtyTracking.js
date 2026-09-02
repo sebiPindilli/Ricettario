@@ -75,6 +75,7 @@ export const MAP_SYSTEM_FIELDS = [
 export const ARRAY_SYSTEM_FIELDS = [
   "extraTagGroups", "sectionList", "categoryList",
   "aggregates", "customFoods", "ignoredSimilarities",
+  "allergenGroups", "ignoredAllergenSuggestions",
 ];
 
 // lastSynced/current: oggetto con le 12 proprietà del documento system

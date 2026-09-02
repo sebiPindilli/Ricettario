@@ -8,14 +8,15 @@ import ChosenIcon from "../components/ChosenIcon.jsx";
 import FoodIconGrid from "../components/FoodIconGrid.jsx";
 import BottomNav from "../components/BottomNav.jsx";
 import ScreenHeader from "../components/ScreenHeader.jsx";
-import { guideOrganizza } from "../data/guideContent.jsx";
+import { guideOrganizza, guideAllergie } from "../data/guideContent.jsx";
+import InfoButton from "../components/InfoButton.jsx";
 import { NUTRITION_DB } from "../data/nutrition.js";
 import {
   buildIngredientDict, ingDictIndex, sortCategoriesBaseFirst,
   normName, uid, macroLine, resolveIngId, flattenIngredients,
   WEIGHT_UNITS, unitLabel, normUnit, fmtQty,
 } from "../utils/helpers.js";
-import { effectiveCategories, effectiveNutritionKey, effectiveEquivalenceKey, sourcePriorityFor, findSimilarIngredients } from "../utils/aggregates.js";
+import { effectiveCategories, effectiveNutritionKey, effectiveEquivalenceKey, sourcePriorityFor, findSimilarIngredients, findAllergenSuggestions } from "../utils/aggregates.js";
 
 // ══════════════════════════════════════════════════════════════
 // SCREEN: ORGANIZZA INGREDIENTI (sotto Svuota Frigo)
@@ -35,6 +36,9 @@ export default function OrganizeIngredientsScreen({
   customFoods = [], onSaveCustomFood, onDeleteCustomFood,
   ingredientDict = null, onRenameIngredient, onDeleteIngredients,
   shoppingList = [],
+  allergenGroups = [], onSaveAllergenGroup, onDeleteAllergenGroup,
+  suggestedAllergenAdditions = [], ignoredAllergenSuggestions = [],
+  onIgnoreAllergenSuggestion, onRestoreAllergenSuggestion,
   initialFilterRecipeId = null, initialAlertTypes = null, initialManageAggs = false, initialManageCats = false,
   initialAggScope = "all",
 }) {
@@ -52,6 +56,9 @@ export default function OrganizeIngredientsScreen({
     initialManageAggs ? { existing:false, suggested:true } : { existing:false, suggested:false }
   );
   const [editingFrom, setEditingFrom] = useState(null);   // null | "manageAggs" — dove tornare dopo l'editor aggregato
+  const [manageAllergens, setManageAllergens] = useState(false); // database allergie/intolleranze (lista)
+  const [openAllergenSections, setOpenAllergenSections] = useState({ existing:false, suggested:false }); // tendine Database allergie
+  const [editingAllergen, setEditingAllergen] = useState(null); // null | {id?, label, members:[]} — editor a sé, non condiviso con "editing" (aggregati)
   const [unusedOpen, setUnusedOpen] = useState(false);       // tendina "Ingredienti non utilizzati"
   const [selectedUnused, setSelectedUnused] = useState(() => new Set()); // ingId selezionati lì dentro
   const [confirmDeleteUnused, setConfirmDeleteUnused] = useState(false); // conferma eliminazione a 2 passaggi
@@ -125,6 +132,20 @@ export default function OrganizeIngredientsScreen({
     const isPairIgnored = (a, b) => ignoredSimilarities.some(([x, y]) => (x === a && y === b) || (x === b && y === a));
     return allSuggestedGroups.filter(g => !activeKeys.has(g.key) && g.pairs.every(([a, b]) => isPairIgnored(a, b)));
   }, [allSuggestedGroups, suggestedAggregates, ignoredSimilarities]);
+  // Allergie suggerite: quelle attive arrivano già pronte come prop
+  // (suggestedAllergenAdditions, già filtrate dagli ignorati); qui calcoliamo
+  // anche l'insieme completo (ignoredPairs=[]) per poter mostrare le card
+  // "ignorate" nella tendina — stesso schema di allSuggestedGroups/
+  // ignoredSuggestedGroups sopra, ma senza scarto per ambiguità (un
+  // ingrediente può comparire in più suggerimenti, uno per gruppo).
+  const allAllergenSuggestions = React.useMemo(
+    () => findAllergenSuggestions(dictM, allergenGroups, []),
+    [dictM, allergenGroups]
+  );
+  const ignoredAllergenSuggestionCards = React.useMemo(() => {
+    const isIgnored = (ingId, groupId) => ignoredAllergenSuggestions.some(([i, g]) => i === ingId && g === groupId);
+    return allAllergenSuggestions.filter(s => isIgnored(s.ingredientId, s.groupId));
+  }, [allAllergenSuggestions, ignoredAllergenSuggestions]);
   // ID ingrediente presenti nella lista spesa corrente — per marcare/filtrare
   // i suggerimenti rilevanti per la spesa (🛒 e switch "Solo lista spesa").
   const shoppingIngIds = React.useMemo(() => {
@@ -318,6 +339,193 @@ export default function OrganizeIngredientsScreen({
               ))}
             </div>
           )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Database allergie e intolleranze: lista + crea/modifica ──
+  // Stato ed editor separati da "manageAggs"/"editing" (kind:"aggregate") per
+  // non rischiare regressioni nel flusso aggregati: stessa resa visiva,
+  // funzioni e stato a sé.
+  if (manageAllergens) {
+    return (
+      <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+        {nav}
+        <div style={{ padding:"12px 20px 8px", display:"flex", alignItems:"center", gap:10 }}>
+          <button onClick={() => setManageAllergens(false)} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
+          <div style={{ flex:1 }}>
+            <div style={{ fontFamily:F.display, fontSize:18, color:th.appInk }}><AppIcon emoji="⚠️" icon="avviso" size={16} /> Allergie e intolleranze</div>
+            <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>gruppi di ingredienti da escludere</div>
+          </div>
+          <InfoButton>{guideAllergie}</InfoButton>
+        </div>
+        <div style={{ flex:1, overflowY:"auto", padding:"4px 18px 40px" }}>
+          <button onClick={() => setEditingAllergen({ label:"", members:[] })} style={{
+            width:"100%", padding:"12px", borderRadius:12, border:`1.5px dashed ${th.appBorder}`,
+            background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:12.5, fontWeight:600, cursor:"pointer", marginBottom:18,
+          }}>＋ Nuova allergia/intolleranza</button>
+
+          {/* ── Allergie esistenti (tendina) ── */}
+          <button onClick={() => setOpenAllergenSections(p => ({ ...p, existing: !p.existing }))} style={{
+            width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
+            background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:12,
+            padding:"10px 12px", marginBottom:8, cursor:"pointer",
+          }}>
+            <span style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.2, color:th.appAccent, textTransform:"uppercase", fontWeight:700 }}>
+              📋 Allergie esistenti ({allergenGroups.length})
+            </span>
+            <span style={{ color:th.appFaded, fontSize:12 }}>{openAllergenSections.existing ? "▾" : "▸"}</span>
+          </button>
+          {openAllergenSections.existing && (
+            <div style={{ marginBottom:8 }}>
+              {allergenGroups.map(group => (
+                <div key={group.id} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:12, padding:"11px 13px", marginBottom:8 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontFamily:F.body, fontSize:14.5, fontWeight:700, color:th.appInk }}>⚠️ {group.label}</div>
+                      <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:2 }}>{(group.members||[]).map(dictName).join(" · ")}</div>
+                    </div>
+                    <button onClick={() => setEditingAllergen({ id:group.id, label:group.label, members:[...(group.members||[])] })} style={{ background:th.appInk, border:"none", borderRadius:9, padding:"7px 11px", color:th.appBg, fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0, display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="✏️" icon="modifica" size={11} /> Modifica</button>
+                  </div>
+                </div>
+              ))}
+              {allergenGroups.length === 0 && (
+                <div style={{ textAlign:"center", padding:"26px 0", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>Nessuna allergia ancora creata</div>
+              )}
+            </div>
+          )}
+
+          {/* ── Allergie suggerite (tendina unica: Da decidere + Ignorati) ── */}
+          <button onClick={() => setOpenAllergenSections(p => ({ ...p, suggested: !p.suggested }))} style={{
+            width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
+            background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:12,
+            padding:"10px 12px", marginBottom:8, cursor:"pointer",
+          }}>
+            <span style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.2, color:th.appAccent, textTransform:"uppercase", fontWeight:700 }}>
+              🔎 Allergie suggerite{(suggestedAllergenAdditions.length + ignoredAllergenSuggestionCards.length) > 0 ? ` (${suggestedAllergenAdditions.length + ignoredAllergenSuggestionCards.length})` : ""}
+            </span>
+            <span style={{ color:th.appFaded, fontSize:12 }}>{openAllergenSections.suggested ? "▾" : "▸"}</span>
+          </button>
+          {openAllergenSections.suggested && (
+            <div style={{ marginBottom:18 }}>
+              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appFaded, textTransform:"uppercase", margin:"4px 0 8px", fontWeight:700 }}>
+                Da decidere
+              </div>
+              {suggestedAllergenAdditions.length === 0 ? (
+                <div style={{ textAlign:"center", padding:"16px 0", color:th.appFaded, fontFamily:F.ui, fontSize:11.5, fontStyle:"italic" }}>
+                  Nessun suggerimento.
+                </div>
+              ) : suggestedAllergenAdditions.map(s => renderAggSuggestionCard(`${s.ingredientId}:${s.groupId}`, {
+                  title: <>Aggiungi «{dictName(s.ingredientId)}» ad un'allergia esistente</>,
+                  subtitle: <>{s.groupLabel} ({(allergenGroups.find(g => g.id === s.groupId)?.members || []).map(dictName).join(", ")})</>,
+                  addLabel: <>⊕ Aggiungi a «{s.groupLabel}»</>,
+                  onAdd: () => {
+                    const group = allergenGroups.find(g => g.id === s.groupId);
+                    if (group) onSaveAllergenGroup && onSaveAllergenGroup({ ...group, members:[...(group.members||[]), s.ingredientId] });
+                  },
+                  onIgnore: () => onIgnoreAllergenSuggestion && onIgnoreAllergenSuggestion(s.ingredientId, s.groupId),
+                }))}
+
+              <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appFaded, textTransform:"uppercase", margin:"14px 0 8px", fontWeight:700 }}>
+                Ignorati
+              </div>
+              {ignoredAllergenSuggestionCards.length === 0 ? (
+                <div style={{ textAlign:"center", padding:"16px 0", color:th.appFaded, fontFamily:F.ui, fontSize:11.5, fontStyle:"italic" }}>Nessuna allergia ignorata.</div>
+              ) : ignoredAllergenSuggestionCards.map(s => (
+                <div key={`${s.ingredientId}:${s.groupId}`} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:12, padding:"11px 13px", marginBottom:8 }}>
+                  <div style={{ opacity:0.55 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <div style={{ fontFamily:F.body, fontSize:14, fontWeight:700, color:th.appInk, flex:1 }}>«{dictName(s.ingredientId)}» → {s.groupLabel}</div>
+                      <span style={{ fontFamily:F.ui, fontSize:9, color:th.appFaded, textTransform:"uppercase", letterSpacing:0.5 }}>ignorato</span>
+                    </div>
+                  </div>
+                  <button onClick={() => onRestoreAllergenSuggestion && onRestoreAllergenSuggestion(s.ingredientId, s.groupId)} style={{ background:"transparent", border:`1.5px solid ${th.appBorder}`, borderRadius:9, padding:"7px 11px", color:th.appFaded, fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="🔄" icon="ripristina" size={11} /> Ripristina</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Editor allergia/intolleranza — nome + griglia ingredienti membri ──
+  // Modellato sull'editor aggregato (vedi "if (editing)" più sotto), ma
+  // separato: stato/salvataggio/eliminazione a sé, nessuna condivisione di
+  // codice per non rischiare regressioni sul flusso aggregati esistente.
+  if (editingAllergen) {
+    const canSaveAllergen = (editingAllergen.label || "").trim() && (editingAllergen.members || []).length > 0;
+    const toggleAllergenMember = (id) => {
+      const members = editingAllergen.members || [];
+      const next = members.includes(id) ? members.filter(m => m !== id) : [...members, id];
+      setEditingAllergen({ ...editingAllergen, members: next });
+    };
+    const saveAllergen = () => {
+      if (!canSaveAllergen) return;
+      onSaveAllergenGroup && onSaveAllergenGroup({
+        id: editingAllergen.id || uid("alg"),
+        label: (editingAllergen.label || "").trim(),
+        members: editingAllergen.members || [],
+      });
+      setEditingAllergen(null);
+    };
+    return (
+      <div style={{ background:th.appBg, minHeight:"100%", display:"flex", flexDirection:"column" }}>
+        {nav}
+        <div style={{ padding:"12px 20px 8px", display:"flex", alignItems:"center", gap:10 }}>
+          <button onClick={() => setEditingAllergen(null)} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", color:th.appInk, fontFamily:F.ui, fontSize:12 }}>‹ Indietro</button>
+          <div style={{ flex:1, fontFamily:F.display, fontSize:18, color:th.appInk }}>
+            {editingAllergen.id ? "Modifica allergia" : "Nuova allergia/intolleranza"}
+          </div>
+        </div>
+
+        <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 40px" }}>
+          <div style={{ marginBottom:16 }}>
+            <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:6 }}>Nome allergia/intolleranza</div>
+            <input
+              value={editingAllergen.label || ""}
+              onChange={e => setEditingAllergen({ ...editingAllergen, label: e.target.value })}
+              placeholder="es. Glutine, Lattosio, LTP…"
+              style={{ width:"100%", padding:"10px 14px", border:`1.5px solid ${th.appBorder}`, borderRadius:10, background:th.appCard, fontFamily:F.body, fontSize:14, color:th.appInk, outline:"none", boxSizing:"border-box" }}
+            />
+          </div>
+
+          <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:8 }}>
+            Ingredienti inclusi ({(editingAllergen.members || []).length})
+          </div>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+            {allDictEntries.map(({ name, display }) => {
+              const sel = (editingAllergen.members || []).includes(name);
+              return (
+                <button key={name} onClick={() => toggleAllergenMember(name)} style={{
+                  padding:"6px 12px", borderRadius:20,
+                  border:`1.5px solid ${sel ? th.appAccent : th.appBorder}`,
+                  background: sel ? th.appAccent : "transparent",
+                  color: sel ? "#fff" : th.appFaded,
+                  fontFamily:F.ui, fontSize:11, cursor:"pointer",
+                  display:"flex", alignItems:"center", gap:4,
+                }}>{sel && <span style={{ fontSize:10 }}>✓</span>}{display}</button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div style={{ padding:"12px 18px 22px", display:"flex", gap:8, borderTop:`1px solid ${th.appBorder}` }}>
+          {editingAllergen.id && (
+            <button onClick={() => { onDeleteAllergenGroup && onDeleteAllergenGroup(editingAllergen.id); setEditingAllergen(null); }} style={{
+              padding:"14px 16px", borderRadius:12, border:`1.5px solid #C4593A`,
+              background:"transparent", color:"#C4593A",
+              fontFamily:F.ui, fontSize:13, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center",
+            }}><AppIcon emoji="🗑️" icon="elimina" size={15} /></button>
+          )}
+          <button onClick={saveAllergen} disabled={!canSaveAllergen} style={{
+            flex:1, padding:"14px", borderRadius:12, border:"none",
+            background: canSaveAllergen ? th.appAccent : th.appBorder,
+            color: canSaveAllergen ? "#fff" : th.appFaded,
+            fontFamily:F.ui, fontSize:14, fontWeight:700,
+            cursor: canSaveAllergen ? "pointer" : "default",
+          }}>Salva</button>
         </div>
       </div>
     );
@@ -1540,6 +1748,7 @@ export default function OrganizeIngredientsScreen({
             ["🏷️", "tag", "Database categorie", "#5A3A9A", () => setManageCats(true)],
             ["⚖️", "bilancia", "Conversioni di sistema", "#2D8C6B", () => setManageEq(true)],
             ["🍎", "nutrizione", "Database valori nutrizionali", "#C4593A", () => setManageNutri(true)],
+            ["⚠️", "avviso", "Allergie e intolleranze", "#B0393A", () => { setManageAllergens(true); setOpenAllergenSections({ existing:true, suggested:false }); }],
           ].map(([emoji, icon, title, color, go]) => (
             <button key={title} onClick={go} style={{
               background:th.appCard, border:`1.5px solid ${th.appBorder}`, borderRadius:14,
@@ -1571,6 +1780,7 @@ export default function OrganizeIngredientsScreen({
             ["tag", "Database categorie", categoryList.length, () => setManageCats(true)],
             ["bilancia", "Conversioni di sistema", Object.keys(customUnits).length, () => setManageEq(true)],
             ["nutrizione", "Valori nutrizionali", customFoods.length, () => setManageNutri(true)],
+            ["avviso", "Allergie e intolleranze", allergenGroups.length, () => { setManageAllergens(true); setOpenAllergenSections({ existing:true, suggested:false }); }],
           ].map(([icon, title, count, go]) => (
             ui.id === "schedario" ? (
               <button key={title} onClick={go} style={{

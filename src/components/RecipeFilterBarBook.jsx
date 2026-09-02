@@ -12,11 +12,11 @@ import Icon from "./Icon.jsx";
 import { guideRicette } from "../data/guideContent.jsx";
 
 // Wrapper che usa RecipeFilterBar sopra la pagina del libro, restringendo le pagine sfogliabili al filtro
-export default function RecipeFilterBarBook({ recipes, extraTagGroups, sectionList, pageIndex, setPageIndex, turning, setTurning, onLanding, onRecipe, onRecipes, onMemories, onAdd, onFridge, onShopping, onExport }) {
+export default function RecipeFilterBarBook({ recipes, extraTagGroups, sectionList, ingredientDict, allergenGroups, pageIndex, setPageIndex, turning, setTurning, onLanding, onRecipe, onRecipes, onMemories, onAdd, onFridge, onShopping, onExport }) {
   const th = useTheme();
   const ui = useUiStyle();
   return (
-    <RecipeFilterBar recipes={recipes} extraTagGroups={extraTagGroups} sectionList={sectionList} bookMode
+    <RecipeFilterBar recipes={recipes} extraTagGroups={extraTagGroups} sectionList={sectionList} ingredientDict={ingredientDict} allergenGroups={allergenGroups} bookMode
       renderNav={({ activeSectionLabel, resultCount }) => (
         <>
           <GlobalNav

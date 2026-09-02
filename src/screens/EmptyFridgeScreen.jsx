@@ -36,6 +36,7 @@ export default function EmptyFridgeScreen({
   ownedMembers, setOwnedMembers,
   suggestedAggregates = [],
   onManageAggregates, onManageCategories, onManageCategoriesDb,
+  allergenGroups = [],
 }) {
   const th = useTheme();
   const ui = useUiStyle();
@@ -394,6 +395,8 @@ export default function EmptyFridgeScreen({
         recipes={recipes}
         extraTagGroups={extraTagGroups}
         sectionList={sectionList}
+        ingredientDict={ingredientDict}
+        allergenGroups={allergenGroups}
         renderNav={() => (
           <>
             {nav}

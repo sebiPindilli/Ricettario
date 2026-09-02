@@ -63,6 +63,14 @@ export const guideOrganizza = (
   </>
 );
 
+export const guideAllergie = (
+  <>
+    <p style={pFirst}>Definisci qui le allergie e intolleranze che ti riguardano (es. <b>Glutine</b>, <b>Lattosio</b>) e per ciascuna elenca gli ingredienti da escludere (farina, pasta, pane…).</p>
+    <p style={p}>Nel <b>filtro ricette</b> (Libro Ricette, vista libro e Svuota Frigo) puoi poi nascondere tutte le ricette che contengono un ingrediente di un gruppo selezionato — oppure escludere al volo un singolo ingrediente (es. "banana") anche senza avergli mai dedicato un gruppo.</p>
+    <p style={pLast}>💡 <b>Allergie suggerite</b> segnala quando un ingrediente scritto in una ricetta somiglia a un membro di un'allergia già definita (es. "farina 00" con "Glutine" che contiene "farina") — te lo chiede anche subito dopo aver salvato la ricetta.</p>
+  </>
+);
+
 export const guideLibri = (
   <>
     <p style={pFirst}>Qui gestisci i tuoi ricettari: puoi averne più di uno e passare dall'uno all'altro con <b>Apri</b>.</p>
