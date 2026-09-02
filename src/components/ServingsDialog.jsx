@@ -28,6 +28,7 @@ export default function ServingsDialog({ recipe, title, emoji, onConfirm, onClos
   const [mode, setMode] = useState(initMode); // "base" | "people" | "limiting"
   const [people, setPeople] = useState(initialScale?.people || baseServings);
   const [doseFactor, setDoseFactor] = useState(1); // scorciatoie della scheda Dosi
+  const [doseFactorInput, setDoseFactorInput] = useState(""); // fattore libero, testo digitato
   // Ingrediente limitante
   const parseable = flattenIngredients(recipe.ingredients).filter(ing => ing.qty != null && ing.qty > 0);
   const [limIdx, setLimIdx] = useState(0);
@@ -102,7 +103,7 @@ export default function ServingsDialog({ recipe, title, emoji, onConfirm, onClos
             <OptCard id="base"     icon="📄" label="Standard"     desc="dosi della ricetta"/>
             <OptCard id="people"   icon="👥" label="Persone"      desc="ricalcola per commensali"/>
             {parseable.length > 0 && (
-              <OptCard id="limiting" icon="⚖️" label="Ingrediente"  desc="in base a ciò che hai"/>
+              <OptCard id="limiting" icon={<AppIcon emoji="⚖️" icon="bilancia" size={18}/>} label="Ingrediente"  desc="in base a ciò che hai"/>
             )}
           </div>
         )}
@@ -114,17 +115,35 @@ export default function ServingsDialog({ recipe, title, emoji, onConfirm, onClos
               Prosegui con le quantità originali della ricetta ({baseServings} porzioni).
             </div>
             {dialogTabs && (
-              <div style={{ display:"flex", gap:6, justifyContent:"center", flexWrap:"wrap" }}>
-                {DOSE_SHORTCUTS.map(({ factor, label }) => (
-                  <button key={label} onClick={() => setDoseFactor(factor)} style={{
-                    padding:"6px 14px", borderRadius:ui.radius.chip,
-                    border:`1.5px solid ${doseFactor===factor ? th.appAccent : th.appBorder}`,
-                    background: doseFactor===factor ? th.appPillBg : "transparent",
-                    color: doseFactor===factor ? th.appAccent : th.appFaded,
-                    fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
-                  }}>{label}</button>
-                ))}
-              </div>
+              <>
+                <div style={{ display:"flex", gap:6, justifyContent:"center", flexWrap:"wrap" }}>
+                  {DOSE_SHORTCUTS.map(({ factor, label }) => (
+                    <button key={label} onClick={() => { setDoseFactor(factor); setDoseFactorInput(""); }} style={{
+                      padding:"6px 14px", borderRadius:ui.radius.chip,
+                      border:`1.5px solid ${doseFactor===factor && !doseFactorInput ? th.appAccent : th.appBorder}`,
+                      background: doseFactor===factor && !doseFactorInput ? th.appPillBg : "transparent",
+                      color: doseFactor===factor && !doseFactorInput ? th.appAccent : th.appFaded,
+                      fontFamily:F.ui, fontSize:11, fontWeight:600, cursor:"pointer",
+                    }}>{label}</button>
+                  ))}
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:8, justifyContent:"center", marginTop:10 }}>
+                  <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>oppure un fattore libero:</span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={doseFactorInput}
+                    onChange={e => {
+                      const v = e.target.value;
+                      setDoseFactorInput(v);
+                      const n = parseFloat(v.replace(",", "."));
+                      if (n > 0) setDoseFactor(n);
+                    }}
+                    placeholder="es. 1,75"
+                    style={{ width:70, padding:"6px 10px", border:`1.5px solid ${doseFactorInput ? th.appAccent : th.appBorder}`, borderRadius:ui.radius.chip, background:th.appCard, fontFamily:F.body, fontSize:12, color:th.appInk, outline:"none", textAlign:"center" }}
+                  />
+                </div>
+              </>
             )}
           </div>
         )}

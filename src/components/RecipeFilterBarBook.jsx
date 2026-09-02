@@ -8,6 +8,7 @@ import ScreenHeader from "./ScreenHeader.jsx";
 import RecipeCardBook from "./RecipeCardBook.jsx";
 import RecipeFilterBar from "./RecipeFilterBar.jsx";
 import AppIcon from "./AppIcon.jsx";
+import Icon from "./Icon.jsx";
 import { guideRicette } from "../data/guideContent.jsx";
 
 // Wrapper che usa RecipeFilterBar sopra la pagina del libro, restringendo le pagine sfogliabili al filtro
@@ -50,7 +51,20 @@ export default function RecipeFilterBarBook({ recipes, extraTagGroups, sectionLi
           />
         </>
       )}
-      topAction={(
+      topAction={ui.navPosition === "bottom" ? (
+        // Stessa resa a piena riga di RecipesScreen.jsx negli stili nuovi —
+        // stessa intestazione passando dal toggle vista schede/libro.
+        <div style={{ padding:`10px ${ui.padX}px 2px` }}>
+          <button onClick={() => onAdd("recipe")} style={{
+            width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+            padding:"13px", borderRadius:ui.radius.control, border:"none",
+            background:ui.accent, color:ui.onAccent, cursor:"pointer",
+            fontFamily:F.ui, fontSize:14, fontWeight:700,
+          }}>
+            <Icon name="aggiungi" size={18} /> Nuova ricetta
+          </button>
+        </div>
+      ) : (
         <div style={{ padding:"10px 24px 2px", textAlign:"center" }}>
           <button onClick={() => onAdd("recipe")} title="Nuova ricetta" style={{
             padding:"9px 20px", borderRadius:20,

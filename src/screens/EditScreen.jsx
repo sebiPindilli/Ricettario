@@ -19,7 +19,7 @@ import { guideNuovaModificaRicetta } from "../data/guideContent.jsx";
 // ══════════════════════════════════════════════════════════════
 // SCREEN: EDIT RECIPE
 // ══════════════════════════════════════════════════════════════
-export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], onAddGroup, onAddTagToGroup, sectionList=MACRO_SECTIONS, onAddSection, onUpdateSection, onDeleteSection, allRecipes=[] }) {
+export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], onAddGroup, onAddTagToGroup, sectionList=MACRO_SECTIONS, onAddSection, onUpdateSection, onDeleteSection, onReorderSections, allRecipes=[] }) {
   const th = useTheme();
   const ui = useUiStyle();
   // Normalise steps: can be string or {text, photos} (o vecchio {text, photo}).
@@ -158,6 +158,7 @@ export default function EditScreen({ recipe, onBack, onSave, extraTagGroups=[], 
                 onAddSection={onAddSection}
                 onUpdateSection={onUpdateSection}
                 onDeleteSection={onDeleteSection}
+                onReorderSections={onReorderSections}
                 showDefaultHint={false}
               />
             </div>

@@ -4,7 +4,7 @@ import { chromeWhite } from "../data/uiStyles.js";
 import { F, INGREDIENT_CATEGORIES, MACRO_SECTIONS } from "../data/constants.js";
 import {
   buildFridgeItems, ingDictIndex, flattenIngredients, ingredientToText,
-  resolveIngId, sortCategoriesBaseFirst,
+  resolveIngId, sortCategoriesBaseFirst, dishPhotoOf,
 } from "../utils/helpers.js";
 import GlobalNav from "../components/GlobalNav.jsx";
 import BottomNav from "../components/BottomNav.jsx";
@@ -434,7 +434,11 @@ export default function EmptyFridgeScreen({
                   borderRadius:16, overflow:"hidden",
                 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px" }}>
-                    <div style={{ width:44, height:44, borderRadius:12, background: ui.sectionColorFull(recipe.macroSection) ?? recipe.color, color:"#fff", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>{recipe.dishPhoto ? <AppIcon emoji="📸" icon="foto" size={22} /> : <ChosenIcon emoji={recipe.emoji} icon={recipe.icon} size={22} />}</div>
+                    <div style={{ width:44, height:44, borderRadius:12, overflow:"hidden", background: ui.sectionColorFull(recipe.macroSection) ?? recipe.color, color:"#fff", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      {dishPhotoOf(recipe)
+                        ? <img src={dishPhotoOf(recipe)} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} loading="lazy"/>
+                        : <ChosenIcon emoji={recipe.emoji} icon={recipe.icon} size={22} />}
+                    </div>
                     <div style={{ flex:1 }}>
                       <div style={{ fontFamily:F.display, fontSize:16, color:th.appInk }}>{recipe.title}</div>
                       <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>{recipe.category} · {recipe.prepTime+recipe.cookTime} min</div>

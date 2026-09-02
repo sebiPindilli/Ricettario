@@ -606,6 +606,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   const [sectionList, setSectionList] = useState(MACRO_SECTIONS);
   const addSection = (sec) => setSectionList(prev => sortSectionsAltroLast([...prev, sec]));
   const updateSection = (sec) => setSectionList(prev => sortSectionsAltroLast(prev.map(s => s.id === sec.id ? sec : s)));
+  const reorderSections = (newOrder) => setSectionList(newOrder);
   // Elimina sezione ("altro" è fissa): le ricette della sezione passano in "altro"
   const deleteSection = (id) => {
     if (id === "altro") return;
@@ -2405,6 +2406,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             onAddSection={addSection}
             onUpdateSection={updateSection}
             onDeleteSection={deleteSection}
+            onReorderSections={reorderSections}
             allRecipes={recipes}
           />
         )}
@@ -2457,6 +2459,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             onAddSection={addSection}
             onUpdateSection={updateSection}
             onDeleteSection={deleteSection}
+            onReorderSections={reorderSections}
             allRecipes={recipes}
           />
         )}
@@ -2469,6 +2472,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             onAddSection={addSection}
             onUpdateSection={updateSection}
             onDeleteSection={deleteSection}
+            onReorderSections={reorderSections}
             onLanding={() => setScreen("landing")}
             onRecipes={() => setScreen("recipes")}
             onBook={() => setScreen("book")}
@@ -2486,6 +2490,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
             onAddSection={addSection}
             onUpdateSection={updateSection}
             onDeleteSection={deleteSection}
+            onReorderSections={reorderSections}
             onLanding={() => setScreen("landing")}
             onRecipes={() => setScreen("recipes")}
             onBook={() => setScreen("book")}

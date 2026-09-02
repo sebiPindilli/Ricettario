@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useTheme, useUiStyle, useOnline } from "../context.js";
 import { F } from "../data/constants.js";
+import { readImageFile } from "../utils/helpers.js";
 import GlobalNav from "../components/GlobalNav.jsx";
 import BackBtn from "../components/BackBtn.jsx";
 import ScreenHeader from "../components/ScreenHeader.jsx";
@@ -9,6 +10,7 @@ import EditLabel from "../components/EditLabel.jsx";
 import Toast from "../components/Toast.jsx";
 import ChosenIcon from "../components/ChosenIcon.jsx";
 import AppIcon from "../components/AppIcon.jsx";
+import PhotoCropOverlay from "../components/PhotoCropOverlay.jsx";
 import { guideNuovoRicordo } from "../data/guideContent.jsx";
 
 export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBack, onSave, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping }) {
@@ -26,6 +28,7 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
   const [story, setStory] = useState("");
   const [chosenPhoto, setChosenPhoto] = useState(null); // emoji o dataURL immagine
   const [photoIsImage, setPhotoIsImage] = useState(false);
+  const [cropSource, setCropSource] = useState(null); // dataURL grezzo in attesa di ritaglio
   const [selectedRecipeIds, setSelectedRecipeIds] = useState(initialRecipeId ? [initialRecipeId] : []);
   const [selectedDate, setSelectedDate] = useState(todayISO);
   const fileInputRef = React.useRef(null);
@@ -35,10 +38,14 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
 
   const handleFile = (e) => {
     const file = e.target.files && e.target.files[0];
+    e.target.value = "";
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => { setChosenPhoto(ev.target.result); setPhotoIsImage(true); };
-    reader.readAsDataURL(file);
+    readImageFile(file, (dataUrl) => setCropSource(dataUrl));
+  };
+  const handleCropConfirm = (croppedDataUrl) => {
+    setChosenPhoto(croppedDataUrl);
+    setPhotoIsImage(true);
+    setCropSource(null);
   };
 
   // Richiede connessione (Storage non ha una coda offline come Firestore).
@@ -129,6 +136,13 @@ export default function AddMemoryScreen({ recipes, initialRecipeId = null, onBac
               <AppIcon emoji="📷" icon="foto" size={30} />
               <span>Scatta o scegli dalla galleria</span>
             </button>
+          )}
+          {cropSource && (
+            <PhotoCropOverlay
+              image={cropSource}
+              onConfirm={handleCropConfirm}
+              onClose={() => setCropSource(null)}
+            />
           )}
         </div>
 

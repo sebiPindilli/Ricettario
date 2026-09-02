@@ -29,7 +29,7 @@ const ModeToggle = ({ mode, onChange }) => {
 // ══════════════════════════════════════════════════════════════
 // SECTION PICKER — selettore sezione ricettario con aggiunta custom
 // ══════════════════════════════════════════════════════════════
-export default function SectionPicker({ value, onChange, sections = MACRO_SECTIONS, onAddSection, onUpdateSection, onDeleteSection, showDefaultHint = true }) {
+export default function SectionPicker({ value, onChange, sections = MACRO_SECTIONS, onAddSection, onUpdateSection, onDeleteSection, onReorderSections, showDefaultHint = true }) {
   const th = useTheme();
   const ui = useUiStyle();
   const [adding, setAdding] = useState(false);
@@ -44,6 +44,20 @@ export default function SectionPicker({ value, onChange, sections = MACRO_SECTIO
   const [confirmDelId, setConfirmDelId] = useState(null);  // id sezione in attesa di conferma eliminazione
 
   const ordered = sortSectionsAltroLast(sections);
+  // Riordino: opera sul sottoinsieme non fisso (mai "altro", sempre in fondo
+  // indipendentemente da come è salvato l'array) e ricostruisce l'array
+  // completo — sortSectionsAltroLast lo rimetterebbe comunque in fondo, ma
+  // qui lo si fa esplicitamente per restare coerenti con quanto salvato.
+  const nonFixedSections = ordered.filter(s => s.id !== "altro");
+  const altroSection = ordered.find(s => s.id === "altro");
+  const moveSection = (id, dir) => {
+    const idx = nonFixedSections.findIndex(s => s.id === id);
+    const swapWith = idx + dir;
+    if (idx < 0 || swapWith < 0 || swapWith >= nonFixedSections.length) return;
+    const next = [...nonFixedSections];
+    [next[idx], next[swapWith]] = [next[swapWith], next[idx]];
+    onReorderSections && onReorderSections(altroSection ? [...next, altroSection] : next);
+  };
 
   const saveNew = () => {
     const label = newName.trim();
@@ -179,11 +193,28 @@ export default function SectionPicker({ value, onChange, sections = MACRO_SECTIO
               <>
                 {ordered.map(sec => {
                   const isFixed = sec.id === "altro";
+                  const posInNonFixed = nonFixedSections.findIndex(s => s.id === sec.id);
                   return (
                     <div key={sec.id} style={{
                       display:"flex", alignItems:"center", gap:8, marginBottom:8,
                       opacity: isFixed ? 0.7 : 1,
                     }}>
+                      {!isFixed && onReorderSections && (
+                        <div style={{ display:"flex", flexDirection:"column", flexShrink:0 }}>
+                          <button
+                            onClick={() => moveSection(sec.id, -1)}
+                            disabled={posInNonFixed === 0}
+                            title="Sposta su"
+                            style={{ width:18, height:15, padding:0, border:"none", background:"none", cursor: posInNonFixed === 0 ? "default" : "pointer", color: posInNonFixed === 0 ? ui.border : th.appFaded, fontSize:10, lineHeight:1, display:"flex", alignItems:"center", justifyContent:"center" }}
+                          >▲</button>
+                          <button
+                            onClick={() => moveSection(sec.id, 1)}
+                            disabled={posInNonFixed === nonFixedSections.length - 1}
+                            title="Sposta giù"
+                            style={{ width:18, height:15, padding:0, border:"none", background:"none", cursor: posInNonFixed === nonFixedSections.length - 1 ? "default" : "pointer", color: posInNonFixed === nonFixedSections.length - 1 ? ui.border : th.appFaded, fontSize:10, lineHeight:1, display:"flex", alignItems:"center", justifyContent:"center" }}
+                          >▼</button>
+                        </div>
+                      )}
                       <button
                         onClick={() => !isFixed && setEditEmojiFor(sec.id)}
                         disabled={isFixed}

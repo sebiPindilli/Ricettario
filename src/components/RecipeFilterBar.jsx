@@ -288,9 +288,9 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
     <>
       {renderNav && renderNav({ activeSectionLabel, resultCount: displayRecipes.length })}
       {topAction}
-      {/* Ricerca */}
-      <div style={{ padding:"8px 16px 4px" }}>
-        <div style={{ display:"flex", gap:8, alignItems:"center", background:th.appCard, border:`1.5px solid ${searchQuery ? th.appAccent : th.appBorder}`, borderRadius:12, padding:"9px 14px" }}>
+      {/* Ricerca — condivide la riga col pulsante Filtri, stesso pattern di RecipesScreen.jsx. */}
+      <div style={{ padding:"8px 16px 4px", display:"flex", gap:8 }}>
+        <div style={{ flex:1, minWidth:0, display:"flex", gap:8, alignItems:"center", background:th.appCard, border:`1.5px solid ${searchQuery ? th.appAccent : th.appBorder}`, borderRadius:12, padding:"9px 14px" }}>
           <span style={{ color:th.appFaded }}><AppIcon emoji="🔍" icon="cerca" size={15} /></span>
           <input
             value={searchQuery}
@@ -300,24 +300,27 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
           />
           {searchQuery && <button onClick={() => setSearchQuery("")} style={{ background:"none", border:"none", color:th.appFaded, cursor:"pointer", fontSize:16 }}>×</button>}
         </div>
+        {ui.filters !== "expanded" && (
+          <button onClick={() => setSheetOpen(true)} title="Filtri" style={{
+            position:"relative", flexShrink:0, width:44,
+            display:"flex", alignItems:"center", justifyContent:"center",
+            border:`1.5px solid ${activeFilterCount>0 ? th.appAccent : th.appBorder}`,
+            borderRadius:12,
+            background: activeFilterCount>0 ? th.appPillBg : th.appCard,
+            color: activeFilterCount>0 ? th.appAccent : ui.faded,
+            cursor:"pointer",
+          }}>
+            <AppIcon emoji="🏷️" icon="filtra" size={18} />
+            {activeFilterCount>0 && (
+              <span style={{ position:"absolute", top:-5, right:-5, background:th.appAccent, color:th.appOnAccent, borderRadius:8, minWidth:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 3px" }}>{activeFilterCount}</span>
+            )}
+          </button>
+        )}
       </div>
 
       {ui.filters === "expanded" ? filterControls : (
         <>
           <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", padding:`2px ${ui.padX}px 10px` }}>
-            <button onClick={() => setSheetOpen(true)} style={{
-              flexShrink:0, display:"flex", alignItems:"center", gap:6,
-              padding:"7px 13px", borderRadius: ui.radius.chip,
-              border:`1.5px solid ${activeFilterCount>0 ? th.appAccent : ui.hairlineStrong}`,
-              background: activeFilterCount>0 ? th.appPillBg : "transparent",
-              color: activeFilterCount>0 ? th.appAccent : ui.faded,
-              fontFamily:F.ui, fontSize:12, fontWeight:600, cursor:"pointer",
-            }}>
-              <AppIcon emoji="🏷️" icon="filtra" size={12} /> Filtri
-              {activeFilterCount>0 && (
-                <span style={{ background:th.appAccent, color:th.appOnAccent, borderRadius:9, padding:"1px 6px", fontSize:10 }}>{activeFilterCount}</span>
-              )}
-            </button>
             {activeSectionLabel && filterSummaryChip(activeSectionLabel, () => setActiveSection(null))}
             {showFavorites && filterSummaryChip("Preferiti", () => setShowFavorites(false))}
             {activeTags.map(tag => filterSummaryChip(tag, () => toggleTag(tag)))}

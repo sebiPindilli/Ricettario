@@ -10,7 +10,6 @@ import RecipeCardList from "../components/RecipeCardList.jsx";
 import { guideRicette } from "../data/guideContent.jsx";
 import AppIcon from "../components/AppIcon.jsx";
 import Icon from "../components/Icon.jsx";
-import SectionCategoryIcon from "../components/SectionCategoryIcon.jsx";
 
 export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, onMemories, onAdd, onFridge, onShopping, onExport, extraTagGroups=[], sectionList=MACRO_SECTIONS }) {
   const th = useTheme();
@@ -460,7 +459,6 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
                     padding:"4px 0", marginBottom: collapsed ? 0 : 8,
                     background:"none", border:"none", cursor:"pointer", textAlign:"left",
                   }}>
-                    <SectionCategoryIcon item={sec} size={14} />
                     <span style={{ flex:1, fontFamily:F.ui, fontSize:12, fontWeight:700, color:th.appInk, textTransform:"uppercase", letterSpacing:0.6 }}>{sec.label}</span>
                     <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded }}>{items.length}</span>
                     <span style={{ color:th.appFaded, fontSize:12, transform: collapsed ? "rotate(-90deg)" : "none", transition:"transform 0.15s" }}>▾</span>

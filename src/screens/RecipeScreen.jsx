@@ -154,8 +154,8 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
             {[["app","App"],["book","📖"]].map(([mode,label]) => (
               <button key={mode} onClick={() => setViewMode(mode)} style={{
                 height:38, padding:"0 12px", border:"none",
-                background: viewMode===mode ? (mode==="book" ? "#333" : "#2C2416") : "#EDE6D4",
-                color: viewMode===mode ? "#fff" : "#7A6E5F",
+                background: viewMode===mode ? th.appAccent : th.appFieldBg,
+                color: viewMode===mode ? th.appOnAccent : th.appFaded,
                 fontFamily:F.ui, fontSize: mode==="book" ? 17 : 11, fontWeight:600,
                 cursor:"pointer", display:"flex", alignItems:"center",
                 borderRadius: mode==="app" ? "8px 0 0 8px" : "0 8px 8px 0",
@@ -412,88 +412,60 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
             {recipe.tags.map(t => (
               <span key={t} style={{
                 padding:"4px 12px", borderRadius:20,
-                background:"#EDE6D4", color:"#7A6E5F",
+                background:th.appFieldBg, color:th.appInk,
                 fontFamily:F.ui, fontSize:11,
               }}>{t}</span>
             ))}
           </div>
 
-          {/* Calcolo dosi (persistente per la ricetta) */}
-          <div style={{ padding:"0 20px 8px" }}>
-            <button onClick={() => setServingsDialog("dose")} style={{
-              width:"100%", padding:"11px 14px",
-              border:`1.5px solid ${doseScale.factor !== 1 ? th.appAccent : th.appBorder}`,
-              borderRadius:12, background: doseScale.factor !== 1 ? th.appPillBg : th.appCard,
-              cursor:"pointer", display:"flex", alignItems:"center", gap:10, textAlign:"left",
-            }}>
-              <span style={{ fontSize:20 }}>⚖️</span>
-              <span style={{ flex:1 }}>
-                <span style={{ display:"block", fontFamily:F.ui, fontSize:12, fontWeight:700, color:th.appInk }}>Calcolo dosi</span>
-                <span style={{ display:"block", fontFamily:F.ui, fontSize:10.5, color: doseScale.factor !== 1 ? th.appAccent : th.appFaded, marginTop:1 }}>{doseScale.label}</span>
-              </span>
-              <span style={{ fontFamily:F.ui, fontSize:16, color:th.appFaded }}>›</span>
-            </button>
-          </div>
-
-          {/* Mode buttons: Spesa + Cucina — usano il calcolo dosi impostato sopra */}
+          {/* Calcolo dosi / Spesa / Cucina — tre azioni secondarie sulla
+              ricetta, stesso trattamento (sfondo th.appAccent pieno) per
+              tutte e tre, coerenti col tema/palette attivi. */}
           <div style={{ display:"flex", gap:8, padding:"0 20px 12px" }}>
+            <button onClick={() => setServingsDialog("dose")} style={{
+              flex:1, padding:"12px 8px",
+              border:"none", borderRadius:12,
+              background:th.appAccent, color:th.appOnAccent,
+              fontFamily:F.ui, fontSize:13, fontWeight:700,
+              cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+            }}><AppIcon emoji="⚖️" icon="bilancia" size={16}/> {doseScale.factor !== 1 ? doseScale.label : "Dosi"}</button>
             <button onClick={() => setActiveMode({ mode:"shopping", scale: doseScale })} style={{
               flex:1, padding:"12px 8px",
               border:"none", borderRadius:12,
               background:th.appAccent, color:th.appOnAccent,
               fontFamily:F.ui, fontSize:13, fontWeight:700,
               cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6,
-            }}>🛒 Spesa</button>
+            }}><AppIcon emoji="🛒" icon="spesa" size={16}/> Spesa</button>
             <button onClick={() => setActiveMode({ mode:"cooking", scale: doseScale })} style={{
               flex:1, padding:"12px 8px",
               border:"none", borderRadius:12,
-              background:th.appInk, color:th.appBg,
+              background:th.appAccent, color:th.appOnAccent,
               fontFamily:F.ui, fontSize:13, fontWeight:700,
               cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6,
-            }}>👨‍🍳 Cucina</button>
+            }}><AppIcon emoji="👨‍🍳" icon="cucina" size={16}/> Cucina</button>
           </div>
 
           <Divider/>
 
-          {/* Tabs */}
-          {ui.id === "classico" ? (
-            <div style={{ display:"flex", padding:"8px 20px", gap:8 }}>
-              {[["ingredienti","Ingredienti"],["preparazione","Preparazione"],["nutrizione","Nutrizione"]].map(([t, label]) => (
-                <button key={t} onClick={() => setTab(t)} style={{
-                  flex:1, padding:"10px 6px",
-                  borderRadius:12, border:"none",
-                  background: tab===t ? th.appInk : th.appBorder,
-                  color: tab===t ? "#fff" : th.appFaded,
-                  fontFamily:F.ui, fontSize:12, fontWeight:600,
-                  cursor:"pointer",
-                }}>{label}</button>
-              ))}
-            </div>
-          ) : ui.id === "quaderno" ? (
-            <div style={{ display:"flex", padding:`8px ${ui.padX}px`, gap:18, borderBottom:`1px solid ${ui.hairline}` }}>
-              {[["ingredienti","Ingredienti"],["preparazione","Preparazione"],["nutrizione","Nutrizione"]].map(([t, label]) => (
-                <button key={t} onClick={() => setTab(t)} style={{
-                  padding:"6px 0 10px", border:"none", background:"none", cursor:"pointer",
-                  borderBottom: tab===t ? `2px solid ${th.appAccent}` : "2px solid transparent",
-                  color: tab===t ? ui.ink : ui.faded,
-                  fontFamily:F.ui, fontSize:12, fontWeight: tab===t ? 700 : 400,
-                }}>{label}</button>
-              ))}
-            </div>
-          ) : (
-            <div style={{ display:"flex", margin:`8px ${ui.padX}px`, padding:3, borderRadius:ui.radius.control, background:"#F0EAD9", gap:2 }}>
-              {[["ingredienti","Ingredienti"],["preparazione","Preparazione"],["nutrizione","Nutrizione"]].map(([t, label]) => (
-                <button key={t} onClick={() => setTab(t)} style={{
-                  flex:1, padding:"8px 4px",
-                  borderRadius:ui.radius.control-2, border:"none",
-                  background: tab===t ? "#FFFDF8" : "transparent",
-                  color: tab===t ? ui.ink : ui.faded,
-                  fontFamily:F.ui, fontSize:11.5, fontWeight: tab===t ? 700 : 500,
-                  cursor:"pointer",
-                }}>{label}</button>
-              ))}
-            </div>
-          )}
+          {/* Tabs — stessa resa in ogni stile: attivo su th.appAccent pieno,
+              inattivo trasparente, coerenti con Dosi/Spesa/Cucina sopra. */}
+          {(() => {
+            const padX = ui.id === "classico" ? 20 : ui.padX;
+            return (
+              <div style={{ display:"flex", padding:`8px ${padX}px`, gap:8 }}>
+                {[["ingredienti","Ingredienti"],["preparazione","Preparazione"],["nutrizione","Nutrizione"]].map(([t, label]) => (
+                  <button key={t} onClick={() => setTab(t)} style={{
+                    flex:1, padding:"10px 6px",
+                    borderRadius:ui.radius.control, border:"none",
+                    background: tab===t ? th.appAccent : "transparent",
+                    color: tab===t ? th.appOnAccent : th.appFaded,
+                    fontFamily:F.ui, fontSize:12, fontWeight: tab===t ? 700 : 600,
+                    cursor:"pointer",
+                  }}>{label}</button>
+                ))}
+              </div>
+            );
+          })()}
 
           <div style={{ padding:"8px 24px 40px" }}>
             {doseScale.factor !== 1 && tab !== "nutrizione" && (
@@ -679,7 +651,7 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
         <ServingsDialog
           recipe={recipe}
           title="Calcolo dosi"
-          emoji="⚖️"
+          emoji={<AppIcon emoji="⚖️" icon="bilancia" size={32}/>}
           initialScale={doseScale}
           onConfirm={(scale) => { setDoseScale(scale); setServingsDialog(null); }}
           onClose={() => setServingsDialog(null)}

@@ -10,7 +10,7 @@ import { getCroppedImage } from "../utils/cropImage.js";
 // drag internamente via Pointer Events (niente codice touch a mano); il
 // contenitore ad altezza esplicita (60vh) è un requisito della libreria —
 // non supporta un'altezza percentuale libera senza vincoli.
-export default function PhotoCropOverlay({ image, onConfirm, onClose }) {
+export default function PhotoCropOverlay({ image, onConfirm, onClose, aspect = DISH_PHOTO_ASPECT, outputWidth = 900, outputHeight = 675 }) {
   const th = useTheme();
   const ui = useUiStyle();
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -25,7 +25,7 @@ export default function PhotoCropOverlay({ image, onConfirm, onClose }) {
   const handleConfirm = async () => {
     if (!croppedAreaPixels) return;
     setSaving(true);
-    const dataUrl = await getCroppedImage(image, croppedAreaPixels, { outputWidth: 900, outputHeight: 675 });
+    const dataUrl = await getCroppedImage(image, croppedAreaPixels, { outputWidth, outputHeight });
     setSaving(false);
     onConfirm(dataUrl);
   };
@@ -40,7 +40,7 @@ export default function PhotoCropOverlay({ image, onConfirm, onClose }) {
             image={image}
             crop={crop}
             zoom={zoom}
-            aspect={DISH_PHOTO_ASPECT}
+            aspect={aspect}
             onCropChange={setCrop}
             onZoomChange={setZoom}
             onCropComplete={onCropComplete}

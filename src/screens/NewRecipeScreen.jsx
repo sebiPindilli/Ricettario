@@ -19,7 +19,7 @@ import { guideNuovaModificaRicetta } from "../data/guideContent.jsx";
 // ══════════════════════════════════════════════════════════════
 // SCREEN: NEW RECIPE (manual entry)
 // ══════════════════════════════════════════════════════════════
-export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping, extraTagGroups=[], onAddGroup, onAddTagToGroup, sectionList=MACRO_SECTIONS, onAddSection, onUpdateSection, onDeleteSection, allRecipes=[], initialDraft=null }) {
+export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, onBook, onMemories, onAdd, onFridge, onShopping, extraTagGroups=[], onAddGroup, onAddTagToGroup, sectionList=MACRO_SECTIONS, onAddSection, onUpdateSection, onDeleteSection, onReorderSections, allRecipes=[], initialDraft=null }) {
   const th = useTheme();
   const ui = useUiStyle();
   const [draft, setDraft] = useState(initialDraft || {
@@ -170,6 +170,7 @@ export default function NewRecipeScreen({ onBack, onSave, onLanding, onRecipes, 
                 onAddSection={onAddSection}
                 onUpdateSection={onUpdateSection}
                 onDeleteSection={onDeleteSection}
+                onReorderSections={onReorderSections}
               />
             </div>
             <EditField label="Fonte / Autore" value={draft.source} onChange={v=>set("source",v)} placeholder="es. Nonna Maria"/>
