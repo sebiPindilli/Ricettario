@@ -48,6 +48,17 @@ export default function EmptyFridgeScreen({
   const pressTimer = React.useRef(null);
   const suppressClick = React.useRef(false);
 
+  // Tutta l'app scorre dentro un unico contenitore fisso (.iphone-content-
+  // scroll, vedi ricettario-v23.jsx): passare da "select" a "results" non
+  // smonta/rimonta nulla, quindi senza questo la lista risultati eredita
+  // la posizione di scroll lasciata dalla selezione ingredienti (spesso a
+  // metà pagina) invece di aprirsi dalla barra cerca/filtri in cima.
+  React.useEffect(() => {
+    if (phase === "results") {
+      document.querySelector(".iphone-content-scroll")?.scrollTo({ top: 0 });
+    }
+  }, [phase]);
+
   // Voci selezionabili (aggregati + singoli)
   const fridgeItems = React.useMemo(
     () => buildFridgeItems(recipes, aggregates, ingredientCategories, ingredientDict),
