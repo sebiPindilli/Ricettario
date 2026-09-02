@@ -65,12 +65,21 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
   // vedi expandAllergenMembers) intersecano gli ingredienti di questa
   // ricetta — stesso calcolo del filtro di esclusione in RecipeFilterBar.jsx/
   // RecipesScreen.jsx, qui solo per segnalare, non per filtrare.
-  const matchedAllergenGroups = React.useMemo(() => {
+  // Per ogni gruppo che tocca la ricetta, solo gli ingredienti DELLA
+  // RICETTA che ci rientrano (non l'intero elenco membri del gruppo) —
+  // es. "Lattosio: latte", non l'intera lista di ingredienti al lattosio
+  // mai usati nel ricettario.
+  const matchedAllergens = React.useMemo(() => {
     const idx = ingredientDict ? ingDictIndex(ingredientDict) : null;
-    const ids = new Set(flattenIngredients(recipe.ingredients).map(ing => resolveIngId(idx, ing.name)));
-    return allergenGroups.filter(group =>
-      [...expandAllergenMembers(group.members, aggregates)].some(m => ids.has(m))
-    );
+    const dictName = (id) => (ingredientDict && ingredientDict[id]) || id;
+    const ids = [...new Set(flattenIngredients(recipe.ingredients).map(ing => resolveIngId(idx, ing.name)))];
+    return allergenGroups
+      .map(group => {
+        const expanded = expandAllergenMembers(group.members, aggregates);
+        const hitNames = ids.filter(id => expanded.has(id)).map(dictName);
+        return hitNames.length > 0 ? { group, hitNames } : null;
+      })
+      .filter(Boolean);
   }, [recipe.ingredients, ingredientDict, aggregates, allergenGroups]);
 
   const addComment = () => {
@@ -491,12 +500,15 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
             {tab === "ingredienti" && (
               <>
                 <IngredientsView ingredients={recipe.ingredients} recipeColor={heroColor} scaleFactor={doseScale.factor}/>
-                {matchedAllergenGroups.length > 0 && (
+                {matchedAllergens.length > 0 && (
                   <div style={{ marginTop:14, padding:"8px 12px", borderRadius:10, background:th.appPillBg, border:`1px solid ${th.appFieldBorder}`, display:"flex", alignItems:"flex-start", gap:8 }}>
                     <AppIcon emoji="⚠️" icon="avviso" size={15} style={{ marginTop:1, flexShrink:0 }}/>
-                    <span style={{ fontFamily:F.ui, fontSize:11, color:th.appInk, lineHeight:1.35 }}>
-                      Contiene ingredienti in conflitto con le allergie, intolleranze o preferenze alimentari che hai definito: <b>{matchedAllergenGroups.map(g => g.label).join(", ")}</b>.
-                    </span>
+                    <div style={{ fontFamily:F.ui, fontSize:11, color:th.appInk, lineHeight:1.35 }}>
+                      <div style={{ marginBottom:3 }}>Contiene ingredienti in conflitto con le allergie, intolleranze o preferenze alimentari che hai definito:</div>
+                      {matchedAllergens.map(({ group, hitNames }) => (
+                        <div key={group.id}><b>{group.label}</b>: {hitNames.join(", ")}</div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </>
