@@ -441,7 +441,7 @@ export default function OrganizeIngredientsScreen({
                   Nessun suggerimento.
                 </div>
               ) : suggestedAllergenAdditions.map(s => renderAggSuggestionCard(`${s.ingredientId}:${s.groupId}`, {
-                  title: <>Aggiungi «{dictName(s.ingredientId)}» ad un'allergia esistente</>,
+                  title: <>Aggiungi «{dictName(s.ingredientId)}» a un gruppo esistente</>,
                   subtitle: <>{s.groupLabel} ({(allergenGroups.find(g => g.id === s.groupId)?.members || []).map(dictName).join(", ")})</>,
                   addLabel: <>⊕ Aggiungi a «{s.groupLabel}»</>,
                   onAdd: () => {
@@ -519,7 +519,7 @@ export default function OrganizeIngredientsScreen({
           {aggregates.length > 0 && (
             <>
               <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:8 }}>
-                Aggregati inclusi — tutti i loro ingredienti attuali contano per questa allergia
+                Aggregati inclusi (si aggiornano da soli)
               </div>
               <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:20 }}>
                 {aggregates.map(agg => {
@@ -540,7 +540,7 @@ export default function OrganizeIngredientsScreen({
           )}
 
           <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1, color:th.appFaded, textTransform:"uppercase", marginBottom:8 }}>
-            Ingredienti inclusi singolarmente ({(editingAllergen.members || []).filter(m => !aggregates.some(a => a.id === m)).length})
+            Ingredienti inclusi ({(editingAllergen.members || []).filter(m => !aggregates.some(a => a.id === m)).length})
           </div>
           {allDictEntriesByCategory.map(cat => (
             <div key={cat.id} style={{ marginBottom:14 }}>

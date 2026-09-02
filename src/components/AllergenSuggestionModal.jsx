@@ -16,9 +16,9 @@ export default function AllergenSuggestionModal({ suggestion, ingredientName, on
     <div style={{ position:"absolute", inset:0, zIndex:500, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
       <div style={{ width:"100%", background:th.appBg, borderRadius:20, padding:"22px 20px", textAlign:"center", maxHeight:"90%", overflowY:"auto" }}>
         <div style={{ display:"flex", justifyContent:"center", marginBottom:6 }}><AppIcon emoji="⚠️" icon="avviso" size={30} /></div>
-        <div style={{ fontFamily:F.display, fontSize:19, color:th.appInk, marginBottom:6 }}>Allergia/intolleranza?</div>
+        <div style={{ fontFamily:F.display, fontSize:19, color:th.appInk, marginBottom:6 }}>Corrispondenza trovata</div>
         <div style={{ fontFamily:F.ui, fontSize:12.5, color:th.appFaded, lineHeight:1.5, marginBottom:18 }}>
-          Questa ricetta contiene «<b style={{ color:th.appInk }}>{ingredientName}</b>». Vuoi aggiungerla all'allergia «<b style={{ color:th.appInk }}>{suggestion.groupLabel}</b>»?
+          Questa ricetta contiene «<b style={{ color:th.appInk }}>{ingredientName}</b>». Vuoi aggiungerlo al gruppo «<b style={{ color:th.appInk }}>{suggestion.groupLabel}</b>»?
         </div>
         <div style={{ display:"flex", flexDirection:"column", gap:9 }}>
           <button onClick={onAccept} style={{

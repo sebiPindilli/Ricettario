@@ -466,7 +466,7 @@ export default function RecipeFilterBar({ recipes, extraTagGroups = [], sectionL
             {activeTags.map(tag => filterSummaryChip(tag, () => toggleTag(tag)))}
             {timeActive && filterSummaryChip("Tempo", resetTime)}
             {activeAllergenGroupIds.map(gid => filterSummaryChip(allergenGroups.find(g => g.id === gid)?.label || gid, () => toggleAllergenGroup(gid)))}
-            {excludedIngredientIds.map(id => filterSummaryChip(`No ${dictName(id)}`, () => removeExcludedIngredient(id)))}
+            {excludedIngredientIds.map(id => filterSummaryChip(`Senza ${dictName(id)}`, () => removeExcludedIngredient(id)))}
             {activeFilterCount > 0 && (
               <button onClick={resetAllFilters} style={{
                 background:"none", border:"none", cursor:"pointer",

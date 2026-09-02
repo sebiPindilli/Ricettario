@@ -545,7 +545,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
               {activeTags.map(tag => filterSummaryChip(tag, () => toggleTag(tag)))}
               {timeActive && filterSummaryChip("Tempo", resetTime)}
               {activeAllergenGroupIds.map(gid => filterSummaryChip(allergenGroups.find(g => g.id === gid)?.label || gid, () => toggleAllergenGroup(gid)))}
-              {excludedIngredientIds.map(id => filterSummaryChip(`No ${dictName(id)}`, () => removeExcludedIngredient(id)))}
+              {excludedIngredientIds.map(id => filterSummaryChip(`Senza ${dictName(id)}`, () => removeExcludedIngredient(id)))}
               {activeFilterCount > 0 && (
                 <button onClick={resetAllFilters} style={{
                   background:"none", border:"none", cursor:"pointer",
@@ -575,7 +575,7 @@ export default function RecipesScreen({ recipes, onRecipe, onLanding, onBook, on
           {activeTags.length > 0 && ` · ${activeTags.length} tag`}
           {timeActive && <> · <AppIcon emoji="⏱️" icon="tempo" size={11} style={{ verticalAlign:"-1px" }} /> tempo</>}
           {showFavorites && <> · <AppIcon emoji="⭐" icon="preferito" size={11} style={{ verticalAlign:"-1px" }} /> Preferiti</>}
-          {allergenActive && <> · <AppIcon emoji="⚠️" icon="avviso" size={11} style={{ verticalAlign:"-1px" }} /> allergie</>}
+          {allergenActive && <> · <AppIcon emoji="⚠️" icon="avviso" size={11} style={{ verticalAlign:"-1px" }} /> filtro allergie</>}
         </div>
       )}
 

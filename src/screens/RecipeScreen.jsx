@@ -495,7 +495,7 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
                   <div style={{ marginTop:14, padding:"8px 12px", borderRadius:10, background:th.appPillBg, border:`1px solid ${th.appFieldBorder}`, display:"flex", alignItems:"flex-start", gap:8 }}>
                     <AppIcon emoji="⚠️" icon="avviso" size={15} style={{ marginTop:1, flexShrink:0 }}/>
                     <span style={{ fontFamily:F.ui, fontSize:11, color:th.appInk, lineHeight:1.35 }}>
-                      Contiene ingredienti di: <b>{matchedAllergenGroups.map(g => g.label).join(", ")}</b>
+                      Contiene ingredienti in conflitto con le allergie, intolleranze o preferenze alimentari che hai definito: <b>{matchedAllergenGroups.map(g => g.label).join(", ")}</b>.
                     </span>
                   </div>
                 )}
