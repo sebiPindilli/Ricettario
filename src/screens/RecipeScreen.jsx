@@ -210,8 +210,8 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
             {[["app","App"],["book","Libro"]].map(([mode,label]) => (
               <button key={mode} onClick={() => setViewMode(mode)} style={{
                 height:32, padding:"0 10px", border:"none",
-                background: viewMode===mode ? ui.ink : "transparent",
-                color: viewMode===mode ? "#fff" : ui.faded,
+                background: viewMode===mode ? th.appAccent : "transparent",
+                color: viewMode===mode ? th.appOnAccent : ui.faded,
                 fontFamily:F.ui, fontSize:11, fontWeight:600,
                 cursor:"pointer",
                 borderRadius: mode==="app" ? "8px 0 0 8px" : "0 8px 8px 0",
