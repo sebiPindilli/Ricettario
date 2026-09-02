@@ -512,13 +512,13 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
                     <div style={{ flex:1, fontFamily:F.ui, fontSize:11, color:th.appInk, lineHeight:1.35 }}>
                       {allergenBoxOpen ? (
                         <>
-                          <div style={{ marginBottom:3 }}>Contiene ingredienti in conflitto con le allergie, intolleranze o preferenze alimentari che hai definito:</div>
+                          <div style={{ marginBottom:3 }}>Contiene ingredienti presenti nelle allergie, intolleranze o preferenze alimentari che hai definito:</div>
                           {matchedAllergens.map(({ group, hitNames }) => (
                             <div key={group.id}><b>{group.label}</b>: {hitNames.join(", ")}</div>
                           ))}
                         </>
                       ) : (
-                        "Contiene ingredienti in conflitto con allergie, intolleranze o preferenze alimentari"
+                        "Contiene ingredienti presenti in allergie, intolleranze o preferenze alimentari"
                       )}
                     </div>
                     <span style={{ fontSize:10, color:th.appFaded, flexShrink:0, marginTop:2 }}>{allergenBoxOpen ? "▾" : "▸"}</span>
