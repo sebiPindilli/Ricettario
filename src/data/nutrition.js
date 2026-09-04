@@ -208,6 +208,18 @@ export const NUTRITION_DB = [
   { cat:"Verdure e ortaggi", id:"verza", name:"Cavolo verza, cruda", kcal:29, carb:3.8, sug:3.8, prot:2.0, fat:0.1, sat:0, fib:2.9, salt:0.05, defaultCategories:["ortofrutta"], source:"CREA (alimentinutrizione.it) — sodio stimato per analogia, non riportato dalla fonte" },
   { cat:"Verdure e ortaggi", id:"cavolo_cappuccio", name:"Cavolo cappuccio, verde, crudo", kcal:24, carb:2.5, sug:2.5, prot:2.1, fat:0.1, sat:0, fib:2.6, salt:0.06, synonyms:["cavolo","cavolo cappuccio"], defaultCategories:["ortofrutta"], source:"CREA (alimentinutrizione.it)" },
 
+  // ── Verdure e ortaggi (lotto 6, cucina italiana — CREA/alimentinutrizione.it
+  // salvo le due eccezioni dichiarate: "cavolo nero" (CREA non lo censisce
+  // come voce a sé; usati i valori USDA per kale, la stessa cultivar) e
+  // "scalogno" (idem, valori USDA — vedi anche nota lotto 2) ──
+  { cat:"Verdure e ortaggi", id:"cime_di_rapa", name:"Cavolo broccolo verde ramoso, crudo", kcal:30, carb:2.0, sug:2.0, prot:3.4, fat:0.3, sat:0, fib:3.0, salt:0.02, synonyms:["cime di rapa","broccoletti"], defaultCategories:["ortofrutta"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Verdure e ortaggi", id:"ravanelli", name:"Ravanelli, freschi", kcal:13, carb:1.8, sug:1.8, prot:0.8, fat:0.1, sat:0, fib:1.3, salt:0.15, synonyms:["ravanello"], defaultCategories:["ortofrutta"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Verdure e ortaggi", id:"topinambur", name:"Topinambur, cotto, bollito", kcal:52, carb:10.6, sug:0, prot:1.6, fat:0.1, sat:0, fib:2.7, salt:0.01, defaultCategories:["ortofrutta"], source:"CREA (alimentinutrizione.it) — sodio stimato per analogia, non riportato dalla fonte" },
+  { cat:"Verdure e ortaggi", id:"barbabietole", name:"Barbabietole rosse, crude", kcal:25, carb:4.0, sug:4.0, prot:1.1, fat:0, sat:0, fib:2.6, salt:0.21, synonyms:["barbabietola"], defaultCategories:["ortofrutta"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Verdure e ortaggi", id:"cardi", name:"Cardi, crudi", kcal:13, carb:1.7, sug:1.5, prot:0.6, fat:0.1, sat:0, fib:1.5, salt:0.06, synonyms:["cardo"], defaultCategories:["ortofrutta"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Verdure e ortaggi", id:"cavolo_nero", name:"Cavolo nero", kcal:35, carb:4.4, sug:1.3, prot:2.9, fat:1.5, sat:0.15, fib:4.1, salt:0.06, synonyms:["cavolo toscano","kale"], defaultCategories:["ortofrutta"], source:"USDA FoodData Central — zuccheri e grassi saturi stimati per analogia (non nella fonte)" },
+  { cat:"Verdure e ortaggi", id:"scalogno", name:"Scalogno", kcal:72, carb:16.8, sug:7.9, prot:2.5, fat:0.1, sat:0.01, fib:3.2, salt:0.03, defaultCategories:["ortofrutta"], source:"USDA FoodData Central — zuccheri, grassi saturi, fibre e sodio stimati per analogia (fonte parziale)" },
+
   // ── Frutta ──
   { cat:"Frutta", id:"mele", name:"Mele", kcal:57, carb:13.7, sug:13.7, prot:0.3, fat:0.1, sat:0, fib:1.7, salt:0.005, synonyms:["mela"], defaultCategories:["ortofrutta"], defaultEquivalences:{pz:150}, source:"CREA (alimentinutrizione.it)" },
   { cat:"Frutta", id:"pere", name:"Pere", kcal:41, carb:9.5, sug:9.5, prot:0.3, fat:0.1, sat:0, fib:3.8, salt:0.005, synonyms:["pera"], defaultCategories:["ortofrutta"], defaultEquivalences:{pz:150}, source:"CREA (alimentinutrizione.it)" },
