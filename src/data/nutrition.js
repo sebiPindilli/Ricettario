@@ -219,6 +219,8 @@ export const NUTRITION_DB = [
   { cat:"Verdure e ortaggi", id:"cardi", name:"Cardi, crudi", kcal:13, carb:1.7, sug:1.5, prot:0.6, fat:0.1, sat:0, fib:1.5, salt:0.06, synonyms:["cardo"], defaultCategories:["ortofrutta"], source:"CREA (alimentinutrizione.it)" },
   { cat:"Verdure e ortaggi", id:"cavolo_nero", name:"Cavolo nero", kcal:35, carb:4.4, sug:1.3, prot:2.9, fat:1.5, sat:0.15, fib:4.1, salt:0.06, synonyms:["cavolo toscano","kale"], defaultCategories:["ortofrutta"], source:"USDA FoodData Central — zuccheri e grassi saturi stimati per analogia (non nella fonte)" },
   { cat:"Verdure e ortaggi", id:"scalogno", name:"Scalogno", kcal:72, carb:16.8, sug:7.9, prot:2.5, fat:0.1, sat:0.01, fib:3.2, salt:0.03, defaultCategories:["ortofrutta"], source:"USDA FoodData Central — zuccheri, grassi saturi, fibre e sodio stimati per analogia (fonte parziale)" },
+  { cat:"Verdure e ortaggi", id:"salvia", name:"Salvia, fresco", kcal:132, carb:15.6, sug:15.6, prot:3.9, fat:4.6, sat:0, fib:8.2, salt:0.01, synonyms:["salvia"], defaultCategories:["spezie"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Verdure e ortaggi", id:"peperoncino", name:"Peperoncini piccanti, freschi", kcal:30, carb:3.8, sug:1.5, prot:1.8, fat:0.5, sat:0, fib:2.0, salt:0.02, synonyms:["peperoncino","peperoncino fresco","peperoncino piccante"], defaultCategories:["spezie"], source:"CREA (alimentinutrizione.it)" },
 
   // ── Frutta ──
   { cat:"Frutta", id:"mele", name:"Mele", kcal:57, carb:13.7, sug:13.7, prot:0.3, fat:0.1, sat:0, fib:1.7, salt:0.005, synonyms:["mela"], defaultCategories:["ortofrutta"], defaultEquivalences:{pz:150}, source:"CREA (alimentinutrizione.it)" },
@@ -288,6 +290,18 @@ export const NUTRITION_DB = [
   { cat:"Varie", id:"olive", name:"Olive da tavola", kcal:145, carb:1.0, sug:0.5, prot:0.8, fat:15.0, sat:2.3, fib:4.4, salt:3.5, synonyms:["olive nere","olive verdi"], defaultCategories:["altro"], source:"CREA (alimentinutrizione.it)" },
   { cat:"Varie", id:"capperi", name:"Capperi sotto sale (dissalati)", kcal:23, carb:2.4, sug:0.4, prot:2.4, fat:0.9, sat:0.2, fib:3.2, salt:2.5, synonyms:["capperi"], defaultCategories:["altro"], source:"CREA (alimentinutrizione.it)" },
   { cat:"Varie", id:"zafferano", name:"Zafferano", kcal:310, carb:61.5, sug:0, prot:11.4, fat:5.9, sat:1.6, fib:3.9, salt:0.4, defaultCategories:["spezie"], defaultEquivalences:{bustina:0.1}, source:"CREA (alimentinutrizione.it)" },
+
+  // ── Spezie ed erbe aromatiche (lotto 8, cucina italiana — CREA non le censisce
+  // come voci a sé, usati valori USDA FoodData Central; zuccheri stimati 0
+  // (erbe/spezie essiccate, trascurabili) e grassi saturi come quota tipica
+  // dei grassi totali per questo genere di spezie dove la fonte non la
+  // riporta separatamente — entrambe le stime dichiarate, non dati USDA diretti ──
+  { cat:"Varie", id:"origano", name:"Origano essiccato", kcal:265, carb:68.92, sug:0, prot:9.0, fat:4.28, sat:1.0, fib:42.0, salt:0.06, synonyms:["origano"], defaultCategories:["spezie"], source:"USDA FoodData Central — zuccheri e grassi saturi stimati (v. nota di sezione)" },
+  { cat:"Varie", id:"maggiorana", name:"Maggiorana essiccata", kcal:271, carb:60.60, sug:0, prot:12.70, fat:7.04, sat:1.7, fib:35.0, salt:0.19, synonyms:["maggiorana"], defaultCategories:["spezie"], source:"USDA FoodData Central — zuccheri, grassi saturi e fibre stimati (v. nota di sezione)" },
+  { cat:"Varie", id:"alloro", name:"Alloro, foglie essiccate", kcal:313, carb:74.97, sug:0, prot:7.61, fat:8.36, sat:2.0, fib:26.0, salt:0.06, synonyms:["alloro","foglie di alloro"], defaultCategories:["spezie"], source:"USDA FoodData Central — zuccheri e grassi saturi stimati (v. nota di sezione)" },
+  { cat:"Varie", id:"noce_moscata", name:"Noce moscata macinata", kcal:525, carb:49.29, sug:0, prot:5.84, fat:36.31, sat:25.9, fib:20.8, salt:0.02, synonyms:["noce moscata"], defaultCategories:["spezie"], source:"USDA FoodData Central — zuccheri e sodio stimati (v. nota di sezione)" },
+  { cat:"Varie", id:"chiodi_di_garofano", name:"Chiodi di garofano macinati", kcal:274, carb:65.53, sug:0, prot:5.97, fat:13.0, sat:3.9, fib:33.9, salt:0.69, synonyms:["chiodi di garofano"], defaultCategories:["spezie"], source:"USDA FoodData Central — zuccheri e grassi saturi stimati (v. nota di sezione)" },
+  { cat:"Varie", id:"erba_cipollina", name:"Erba cipollina fresca", kcal:30, carb:4.35, sug:2.0, prot:3.27, fat:0.73, sat:0.1, fib:4.7, salt:0.01, synonyms:["erba cipollina"], defaultCategories:["spezie"], source:"USDA FoodData Central — zuccheri e grassi saturi stimati (v. nota di sezione)" },
 ];
 
 export const NUTRIENT_LABELS = [
