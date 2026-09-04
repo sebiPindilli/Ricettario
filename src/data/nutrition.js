@@ -230,6 +230,21 @@ export const NUTRITION_DB = [
   { cat:"Frutta", id:"pesche", name:"Pesche", kcal:28, carb:6.1, sug:6.1, prot:0.7, fat:0.1, sat:0, fib:2.1, salt:0.005, synonyms:["pesca"], defaultCategories:["ortofrutta"], defaultEquivalences:{pz:150}, source:"CREA (alimentinutrizione.it)" },
   { cat:"Frutta", id:"uva", name:"Uva", kcal:64, carb:15.6, sug:15.6, prot:0.5, fat:0.1, sat:0, fib:1.5, salt:0.005, defaultCategories:["ortofrutta"], source:"CREA (alimentinutrizione.it)" },
 
+  // ── Frutta (lotto 7, cucina italiana — CREA/alimentinutrizione.it ──
+  { cat:"Frutta", id:"kiwi", name:"Kiwi, freschi", kcal:48, carb:9.0, sug:9.0, prot:1.2, fat:0.6, sat:0, fib:2.2, salt:0.01, defaultCategories:["ortofrutta"], defaultEquivalences:{pz:80}, source:"CREA (alimentinutrizione.it)" },
+  { cat:"Frutta", id:"anguria", name:"Cocomero, fresco", kcal:16, carb:3.7, sug:3.7, prot:0.4, fat:0, sat:0, fib:0.2, salt:0.01, synonyms:["anguria","cocomero"], defaultCategories:["ortofrutta"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Frutta", id:"melone", name:"Melone, d'estate, fresco", kcal:34, carb:7.4, sug:7.4, prot:0.8, fat:0.2, sat:0, fib:0.7, salt:0.02, synonyms:["melone"], defaultCategories:["ortofrutta"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Frutta", id:"fichi", name:"Fichi, freschi", kcal:63, carb:14.2, sug:14.2, prot:0.9, fat:0.2, sat:0, fib:2.0, salt:0.01, synonyms:["fico"], defaultCategories:["ortofrutta"], defaultEquivalences:{pz:50}, source:"CREA (alimentinutrizione.it)" },
+  { cat:"Frutta", id:"castagne", name:"Castagne", kcal:174, carb:36.7, sug:8.9, prot:2.9, fat:1.7, sat:0, fib:4.7, salt:0.02, defaultCategories:["ortofrutta"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Frutta", id:"mandarini", name:"Mandarini, freschi", kcal:76, carb:17.6, sug:17.6, prot:0.9, fat:0.3, sat:0, fib:1.7, salt:0.003, synonyms:["mandarino","clementine"], defaultCategories:["ortofrutta"], defaultEquivalences:{pz:80}, source:"CREA (alimentinutrizione.it)" },
+  { cat:"Frutta", id:"mirtilli", name:"Mirtilli, freschi", kcal:49, carb:10.1, sug:10.1, prot:0.9, fat:0.2, sat:0, fib:3.1, salt:0.005, defaultCategories:["ortofrutta"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Frutta", id:"pompelmo", name:"Pompelmo, fresco", kcal:29, carb:6.2, sug:6.2, prot:0.6, fat:0, sat:0, fib:1.6, salt:0.003, defaultCategories:["ortofrutta"], defaultEquivalences:{pz:200}, source:"CREA (alimentinutrizione.it)" },
+  { cat:"Frutta", id:"lamponi", name:"Lamponi, freschi", kcal:49, carb:6.5, sug:6.5, prot:1.0, fat:0.6, sat:0, fib:7.4, salt:0.01, defaultCategories:["ortofrutta"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Frutta", id:"prugne", name:"Prugne, fresche", kcal:45, carb:10.5, sug:10.5, prot:0.5, fat:0.1, sat:0, fib:1.5, salt:0.005, synonyms:["prugna","susine"], defaultCategories:["ortofrutta"], defaultEquivalences:{pz:60}, source:"CREA (alimentinutrizione.it)" },
+  { cat:"Frutta", id:"albicocche", name:"Albicocche, fresche", kcal:42, carb:9.8, sug:9.8, prot:0.4, fat:0.1, sat:0, fib:1.5, salt:0.003, synonyms:["albicocca"], defaultCategories:["ortofrutta"], defaultEquivalences:{pz:40}, source:"CREA (alimentinutrizione.it)" },
+  { cat:"Frutta", id:"kaki", name:"Loti o kaki, freschi", kcal:70, carb:16.0, sug:16.0, prot:0.6, fat:0.3, sat:0, fib:2.5, salt:0.01, synonyms:["cachi"], defaultCategories:["ortofrutta"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Frutta", id:"more", name:"Mora di rovo", kcal:42, carb:8.1, sug:8.1, prot:1.3, fat:0, sat:0, fib:3.2, salt:0.005, synonyms:["mora"], defaultCategories:["ortofrutta"], source:"CREA (alimentinutrizione.it)" },
+
   // ── Frutta secca e semi ──
   { cat:"Frutta secca e semi", id:"mandorle", name:"Mandorle sgusciate", kcal:628, carb:4.6, sug:3.7, prot:22.0, fat:55.3, sat:4.6, fib:12.7, salt:0.01, synonyms:["mandorle"], defaultCategories:["grassi"], source:"CREA (alimentinutrizione.it)" },
   { cat:"Frutta secca e semi", id:"noci", name:"Noci sgusciate", kcal:689, carb:5.1, sug:3.1, prot:14.3, fat:68.1, sat:6.1, fib:6.2, salt:0.005, synonyms:["noci"], defaultCategories:["grassi"], source:"CREA (alimentinutrizione.it)" },
