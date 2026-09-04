@@ -46,6 +46,17 @@ export const NUTRITION_DB = [
   { cat:"Farine, cereali e derivati", id:"lievito_birra", name:"Lievito di birra fresco", kcal:82, carb:1.1, sug:0, prot:12.1, fat:0.4, sat:0.1, fib:6.9, salt:0.09, synonyms:["lievito di birra"], defaultCategories:["base"], defaultEquivalences:{cubetto:25}, source:"CREA (alimentinutrizione.it)" },
   { cat:"Farine, cereali e derivati", id:"lievito_chimico", name:"Lievito chimico (per dolci)", kcal:110, carb:27.0, sug:0, prot:0.5, fat:0.1, sat:0, fib:0.2, salt:26.0, synonyms:["lievito per dolci","lievito in polvere"], defaultCategories:["base"], defaultEquivalences:{bustina:16}, source:"CREA (alimentinutrizione.it)" },
 
+  // ── Farine, cereali e derivati (lotto 2, cucina italiana — CREA/alimentinutrizione.it;
+  // dove la fonte non riporta un valore assoluto per i grassi saturi ma solo
+  // la % sui lipidi totali, il grammo è ricavato da quella percentuale ──
+  { cat:"Farine, cereali e derivati", id:"farina_riso", name:"Farina di riso", kcal:332, carb:79.1, sug:0, prot:7.3, fat:0.5, sat:0, fib:1.0, salt:0.01, synonyms:["farina di riso"], defaultCategories:["cereali"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Farine, cereali e derivati", id:"farina_tipo0", name:"Farina di frumento tipo 0", kcal:321, carb:69.5, sug:1.8, prot:11.5, fat:1.0, sat:0.18, fib:2.9, salt:0.005, synonyms:["farina 0","farina tipo 0","farina manitoba"], defaultCategories:["cereali"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Farine, cereali e derivati", id:"farina_castagne", name:"Farina di castagne", kcal:318, carb:62.0, sug:16.1, prot:6.1, fat:3.7, sat:0, fib:13.8, salt:0.03, synonyms:["farina di castagne"], defaultCategories:["cereali"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Farine, cereali e derivati", id:"farina_segale", name:"Farina di segale", kcal:342, carb:67.8, sug:0.1, prot:11.7, fat:2.0, sat:0, fib:11.3, salt:0.02, synonyms:["farina di segale"], defaultCategories:["cereali"], source:"CREA (alimentinutrizione.it) — sodio stimato per analogia, non riportato dalla fonte" },
+  { cat:"Farine, cereali e derivati", id:"grano_saraceno", name:"Grano saraceno", kcal:329, carb:61.2, sug:0, prot:12.4, fat:3.3, sat:0.71, fib:10.0, salt:0.003, synonyms:["grano saraceno"], defaultCategories:["cereali"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Farine, cereali e derivati", id:"miglio", name:"Miglio", kcal:343, carb:64.9, sug:0, prot:11.8, fat:3.9, sat:0, fib:8.5, salt:0.01, defaultCategories:["cereali"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Farine, cereali e derivati", id:"riso_venere", name:"Riso Venere, crudo", kcal:355, carb:80.4, sug:2.2, prot:7.8, fat:1.3, sat:0, fib:5.1, salt:0.005, synonyms:["riso nero","riso venere"], defaultCategories:["cereali"], source:"CREA (alimentinutrizione.it)" },
+
   // ── Zuccheri e dolcificanti ──
   { cat:"Zuccheri e dolcificanti", id:"zucchero", name:"Zucchero (saccarosio)", kcal:392, carb:100, sug:100, prot:0, fat:0, sat:0, fib:0, salt:0, synonyms:["zucchero semolato","zucchero bianco"], defaultCategories:["base"], source:"CREA (alimentinutrizione.it)" },
   { cat:"Zuccheri e dolcificanti", id:"zucchero_canna", name:"Zucchero di canna grezzo", kcal:377, carb:97.0, sug:96.0, prot:0.1, fat:0, sat:0, fib:0, salt:0.03, synonyms:["zucchero di canna"], defaultCategories:["base"], source:"CREA (alimentinutrizione.it)" },
@@ -100,6 +111,14 @@ export const NUTRITION_DB = [
   { cat:"Legumi", id:"fagioli_borlotti", name:"Fagioli borlotti in scatola scolati", kcal:91, carb:14.9, sug:0.6, prot:6.9, fat:0.6, sat:0.1, fib:6.5, salt:0.7, synonyms:["fagioli borlotti"], defaultCategories:["legumi"], source:"CREA (alimentinutrizione.it)" },
   { cat:"Legumi", id:"fagioli_cannellini", name:"Fagioli cannellini in scatola scolati", kcal:85, carb:13.5, sug:0.5, prot:6.6, fat:0.5, sat:0.1, fib:6.2, salt:0.7, synonyms:["fagioli cannellini"], defaultCategories:["legumi"], source:"CREA (alimentinutrizione.it)" },
   { cat:"Legumi", id:"piselli", name:"Piselli freschi/surgelati", kcal:76, carb:11.4, sug:3.3, prot:5.5, fat:0.6, sat:0.1, fib:5.2, salt:0.01, synonyms:["piselli surgelati"], defaultCategories:["legumi"], source:"CREA (alimentinutrizione.it)" },
+
+  // ── Legumi (lotto 2, cucina italiana — CREA/alimentinutrizione.it ──
+  { cat:"Legumi", id:"fave_secche", name:"Fave, secche", kcal:331, carb:52.8, sug:4.5, prot:21.3, fat:2.1, sat:0.45, fib:14.7, salt:0.02, synonyms:["fave"], defaultCategories:["legumi"], source:"CREA (alimentinutrizione.it) — sodio stimato per analogia, non riportato dalla fonte" },
+  { cat:"Legumi", id:"lupini", name:"Lupini, ammollati", kcal:119, carb:7.1, sug:0.5, prot:16.4, fat:2.4, sat:0, fib:2.8, salt:0.02, synonyms:["lupini in salamoia"], defaultCategories:["legumi"], source:"CREA (alimentinutrizione.it) — sodio stimato per analogia, non riportato dalla fonte" },
+  { cat:"Legumi", id:"piselli_secchi", name:"Piselli, secchi", kcal:317, carb:48.2, sug:2.9, prot:21.7, fat:2.0, sat:0, fib:15.7, salt:0.10, defaultCategories:["legumi"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Legumi", id:"fagiolini", name:"Fagiolini, freschi", kcal:24, carb:2.4, sug:2.4, prot:2.1, fat:0.1, sat:0, fib:2.9, salt:0.005, defaultCategories:["ortofrutta"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Legumi", id:"fagioli_borlotti_secchi", name:"Fagioli, Borlotti, secchi", kcal:312, carb:47.7, sug:3.5, prot:20.2, fat:2.0, sat:0, fib:17.3, salt:0.01, synonyms:["fagioli borlotti secchi"], defaultCategories:["legumi"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Legumi", id:"fagioli_cannellini_secchi", name:"Fagioli, Cannellini, secchi", kcal:314, carb:45.5, sug:2.9, prot:23.4, fat:1.6, sat:0, fib:17.6, salt:0.01, synonyms:["fagioli cannellini secchi"], defaultCategories:["legumi"], source:"CREA (alimentinutrizione.it)" },
 
   // ── Verdure e ortaggi ──
   { cat:"Verdure e ortaggi", id:"pomodori", name:"Pomodori da insalata", kcal:19, carb:2.8, sug:2.8, prot:1.0, fat:0.2, sat:0, fib:1.1, salt:0.01, synonyms:["pomodoro","pomodori","pomodorini","pomodoro san marzano"], defaultCategories:["ortofrutta"], source:"CREA (alimentinutrizione.it)" },
