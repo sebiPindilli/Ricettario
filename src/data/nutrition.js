@@ -64,6 +64,7 @@ export const NUTRITION_DB = [
   { cat:"Zuccheri e dolcificanti", id:"miele", name:"Miele", kcal:304, carb:80.3, sug:80.3, prot:0.6, fat:0, sat:0, fib:0, salt:0.01, defaultCategories:["base"], source:"CREA (alimentinutrizione.it)" },
   { cat:"Zuccheri e dolcificanti", id:"marmellata", name:"Marmellata / confettura", kcal:222, carb:58.7, sug:58.7, prot:0.5, fat:0, sat:0, fib:1.0, salt:0.03, synonyms:["confettura"], defaultCategories:["altro"], source:"CREA (alimentinutrizione.it)" },
   { cat:"Zuccheri e dolcificanti", id:"nutella", name:"Crema spalmabile alle nocciole", kcal:539, carb:57.5, sug:56.3, prot:6.3, fat:30.9, sat:10.6, fib:3.4, salt:0.11, defaultCategories:["altro"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Zuccheri e dolcificanti", id:"frutta_candita", name:"Ciliege, candite", kcal:252, carb:66.4, sug:66.4, prot:0.4, fat:0, sat:0, fib:0.9, salt:0.07, synonyms:["frutta candita","ciliegie candite"], defaultCategories:["altro"], source:"CREA (alimentinutrizione.it)" },
 
   // ── Latticini e uova ──
   { cat:"Latticini e uova", id:"latte_intero", name:"Latte intero", kcal:64, carb:4.9, sug:4.9, prot:3.3, fat:3.6, sat:2.1, fib:0, salt:0.13, synonyms:["latte"], defaultCategories:["latticini"], source:"CREA (alimentinutrizione.it)" },
@@ -274,12 +275,19 @@ export const NUTRITION_DB = [
   { cat:"Cioccolato, cacao e dolci", id:"cacao_amaro", name:"Cacao amaro in polvere", kcal:355, carb:11.5, sug:0.5, prot:20.4, fat:25.6, sat:15.3, fib:29.8, salt:0.05, synonyms:["cacao in polvere","cacao"], defaultCategories:["cacao"], source:"CREA (alimentinutrizione.it)" },
   { cat:"Cioccolato, cacao e dolci", id:"biscotti_secchi", name:"Biscotti secchi", kcal:429, carb:80.4, sug:21.9, prot:7.6, fat:8.1, sat:2.7, fib:2.6, salt:0.5, synonyms:["biscotti"], defaultCategories:["altro"], source:"CREA (alimentinutrizione.it)" },
   { cat:"Cioccolato, cacao e dolci", id:"savoiardi", name:"Savoiardi", kcal:392, carb:75.5, sug:41.0, prot:9.5, fat:5.9, sat:1.9, fib:1.8, salt:0.25, defaultCategories:["altro"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Cioccolato, cacao e dolci", id:"cioccolato_bianco", name:"Cioccolato bianco", kcal:539, carb:57.5, sug:55.0, prot:5.0, fat:35.0, sat:19.0, fib:0, salt:0.50, defaultCategories:["cacao"], source:"USDA FoodData Central — zuccheri stimati per analogia con il cioccolato al latte (fonte non scomponeva i carboidrati)" },
+  { cat:"Cioccolato, cacao e dolci", id:"marzapane", name:"Marzapane", kcal:429, carb:57.0, sug:50.0, prot:4.2, fat:17.0, sat:3.9, fib:3.0, salt:0.02, defaultCategories:["altro"], source:"USDA FoodData Central — valori con variabilità significativa tra fonti; zuccheri, fibre e sodio stimati per analogia" },
 
   // ── Bevande e alcolici (per cucina) ──
   { cat:"Bevande e alcolici (per cucina)", id:"vino_bianco", name:"Vino bianco da tavola", kcal:70, carb:0.1, sug:0.1, prot:0.1, fat:0, sat:0, fib:0, salt:0.01, synonyms:["vino bianco"], defaultCategories:["alcolici"], source:"CREA (alimentinutrizione.it)" },
   { cat:"Bevande e alcolici (per cucina)", id:"vino_rosso", name:"Vino rosso da tavola", kcal:75, carb:0.2, sug:0.2, prot:0.1, fat:0, sat:0, fib:0, salt:0.01, synonyms:["vino rosso"], defaultCategories:["alcolici"], source:"CREA (alimentinutrizione.it)" },
   { cat:"Bevande e alcolici (per cucina)", id:"birra", name:"Birra chiara", kcal:34, carb:3.5, sug:3.5, prot:0.2, fat:0, sat:0, fib:0, salt:0.005, synonyms:["birra"], defaultCategories:["alcolici"], source:"CREA (alimentinutrizione.it)" },
   { cat:"Bevande e alcolici (per cucina)", id:"caffe", name:"Caffè espresso", kcal:2, carb:0.3, sug:0, prot:0.1, fat:0, sat:0, fib:0, salt:0.005, synonyms:["caffè"], defaultCategories:["altro"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Bevande e alcolici (per cucina)", id:"marsala", name:"Marsala all'uovo", kcal:150, carb:12.4, sug:12.4, prot:0, fat:0, sat:0, fib:0, salt:0, synonyms:["marsala"], defaultCategories:["alcolici"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Bevande e alcolici (per cucina)", id:"grappa", name:"Grappa", kcal:242, carb:0, sug:0, prot:0, fat:0, sat:0, fib:0, salt:0, defaultCategories:["alcolici"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Bevande e alcolici (per cucina)", id:"spumante", name:"Bevanda alcolica, Spumante", kcal:87, carb:0.6, sug:0.6, prot:0, fat:0, sat:0, fib:0, salt:0.01, synonyms:["spumante","prosecco"], defaultCategories:["alcolici"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Bevande e alcolici (per cucina)", id:"vin_santo", name:"Vin Santo", kcal:136, carb:12.0, sug:12.0, prot:0, fat:0, sat:0, fib:0, salt:0.01, defaultCategories:["alcolici"], source:"Stima da titolo alcolometrico (~16% vol) e residuo zuccherino tipici dichiarati per la denominazione — non una misurazione diretta CREA/USDA" },
+  { cat:"Bevande e alcolici (per cucina)", id:"limoncello", name:"Limoncello", kcal:286, carb:30.0, sug:30.0, prot:0, fat:0, sat:0, fib:0, salt:0.01, defaultCategories:["alcolici"], source:"Stima da titolo alcolometrico (~30% vol) e residuo zuccherino tipici dichiarati per il prodotto — non una misurazione diretta CREA/USDA" },
 
   // ── Varie ──
   { cat:"Varie", id:"vaniglia", name:"Vaniglia (bacca/estratto)", kcal:288, carb:12.7, sug:12.7, prot:0.1, fat:0.1, sat:0, fib:0, salt:0.02, synonyms:["bacca di vaniglia","estratto di vaniglia"], defaultCategories:["spezie"], source:"CREA (alimentinutrizione.it)" },
