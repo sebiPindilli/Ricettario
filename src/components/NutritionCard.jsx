@@ -3,7 +3,7 @@ import { useTheme, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import SuggestionHint from "./SuggestionHint.jsx";
 import { NUTRITION_DB, NUTRIENT_LABELS } from "../data/nutrition.js";
-import { normName, ingDictIndex, resolveIngId, flattenIngredients } from "../utils/helpers.js";
+import { normName, ingDictIndex, resolveIngId, flattenIngredients, buildFoodNameIndex } from "../utils/helpers.js";
 import { effectiveNutritionKey } from "../utils/aggregates.js";
 import { computeRecipeNutrition } from "../utils/recipeNutrition.js";
 
@@ -30,7 +30,7 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
   );
   // Conta gli ingredienti mappati (anche se non convertibili in grammi)
   const mappedCount = React.useMemo(() => {
-    const dbByName = new Map([...NUTRITION_DB, ...customFoods].map(f => [normName(f.name), f]));
+    const dbByName = buildFoodNameIndex([...NUTRITION_DB, ...customFoods]);
     const idx = ingredientDict ? ingDictIndex(ingredientDict) : null;
     return flattenIngredients(recipe.ingredients).filter(ing => {
       const key = effectiveNutritionKey(resolveIngId(idx, ing.name), aggregates, nutritionMap, sourceByIngredient);

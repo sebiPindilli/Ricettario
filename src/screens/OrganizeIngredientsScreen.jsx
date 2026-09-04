@@ -14,7 +14,7 @@ import { NUTRITION_DB } from "../data/nutrition.js";
 import {
   buildIngredientDict, ingDictIndex, sortCategoriesBaseFirst,
   normName, uid, macroLine, resolveIngId, flattenIngredients,
-  WEIGHT_UNITS, unitLabel, normUnit, fmtQty,
+  WEIGHT_UNITS, unitLabel, normUnit, fmtQty, buildFoodNameIndex,
 } from "../utils/helpers.js";
 import { effectiveCategories, effectiveNutritionKey, effectiveEquivalenceKey, sourcePriorityFor, findSimilarIngredients, findAllergenSuggestions } from "../utils/aggregates.js";
 
@@ -1216,7 +1216,7 @@ export default function OrganizeIngredientsScreen({
   // ══ VISTA PRINCIPALE: 4 database + schede ingrediente/aggregato ══
   const allFoods = [...NUTRITION_DB, ...customFoods];
   const dbById = new Map(allFoods.map(f => [f.id, f]));
-  const dbByName = new Map(allFoods.map(f => [normName(f.name), f]));
+  const dbByName = buildFoodNameIndex(allFoods);
   const catsSorted = sortCategoriesBaseFirst(categoryList);
   const catOf = (id) => catsSorted.find(c => c.id === id);
 

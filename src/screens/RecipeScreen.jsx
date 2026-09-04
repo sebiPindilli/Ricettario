@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { useTheme, useOnline, useUiStyle } from "../context.js";
 import { F } from "../data/constants.js";
 import { NUTRITION_DB } from "../data/nutrition.js";
-import { uid, dishPhotoOf, readImageFile, normName, ingDictIndex, resolveIngId, flattenIngredients } from "../utils/helpers.js";
+import { uid, dishPhotoOf, readImageFile, normName, ingDictIndex, resolveIngId, flattenIngredients, buildFoodNameIndex } from "../utils/helpers.js";
 import { effectiveNutritionKey, expandAllergenMembers } from "../utils/aggregates.js";
 import BackBtn from "../components/BackBtn.jsx";
 import Toast from "../components/Toast.jsx";
@@ -53,7 +53,7 @@ export default function RecipeScreen({ recipe, onBack, onUpdate, onEdit, onDelet
 
   // Copertura valori nutrizionali degli ingredienti (per scegliere se mostrare la tabella o il placeholder)
   const nutritionStatus = React.useMemo(() => {
-    const dbByName = new Map([...NUTRITION_DB, ...customFoods].map(f => [normName(f.name), f]));
+    const dbByName = buildFoodNameIndex([...NUTRITION_DB, ...customFoods]);
     const idx = ingredientDict ? ingDictIndex(ingredientDict) : null;
     const anyMapped = flattenIngredients(recipe.ingredients).some(ing => {
       const key = effectiveNutritionKey(resolveIngId(idx, ing.name), aggregates, nutritionMap, sourceByIngredient);

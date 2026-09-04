@@ -18,7 +18,7 @@ import {
   WEIGHT_UNITS, ingredientToGrams,
   parseIngredientAmount, composeIngredient,
   memoryPeriodLabel, memorySortKey, buildFridgeItems, withTimeout,
-  isSystemDataEmpty, applyImportedSystemData,
+  isSystemDataEmpty, applyImportedSystemData, buildFoodNameIndex,
 } from "./utils/helpers.js";
 import { effectiveNutritionKey, findSimilarIngredients, findAllergenSuggestions } from "./utils/aggregates.js";
 import {
@@ -676,6 +676,37 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   useEffect(() => {
     setIngredientDict(d => buildIngredientDict(recipes, d));
   }, [recipes]);
+  // Dizionario ingredienti base (NUTRITION_DB con defaultCategories/
+  // defaultEquivalences, vedi piano "dizionario ingredienti"): quando un
+  // ingrediente NUOVO entra nel dizionario del libro, se il suo nome (o un
+  // suo sinonimo) corrisponde a una voce del dizionario base, le categorie
+  // ed equivalenze di default vengono copiate nel libro — solo se il libro
+  // non ha già un valore proprio per quell'ingrediente (mai sovrascritto) e
+  // solo se la categoria suggerita esiste ancora in questo libro (l'utente
+  // può averla rinominata o cancellata). La nutrizione invece non si copia
+  // mai qui: resta un confronto per nome dal vivo (vedi buildFoodNameIndex
+  // in computeRecipeNutrition/nutritionStatus), così un miglioramento
+  // futuro del dizionario si vede subito anche sulle ricette già scritte.
+  const prevIngredientDictKeysRef = useRef(new Set());
+  useEffect(() => {
+    const prevKeys = prevIngredientDictKeysRef.current;
+    const newIds = Object.keys(ingredientDict).filter(id => !prevKeys.has(id));
+    prevIngredientDictKeysRef.current = new Set(Object.keys(ingredientDict));
+    if (newIds.length === 0) return;
+    const baseIndex = buildFoodNameIndex(NUTRITION_DB);
+    newIds.forEach(id => {
+      const match = baseIndex.get(normName(ingredientDict[id]));
+      if (!match) return;
+      if (!ingredientCategories[id] && match.defaultCategories?.length) {
+        const validCats = match.defaultCategories.filter(catId => categoryList.some(c => c.id === catId));
+        if (validCats.length > 0) setIngredientCategories(prev => ({ ...prev, [id]: validCats }));
+      }
+      if (!equivalences[id] && match.defaultEquivalences && Object.keys(match.defaultEquivalences).length > 0) {
+        setEquivalences(prev => ({ ...prev, [id]: { factors: match.defaultEquivalences } }));
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ingredientDict]);
   const dictIdx = React.useMemo(() => ingDictIndex(ingredientDict), [ingredientDict]);
   // Rinomina: aggiorna il nome nel dizionario E in tutte le ricette.
   // Le mappe keyed per id restano intatte. Ritorna false se il nome è già in uso.

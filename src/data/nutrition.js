@@ -1,9 +1,26 @@
 // ══════════════════════════════════════════════════════════════
 // VALORI NUTRIZIONALI — dataset locale (per 100 g di parte edibile)
 // Valori indicativi elaborati dalle Tabelle di Composizione degli
-// Alimenti CREA (alimentinutrizione.it) — citare la fonte nell'app.
+// Alimenti CREA (alimentinutrizione.it) per le voci italiane storiche;
+// le voci aggiunte per altre cucine dichiarano la propria fonte nel
+// commento di sezione — citare le fonti nell'app.
 // kcal · carb=carboidrati · sug=zuccheri · prot=proteine
 // fat=grassi · sat=saturi · fib=fibre · salt=sale (g)
+//
+// Tre campi opzionali, assenti sulle voci storiche, alimentano il
+// "dizionario ingredienti" (categorie/equivalenze/sinonimi di base):
+// - synonyms: [string,...] — altre grafie/varianti dello stesso alimento
+//   (es. "carote" per "Carota"). Usati per il collegamento automatico alla
+//   nutrizione (buildFoodNameIndex, in utils/helpers.js) E per riconoscere
+//   un ingrediente nuovo come corrispondente a questa voce.
+// - defaultCategories: [catId,...] — id di INGREDIENT_CATEGORIES copiati
+//   nel libro alla prima comparsa dell'ingrediente, solo se il libro non ha
+//   già una propria categorizzazione per quell'ingrediente e solo se l'id
+//   esiste ancora tra le categorie del libro (vedi l'effetto dedicato in
+//   ricettario-v23.jsx). Mai un riferimento vivo: una volta copiati,
+//   l'utente li modifica liberamente come se li avesse scelti lui.
+// - defaultEquivalences: {unità: grammi} — stessa logica di copia-alla-
+//   prima-comparsa, dentro equivalences[id].factors.
 // ══════════════════════════════════════════════════════════════
 export const NUTRITION_DB = [
   // ── Farine, cereali e derivati ──

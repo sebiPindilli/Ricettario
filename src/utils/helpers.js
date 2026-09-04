@@ -182,6 +182,26 @@ export const readImageFile = (file, onLoaded) => {
 
 // Nome normalizzato per confronti esatti (frigo, aggregati, suggerimenti)
 export const normName = (name) => (name || "").trim().toLowerCase();
+
+// Indice nome→alimento per il collegamento automatico alla nutrizione
+// (NUTRITION_DB/customFoods, vedi computeRecipeNutrition e i controlli di
+// stato in RecipeScreen.jsx/NutritionCard.jsx/OrganizeIngredientsScreen.jsx):
+// indicizza sia il nome principale sia gli eventuali sinonimi di ogni voce
+// (campo `synonyms`, dizionario ingredienti base) — un ingrediente scritto
+// come "carote" trova comunque la voce "Carota" senza bisogno di un
+// collegamento esplicito in nutritionMap. Voce già presente per un nome
+// (o sinonimo) duplicato = vince la prima incontrata (mai un secondo
+// alimento a rimpiazzarne uno già indicizzato).
+export const buildFoodNameIndex = (allFoods) => {
+  const m = new Map();
+  (allFoods || []).forEach((f) => {
+    [f.name, ...(f.synonyms || [])].forEach((n) => {
+      const key = normName(n);
+      if (key && !m.has(key)) m.set(key, f);
+    });
+  });
+  return m;
+};
 // R9 — id univoci robusti (evita collisioni tra copie create nello stesso istante)
 export const uid = (prefix = "") => {
   const rnd = (typeof crypto !== "undefined" && crypto.randomUUID)

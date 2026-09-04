@@ -5,14 +5,14 @@
 // nutritionMap: { "<nome normalizzato>": { foodId } | { custom:{kcal,...} } }
 // Ritorna { total, perServing, per100, totalGrams, covered, excluded, details }
 import { NUTRITION_DB } from "../data/nutrition.js";
-import { normName, ingDictIndex, resolveIngId, flattenIngredients, ingredientToGrams } from "./helpers.js";
+import { normName, ingDictIndex, resolveIngId, flattenIngredients, ingredientToGrams, buildFoodNameIndex } from "./helpers.js";
 import { effectiveNutritionKey } from "./aggregates.js";
 
 export const computeRecipeNutrition = (recipe, nutritionMap = {}, equivalences = {}, customFoods = [], ingredientDict = null, aggregates = [], sourceByIngredient, customUnits = {}) => {
   const dictIdx = ingredientDict ? ingDictIndex(ingredientDict) : null;
   const allFoods = [...NUTRITION_DB, ...customFoods];
   const dbById = new Map(allFoods.map(f => [f.id, f]));
-  const dbByName = new Map(allFoods.map(f => [normName(f.name), f]));
+  const dbByName = buildFoodNameIndex(allFoods);
   const total = { kcal:0, carb:0, sug:0, prot:0, fat:0, sat:0, fib:0, salt:0 };
   const excluded = [];
   let covered = 0;
