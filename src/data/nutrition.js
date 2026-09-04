@@ -96,6 +96,19 @@ export const NUTRITION_DB = [
   { cat:"Carni e salumi", id:"pancetta", name:"Pancetta tesa", kcal:337, carb:0.8, sug:0.8, prot:20.9, fat:28.1, sat:10.1, fib:0, salt:2.8, defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
   { cat:"Carni e salumi", id:"guanciale", name:"Guanciale", kcal:655, carb:0.2, sug:0.2, prot:8.6, fat:69.6, sat:24.5, fib:0, salt:2.0, defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
 
+  // ── Carni, salumi e frattaglie (lotto 4, cucina italiana — CREA/alimentinutrizione.it;
+  // grassi saturi ricavati dalla % sui lipidi totali dove la fonte non dà il grammo ──
+  { cat:"Carni e salumi", id:"agnello", name:"Agnello, crudo", kcal:159, carb:0, sug:0, prot:20.0, fat:8.8, sat:4.70, fib:0, salt:0.22, defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Carni e salumi", id:"coniglio", name:"Coniglio intero, crudo", kcal:118, carb:0, sug:0, prot:19.9, fat:4.3, sat:1.89, fib:0, salt:0.17, synonyms:["coniglio"], defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Carni e salumi", id:"anatra", name:"Anatra domestica, crudo", kcal:159, carb:0, sug:0, prot:21.4, fat:8.2, sat:0, fib:0, salt:0.28, synonyms:["anatra"], defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Carni e salumi", id:"fegato_bovino", name:"Fegato di bovino", kcal:142, carb:5.9, sug:5.9, prot:20.0, fat:4.4, sat:1.81, fib:0, salt:0.20, synonyms:["fegato","fegato di vitello","fegato di manzo"], defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Carni e salumi", id:"bresaola", name:"Bresaola della Valtellina IGP", kcal:152, carb:0.4, sug:0, prot:33.1, fat:2.0, sat:0.66, fib:0, salt:4.0, synonyms:["bresaola"], defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Carni e salumi", id:"salame", name:"Salame nostrano", kcal:370, carb:1.1, sug:1.1, prot:27.3, fat:28.5, sat:10.15, fib:0, salt:4.08, synonyms:["salame"], defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Carni e salumi", id:"mortadella", name:"Mortadella Bologna IGP", kcal:288, carb:0, sug:0, prot:15.7, fat:25.0, sat:7.88, fib:0, salt:2.4, synonyms:["mortadella"], defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Carni e salumi", id:"coppa", name:"Coppa", kcal:400, carb:0, sug:0, prot:28.9, fat:31.6, sat:11.28, fib:0, salt:4.9, synonyms:["coppa piacentina"], defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Carni e salumi", id:"cotechino", name:"Cotechino Modena IGP, cotto", kcal:253, carb:3.2, sug:0, prot:23.6, fat:16.3, sat:4.86, fib:0, salt:2.2, synonyms:["cotechino"], defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Carni e salumi", id:"zampone", name:"Zampone Modena IGP, cotto", kcal:262, carb:2.6, sug:0, prot:23.7, fat:17.5, sat:5.20, fib:0, salt:1.7, synonyms:["zampone"], defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
+
   // ── Pesce ──
   { cat:"Pesce", id:"tonno_fresco", name:"Tonno fresco", kcal:159, carb:0.1, sug:0.1, prot:21.5, fat:8.1, sat:2.8, fib:0, salt:0.1, defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
   { cat:"Pesce", id:"tonno_olio", name:"Tonno sott'olio sgocciolato", kcal:192, carb:0, sug:0, prot:25.2, fat:10.1, sat:2.4, fib:0, salt:0.9, synonyms:["tonno in scatola"], defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
