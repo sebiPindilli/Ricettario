@@ -334,6 +334,17 @@ export const NUTRITION_DB = [
   { cat:"Cucina americana", id:"noci_pecan", name:"Noci pecan", kcal:691, carb:13.86, sug:4.0, prot:9.17, fat:71.9, sat:6.18, fib:9.6, salt:0, synonyms:["pecan","noci pecan"], defaultCategories:["grassi"], source:"USDA FoodData Central — zuccheri stimati per analogia (fonte non li scomponeva dai carboidrati totali)" },
   { cat:"Cucina americana", id:"ketchup", name:"Ketchup", kcal:101, carb:27.0, sug:21.0, prot:1.0, fat:0.1, sat:0, fib:0.3, salt:2.27, defaultCategories:["altro"], source:"USDA FoodData Central" },
   { cat:"Cucina americana", id:"worcestershire", name:"Salsa Worcestershire", kcal:49, carb:11.0, sug:4.5, prot:0.9, fat:0.1, sat:0, fib:0, salt:3.26, synonyms:["worcestershire sauce","salsa worcester"], defaultCategories:["altro"], source:"USDA FoodData Central — valori con variabilità significativa tra fonti/prodotti" },
+
+  // ── Cucina americana/inglese, lotto 11: formaggi, carni e altro — USDA
+  // FoodData Central; zuccheri/grassi saturi/sodio stimati dove la fonte
+  // non li scomponeva, dichiarato voce per voce ──
+  { cat:"Cucina americana", id:"cheddar", name:"Formaggio cheddar", kcal:404, carb:3.09, sug:0, prot:22.87, fat:33.31, sat:21.0, fib:0, salt:1.70, synonyms:["cheddar"], defaultCategories:["latticini"], source:"USDA FoodData Central" },
+  { cat:"Cucina americana", id:"bacon", name:"Bacon, cotto", kcal:541, carb:0.5, sug:0, prot:37.0, fat:42.0, sat:15.0, fib:0, salt:3.75, synonyms:["bacon"], defaultCategories:["proteine"], source:"USDA FoodData Central — grassi saturi e sodio stimati per analogia (fonte non li riportava con precisione)" },
+  { cat:"Cucina americana", id:"cream_cheese", name:"Formaggio cremoso spalmabile (cream cheese)", kcal:350, carb:5.52, sug:4.0, prot:6.15, fat:34.0, sat:20.0, fib:0, salt:1.68, synonyms:["cream cheese","philadelphia"], defaultCategories:["latticini"], source:"USDA FoodData Central — zuccheri stimati per analogia (fonte non li scomponeva dai carboidrati totali)" },
+  { cat:"Cucina americana", id:"marshmallow", name:"Marshmallow", kcal:318, carb:81.3, sug:57.56, prot:1.8, fat:0.2, sat:0, fib:0.1, salt:0.20, defaultCategories:["altro"], source:"USDA FoodData Central" },
+  { cat:"Cucina americana", id:"graham_cracker", name:"Graham cracker", kcal:430, carb:78.0, sug:30.0, prot:6.69, fat:10.5, sat:2.5, fib:3.4, salt:1.57, synonyms:["graham cracker"], defaultCategories:["altro"], source:"USDA FoodData Central — zuccheri e grassi saturi stimati per analogia (fonte non li scomponeva)" },
+  { cat:"Cucina americana", id:"popcorn", name:"Popcorn, al naturale", kcal:387, carb:63.28, sug:0.87, prot:12.9, fat:4.5, sat:0.6, fib:14.5, salt:0.02, synonyms:["popcorn"], defaultCategories:["cereali"], source:"USDA FoodData Central — grassi saturi stimati per analogia (fonte non li scomponeva)" },
+  { cat:"Cucina americana", id:"panna_half", name:"Panna leggera (half and half)", kcal:123, carb:4.73, sug:4.5, prot:3.13, fat:10.39, sat:7.0, fib:0, salt:0.10, synonyms:["half and half"], defaultCategories:["latticini"], source:"USDA FoodData Central — zuccheri e sodio stimati per analogia (fonte non li riportava)" },
 ];
 
 export const NUTRIENT_LABELS = [
