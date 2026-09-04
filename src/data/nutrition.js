@@ -310,6 +310,30 @@ export const NUTRITION_DB = [
   { cat:"Varie", id:"noce_moscata", name:"Noce moscata macinata", kcal:525, carb:49.29, sug:0, prot:5.84, fat:36.31, sat:25.9, fib:20.8, salt:0.02, synonyms:["noce moscata"], defaultCategories:["spezie"], source:"USDA FoodData Central — zuccheri e sodio stimati (v. nota di sezione)" },
   { cat:"Varie", id:"chiodi_di_garofano", name:"Chiodi di garofano macinati", kcal:274, carb:65.53, sug:0, prot:5.97, fat:13.0, sat:3.9, fib:33.9, salt:0.69, synonyms:["chiodi di garofano"], defaultCategories:["spezie"], source:"USDA FoodData Central — zuccheri e grassi saturi stimati (v. nota di sezione)" },
   { cat:"Varie", id:"erba_cipollina", name:"Erba cipollina fresca", kcal:30, carb:4.35, sug:2.0, prot:3.27, fat:0.73, sat:0.1, fib:4.7, salt:0.01, synonyms:["erba cipollina"], defaultCategories:["spezie"], source:"USDA FoodData Central — zuccheri e grassi saturi stimati (v. nota di sezione)" },
+
+  // ══════════════════════════════════════════════════════════════
+  // FASE B — CUCINE INTERNAZIONALI. Da qui in poi le voci sono raggruppate
+  // per lotto/cucina di introduzione (non più per categoria alimentare come
+  // sopra, dove tutto era CREA): più facile capire da dove viene ogni voce.
+  // Fonte primaria: USDA FoodData Central (nessun database italiano
+  // equivalente a CREA per questi ingredienti).
+  // ══════════════════════════════════════════════════════════════
+
+  // ── Cucina americana/inglese, lotto 10: dispensa e basi — USDA FoodData
+  // Central; zuccheri di mirtilli rossi/noci pecan stimati per analogia
+  // (fonte non li scomponeva dai carboidrati totali); sodio di sciroppo
+  // d'acero/noci pecan assente dalla fonte, stimato quasi nullo per
+  // analogia con prodotti simili ──
+  { cat:"Cucina americana", id:"burro_arachidi", name:"Burro di arachidi", kcal:598, carb:24.0, sug:6.5, prot:21.9, fat:49.5, sat:9.52, fib:5.7, salt:1.19, synonyms:["burro di arachidi","peanut butter"], defaultCategories:["grassi"], source:"USDA FoodData Central" },
+  { cat:"Cucina americana", id:"sciroppo_acero", name:"Sciroppo d'acero", kcal:260, carb:67.04, sug:67.04, prot:0.04, fat:0.06, sat:0, fib:0, salt:0.01, synonyms:["sciroppo d'acero","maple syrup"], defaultCategories:["base"], source:"USDA FoodData Central — sodio stimato per analogia, non riportato dalla fonte" },
+  { cat:"Cucina americana", id:"bicarbonato", name:"Bicarbonato di sodio", kcal:0, carb:0, sug:0, prot:0, fat:0, sat:0, fib:0, salt:68.5, synonyms:["bicarbonato"], defaultCategories:["base"], source:"Calcolo chimico dalla composizione NaHCO3 (27,4% sodio in peso) — non una misurazione di tabella nutrizionale" },
+  { cat:"Cucina americana", id:"latticello", name:"Latticello (buttermilk)", kcal:62, carb:4.9, sug:4.9, prot:3.2, fat:3.3, sat:1.9, fib:0, salt:0.26, synonyms:["buttermilk","latticello"], defaultCategories:["latticini"], source:"USDA FoodData Central" },
+  { cat:"Cucina americana", id:"melassa", name:"Melassa", kcal:290, carb:74.7, sug:74.7, prot:0, fat:0.1, sat:0, fib:0, salt:0.09, synonyms:["molasses"], defaultCategories:["base"], source:"USDA FoodData Central" },
+  { cat:"Cucina americana", id:"sciroppo_mais", name:"Sciroppo di mais", kcal:324, carb:81.0, sug:81.0, prot:0, fat:0, sat:0, fib:0, salt:0, synonyms:["corn syrup"], defaultCategories:["base"], source:"USDA FoodData Central" },
+  { cat:"Cucina americana", id:"mirtilli_rossi", name:"Mirtilli rossi (cranberries)", kcal:46, carb:11.97, sug:4.0, prot:0.46, fat:0.13, sat:0, fib:3.6, salt:0.005, synonyms:["cranberries","mirtilli rossi"], defaultCategories:["ortofrutta"], source:"USDA FoodData Central — zuccheri stimati per analogia (fonte non li scomponeva dai carboidrati totali)" },
+  { cat:"Cucina americana", id:"noci_pecan", name:"Noci pecan", kcal:691, carb:13.86, sug:4.0, prot:9.17, fat:71.9, sat:6.18, fib:9.6, salt:0, synonyms:["pecan","noci pecan"], defaultCategories:["grassi"], source:"USDA FoodData Central — zuccheri stimati per analogia (fonte non li scomponeva dai carboidrati totali)" },
+  { cat:"Cucina americana", id:"ketchup", name:"Ketchup", kcal:101, carb:27.0, sug:21.0, prot:1.0, fat:0.1, sat:0, fib:0.3, salt:2.27, defaultCategories:["altro"], source:"USDA FoodData Central" },
+  { cat:"Cucina americana", id:"worcestershire", name:"Salsa Worcestershire", kcal:49, carb:11.0, sug:4.5, prot:0.9, fat:0.1, sat:0, fib:0, salt:3.26, synonyms:["worcestershire sauce","salsa worcester"], defaultCategories:["altro"], source:"USDA FoodData Central — valori con variabilità significativa tra fonti/prodotti" },
 ];
 
 export const NUTRIENT_LABELS = [
