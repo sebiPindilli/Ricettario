@@ -358,6 +358,19 @@ export const NUTRITION_DB = [
   { cat:"Cucina sudamericana/messicana", id:"tortilla_mais", name:"Tortilla di mais", kcal:218, carb:47.9, sug:0, prot:5.7, fat:2.1, sat:0.3, fib:4.8, salt:0.02, synonyms:["tortilla"], defaultCategories:["cereali"], source:"USDA FoodData Central — zuccheri, grassi saturi e sodio stimati per analogia (fonte li dichiarava trascurabili senza numero)" },
   { cat:"Cucina sudamericana/messicana", id:"fagioli_neri", name:"Fagioli neri, cotti", kcal:132, carb:23.71, sug:0.32, prot:8.86, fat:0.54, sat:0, fib:8.7, salt:0.59, synonyms:["fagioli neri","black beans"], defaultCategories:["legumi"], source:"USDA FoodData Central" },
   { cat:"Cucina sudamericana/messicana", id:"fagioli_pinto", name:"Fagioli pinto, cotti", kcal:143, carb:26.22, sug:0.34, prot:9.01, fat:0.65, sat:0, fib:9.0, salt:0.005, synonyms:["fagioli pinto","pinto beans"], defaultCategories:["legumi"], source:"USDA FoodData Central" },
+
+  // ── Cucina sudamericana/messicana, lotto 13: frutta tropicale, formaggi e
+  // carni — USDA FoodData Central; zuccheri/grassi saturi/sodio stimati
+  // dove la fonte non li scomponeva, dichiarato voce per voce ──
+  { cat:"Cucina sudamericana/messicana", id:"mango", name:"Mango", kcal:60, carb:15.0, sug:13.7, prot:0.82, fat:0.38, sat:0, fib:1.6, salt:0.003, defaultCategories:["ortofrutta"], defaultEquivalences:{pz:200}, source:"USDA FoodData Central" },
+  { cat:"Cucina sudamericana/messicana", id:"papaya", name:"Papaya", kcal:43, carb:10.8, sug:8.0, prot:0.47, fat:0.26, sat:0, fib:1.7, salt:0.003, defaultCategories:["ortofrutta"], source:"USDA FoodData Central — zuccheri stimati per analogia (fonte non li scomponeva)" },
+  { cat:"Cucina sudamericana/messicana", id:"guava", name:"Guava", kcal:68, carb:14.32, sug:8.92, prot:2.55, fat:0.95, sat:0, fib:5.4, salt:0.005, defaultCategories:["ortofrutta"], source:"USDA FoodData Central" },
+  { cat:"Cucina sudamericana/messicana", id:"platano", name:"Platano (banana da cottura)", kcal:122, carb:31.89, sug:15.0, prot:1.3, fat:0.37, sat:0, fib:2.3, salt:0.01, synonyms:["platano","plantain","banana da cottura"], defaultCategories:["ortofrutta"], source:"USDA FoodData Central — zuccheri stimati per analogia (fonte non li scomponeva); valori della varietà matura" },
+  { cat:"Cucina sudamericana/messicana", id:"yuca", name:"Yuca (manioca)", kcal:160, carb:38.0, sug:1.7, prot:1.4, fat:0.3, sat:0, fib:1.8, salt:0.03, synonyms:["manioca","cassava"], defaultCategories:["cereali"], source:"USDA FoodData Central — sodio stimato per analogia (fonte non lo riportava per la radice cruda)" },
+  { cat:"Cucina sudamericana/messicana", id:"queso_fresco", name:"Queso fresco", kcal:299, carb:3.0, sug:2.0, prot:18.0, fat:24.0, sat:13.0, fib:0, salt:1.88, defaultCategories:["latticini"], source:"USDA FoodData Central" },
+  { cat:"Cucina sudamericana/messicana", id:"panna_acida", name:"Panna acida (sour cream)", kcal:181, carb:7.1, sug:0.2, prot:7.0, fat:10.6, sat:9.0, fib:0, salt:0.15, synonyms:["sour cream","crema agria"], defaultCategories:["latticini"], source:"USDA FoodData Central" },
+  { cat:"Cucina sudamericana/messicana", id:"chorizo", name:"Chorizo", kcal:455, carb:1.9, sug:0, prot:24.0, fat:38.0, sat:14.0, fib:0, salt:3.09, defaultCategories:["proteine"], source:"USDA FoodData Central" },
+  { cat:"Cucina sudamericana/messicana", id:"dulce_de_leche", name:"Dulce de leche", kcal:315, carb:55.0, sug:50.0, prot:7.0, fat:7.0, sat:4.5, fib:0, salt:0.32, defaultCategories:["altro"], source:"USDA FoodData Central" },
 ];
 
 export const NUTRIENT_LABELS = [
