@@ -104,6 +104,26 @@ export const NUTRITION_DB = [
   { cat:"Pesce", id:"gamberi", name:"Gamberi", kcal:71, carb:0.6, sug:0, prot:13.6, fat:0.6, sat:0.2, fib:0, salt:0.6, synonyms:["gamberetti"], defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
   { cat:"Pesce", id:"acciughe", name:"Acciughe sott'olio", kcal:206, carb:0.2, sug:0.2, prot:25.9, fat:11.3, sat:2.7, fib:0, salt:9.3, synonyms:["alici"], defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
 
+  // ── Pesce e frutti di mare (lotto 3, cucina italiana — CREA/alimentinutrizione.it;
+  // dove la fonte riporta i saturi solo come % dei lipidi totali il grammo è
+  // ricavato da quella percentuale; due eccezioni dichiarate: sodio di
+  // "polpo"/"orata" stimato per analogia (assente dalla fonte), sodio di
+  // "baccalà" stimato da fonti pubbliche esterne (non da CREA) perché è un
+  // prodotto sotto sale — un valore vicino a 0 sarebbe fuorviante ──
+  { cat:"Pesce", id:"cozze", name:"Cozza o mitilo", kcal:84, carb:3.4, sug:0.3, prot:11.7, fat:2.7, sat:0.81, fib:0, salt:0.73, synonyms:["cozza","mitili"], defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Pesce", id:"vongole", name:"Vongola", kcal:65, carb:3.9, sug:0, prot:9.8, fat:1.2, sat:0.40, fib:0, salt:1.48, synonyms:["vongola"], defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Pesce", id:"seppia", name:"Seppia", kcal:72, carb:0.7, sug:0.7, prot:14.0, fat:1.5, sat:0, fib:0, salt:0.89, defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Pesce", id:"polpo", name:"Polpo", kcal:57, carb:1.4, sug:1.4, prot:10.6, fat:1.0, sat:0.42, fib:0, salt:0.35, synonyms:["polipo"], defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it) — sodio stimato per analogia, non riportato dalla fonte" },
+  { cat:"Pesce", id:"branzino", name:"Spigola", kcal:82, carb:0.6, sug:0.6, prot:16.5, fat:1.5, sat:0.50, fib:0, salt:0.32, synonyms:["branzino","spigola"], defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Pesce", id:"orata", name:"Orata, filetti", kcal:121, carb:1.0, sug:1.0, prot:20.7, fat:3.8, sat:1.11, fib:0, salt:0.30, synonyms:["orata"], defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it) — sodio stimato per analogia, non riportato dalla fonte" },
+  { cat:"Pesce", id:"sogliola", name:"Sogliola", kcal:83, carb:0.8, sug:0.8, prot:16.9, fat:1.4, sat:0.20, fib:0, salt:0.30, defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Pesce", id:"sgombro", name:"Sgombro o maccarello", kcal:170, carb:0.5, sug:0.5, prot:17.0, fat:11.1, sat:3.16, fib:0, salt:0.33, synonyms:["maccarello"], defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Pesce", id:"sardine", name:"Sardine", kcal:225, carb:1.5, sug:1.5, prot:20.3, fat:15.4, sat:5.23, fib:0, salt:0.29, synonyms:["sarde","sardina"], defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Pesce", id:"baccala", name:"Baccalà, secco", kcal:131, carb:0, sug:0, prot:29.0, fat:1.7, sat:0, fib:0, salt:16.25, synonyms:["baccalà"], defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it) per kcal/macro; sodio stimato da fonti pubbliche esterne (prodotto sotto sale non dissalato, CREA non lo riporta)" },
+  { cat:"Pesce", id:"granchio", name:"Granchio, in scatola", kcal:81, carb:0, sug:0, prot:18.1, fat:0.9, sat:0, fib:0, salt:1.38, synonyms:["granchio"], defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Pesce", id:"aragosta", name:"Aragosta", kcal:85, carb:1.0, sug:1.0, prot:16.0, fat:1.9, sat:0.66, fib:0, salt:0.44, defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Pesce", id:"trota", name:"Trota", kcal:86, carb:0, sug:0, prot:14.7, fat:3.0, sat:0.80, fib:0, salt:0.10, defaultCategories:["proteine"], source:"CREA (alimentinutrizione.it)" },
+
   // ── Legumi ──
   { cat:"Legumi", id:"ceci_secchi", name:"Ceci secchi", kcal:343, carb:46.9, sug:3.7, prot:20.9, fat:6.3, sat:0.7, fib:13.6, salt:0.02, synonyms:["ceci"], defaultCategories:["legumi"], source:"CREA (alimentinutrizione.it)" },
   { cat:"Legumi", id:"ceci_cotti", name:"Ceci in scatola scolati", kcal:113, carb:15.0, sug:0.9, prot:6.7, fat:2.3, sat:0.2, fib:5.7, salt:0.6, defaultCategories:["legumi"], source:"CREA (alimentinutrizione.it)" },
