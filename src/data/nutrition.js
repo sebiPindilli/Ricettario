@@ -80,6 +80,23 @@ export const NUTRITION_DB = [
   { cat:"Latticini e uova", id:"grana", name:"Grana Padano", kcal:398, carb:0, sug:0, prot:33.0, fat:29.0, sat:19.0, fib:0, salt:1.5, defaultCategories:["latticini"], source:"CREA (alimentinutrizione.it)" },
   { cat:"Latticini e uova", id:"pecorino", name:"Pecorino", kcal:392, carb:0.2, sug:0.2, prot:28.5, fat:30.6, sat:19.6, fib:0, salt:1.9, synonyms:["pecorino romano"], defaultCategories:["latticini"], source:"CREA (alimentinutrizione.it)" },
   { cat:"Latticini e uova", id:"gorgonzola", name:"Gorgonzola", kcal:324, carb:0.1, sug:0.1, prot:19.1, fat:27.1, sat:18.0, fib:0, salt:1.6, defaultCategories:["latticini"], source:"CREA (alimentinutrizione.it)" },
+
+  // ── Formaggi regionali (lotto 5, cucina italiana — CREA/alimentinutrizione.it;
+  // grassi saturi assenti dalla fonte per taleggio/caciocavallo/scamorza/
+  // stracchino/robiola/crescenza stimati come 65% dei grassi totali, lo
+  // stesso rapporto osservato sui formaggi di questo database dove il dato
+  // è invece dichiarato (mozzarella/parmigiano/grana/pecorino/gorgonzola,
+  // ~64-66%); sodio assente per scamorza/stracchino/robiola stimato per
+  // analogia con formaggi freschi simili — entrambe le stime dichiarate qui,
+  // non da CREA ──
+  { cat:"Latticini e uova", id:"provolone", name:"Provolone", kcal:374, carb:2.0, sug:2.0, prot:28.1, fat:28.2, sat:19.19, fib:0, salt:2.15, defaultCategories:["latticini"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Latticini e uova", id:"fontina", name:"Fontina", kcal:361, carb:0.8, sug:0.8, prot:24.5, fat:28.9, sat:18.62, fib:0, salt:1.72, defaultCategories:["latticini"], source:"CREA (alimentinutrizione.it)" },
+  { cat:"Latticini e uova", id:"taleggio", name:"Taleggio", kcal:315, carb:0.9, sug:0.9, prot:19.0, fat:26.2, sat:17.03, fib:0, salt:2.18, defaultCategories:["latticini"], source:"CREA (alimentinutrizione.it) — grassi saturi stimati (v. nota di sezione)" },
+  { cat:"Latticini e uova", id:"caciocavallo", name:"Caciocavallo", kcal:431, carb:2.3, sug:2.3, prot:35.7, fat:31.1, sat:20.22, fib:0, salt:2.4, defaultCategories:["latticini"], source:"CREA (alimentinutrizione.it) — grassi saturi stimati (v. nota di sezione)" },
+  { cat:"Latticini e uova", id:"scamorza", name:"Scamorza", kcal:334, carb:1.0, sug:1.0, prot:25.0, fat:25.6, sat:16.64, fib:0, salt:1.2, defaultCategories:["latticini"], source:"CREA (alimentinutrizione.it) — grassi saturi e sodio stimati (v. nota di sezione)" },
+  { cat:"Latticini e uova", id:"stracchino", name:"Stracchino", kcal:300, carb:0, sug:0, prot:18.5, fat:25.1, sat:16.32, fib:0, salt:1.0, synonyms:["crescenza stracchino"], defaultCategories:["latticini"], source:"CREA (alimentinutrizione.it) — grassi saturi e sodio stimati (v. nota di sezione)" },
+  { cat:"Latticini e uova", id:"robiola", name:"Robiola", kcal:338, carb:2.3, sug:2.3, prot:20.0, fat:27.7, sat:18.01, fib:0, salt:0.9, defaultCategories:["latticini"], source:"CREA (alimentinutrizione.it) — grassi saturi e sodio stimati (v. nota di sezione)" },
+  { cat:"Latticini e uova", id:"crescenza", name:"Crescenza", kcal:281, carb:1.9, sug:1.9, prot:16.1, fat:23.3, sat:15.15, fib:0, salt:0.88, defaultCategories:["latticini"], source:"CREA (alimentinutrizione.it) — grassi saturi stimati (v. nota di sezione)" },
   { cat:"Latticini e uova", id:"uova", name:"Uova di gallina intere", kcal:128, carb:0.5, sug:0.5, prot:12.4, fat:8.7, sat:2.7, fib:0, salt:0.35, synonyms:["uovo"], defaultCategories:["proteine"], defaultEquivalences:{uovo:50,pz:50}, source:"CREA (alimentinutrizione.it)" },
 
   // ── Carni e salumi ──
