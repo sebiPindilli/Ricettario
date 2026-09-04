@@ -345,6 +345,19 @@ export const NUTRITION_DB = [
   { cat:"Cucina americana", id:"graham_cracker", name:"Graham cracker", kcal:430, carb:78.0, sug:30.0, prot:6.69, fat:10.5, sat:2.5, fib:3.4, salt:1.57, synonyms:["graham cracker"], defaultCategories:["altro"], source:"USDA FoodData Central — zuccheri e grassi saturi stimati per analogia (fonte non li scomponeva)" },
   { cat:"Cucina americana", id:"popcorn", name:"Popcorn, al naturale", kcal:387, carb:63.28, sug:0.87, prot:12.9, fat:4.5, sat:0.6, fib:14.5, salt:0.02, synonyms:["popcorn"], defaultCategories:["cereali"], source:"USDA FoodData Central — grassi saturi stimati per analogia (fonte non li scomponeva)" },
   { cat:"Cucina americana", id:"panna_half", name:"Panna leggera (half and half)", kcal:123, carb:4.73, sug:4.5, prot:3.13, fat:10.39, sat:7.0, fib:0, salt:0.10, synonyms:["half and half"], defaultCategories:["latticini"], source:"USDA FoodData Central — zuccheri e sodio stimati per analogia (fonte non li riportava)" },
+
+  // ── Cucina sudamericana/messicana, lotto 12: peperoncini, mais, fagioli —
+  // USDA FoodData Central; zuccheri/grassi saturi/fibre/sodio stimati dove
+  // la fonte non li scomponeva, dichiarato voce per voce ──
+  { cat:"Cucina sudamericana/messicana", id:"jalapeno", name:"Jalapeño, fresco", kcal:29, carb:6.5, sug:3.0, prot:0.91, fat:0.37, sat:0, fib:2.8, salt:0.01, synonyms:["jalapeno","jalapeño"], defaultCategories:["ortofrutta"], source:"USDA FoodData Central — zuccheri stimati per analogia (fonte non li scomponeva)" },
+  { cat:"Cucina sudamericana/messicana", id:"avocado", name:"Avocado", kcal:160, carb:8.53, sug:0.66, prot:2.0, fat:14.66, sat:2.13, fib:6.7, salt:0.02, defaultCategories:["ortofrutta"], defaultEquivalences:{pz:200}, source:"USDA FoodData Central" },
+  { cat:"Cucina sudamericana/messicana", id:"lime", name:"Lime", kcal:30, carb:10.54, sug:1.7, prot:0.7, fat:0.2, sat:0, fib:2.8, salt:0.005, defaultCategories:["ortofrutta"], defaultEquivalences:{pz:70}, source:"USDA FoodData Central — zuccheri stimati per analogia (fonte non li scomponeva)" },
+  { cat:"Cucina sudamericana/messicana", id:"coriandolo_fresco", name:"Coriandolo fresco", kcal:23, carb:3.67, sug:0.9, prot:2.13, fat:0.52, sat:0, fib:3.2, salt:0.12, synonyms:["coriandolo","cilantro"], defaultCategories:["spezie"], source:"USDA FoodData Central" },
+  { cat:"Cucina sudamericana/messicana", id:"cumino", name:"Cumino, semi essiccati", kcal:375, carb:42.857, sug:3.0, prot:17.857, fat:21.429, sat:0, fib:10.0, salt:0.42, synonyms:["cumino"], defaultCategories:["spezie"], source:"USDA FoodData Central — zuccheri stimati per analogia (fonte non li scomponeva)" },
+  { cat:"Cucina sudamericana/messicana", id:"paprika", name:"Paprika essiccata", kcal:289, carb:53.99, sug:0, prot:14.14, fat:12.89, sat:3.1, fib:35.0, salt:0.17, synonyms:["paprika","paprika affumicata","paprika dolce"], defaultCategories:["spezie"], source:"USDA FoodData Central — grassi saturi, fibre e sodio stimati per analogia (fonte non li scomponeva)" },
+  { cat:"Cucina sudamericana/messicana", id:"tortilla_mais", name:"Tortilla di mais", kcal:218, carb:47.9, sug:0, prot:5.7, fat:2.1, sat:0.3, fib:4.8, salt:0.02, synonyms:["tortilla"], defaultCategories:["cereali"], source:"USDA FoodData Central — zuccheri, grassi saturi e sodio stimati per analogia (fonte li dichiarava trascurabili senza numero)" },
+  { cat:"Cucina sudamericana/messicana", id:"fagioli_neri", name:"Fagioli neri, cotti", kcal:132, carb:23.71, sug:0.32, prot:8.86, fat:0.54, sat:0, fib:8.7, salt:0.59, synonyms:["fagioli neri","black beans"], defaultCategories:["legumi"], source:"USDA FoodData Central" },
+  { cat:"Cucina sudamericana/messicana", id:"fagioli_pinto", name:"Fagioli pinto, cotti", kcal:143, carb:26.22, sug:0.34, prot:9.01, fat:0.65, sat:0, fib:9.0, salt:0.005, synonyms:["fagioli pinto","pinto beans"], defaultCategories:["legumi"], source:"USDA FoodData Central" },
 ];
 
 export const NUTRIENT_LABELS = [
