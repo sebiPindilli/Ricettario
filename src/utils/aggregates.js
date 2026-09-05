@@ -25,6 +25,7 @@
 // costruzione diverso da qualsiasi ID ingrediente, quindi non collide
 // mai con un ingrediente che si chiama come l'aggregato.
 // ══════════════════════════════════════════════════════════════
+import { ALLERGEN_GROUP_DEFS } from "../data/constants.js";
 
 // Tutti gli aggregati di cui ingKey è membro (può essere più di uno).
 export const aggregatesContaining = (ingKey, aggregates) =>
@@ -249,6 +250,36 @@ export const findAllergenSuggestions = (ingredientDict, allergenGroups = [], ign
         ingredientDict[memberId] && namesAreSimilar(ingredientDict[ingId], ingredientDict[memberId])
       );
       if (similar) suggestions.push({ ingredientId: ingId, groupId: group.id, groupLabel: group.label });
+    });
+  });
+  return suggestions;
+};
+
+// Seconda fonte di suggerimenti, indipendente dalla somiglianza dei nomi:
+// il dizionario ingredienti base (NUTRITION_DB, vedi defaultAllergenGroups
+// in data/nutrition.js) dichiara per ~140 voci a quali dei 16 gruppi
+// standard (14 allergeni UE + vegetariano/vegano) appartengono. A
+// differenza di findAllergenSuggestions sopra, funziona ANCHE se il
+// gruppo non esiste ancora in questo libro (isNew:true) — è il caso
+// normale la prima volta che un ingrediente di quel tipo compare in un
+// libro nuovo, dato che allergenGroups parte sempre vuoto.
+// dbByName/normName sono passati dal chiamante (mai importati qui da
+// helpers.js, che già importa da questo file: eviterebbe un ciclo).
+export const findAllergenGroupSuggestionsFromDb = (ingredientDict, allergenGroups = [], ignoredPairs = [], aggregates = [], dbByName, normName) => {
+  if (!dbByName || !normName) return [];
+  const isIgnored = (ingId, groupId) => (ignoredPairs || []).some(([i, g]) => i === ingId && g === groupId);
+  const groupById = new Map((allergenGroups || []).map(g => [g.id, g]));
+  const suggestions = [];
+  Object.keys(ingredientDict || {}).forEach(ingId => {
+    const food = dbByName.get(normName(ingredientDict[ingId]));
+    if (!food || !food.defaultAllergenGroups?.length) return;
+    food.defaultAllergenGroups.forEach(groupId => {
+      const existingGroup = groupById.get(groupId);
+      const expanded = existingGroup ? expandAllergenMembers(existingGroup.members, aggregates) : new Set();
+      if (expanded.has(ingId)) return; // già membro (diretto o via aggregato)
+      if (isIgnored(ingId, groupId)) return;
+      const label = existingGroup?.label || ALLERGEN_GROUP_DEFS.find(d => d.id === groupId)?.label || groupId;
+      suggestions.push({ ingredientId: ingId, groupId, groupLabel: label, isNewGroup: !existingGroup });
     });
   });
   return suggestions;

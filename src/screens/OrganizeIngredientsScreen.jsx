@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useTheme, useUiStyle } from "../context.js";
-import { F, INGREDIENT_CATEGORIES } from "../data/constants.js";
+import { F, INGREDIENT_CATEGORIES, ALLERGEN_GROUP_DEFS } from "../data/constants.js";
 import AppIcon from "../components/AppIcon.jsx";
 import Icon from "../components/Icon.jsx";
 import SectionCategoryIcon from "../components/SectionCategoryIcon.jsx";
@@ -16,7 +16,7 @@ import {
   normName, uid, macroLine, resolveIngId, flattenIngredients,
   WEIGHT_UNITS, unitLabel, normUnit, fmtQty, buildFoodNameIndex,
 } from "../utils/helpers.js";
-import { effectiveCategories, effectiveNutritionKey, effectiveEquivalenceKey, sourcePriorityFor, findSimilarIngredients, findAllergenSuggestions } from "../utils/aggregates.js";
+import { effectiveCategories, effectiveNutritionKey, effectiveEquivalenceKey, sourcePriorityFor, findSimilarIngredients, findAllergenSuggestions, findAllergenGroupSuggestionsFromDb } from "../utils/aggregates.js";
 
 // ══════════════════════════════════════════════════════════════
 // SCREEN: ORGANIZZA INGREDIENTI (sotto Svuota Frigo)
@@ -155,16 +155,25 @@ export default function OrganizeIngredientsScreen({
     const isPairIgnored = (a, b) => ignoredSimilarities.some(([x, y]) => (x === a && y === b) || (x === b && y === a));
     return allSuggestedGroups.filter(g => !activeKeys.has(g.key) && g.pairs.every(([a, b]) => isPairIgnored(a, b)));
   }, [allSuggestedGroups, suggestedAggregates, ignoredSimilarities]);
+  // Indice nome→alimento per findAllergenGroupSuggestionsFromDb sotto:
+  // dichiarato qui (non riusa il dbByName più in basso, dichiarato dopo i
+  // return condizionali di questo componente — non ancora inizializzato a
+  // questo punto dell'esecuzione).
+  const allergenDbIndex = React.useMemo(() => buildFoodNameIndex([...NUTRITION_DB, ...customFoods]), [customFoods]);
   // Allergie suggerite: quelle attive arrivano già pronte come prop
   // (suggestedAllergenAdditions, già filtrate dagli ignorati); qui calcoliamo
   // anche l'insieme completo (ignoredPairs=[]) per poter mostrare le card
   // "ignorate" nella tendina — stesso schema di allSuggestedGroups/
   // ignoredSuggestedGroups sopra, ma senza scarto per ambiguità (un
-  // ingrediente può comparire in più suggerimenti, uno per gruppo).
-  const allAllergenSuggestions = React.useMemo(
-    () => findAllergenSuggestions(dictM, allergenGroups, [], aggregates),
-    [dictM, allergenGroups, aggregates]
-  );
+  // ingrediente può comparire in più suggerimenti, uno per gruppo). Due
+  // fonti indipendenti (dal database e da nomi simili), unite senza
+  // doppioni per la stessa coppia ingrediente/gruppo.
+  const allAllergenSuggestions = React.useMemo(() => {
+    const fromDb = findAllergenGroupSuggestionsFromDb(dictM, allergenGroups, [], aggregates, allergenDbIndex, normName);
+    const fromNames = findAllergenSuggestions(dictM, allergenGroups, [], aggregates);
+    const seen = new Set(fromDb.map(s => `${s.ingredientId}:${s.groupId}`));
+    return [...fromDb, ...fromNames.filter(s => !seen.has(`${s.ingredientId}:${s.groupId}`))];
+  }, [dictM, allergenGroups, aggregates, allergenDbIndex]);
   const ignoredAllergenSuggestionCards = React.useMemo(() => {
     const isIgnored = (ingId, groupId) => ignoredAllergenSuggestions.some(([i, g]) => i === ingId && g === groupId);
     return allAllergenSuggestions.filter(s => isIgnored(s.ingredientId, s.groupId));
@@ -454,16 +463,23 @@ export default function OrganizeIngredientsScreen({
                 <div style={{ textAlign:"center", padding:"16px 0", color:th.appFaded, fontFamily:F.ui, fontSize:11.5, fontStyle:"italic" }}>
                   Nessun suggerimento.
                 </div>
-              ) : suggestedAllergenAdditions.map(s => renderAggSuggestionCard(`${s.ingredientId}:${s.groupId}`, {
-                  title: <>Aggiungi «{dictName(s.ingredientId)}» a un gruppo esistente</>,
-                  subtitle: <>{s.groupLabel} ({(allergenGroups.find(g => g.id === s.groupId)?.members || []).map(dictName).join(", ")})</>,
-                  addLabel: <>⊕ Aggiungi a «{s.groupLabel}»</>,
-                  onAdd: () => {
-                    const group = allergenGroups.find(g => g.id === s.groupId);
-                    if (group) onSaveAllergenGroup && onSaveAllergenGroup({ ...group, members:[...(group.members||[]), s.ingredientId] });
-                  },
-                  onIgnore: () => onIgnoreAllergenSuggestion && onIgnoreAllergenSuggestion(s.ingredientId, s.groupId),
-                }))}
+              ) : suggestedAllergenAdditions.map(s => {
+                  const group = allergenGroups.find(g => g.id === s.groupId);
+                  return renderAggSuggestionCard(`${s.ingredientId}:${s.groupId}`, {
+                    title: <>Aggiungi «{dictName(s.ingredientId)}» {group ? "a un gruppo esistente" : "a un nuovo gruppo"}</>,
+                    subtitle: group ? <>{s.groupLabel} ({(group.members || []).map(dictName).join(", ")})</> : <>{s.groupLabel} · nuovo gruppo</>,
+                    addLabel: <>⊕ Aggiungi a «{s.groupLabel}»</>,
+                    onAdd: () => {
+                      if (group) {
+                        onSaveAllergenGroup && onSaveAllergenGroup({ ...group, members:[...(group.members||[]), s.ingredientId] });
+                      } else {
+                        const def = ALLERGEN_GROUP_DEFS.find(d => d.id === s.groupId);
+                        onSaveAllergenGroup && onSaveAllergenGroup({ id: s.groupId, label: def?.label || s.groupLabel, emoji: def?.emoji, members:[s.ingredientId] });
+                      }
+                    },
+                    onIgnore: () => onIgnoreAllergenSuggestion && onIgnoreAllergenSuggestion(s.ingredientId, s.groupId),
+                  });
+                })}
 
               <div style={{ fontFamily:F.ui, fontSize:10, letterSpacing:1.5, color:th.appFaded, textTransform:"uppercase", margin:"14px 0 8px", fontWeight:700 }}>
                 Ignorati

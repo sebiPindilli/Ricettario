@@ -20,7 +20,7 @@ import {
   memoryPeriodLabel, memorySortKey, buildFridgeItems, withTimeout,
   isSystemDataEmpty, applyImportedSystemData, buildFoodNameIndex,
 } from "./utils/helpers.js";
-import { effectiveNutritionKey, findSimilarIngredients, findAllergenSuggestions } from "./utils/aggregates.js";
+import { effectiveNutritionKey, findSimilarIngredients, findAllergenSuggestions, findAllergenGroupSuggestionsFromDb } from "./utils/aggregates.js";
 import {
   loadFullBook, saveRecipe, deleteRecipe as deleteRecipeDoc,
   saveBookSystem, saveBookMeta, saveShoppingList, loadBookSystem,
@@ -58,7 +58,7 @@ import PwaBanners from "./components/PwaBanners.jsx";
 import IconSprite from "./components/IconSprite.jsx";
 import {
   T, F, MACRO_SECTIONS, PICKER_EMOJIS, INGREDIENT_CATEGORIES,
-  TAG_GROUPS, ALL_PRESET_TAGS,
+  TAG_GROUPS, ALL_PRESET_TAGS, ALLERGEN_GROUP_DEFS,
   EMOJI_CATEGORIES, EMOJI_OPTIONS, COLOR_OPTIONS, DEFAULT_UNIT_SUGGESTIONS,
   MOBILE_BREAKPOINT_CSS,
 } from "./data/constants.js";
@@ -834,10 +834,19 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   const restoreAllergenSuggestion = (ingId, groupId) => {
     setIgnoredAllergenSuggestions(prev => prev.filter(([i, g]) => !(i === ingId && g === groupId)));
   };
-  const suggestedAllergenAdditions = React.useMemo(
-    () => findAllergenSuggestions(ingredientDict, allergenGroups, ignoredAllergenSuggestions, aggregates),
-    [ingredientDict, allergenGroups, ignoredAllergenSuggestions, aggregates]
-  );
+  // Indice nome→alimento (base + personalizzati) per la seconda fonte di
+  // suggerimenti sotto: findAllergenGroupSuggestionsFromDb consulta
+  // defaultAllergenGroups su NUTRITION_DB, non la somiglianza dei nomi.
+  const allergenDbIndex = React.useMemo(() => buildFoodNameIndex([...NUTRITION_DB, ...customFoods]), [customFoods]);
+  // Due fonti indipendenti unite in un'unica lista, senza doppioni per la
+  // stessa coppia ingrediente/gruppo (preferita la voce dal database,
+  // più autorevole di una somiglianza di nome quando coincidono).
+  const suggestedAllergenAdditions = React.useMemo(() => {
+    const fromNames = findAllergenSuggestions(ingredientDict, allergenGroups, ignoredAllergenSuggestions, aggregates);
+    const fromDb = findAllergenGroupSuggestionsFromDb(ingredientDict, allergenGroups, ignoredAllergenSuggestions, aggregates, allergenDbIndex, normName);
+    const seen = new Set(fromDb.map(s => `${s.ingredientId}:${s.groupId}`));
+    return [...fromDb, ...fromNames.filter(s => !seen.has(`${s.ingredientId}:${s.groupId}`))];
+  }, [ingredientDict, allergenGroups, ignoredAllergenSuggestions, aggregates, allergenDbIndex]);
 
   // ── Lista Spesa globale ──
   // entries: [{ id, recipeId, recipeTitle, scaleLabel, items:[{text, original}] }]
@@ -1981,18 +1990,30 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
       const id = resolveIngId(dictIdx, ing.name);
       if (!fullDict[id]) fullDict[id] = ing.name.trim();
     });
-    const suggestions = findAllergenSuggestions(fullDict, allergenGroups, ignoredAllergenSuggestions, aggregates)
+    const fromDb = findAllergenGroupSuggestionsFromDb(fullDict, allergenGroups, ignoredAllergenSuggestions, aggregates, allergenDbIndex, normName);
+    const fromNames = findAllergenSuggestions(fullDict, allergenGroups, ignoredAllergenSuggestions, aggregates);
+    const seen = new Set(fromDb.map(s => `${s.ingredientId}:${s.groupId}`));
+    const suggestions = [...fromDb, ...fromNames.filter(s => !seen.has(`${s.ingredientId}:${s.groupId}`))]
       .filter(s => recipeIds.has(s.ingredientId));
     if (suggestions.length > 0) {
       setPendingAllergenSuggestion({ ...suggestions[0], ingredientName: fullDict[suggestions[0].ingredientId] });
     }
   };
+  // Il gruppo può non esistere ancora in questo libro (suggerimento dal
+  // database, mai da un nome simile: allergenGroups parte sempre vuoto):
+  // in tal caso lo crea con l'etichetta/emoji standard del gruppo (vedi
+  // ALLERGEN_GROUP_DEFS), l'utente potrà poi rinominarlo liberamente.
   const resolvePendingAllergenSuggestion = (accept) => {
     const s = pendingAllergenSuggestion;
     if (s) {
       if (accept) {
         const group = allergenGroups.find(g => g.id === s.groupId);
-        if (group) saveAllergenGroup({ ...group, members:[...(group.members||[]), s.ingredientId] });
+        if (group) {
+          saveAllergenGroup({ ...group, members:[...(group.members||[]), s.ingredientId] });
+        } else {
+          const def = ALLERGEN_GROUP_DEFS.find(d => d.id === s.groupId);
+          saveAllergenGroup({ id: s.groupId, label: def?.label || s.groupLabel || s.groupId, emoji: def?.emoji, members:[s.ingredientId] });
+        }
       } else {
         ignoreAllergenSuggestion(s.ingredientId, s.groupId);
       }

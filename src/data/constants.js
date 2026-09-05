@@ -82,6 +82,35 @@ export const INGREDIENT_CATEGORIES = [
   { id:"altro",     label:"Altro",                         emoji:"📦", icon:"altro" },
 ];
 
+// ── Gruppi allergie/preferenze alimentari standard ──────────────
+// I 14 allergeni a dichiarazione obbligatoria UE (Reg. 1169/2011,
+// Allegato II) più Vegetariano/Vegano a ETICHETTA INVERTITA: il gruppo
+// elenca gli ingredienti da ESCLUDERE per rispettare la preferenza (es.
+// "Vegetariano" contiene carne e pesce, non gli ingredienti ammessi),
+// coerente con la semantica di esclusione già usata dal filtro ricette.
+// Usati per dare un'etichetta/emoji di default quando un gruppo standard
+// viene creato la prima volta da un suggerimento (vedi
+// findAllergenGroupSuggestionsFromDb in utils/aggregates.js) — l'utente
+// può poi rinominarli/eliminarli liberamente come un gruppo qualsiasi.
+export const ALLERGEN_GROUP_DEFS = [
+  { id:"glutine",       label:"Glutine",                          emoji:"🌾" },
+  { id:"crostacei",     label:"Crostacei",                        emoji:"🦐" },
+  { id:"uova",          label:"Uova",                             emoji:"🥚" },
+  { id:"pesce",         label:"Pesce",                            emoji:"🐟" },
+  { id:"arachidi",      label:"Arachidi",                         emoji:"🥜" },
+  { id:"soia",          label:"Soia",                             emoji:"🫘" },
+  { id:"latte",         label:"Latte e lattosio",                 emoji:"🥛" },
+  { id:"frutta_guscio", label:"Frutta a guscio",                  emoji:"🌰" },
+  { id:"sedano",        label:"Sedano",                           emoji:"🥬" },
+  { id:"senape",        label:"Senape",                           emoji:"🫙" },
+  { id:"sesamo",        label:"Semi di sesamo",                   emoji:"⚪" },
+  { id:"solfiti",       label:"Anidride solforosa e solfiti",     emoji:"🍷" },
+  { id:"lupini",        label:"Lupini",                           emoji:"🫛" },
+  { id:"molluschi",     label:"Molluschi",                        emoji:"🐚" },
+  { id:"vegetariano",   label:"Vegetariano (esclude carne e pesce)", emoji:"🥕" },
+  { id:"vegano",        label:"Vegano (esclude anche derivati animali)", emoji:"🌱" },
+];
+
 // ── Structured tag system ──────────────────────────────────────
 export const TAG_GROUPS = [
   {
