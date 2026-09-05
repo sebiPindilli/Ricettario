@@ -803,7 +803,13 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
     setAllergenGroups(prev => prev.filter(g => g.id !== id));
   };
 
-  // ── Suggerimenti aggregati (ingredienti dal nome simile) ──
+  // Indice nome→alimento (base + personalizzati): usato sia per arricchire
+  // i suggerimenti aggregati con i sinonimi curati di NUTRITION_DB (sotto)
+  // sia per i suggerimenti allergie dal database (findAllergenGroupSuggestionsFromDb).
+  const baseFoodIndex = React.useMemo(() => buildFoodNameIndex([...NUTRITION_DB, ...customFoods]), [customFoods]);
+  // ── Suggerimenti aggregati (ingredienti dal nome simile, o entrambi
+  // sinonimi della stessa voce di NUTRITION_DB: vedi baseFoodIndex sopra e
+  // il parametro dbByName di findSimilarIngredients) ──
   // ignoredSimilarities: [[ingIdA, ingIdB], ...] coppie che l'utente ha
   // scelto di non raggruppare — persistite come tutto il resto per-libro.
   const [ignoredSimilarities, setIgnoredSimilarities] = useState([]);
@@ -818,8 +824,8 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   // Gruppi ancora attivi (non ignorati): guida sia l'alert in Svuota Frigo
   // sia le card mostrate come "attive" in Organizza Ingredienti.
   const suggestedAggregates = React.useMemo(
-    () => findSimilarIngredients(ingredientDict, aggregates, ignoredSimilarities),
-    [ingredientDict, aggregates, ignoredSimilarities]
+    () => findSimilarIngredients(ingredientDict, aggregates, ignoredSimilarities, baseFoodIndex, normName),
+    [ingredientDict, aggregates, ignoredSimilarities, baseFoodIndex]
   );
 
   // ── Suggerimenti allergie (stesso motore di somiglianza, coppia
@@ -834,19 +840,15 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
   const restoreAllergenSuggestion = (ingId, groupId) => {
     setIgnoredAllergenSuggestions(prev => prev.filter(([i, g]) => !(i === ingId && g === groupId)));
   };
-  // Indice nome→alimento (base + personalizzati) per la seconda fonte di
-  // suggerimenti sotto: findAllergenGroupSuggestionsFromDb consulta
-  // defaultAllergenGroups su NUTRITION_DB, non la somiglianza dei nomi.
-  const allergenDbIndex = React.useMemo(() => buildFoodNameIndex([...NUTRITION_DB, ...customFoods]), [customFoods]);
   // Due fonti indipendenti unite in un'unica lista, senza doppioni per la
   // stessa coppia ingrediente/gruppo (preferita la voce dal database,
   // più autorevole di una somiglianza di nome quando coincidono).
   const suggestedAllergenAdditions = React.useMemo(() => {
     const fromNames = findAllergenSuggestions(ingredientDict, allergenGroups, ignoredAllergenSuggestions, aggregates);
-    const fromDb = findAllergenGroupSuggestionsFromDb(ingredientDict, allergenGroups, ignoredAllergenSuggestions, aggregates, allergenDbIndex, normName);
+    const fromDb = findAllergenGroupSuggestionsFromDb(ingredientDict, allergenGroups, ignoredAllergenSuggestions, aggregates, baseFoodIndex, normName);
     const seen = new Set(fromDb.map(s => `${s.ingredientId}:${s.groupId}`));
     return [...fromDb, ...fromNames.filter(s => !seen.has(`${s.ingredientId}:${s.groupId}`))];
-  }, [ingredientDict, allergenGroups, ignoredAllergenSuggestions, aggregates, allergenDbIndex]);
+  }, [ingredientDict, allergenGroups, ignoredAllergenSuggestions, aggregates, baseFoodIndex]);
 
   // ── Lista Spesa globale ──
   // entries: [{ id, recipeId, recipeTitle, scaleLabel, items:[{text, original}] }]
@@ -1990,7 +1992,7 @@ function AppInner({ me, role, initialDefaultBookId, betaEnabled, initialTimerAle
       const id = resolveIngId(dictIdx, ing.name);
       if (!fullDict[id]) fullDict[id] = ing.name.trim();
     });
-    const fromDb = findAllergenGroupSuggestionsFromDb(fullDict, allergenGroups, ignoredAllergenSuggestions, aggregates, allergenDbIndex, normName);
+    const fromDb = findAllergenGroupSuggestionsFromDb(fullDict, allergenGroups, ignoredAllergenSuggestions, aggregates, baseFoodIndex, normName);
     const fromNames = findAllergenSuggestions(fullDict, allergenGroups, ignoredAllergenSuggestions, aggregates);
     const seen = new Set(fromDb.map(s => `${s.ingredientId}:${s.groupId}`));
     const suggestions = [...fromDb, ...fromNames.filter(s => !seen.has(`${s.ingredientId}:${s.groupId}`))]

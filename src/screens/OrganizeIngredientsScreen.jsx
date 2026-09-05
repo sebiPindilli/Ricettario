@@ -141,25 +141,27 @@ export default function OrganizeIngredientsScreen({
     const agg = aggregates.find(a => a.id === id);
     return agg ? `⊕ ${agg.name}` : dictName(id);
   };
+  // Indice nome→alimento (base + personalizzati): arricchisce sia i
+  // suggerimenti aggregati (sinonimi curati di NUTRITION_DB, oltre alla
+  // somiglianza euristica del nome) sia quelli allergie sotto. Dichiarato
+  // qui (non riusa il dbByName più in basso, dichiarato dopo i return
+  // condizionali di questo componente — non ancora inizializzato a questo
+  // punto dell'esecuzione).
+  const baseFoodIndex = React.useMemo(() => buildFoodNameIndex([...NUTRITION_DB, ...customFoods]), [customFoods]);
   // Suggerimenti aggregati: quelli attivi arrivano già pronti come prop
   // (suggestedAggregates); qui calcoliamo anche l'insieme completo, senza
   // filtro sugli ignorati, per poter mostrare le card "ignorate" attenuate
   // — un gruppo è ignorato se non è tra gli attivi e tutte le sue coppie
   // sono in ignoredSimilarities.
   const allSuggestedGroups = React.useMemo(
-    () => findSimilarIngredients(dictM, aggregates, []),
-    [dictM, aggregates]
+    () => findSimilarIngredients(dictM, aggregates, [], baseFoodIndex, normName),
+    [dictM, aggregates, baseFoodIndex]
   );
   const ignoredSuggestedGroups = React.useMemo(() => {
     const activeKeys = new Set(suggestedAggregates.map(g => g.key));
     const isPairIgnored = (a, b) => ignoredSimilarities.some(([x, y]) => (x === a && y === b) || (x === b && y === a));
     return allSuggestedGroups.filter(g => !activeKeys.has(g.key) && g.pairs.every(([a, b]) => isPairIgnored(a, b)));
   }, [allSuggestedGroups, suggestedAggregates, ignoredSimilarities]);
-  // Indice nome→alimento per findAllergenGroupSuggestionsFromDb sotto:
-  // dichiarato qui (non riusa il dbByName più in basso, dichiarato dopo i
-  // return condizionali di questo componente — non ancora inizializzato a
-  // questo punto dell'esecuzione).
-  const allergenDbIndex = React.useMemo(() => buildFoodNameIndex([...NUTRITION_DB, ...customFoods]), [customFoods]);
   // Allergie suggerite: quelle attive arrivano già pronte come prop
   // (suggestedAllergenAdditions, già filtrate dagli ignorati); qui calcoliamo
   // anche l'insieme completo (ignoredPairs=[]) per poter mostrare le card
@@ -169,11 +171,11 @@ export default function OrganizeIngredientsScreen({
   // fonti indipendenti (dal database e da nomi simili), unite senza
   // doppioni per la stessa coppia ingrediente/gruppo.
   const allAllergenSuggestions = React.useMemo(() => {
-    const fromDb = findAllergenGroupSuggestionsFromDb(dictM, allergenGroups, [], aggregates, allergenDbIndex, normName);
+    const fromDb = findAllergenGroupSuggestionsFromDb(dictM, allergenGroups, [], aggregates, baseFoodIndex, normName);
     const fromNames = findAllergenSuggestions(dictM, allergenGroups, [], aggregates);
     const seen = new Set(fromDb.map(s => `${s.ingredientId}:${s.groupId}`));
     return [...fromDb, ...fromNames.filter(s => !seen.has(`${s.ingredientId}:${s.groupId}`))];
-  }, [dictM, allergenGroups, aggregates, allergenDbIndex]);
+  }, [dictM, allergenGroups, aggregates, baseFoodIndex]);
   const ignoredAllergenSuggestionCards = React.useMemo(() => {
     const isIgnored = (ingId, groupId) => ignoredAllergenSuggestions.some(([i, g]) => i === ingId && g === groupId);
     return allAllergenSuggestions.filter(s => isIgnored(s.ingredientId, s.groupId));

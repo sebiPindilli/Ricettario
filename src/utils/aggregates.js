@@ -160,17 +160,30 @@ export const namesAreSimilar = (nameA, nameB) => {
 //   o più aggregati diversi (ambiguo, non proponiamo un merge), oppure se
 //   sono già tutti dentro lo stesso aggregato (niente da suggerire).
 // ignoredPairs: array di [ingIdA, ingIdB] (ordine qualsiasi) da escludere.
-export const findSimilarIngredients = (ingredientDict, aggregates = [], ignoredPairs = []) => {
+// dbByName/normName (opzionali): oltre alla somiglianza euristica del nome,
+// due ingredienti sono considerati "simili" anche quando entrambi risolvono
+// (per nome o sinonimo) alla STESSA voce di NUTRITION_DB — segnale più
+// preciso dei sinonimi curati (es. "farina" e "farina 00" non sono simili
+// per namesAreSimilar, ma sono sinonimi dichiarati della stessa voce).
+// Passati dal chiamante per non introdurre qui una dipendenza da
+// helpers.js, che già importa da questo file (eviterebbe un ciclo).
+export const findSimilarIngredients = (ingredientDict, aggregates = [], ignoredPairs = [], dbByName = null, normName = null) => {
   const ids = Object.keys(ingredientDict || {});
   const isIgnored = (a, b) => (ignoredPairs || []).some(([x, y]) => (x === a && y === b) || (x === b && y === a));
   const sameAggregate = (a, b) => (aggregates || []).some(agg => (agg.members || []).includes(a) && (agg.members || []).includes(b));
+  const sameBaseFood = (a, b) => {
+    if (!dbByName || !normName) return false;
+    const fa = dbByName.get(normName(ingredientDict[a]));
+    const fb = dbByName.get(normName(ingredientDict[b]));
+    return !!fa && fa === fb;
+  };
 
   const edges = [];
   for (let i = 0; i < ids.length; i++) {
     for (let j = i + 1; j < ids.length; j++) {
       const a = ids[i], b = ids[j];
       if (isIgnored(a, b) || sameAggregate(a, b)) continue;
-      if (namesAreSimilar(ingredientDict[a], ingredientDict[b])) edges.push([a, b]);
+      if (namesAreSimilar(ingredientDict[a], ingredientDict[b]) || sameBaseFood(a, b)) edges.push([a, b]);
     }
   }
   if (edges.length === 0) return [];
