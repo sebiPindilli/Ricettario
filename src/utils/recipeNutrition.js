@@ -3,7 +3,11 @@
 // ricettario-v23.jsx è puro JS, non un componente): un'unica implementazione,
 // mai duplicata tra scheda ricetta in app ed export.
 // nutritionMap: { "<nome normalizzato>": { foodId } | { custom:{kcal,...} } }
-// Ritorna { total, perServing, per100, totalGrams, covered, excluded, details }
+// Ritorna { total, perServing, per100, totalGrams, covered, excluded, details, incomplete }
+// incomplete: { <nutriente>: bool } — true se almeno un ingrediente incluso nel
+// computo ha quel nutriente non disponibile (null) nella propria fonte. In tal
+// caso il totale per quel nutriente NON è affidabile (manca un contributo reale,
+// non zero): va mostrato come "n/d", mai come se fosse un numero completo.
 import { NUTRITION_DB } from "../data/nutrition.js";
 import { normName, ingDictIndex, resolveIngId, flattenIngredients, ingredientToGrams, buildFoodNameIndex } from "./helpers.js";
 import { effectiveNutritionKey } from "./aggregates.js";
@@ -14,6 +18,7 @@ export const computeRecipeNutrition = (recipe, nutritionMap = {}, equivalences =
   const dbById = new Map(allFoods.map(f => [f.id, f]));
   const dbByName = buildFoodNameIndex(allFoods);
   const total = { kcal:0, carb:0, sug:0, prot:0, fat:0, sat:0, fib:0, salt:0 };
+  const incomplete = { kcal:false, carb:false, sug:false, prot:false, fat:false, sat:false, fib:false, salt:false };
   const excluded = [];
   let covered = 0;
   let totalGrams = 0;
@@ -58,7 +63,10 @@ export const computeRecipeNutrition = (recipe, nutritionMap = {}, equivalences =
     covered++;
     totalGrams += effGrams;
     details.push({ name: ing.name, status: "ok", grams: effGrams, foodName, pct });
-    Object.keys(total).forEach(k => { total[k] += (values[k] || 0) * effGrams / 100; });
+    Object.keys(total).forEach(k => {
+      if (values[k] == null) { incomplete[k] = true; return; }
+      total[k] += values[k] * effGrams / 100;
+    });
   });
 
   const servings = recipe.servings > 0 ? recipe.servings : 1;
@@ -66,5 +74,5 @@ export const computeRecipeNutrition = (recipe, nutritionMap = {}, equivalences =
   Object.keys(total).forEach(k => { perServing[k] = total[k] / servings; });
   const per100 = {};
   Object.keys(total).forEach(k => { per100[k] = totalGrams > 0 ? total[k] * 100 / totalGrams : 0; });
-  return { total, perServing, per100, totalGrams, covered, excluded, details };
+  return { total, perServing, per100, totalGrams, covered, excluded, details, incomplete };
 };

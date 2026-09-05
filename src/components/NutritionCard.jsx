@@ -97,6 +97,10 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
 
   const vals = view === "per100" ? nutri.per100 : view === "total" ? nutri.total : nutri.perServing;
   const fmt = (v, dec) => v >= 100 ? String(Math.round(v)) : String(Math.round(v * 10**dec) / 10**dec).replace(".", ",");
+  // Se anche un solo ingrediente ha questo nutriente non disponibile nella
+  // propria fonte, il totale non è un dato completo: "n/d", mai un numero
+  // che sembra preciso ma in realtà ignora un contributo reale mancante.
+  const fmtN = (key, dec) => nutri.incomplete?.[key] ? "n/d" : fmt(vals[key], dec);
 
   return (
     <div style={{ marginTop: standalone ? 0 : 14, background: isNew ? ui.card : th.appCard, border:`1px solid ${isNew ? ui.border : th.appBorder}`, borderRadius: isNew ? ui.radius.card : 14, overflow:"hidden" }}>
@@ -151,7 +155,7 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16 }}>
                 {MAIN_MACROS.map(({ key, label, unit, dec }) => (
                   <div key={key} style={{ ...ui.cardStyle, padding:"12px 8px", textAlign:"center" }}>
-                    <div style={{ fontFamily:F.mono, fontSize:34, color:ui.ink, lineHeight:1 }}>{fmt(vals[key], dec)}</div>
+                    <div style={{ fontFamily:F.mono, fontSize:34, color:ui.ink, lineHeight:1 }}>{fmtN(key, dec)}</div>
                     <div style={{ fontFamily:F.ui, fontSize:10.5, color:ui.muted, textTransform:"uppercase", letterSpacing:0.6, marginTop:4 }}>{label} · {unit}</div>
                   </div>
                 ))}
@@ -173,7 +177,7 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
                   color: n.sub ? ui.faded : ui.ink,
                 }}>
                   <span>{n.label}</span>
-                  <span style={{ fontFamily:F.mono, fontWeight: n.sub ? 400 : 700 }}>{fmt(vals[n.key], n.dec)} {n.unit}</span>
+                  <span style={{ fontFamily:F.mono, fontWeight: n.sub ? 400 : 700 }}>{fmtN(n.key, n.dec)} {n.unit}</span>
                 </div>
               ))}
             </>
@@ -187,7 +191,7 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
                 color: sub ? th.appFaded : th.appInk,
               }}>
                 <span>{label}</span>
-                <span style={{ fontWeight: sub ? 400 : 700 }}>{fmt(vals[key], dec)} {unit}</span>
+                <span style={{ fontWeight: sub ? 400 : 700 }}>{fmtN(key, dec)} {unit}</span>
               </div>
             ))
           )}
@@ -242,7 +246,7 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
             <div style={{ marginTop:8 }}>{hintsBox}</div>
           )}
           <div style={{ fontFamily:F.ui, fontSize:9, color:th.appFaded, marginTop:8, textAlign:"center" }}>
-            Valori indicativi — elaborazione da Tabelle CREA (alimentinutrizione.it)
+            Valori indicativi · la fonte di ciascun alimento è indicata nel database ingredienti
           </div>
         </div>
       )}

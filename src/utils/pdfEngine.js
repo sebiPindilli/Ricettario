@@ -150,10 +150,11 @@ export const nutritionPdfHtml = (recipe, ctx) => {
   const n = computeRecipeNutrition(recipe, ctx.nutritionMap, ctx.equivalences, ctx.customFoods, ctx.ingredientDict, ctx.aggregates, ctx.sourceByIngredient, ctx.customUnits);
   if (!n || n.covered === 0) return "";
   const fmt = (v, dec) => v >= 100 ? String(Math.round(v)) : String(Math.round(v * 10**dec) / 10**dec).replace(".", ",");
+  const fmtN = (key, dec) => n.incomplete?.[key] ? "n/d" : fmt(n.perServing[key], dec);
   return `
     <div class="divider">✦</div>
     <h2>Valori nutrizionali (per porzione)</h2>
-    ${NUTRIENT_LABELS.map(({ key, label, unit, dec, sub }) => `<div class="nutri-row${sub?" sub":""}"><span>${label}</span><span>${fmt(n.perServing[key], dec)} ${unit}</span></div>`).join("")}
+    ${NUTRIENT_LABELS.map(({ key, label, unit, dec, sub }) => `<div class="nutri-row${sub?" sub":""}"><span>${label}</span><span>${fmtN(key, dec)} ${unit}</span></div>`).join("")}
   `;
 };
 
@@ -297,9 +298,10 @@ export const recipeBodyQuadernoHtml = (recipe, opts, nutritionCtx, sectionLabel 
       c.ingredientDict, c.aggregates, c.sourceByIngredient, c.customUnits);
     if (nut && nut.covered > 0) {
       const fmt = (v, dec) => v >= 100 ? String(Math.round(v)) : String(Math.round(v * 10 ** dec) / 10 ** dec).replace(".", ",");
+      const fmtN = (key, dec) => nut.incomplete?.[key] ? "n/d" : fmt(nut.perServing[key], dec);
       nutriHtml = `<div class="q-nutri"><div class="q-sub">Per porzione</div><div class="row">` +
         NUTRIENT_LABELS.filter(l => !l.sub)
-          .map(l => `<span>${l.label} <b>${fmt(nut.perServing[l.key], l.dec)} ${l.unit}</b></span>`).join("") +
+          .map(l => `<span>${l.label} <b>${fmtN(l.key, l.dec)} ${l.unit}</b></span>`).join("") +
         `</div></div>`;
     }
   }

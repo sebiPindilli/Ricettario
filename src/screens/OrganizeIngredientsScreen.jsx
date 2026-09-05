@@ -728,7 +728,7 @@ export default function OrganizeIngredientsScreen({
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontFamily:F.body, fontSize:13, color:th.appInk }}>{f.name}</div>
                       <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:2 }}>
-                        {macroLine(f)} · sale {String(f.salt).replace(".",",")} g
+                        {macroLine(f)} · sale {f.salt != null ? String(f.salt).replace(".",",") + " g" : "n/d"}
                       </div>
                       <div style={{ fontFamily:F.ui, fontSize:9, color:th.appAccent, marginTop:2 }}>fonte: {f.source || "personalizzata"}</div>
                     </div>
@@ -750,7 +750,7 @@ export default function OrganizeIngredientsScreen({
                 <div key={f.id} style={{ background:th.appCard, border:`1px solid ${th.appBorder}`, borderRadius:10, padding:"9px 12px", marginBottom:5 }}>
                   <div style={{ fontFamily:F.body, fontSize:13, color:th.appInk }}>{f.name}</div>
                   <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:2 }}>
-                    {macroLine(f)} · sale {String(f.salt).replace(".",",")} g
+                    {macroLine(f)} · sale {f.salt != null ? String(f.salt).replace(".",",") + " g" : "n/d"}
                   </div>
                   {f.source && (
                     <div style={{ fontFamily:F.ui, fontSize:9, color:th.appAccent, marginTop:2 }}>fonte: {f.source}</div>
