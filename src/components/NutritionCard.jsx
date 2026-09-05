@@ -48,9 +48,15 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
 
   const hasNonConvertible = nutri.details.some(d => d.status === "nounit");
   const hasUnlinked = nutri.details.some(d => d.status === "unlinked");
+  // Almeno un nutriente del totale è incompleto: un ingrediente collegato ha
+  // quel campo non disponibile nella propria fonte (null), quindi il totale
+  // per quel nutriente esclude un contributo reale — non è un semplice "non
+  // collegato", ma va comunque risolto dallo stesso posto (l'editor
+  // nutrizionale dell'ingrediente, dove si può inserire il valore mancante).
+  const hasIncompleteNutrient = Object.values(nutri.incomplete || {}).some(Boolean);
   const linkStyle = { color:th.appAccent, fontWeight:700, cursor:"pointer", textDecoration:"underline", textUnderlineOffset:2 };
   const hintsBox = (
-    ((hasNonConvertible && onManageEquivalences) || (hasUnlinked && onManageIngredients)) && (
+    ((hasNonConvertible && onManageEquivalences) || ((hasUnlinked || hasIncompleteNutrient) && onManageIngredients)) && (
       <div>
         {hasNonConvertible && onManageEquivalences && (
           <SuggestionHint>
@@ -65,6 +71,14 @@ export default function NutritionCard({ recipe, nutritionMap = {}, equivalences 
             <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
               Alcuni ingredienti non sono ancora collegati a un valore nutrizionale: per un funzionamento ottimale{" "}
               <span onClick={() => onManageIngredients(recipe.id)} style={linkStyle}>gestisci i valori nutrizionali mancanti di questa ricetta</span>.
+            </span>
+          </SuggestionHint>
+        )}
+        {hasIncompleteNutrient && onManageIngredients && (
+          <SuggestionHint>
+            <span style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, lineHeight:1.5 }}>
+              Alcuni valori (es. grassi saturi, zuccheri) segnati "n/d" mancano nella fonte di uno o più ingredienti collegati:{" "}
+              <span onClick={() => onManageIngredients(recipe.id)} style={linkStyle}>inserisci i valori nutrizionali mancanti di questa ricetta</span>.
             </span>
           </SuggestionHint>
         )}

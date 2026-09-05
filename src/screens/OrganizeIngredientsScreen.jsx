@@ -24,6 +24,19 @@ import { effectiveCategories, effectiveNutritionKey, effectiveEquivalenceKey, so
 // Sentinel per il filtro "fonte": lista spesa invece di una ricetta specifica.
 export const SHOPPING_SOURCE = "shopping";
 
+// Elenco condiviso dei campi nutrizionali (chiave dato + etichetta estesa),
+// usato sia dal form "nuovo/modifica alimento personalizzato" sia dall'editor
+// nutrizionale inline di un ingrediente (NutriEditor) — un'unica definizione,
+// mai duplicata tra i due punti.
+const NUTRI_FIELDS = [
+  ["kcal","Energia (kcal)"], ["carb","Carboidrati (g)"], ["sug","di cui zuccheri (g)"],
+  ["prot","Proteine (g)"], ["fat","Grassi (g)"], ["sat","di cui saturi (g)"],
+  ["fib","Fibre (g)"], ["salt","Sale (g)"],
+];
+// null = dato non disponibile nella fonte (mai 0 finto): un campo del genere
+// va mostrato vuoto con placeholder "n/d", mai come se fosse zero.
+const hasIncompleteField = (values) => !!values && NUTRI_FIELDS.some(([k]) => values[k] == null);
+
 export default function OrganizeIngredientsScreen({
   nav, recipes, aggregates, ingredientCategories, sourceByIngredient = {}, onSetSourcePriority,
   onSetIngredientCats, onSaveAggregate, onDeleteAggregate, onBack,
@@ -71,6 +84,7 @@ export default function OrganizeIngredientsScreen({
   // Scaricate ad ogni apertura/chiusura di sezione: senza Salva si perdono.
   const [catDraft, setCatDraft] = useState({});     // key → string[] (categorie scelte)
   const [nutriDraft, setNutriDraft] = useState({}); // key → {foodId}|{custom}|null (bozza collegamento) — assente = usa il valore salvato
+  const [nutriValDraft, setNutriValDraft] = useState({}); // key → {kcal,carb,...} stringhe in modifica diretta nell'editor nutrizionale — assente = non ancora toccato, usa i valori dell'alimento collegato
   const [eqDraft, setEqDraft] = useState({});       // key → { unità: grammi }
   const [newCat, setNewCat] = useState({ emoji:"", label:"", icon:undefined });
   const [iconPickerMode, setIconPickerMode] = useState("emoji"); // "emoji" | "svg", per il popup icona categoria
@@ -619,11 +633,7 @@ export default function OrganizeIngredientsScreen({
 
     // ── Form alimento personalizzato ──
     if (foodForm) {
-      const fields = [
-        ["kcal","Energia (kcal)"], ["carb","Carboidrati (g)"], ["sug","di cui zuccheri (g)"],
-        ["prot","Proteine (g)"], ["fat","Grassi (g)"], ["sat","di cui saturi (g)"],
-        ["fib","Fibre (g)"], ["salt","Sale (g)"],
-      ];
+      const fields = NUTRI_FIELDS;
       const setF = (k, v) => setFoodForm(p => ({ ...p, [k]: v }));
       const canSaveFood = (foodForm.name || "").trim() && foodForm.kcal !== "";
       // Se il form è stato aperto dall'editor nutrizionale di un ingrediente
@@ -1234,15 +1244,16 @@ export default function OrganizeIngredientsScreen({
     setExpanded(p => ({ ...p, [key]: p[key] === kind ? null : kind }));
     setCatDraft(p => { if (!(key in p)) return p; const n = { ...p }; delete n[key]; return n; });
     setNutriDraft(p => { if (!(key in p)) return p; const n = { ...p }; delete n[key]; return n; });
+    setNutriValDraft(p => { if (!(key in p)) return p; const n = { ...p }; delete n[key]; return n; });
     setEqDraft(p => { if (!(key in p)) return p; const n = { ...p }; delete n[key]; return n; });
     setNutriSearch(p => { if (!(key in p)) return p; const n = { ...p }; delete n[key]; return n; });
   };
 
   const nutriStatusOf = (ingId) => {
     const mapping = nutritionMap[ingId];
-    if (mapping?.custom) return { ok:true, label:"valori manuali", values: mapping.custom };
+    if (mapping?.custom) return { ok:true, label:"valori manuali", values: mapping.custom, incomplete: hasIncompleteField(mapping.custom) };
     const food = mapping?.foodId ? dbById.get(mapping.foodId) : dbByName.get(normName(dictName(ingId)));
-    return food ? { ok:true, label:food.name, values:food, auto: !mapping } : { ok:false };
+    return food ? { ok:true, label:food.name, values:food, auto: !mapping, incomplete: hasIncompleteField(food) } : { ok:false, incomplete:false };
   };
   const q = search.trim().toLowerCase();
   const filterIsShopping = filterRecipeId === SHOPPING_SOURCE;
@@ -1276,7 +1287,11 @@ export default function OrganizeIngredientsScreen({
     const nutriKey = !isAgg ? effectiveNutritionKey(itemId, aggregates, nutritionMap, sourceByIngredient) : dataKey;
     const nutri = nutriStatusOf(nutriKey);
     const memberIds = isAgg ? (agg.members || []) : [itemId];
-    return { cat: cats.length === 0, nutri: !nutri.ok, eq: eqIssueFor(dataKey, memberIds) };
+    // "Problema di nutrizione" include sia il caso non collegato sia il caso
+    // collegato-ma-incompleto (l'alimento ha almeno un campo null): in
+    // entrambi i casi l'ingrediente va in "da gestire" e compare quando si
+    // arriva dall'alert della scheda ricetta.
+    return { cat: cats.length === 0, nutri: !nutri.ok || nutri.incomplete, eq: eqIssueFor(dataKey, memberIds) };
   };
   const matchesAlertFilter = (itemId, isAgg, agg) => {
     if (!issueMode) return true;
@@ -1340,33 +1355,75 @@ export default function OrganizeIngredientsScreen({
     const draftMapping = nutriDraft[draftKey]; // undefined = nessuna bozza, usa mapping
     const effMapping = draftMapping !== undefined ? draftMapping : mapping;
     const statusFor = (m) => {
-      if (m?.custom) return { ok:true, label:"valori manuali", values:m.custom };
+      if (m?.custom) return { ok:true, label:"valori manuali", values:m.custom, incomplete: hasIncompleteField(m.custom) };
       const food = m?.foodId ? dbById.get(m.foodId) : dbByName.get(normName(dictName(dataKey)));
-      return food ? { ok:true, label:food.name, values:food, auto: !m } : { ok:false };
+      return food ? { ok:true, label:food.name, values:food, auto: !m, incomplete: hasIncompleteField(food) } : { ok:false, incomplete:false };
     };
     const status = statusFor(effMapping);
     const searching = nutriSearch[draftKey] !== undefined;
     const s = nutriSearch[draftKey] ?? "";
     const results = searching && s.trim() ? allFoods.filter(f => f.name.toLowerCase().includes(s.trim().toLowerCase())).slice(0, 5) : [];
-    const startSearch = () => setNutriSearch(p => ({ ...p, [draftKey]: "" }));
+    const clearValDraft = () => setNutriValDraft(p => { if (!(draftKey in p)) return p; const n = { ...p }; delete n[draftKey]; return n; });
+    const startSearch = () => { setNutriSearch(p => ({ ...p, [draftKey]: "" })); clearValDraft(); };
     const stopSearch = () => setNutriSearch(p => (({ [draftKey]:_, ...rest }) => rest)(p));
+
+    // Bozza di modifica diretta dei valori nutrizionali: assente = usa quelli
+    // dell'alimento collegato così come sono (null → campo vuoto "n/d", mai
+    // uno 0 finto). Toccare un campo qualsiasi marca l'ingrediente come
+    // "modificato": al salvataggio diventa un alimento a fonte utente.
+    const valDraft = nutriValDraft[draftKey] ?? (status.ok
+      ? Object.fromEntries(NUTRI_FIELDS.map(([k]) => [k, status.values[k] == null ? "" : String(status.values[k]).replace(".", ",")]))
+      : {});
+    const setVal = (k, v) => setNutriValDraft(p => ({ ...p, [draftKey]: { ...valDraft, [k]: v } }));
+    const edited = nutriValDraft[draftKey] !== undefined;
+
     const save = () => {
-      onSaveNutritionMapping(dataKey, effMapping);
+      if (edited && status.ok) {
+        const num = (v) => { const n = parseFloat(String(v).replace(",", ".")); return v === "" || v == null || isNaN(n) ? null : n; };
+        const values = Object.fromEntries(NUTRI_FIELDS.map(([k]) => [k, num(valDraft[k])]));
+        // Se era già un alimento personalizzato, aggiorna quella stessa voce
+        // (condivisa, come "Modifica" nel Database alimenti); se era una voce
+        // del database base, ne crea una copia personalizzata per non
+        // toccare il dato condiviso con tutti gli altri libri.
+        const alreadyCustom = status.values?.custom === true;
+        const foodId = alreadyCustom ? status.values.id : uid("cf");
+        onSaveCustomFood({
+          id: foodId, cat: "Personalizzati", custom: true,
+          name: status.values.name || displayName,
+          source: "fonte utente",
+          ...values,
+        });
+        onSaveNutritionMapping(dataKey, { foodId });
+      } else {
+        onSaveNutritionMapping(dataKey, effMapping);
+      }
       toggleExpand(draftKey, "nutri");
     };
 
     return (
       <div style={{ marginTop:8 }}>
-        {/* ── Già collegato (o selezionato in bozza): mostra a cosa, con possibilità di scollegare o cambiare ── */}
+        {/* ── Già collegato (o selezionato in bozza): valori per esteso e modificabili ── */}
         {!searching && status.ok ? (
           <div style={{ background:th.appBg, border:`1px solid ${th.appBorder}`, borderRadius:9, padding:"9px 11px" }}>
             <div style={{ fontFamily:F.body, fontSize:12.5, color:th.appInk, fontWeight:600 }}>
               {status.label}{status.auto ? <span style={{ fontFamily:F.ui, fontSize:9.5, color:th.appAccent, fontWeight:400 }}> · match automatico</span> : null}
             </div>
-            <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:2 }}>{macroLine(status.values, {fib:false})}</div>
+            <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:2 }}>fonte: {status.values?.source || "—"}</div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"6px 8px", marginTop:8 }}>
+              {NUTRI_FIELDS.map(([k, label]) => (
+                <div key={k}>
+                  <div style={{ fontFamily:F.ui, fontSize:9, color:th.appFaded, marginBottom:2 }}>{label}</div>
+                  <input type="text" inputMode="decimal" value={valDraft[k] ?? ""} onChange={e => setVal(k, e.target.value)} placeholder="n/d"
+                    style={{ width:"100%", padding:"7px 8px", border:`1.5px solid ${th.appBorder}`, borderRadius:8, background:th.appCard, fontFamily:F.body, fontSize:12, color:th.appInk, outline:"none", boxSizing:"border-box", textAlign:"center" }}/>
+                </div>
+              ))}
+            </div>
+            {edited && (
+              <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appAccent, marginTop:6 }}>Salvando, questi valori diventano fonte utente per questo ingrediente.</div>
+            )}
             <div style={{ display:"flex", gap:14, marginTop:8 }}>
               {effMapping && (
-                <button onClick={() => setNutriDraft(p => ({ ...p, [draftKey]: null }))} style={{ background:"none", border:"none", color:"#C4593A", fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, textDecoration:"underline" }}>× Scollega</button>
+                <button onClick={() => { setNutriDraft(p => ({ ...p, [draftKey]: null })); clearValDraft(); }} style={{ background:"none", border:"none", color:"#C4593A", fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, textDecoration:"underline" }}>× Scollega</button>
               )}
               <button onClick={startSearch} style={{ background:"none", border:"none", color:th.appAccent, fontFamily:F.ui, fontSize:10.5, fontWeight:600, cursor:"pointer", padding:0, textDecoration:"underline" }}>Cambia collegamento</button>
             </div>
