@@ -752,6 +752,9 @@ export default function OrganizeIngredientsScreen({
                   <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, marginTop:2 }}>
                     {macroLine(f)} · sale {String(f.salt).replace(".",",")} g
                   </div>
+                  {f.source && (
+                    <div style={{ fontFamily:F.ui, fontSize:9, color:th.appAccent, marginTop:2 }}>fonte: {f.source}</div>
+                  )}
                 </div>
               ))}
             </div>
@@ -760,7 +763,7 @@ export default function OrganizeIngredientsScreen({
             <div style={{ textAlign:"center", padding:"30px 0", color:th.appFaded, fontFamily:F.display, fontStyle:"italic" }}>Nessun alimento trovato</div>
           )}
           <div style={{ fontFamily:F.ui, fontSize:9.5, color:th.appFaded, textAlign:"center", marginTop:14, lineHeight:1.5 }}>
-            Valori indicativi per 100 g, elaborati dalle Tabelle di Composizione degli Alimenti<br/>CREA — alimentinutrizione.it
+            Valori indicativi per 100 g · la fonte di ciascuna voce è indicata sotto il rispettivo alimento
           </div>
         </div>
       </div>
