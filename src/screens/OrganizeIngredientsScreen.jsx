@@ -148,6 +148,202 @@ export default function OrganizeIngredientsScreen({
   // condizionali di questo componente — non ancora inizializzato a questo
   // punto dell'esecuzione).
   const baseFoodIndex = React.useMemo(() => buildFoodNameIndex([...NUTRITION_DB, ...customFoods]), [customFoods]);
+  const baseFoodById = React.useMemo(() => new Map([...NUTRITION_DB, ...customFoods].map(f => [f.id, f])), [customFoods]);
+
+  // ── Popup "scegli i dati per il nuovo aggregato" ──
+  // Quando crei un aggregato, o unisci un ingrediente a uno già esistente,
+  // categoria/nutrizione/equivalenze dei singoli membri non passano mai
+  // automaticamente all'aggregato (comportamento invariato: restano
+  // risolte dinamicamente per singolo ingrediente finché l'aggregato non
+  // ha un proprio valore). Questo popup offre di POPOLARE l'aggregato
+  // copiando il dato di un membro che ce l'ha già — una scelta unica al
+  // momento del salvataggio, non un meccanismo di priorità (quello,
+  // sourcePriorityFor, resta invariato e continua a valere sempre).
+  //
+  // Funzioni "valore proprio di un ingrediente" self-contained (non
+  // riusano nutriStatusOf più sotto: quel branch ritorna prima di
+  // raggiungerlo per manageAggs/editing, dove serve questo popup).
+  const ownCategoriesOf = (id) => (ingredientCategories[id] || []);
+  const ownNutritionOf = (id) => {
+    const mapping = nutritionMap[id];
+    if (mapping?.custom) return { hasIt:true, label:"valori manuali", mapping };
+    if (mapping?.foodId) { const f = baseFoodById.get(mapping.foodId); return f ? { hasIt:true, label:f.name, mapping } : { hasIt:false }; }
+    const f = baseFoodIndex.get(normName(dictName(id)));
+    return f ? { hasIt:true, label:`${f.name} (auto)`, mapping:{ foodId:f.id } } : { hasIt:false };
+  };
+  const ownEquivalencesOf = (id) => {
+    const factors = equivalences[id]?.factors;
+    return factors && Object.keys(factors).length > 0 ? factors : null;
+  };
+  const [pendingAggDataChoice, setPendingAggDataChoice] = useState(null);
+  // nextAgg: l'aggregato con nome/membri già aggiornati, pronto per
+  // onSaveAggregate. prevAgg: lo stato ATTUALE dell'aggregato prima di
+  // questa operazione (undefined/null per una creazione). newMemberIds:
+  // solo i membri aggiunti in QUESTA operazione (tutti, per una
+  // creazione; solo quello unito, per un "aggiungi a esistente") — i
+  // membri già presenti da prima non vengono rimessi in discussione ad
+  // ogni fusione successiva.
+  // onDone: richiamato dopo il salvataggio effettivo (Conferma), MAI se
+  // l'utente annulla il popup — così un salvataggio dall'editor "Nuovo/
+  // Modifica aggregato" può restare aperto finché non si risolve la
+  // scelta, invece di chiudersi subito e far sparire il popup con sé
+  // (l'editor e il popup condividono lo stesso ramo di return). Ritorna
+  // true se il salvataggio è stato rimandato al popup, false se è già
+  // avvenuto subito (nulla da scegliere).
+  const attemptSaveAggregate = (nextAgg, prevAgg, newMemberIds, onDone) => {
+    const columns = {};
+    // Categoria — usa nextAgg.categories (non prevAgg) come stato "già
+    // presente": per l'editor manuale riflette anche una scelta fatta a
+    // mano nella stessa sessione, non solo un valore già salvato in
+    // precedenza. "Lascia vuoto" qui significa "non toccare nextAgg.categories
+    // così com'è", mai "svuotarla".
+    {
+      const aggHas = (nextAgg.categories || []).length > 0;
+      const candidates = newMemberIds.filter(id => ownCategoriesOf(id).length > 0);
+      if (candidates.length > 0) {
+        columns.categoria = { aggHas, aggValue: nextAgg.categories, candidates, choice: aggHas ? "__agg__" : "__empty__" };
+      }
+    }
+    // Nutrizione
+    {
+      const aggStatus = prevAgg ? ownNutritionOf(prevAgg.id) : { hasIt:false };
+      const memberStatuses = newMemberIds.map(id => ({ id, status: ownNutritionOf(id) })).filter(x => x.status.hasIt);
+      if (memberStatuses.length > 0) {
+        columns.nutrizione = { aggHas: aggStatus.hasIt, aggValue: aggStatus, candidates: memberStatuses, choice: aggStatus.hasIt ? "__agg__" : "__empty__" };
+      }
+    }
+    // Equivalenze (multi-selezione, unione dei fattori scelti)
+    {
+      const aggFactors = prevAgg ? ownEquivalencesOf(prevAgg.id) : null;
+      const memberFactors = newMemberIds.map(id => ({ id, factors: ownEquivalencesOf(id) })).filter(x => x.factors);
+      if (memberFactors.length > 0) {
+        columns.equivalenze = { aggHas: !!aggFactors, aggValue: aggFactors, candidates: memberFactors, checked: [] };
+      }
+    }
+    if (Object.keys(columns).length === 0) { onSaveAggregate(nextAgg); return false; }
+    setPendingAggDataChoice({ agg: nextAgg, columns, onDone });
+    return true;
+  };
+  const confirmAggDataChoice = () => {
+    const { agg, columns, onDone } = pendingAggDataChoice;
+    let finalAgg = agg;
+    if (columns.categoria) {
+      const c = columns.categoria;
+      if (c.choice === "__agg__") finalAgg = { ...finalAgg, categories: c.aggValue || [] };
+      else if (c.choice === "__empty__") { /* nessuna categoria propria: comportamento invariato */ }
+      else finalAgg = { ...finalAgg, categories: ownCategoriesOf(c.choice) };
+    }
+    onSaveAggregate(finalAgg);
+    if (columns.nutrizione) {
+      const n = columns.nutrizione;
+      if (n.choice === "__agg__" && n.aggValue?.mapping) onSaveNutritionMapping(finalAgg.id, n.aggValue.mapping);
+      else if (n.choice !== "__empty__" && n.choice !== "__agg__") {
+        const picked = n.candidates.find(x => x.id === n.choice);
+        if (picked) onSaveNutritionMapping(finalAgg.id, picked.status.mapping);
+      }
+    }
+    if (columns.equivalenze) {
+      const e = columns.equivalenze;
+      const merged = {};
+      if (e.aggHas && e.checked.includes("__agg__")) Object.assign(merged, e.aggValue || {});
+      e.candidates.forEach(({ id, factors }) => { if (e.checked.includes(id)) Object.assign(merged, factors); });
+      if (Object.keys(merged).length > 0) onSaveEquivalence(finalAgg.id, { factors: merged });
+    }
+    setPendingAggDataChoice(null);
+    if (onDone) onDone();
+  };
+  const AggDataChoiceModal = () => {
+    if (!pendingAggDataChoice) return null;
+    const { columns } = pendingAggDataChoice;
+    const setChoice = (col, val) => setPendingAggDataChoice(p => ({ ...p, columns: { ...p.columns, [col]: { ...p.columns[col], choice: val } } }));
+    const toggleEqChecked = (key) => setPendingAggDataChoice(p => {
+      const cur = p.columns.equivalenze.checked;
+      const next = cur.includes(key) ? cur.filter(k => k !== key) : [...cur, key];
+      return { ...p, columns: { ...p.columns, equivalenze: { ...p.columns.equivalenze, checked: next } } };
+    });
+    const colDefs = [
+      columns.categoria && { key:"categoria", label:"Categoria" },
+      columns.nutrizione && { key:"nutrizione", label:"Nutrizione" },
+      columns.equivalenze && { key:"equivalenze", label:"Equivalenze" },
+    ].filter(Boolean);
+    return (
+      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, padding:16 }}>
+        <div style={{ background:th.appBg, borderRadius:16, padding:18, maxWidth:520, width:"100%", maxHeight:"85vh", overflowY:"auto" }}>
+          <div style={{ fontFamily:F.display, fontSize:17, color:th.appInk, marginBottom:4 }}>Dati per l'aggregato</div>
+          <div style={{ fontFamily:F.ui, fontSize:11, color:th.appFaded, marginBottom:14, lineHeight:1.5 }}>
+            Alcuni ingredienti hanno già dei valori: scegli con quali popolare l'aggregato, o lascia vuoto per mantenere il calcolo per singolo ingrediente.
+          </div>
+          <div style={{ overflowX:"auto" }}>
+            <table style={{ width:"100%", borderCollapse:"collapse", fontFamily:F.ui, fontSize:11.5 }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign:"left", padding:"6px 8px", color:th.appFaded, fontWeight:600 }}>Ingrediente</th>
+                  {colDefs.map(c => <th key={c.key} style={{ textAlign:"center", padding:"6px 8px", color:th.appFaded, fontWeight:600 }}>{c.label}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {columns.categoria?.aggHas || columns.nutrizione?.aggHas || columns.equivalenze?.aggHas ? (
+                  <tr style={{ borderTop:`1px solid ${th.appBorder}` }}>
+                    <td style={{ padding:"6px 8px", fontStyle:"italic", color:th.appFaded }}>Valore attuale dell'aggregato</td>
+                    {colDefs.map(c => {
+                      const col = columns[c.key];
+                      if (!col.aggHas) return <td key={c.key}></td>;
+                      return (
+                        <td key={c.key} style={{ textAlign:"center", padding:"6px 8px" }}>
+                          {c.key === "equivalenze" ? (
+                            <input type="checkbox" checked={col.checked.includes("__agg__")} onChange={() => toggleEqChecked("__agg__")} />
+                          ) : (
+                            <input type="radio" name={c.key} checked={col.choice === "__agg__"} onChange={() => setChoice(c.key, "__agg__")} />
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ) : null}
+                {Array.from(new Set([
+                  ...(columns.categoria?.candidates || []),
+                  ...(columns.nutrizione?.candidates || []).map(x => x.id),
+                  ...(columns.equivalenze?.candidates || []).map(x => x.id),
+                ])).map(id => (
+                  <tr key={id} style={{ borderTop:`1px solid ${th.appBorder}` }}>
+                    <td style={{ padding:"6px 8px", color:th.appInk }}>{dictName(id)}</td>
+                    {colDefs.map(c => {
+                      const col = columns[c.key];
+                      const has = c.key === "categoria" ? col.candidates.includes(id)
+                        : c.key === "nutrizione" ? col.candidates.some(x => x.id === id)
+                        : col.candidates.some(x => x.id === id);
+                      if (!has) return <td key={c.key}></td>;
+                      return (
+                        <td key={c.key} style={{ textAlign:"center", padding:"6px 8px" }}>
+                          {c.key === "equivalenze" ? (
+                            <input type="checkbox" checked={col.checked.includes(id)} onChange={() => toggleEqChecked(id)} />
+                          ) : (
+                            <input type="radio" name={c.key} checked={col.choice === id} onChange={() => setChoice(c.key, id)} />
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+                <tr style={{ borderTop:`1px solid ${th.appBorder}` }}>
+                  <td style={{ padding:"6px 8px", fontStyle:"italic", color:th.appFaded }}>Lascia vuoto</td>
+                  {colDefs.map(c => c.key === "equivalenze" ? <td key={c.key}></td> : (
+                    <td key={c.key} style={{ textAlign:"center", padding:"6px 8px" }}>
+                      <input type="radio" name={c.key} checked={columns[c.key].choice === "__empty__"} onChange={() => setChoice(c.key, "__empty__")} />
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style={{ display:"flex", gap:10, marginTop:16 }}>
+            <button onClick={() => setPendingAggDataChoice(null)} style={{ flex:1, padding:"11px", borderRadius:11, border:`1.5px solid ${th.appBorder}`, background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:12.5, fontWeight:600, cursor:"pointer" }}>Annulla</button>
+            <button onClick={confirmAggDataChoice} style={{ flex:1, padding:"11px", borderRadius:11, border:"none", background:th.appAccent, color:th.appOnAccent, fontFamily:F.ui, fontSize:12.5, fontWeight:700, cursor:"pointer" }}>Conferma</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
   // Suggerimenti aggregati: quelli attivi arrivano già pronti come prop
   // (suggestedAggregates); qui calcoliamo anche l'insieme completo, senza
   // filtro sugli ignorati, per poter mostrare le card "ignorate" attenuate
@@ -268,7 +464,7 @@ export default function OrganizeIngredientsScreen({
           </div>
         </div>
         <div style={{ flex:1, overflowY:"auto", padding:"4px 18px 40px" }}>
-          <button onClick={() => { setManageAggs(false); setEditingFrom("manageAggs"); setEditing({ kind:"aggregate", name:"", members:[], categories:[] }); }} style={{
+          <button onClick={() => { setManageAggs(false); setEditingFrom("manageAggs"); setEditing({ kind:"aggregate", name:"", members:[], categories:[], origMembers:[] }); }} style={{
             width:"100%", padding:"12px", borderRadius:12, border:`1.5px dashed ${th.appBorder}`,
             background:"transparent", color:th.appFaded, fontFamily:F.ui, fontSize:12.5, fontWeight:600, cursor:"pointer", marginBottom:18,
           }}>＋ Nuovo aggregato</button>
@@ -293,7 +489,7 @@ export default function OrganizeIngredientsScreen({
                       <div style={{ fontFamily:F.body, fontSize:14.5, fontWeight:700, color:th.appInk }}>⊕ {agg.name}</div>
                       <div style={{ fontFamily:F.ui, fontSize:10.5, color:th.appFaded, marginTop:2 }}>{(agg.members||[]).map(dictName).join(" · ")}</div>
                     </div>
-                    <button onClick={() => { setManageAggs(false); setEditingFrom("manageAggs"); setEditing({ kind:"aggregate", id:agg.id, name:agg.name, members:[...(agg.members||[])], categories:[...(agg.categories||[])] }); }} style={{ background:th.appInk, border:"none", borderRadius:9, padding:"7px 11px", color:th.appBg, fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0, display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="✏️" icon="modifica" size={11} /> Modifica</button>
+                    <button onClick={() => { setManageAggs(false); setEditingFrom("manageAggs"); setEditing({ kind:"aggregate", id:agg.id, name:agg.name, members:[...(agg.members||[])], categories:[...(agg.categories||[])], origMembers:[...(agg.members||[])] }); }} style={{ background:th.appInk, border:"none", borderRadius:9, padding:"7px 11px", color:th.appBg, fontFamily:F.ui, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0, display:"flex", alignItems:"center", gap:5 }}><AppIcon emoji="✏️" icon="modifica" size={11} /> Modifica</button>
                   </div>
                 </div>
               ))}
@@ -351,7 +547,7 @@ export default function OrganizeIngredientsScreen({
                       title: <>Aggiungi «{dictName(m)}» a un aggregato esistente</>,
                       subtitle: <>{g.aggregate.name} ({(g.aggregate.members || []).map(dictName).join(", ")})</>,
                       addLabel: <>⊕ Aggiungi a «{g.label}»</>,
-                      onAdd: () => onSaveAggregate && onSaveAggregate({ ...g.aggregate, members:[...(g.aggregate.members || []), m] }),
+                      onAdd: () => attemptSaveAggregate({ ...g.aggregate, members:[...(g.aggregate.members || []), m] }, g.aggregate, [m]),
                       onIgnore: () => g.pairs.filter(([a, b]) => a === m || b === m).forEach(([a, b]) => onIgnoreSimilarity && onIgnoreSimilarity(a, b)),
                     }))
                   : [renderAggSuggestionCard(g.key, {
@@ -359,7 +555,7 @@ export default function OrganizeIngredientsScreen({
                       title: g.label,
                       subtitle: g.members.map(dictName).join(" · "),
                       addLabel: "⊕ Crea aggregato",
-                      onAdd: () => { setManageAggs(false); setEditingFrom("manageAggs"); setEditing({ kind:"aggregate", name:g.label, members:[...g.members], categories:[] }); },
+                      onAdd: () => { setManageAggs(false); setEditingFrom("manageAggs"); setEditing({ kind:"aggregate", name:g.label, members:[...g.members], categories:[], origMembers:[] }); },
                       onIgnore: () => g.pairs.forEach(([a, b]) => onIgnoreSimilarity && onIgnoreSimilarity(a, b)),
                     })]
               )}
@@ -389,6 +585,7 @@ export default function OrganizeIngredientsScreen({
             </div>
           )}
         </div>
+        {AggDataChoiceModal()}
       </div>
     );
   }
@@ -1138,12 +1335,20 @@ export default function OrganizeIngredientsScreen({
           categories: editing.categories || [],
         };
         if (!agg.name || agg.members.length === 0) return;
-        onSaveAggregate(agg);
+        // prevAgg: lo stato attualmente salvato (undefined per una vera
+        // creazione); newMemberIds: solo i membri aggiunti in QUESTA
+        // sessione di modifica, non tutti quelli già presenti prima.
+        const prevAgg = editing.id ? aggregates.find(a => a.id === editing.id) : null;
+        const origMembers = new Set(editing.origMembers || []);
+        const newMemberIds = agg.members.filter(m => !origMembers.has(m));
+        if (newMemberIds.length === 0) { onSaveAggregate(agg); closeEditor(); }
+        else if (!attemptSaveAggregate(agg, prevAgg, newMemberIds, closeEditor)) closeEditor();
+        // se true: rimandato al popup, che chiamerà closeEditor da solo alla Conferma
       } else {
         // salva categorie del singolo ingrediente
         onSetIngredientCats(editing.name, editing.categories || []);
+        closeEditor();
       }
-      closeEditor();
     };
 
     return (
@@ -1240,6 +1445,7 @@ export default function OrganizeIngredientsScreen({
             cursor: canSaveAgg ? "pointer" : "default",
           }}>Salva</button>
         </div>
+        {AggDataChoiceModal()}
       </div>
     );
   }
@@ -1637,7 +1843,7 @@ export default function OrganizeIngredientsScreen({
             </div>
           )}
           {isAgg ? (
-            <button onClick={() => setEditing({ kind:"aggregate", id:agg.id, name:agg.name, members:[...(agg.members||[])], categories:[...(agg.categories||[])] })} style={{ background:"none", border:"none", fontSize:14, cursor:"pointer", color:th.appFaded, flexShrink:0, padding:"2px 4px", display:"flex" }}><AppIcon emoji="✏️" icon="modifica" size={14} /></button>
+            <button onClick={() => setEditing({ kind:"aggregate", id:agg.id, name:agg.name, members:[...(agg.members||[])], categories:[...(agg.categories||[])], origMembers:[...(agg.members||[])] })} style={{ background:"none", border:"none", fontSize:14, cursor:"pointer", color:th.appFaded, flexShrink:0, padding:"2px 4px", display:"flex" }}><AppIcon emoji="✏️" icon="modifica" size={14} /></button>
           ) : (onRenameIngredient && (
             <button
               title="Rinomina ingrediente"
